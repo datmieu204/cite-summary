@@ -1,0 +1,1613 @@
+{
+    "ID": "W06-1670",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "In this paper we approach word sense disambiguation and information extraction as a unified tagging problem.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task consists of annotating text with the tagset defined by the 41 Wordnet super- sense classes for nouns and verbs.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the tagset is directly related to Wordnet synsets, the tagger returns partial word sense disambiguation.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, since the noun tags include the standard named entity detection classes \u2013 person, location, organization, time, etc. \u2013 the tagger, as a byproduct, returns extended named entity information.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We cast the problem of supersense tagging as a sequential labeling task and investigate it empirically with a discriminatively-trained Hidden Markov Model.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental evaluation on the main sense-annotated datasets available, i.e., Semcor and Senseval, shows considerable improvements over the best known \u201cfirst-sense\u201d baseline.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Named entity recognition (NER) is the most studied information extraction (IE) task.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NER typically focuses on detecting instances of \u201cperson\u201d, \u201clocation\u201d, \u201corganization\u201d names and optionally instances of \u201cmiscellaneous\u201d or \u201ctime\u201d categories.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The scalability of statistical NER allowed researchers to apply it successfully on large collections of newswire text, in several languages, and biomedical literature.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Newswire NER performance, in terms of F-score, is in the upper 80s (Carreras et al., 2002; Florian et al., 2003), while BioNER accuracy ranges between the low 70s and 80s, depending on the data-set used for training/evaluation (Dingare et al., 2005).",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One shortcoming of NER is its oversimplified onto- logical model, leaving instances of other potentially informative categories unidentified.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, the utility of named entity information is limited.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, instances to be detected are mainly restricted to (sequences of) proper nouns.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word sense disambiguation (WSD) is the task of deciding the intended sense for ambiguous words in context.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With respect to NER, WSD lies at the other end of the semantic tagging spectrum, since the dictionary defines tens of thousand of very specific word senses, including NER categories.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wordnet (Fellbaum, 1998)1, possibly the most used resource for WSD, defines word senses for verbs, common and proper nouns.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word sense disambiguation, at this level of granularity, is a complex task which resisted all attempts of robust broad-coverage solutions.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many distinctions are too subtle to be captured automatically, and the magnitude of the class space \u2013 several orders larger than NER\u2019s \u2013 makes it hard to approach the problem with sophisticated, but scal- able, machine learning methods.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lastly, even if the methods would scale up, there are not enough manually tagged data, at the word sense level, for training a model.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of state of the art WSD systems on realistic evaluations is only comparable to the \u201cfirst sense\u201d baseline (cf.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5.3).",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notwithstanding much research, the benefits of disambiguated lexical information for language processing are still mostly speculative.This paper presents a novel approach to broad \u2217The first author is now at Yahoo!",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Research.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tag- ger described in this paper is free software and can be downloaded from http://www.loacnr.it/ciaramita.html.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 When referring to Wordnet, throughout the paper, we.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "mean Wordnet version 2.0.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "594 Proceedings of the 2006 Conference on Empirical Methods in Natural Language Processing (EMNLP 2006), pages 594\u2013602, Sydney, July 2006.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2006 Association for Computational Linguistics NOUNS SUPERSENSE NOUNS DENOTING SUPERSENSE NOUNS DENOTING act animal artifact attribute body cognition communication event feeling food group location motive acts or actions animals man-made objects attributes of people and objects body parts cognitive processes and contents communicative processes and contents natural events feelings and emotions foods and drinks groupings of people or objects spatial position goals object quantity phenomenon plant possession process person relation shape state substance time Tops natural objects (not man-made) quantities and units of measure natural phenomena plants possession and transfer of possession natural processes people relations between people or things or ideas two and three dimensional shapes stable states of affairs substances time and temporal relations abstract terms for unique beginners VERBS SUPERSENSE VERBS OF SUPERSENSE VERBS OF body change cognition communication competition consumption contact creation grooming, dressing and bodily care size, temperature change, intensifying thinking, judging, analyzing, doubting telling, asking, ordering, singing fighting, athletic activities eating and drinking touching, hitting, tying, digging sewing, baking, painting, performing emotion motion perception possession social stative weather feeling walking, flying, swimming seeing, hearing, feeling buying, selling, owning political and social activities and events being, having, spatial relations raining, snowing, thawing, thundering Table 1.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nouns and verbs supersense labels, and short description (from the Wordnet documentation).",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "coverage information extraction and word sense disambiguation.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal is to simplify the disambiguation task, for both nouns and verbs, to a level at which it can be approached as any other tagging problem, and can be solved with state of the art methods.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a byproduct, this task includes and extends NER.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a tagset based on Word- net\u2019s lexicographers classes, or supersenses (Ciaramita and Johnson, 2003), cf.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size of the supersense tagset allows us to adopt a structured learning approach, which takes local dependencies between labels into account.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To this extent, we cast the supersense tagging problem as a sequence labeling task and train a discriminative Hidden Markov Model (HMM), based on that of Collins (2002), on the manually annotated Semcor corpus (Miller et al., 1993).",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In two experiments we evaluate the accuracy of the tagger on the Semcor corpus itself, and on the English \u201call words\u201d Senseval 3 shared task data (Snyder and Palmer, 2004).",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model outperforms remarkably the best known baseline, the first sense heuristic \u2013 to the best of our knowledge, for the first time on the most realistic \u201call words\u201d evaluation setting.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The paper is organized as follows.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 2 introduces the tagset, Section 3 discusses related work and Section 4 the learning model.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5 reports on experimental settings and results.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 6 we summarize our contribution and consider directions for further research.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "supersense tagset. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Wordnet (Fellbaum, 1998) is a broad-coverage machine-readable dictionary which includes 11,306 verbs mapped to 13,508 word senses, called synsets, and 114,648 common and proper nouns mapped to 79,689 synsets.",
+                    "sid": 43,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each noun or verb synset is associated with one of 41 broad semantic categories, in order to organize the lexicographer\u2019s work of updating and managing the lexicon (see Table 1).",
+                    "sid": 44,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since each lexicographer category groups together many synsets they have been also called supersenses (Ciaramita and Johnson, 2003).",
+                    "sid": 45,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are 26 supersenses for nouns, 15 for verbs.",
+                    "sid": 46,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This coarse-grained ontology has a number of attractive features, for the purpose of natural language processing.",
+                    "sid": 47,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the small size of the set makes it possible to build a single tagger which has positive consequences on robustness.",
+                    "sid": 48,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, classes, although fairly general, are easily recognizable and not too abstract or vague.",
+                    "sid": 49,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More importantly, similar word senses tend to be merged together.",
+                    "sid": 50,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an example, Table 2 summarizes all senses of the noun \u201cbox\u201d.",
+                    "sid": 51,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 10 synsets are mapped to 6 supersenses: \u201cartifact\u201d, \u201cquantity\u201d, \u201cshape\u201d, \u201cstate\u201d, \u201cplant\u201d, and \u201cact\u201d.",
+                    "sid": 52,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Three similar senses (2), (7) and (9), and the probably related (8), are merged in the \u201cartifact\u201d supersense.",
+                    "sid": 53,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This process can help disambiguation because it removes sub 1.",
+                    "sid": 54,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box} (container) \u201dhe rummaged through a box of spare parts\u201d - n.artifact 2.",
+                    "sid": 55,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box, loge} (private area in a theater or grandstand where a small group can watch the performance) \u201dthe royal box was empty\u201d - n.artifact 3.",
+                    "sid": 56,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box, boxful} (the quantity contained in a box) \u201dhe gave her a box of chocolates\u201d - n.quantity 4.",
+                    "sid": 57,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{corner, box} (a predicament from which a skillful or graceful escape is impossible) \u201dhis lying got him into a tight corner\u201d - n.state 5.",
+                    "sid": 58,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box} (a rectangular drawing) \u201dthe flowchart contained many boxes\u201d - n.shape 6.",
+                    "sid": 59,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box, boxwood} (evergreen shrubs or small trees) - n.plant 7.",
+                    "sid": 60,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box} (any one of several designated areas on a ball field where the batter or catcher or coaches are positioned) \u201dthe umpire warned the batter to stay in the batter\u2019s box\u201d - n.artifact 8.",
+                    "sid": 61,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box, box seat} (the driver\u2019s seat on a coach) \u201dan armed guard sat in the box with the driver\u201d - n.artifact 9.",
+                    "sid": 62,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box} (separate partitioned area in a public place for a few people) \u201dthe sentry stayed in his box to avoid the cold\u201d - n.artifact 10.",
+                    "sid": 63,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{box} (a blow with the hand (usually on the ear)) \u201dI gave him a good box on the ear\u201d - n.act Table 2.",
+                    "sid": 64,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The noun \u201cbox\u201d in Wordnet: each line lists one synset, the set of synonyms, a definition, an optional example sentence, and the supersense label.",
+                    "sid": 65,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tle distinctions, which are hard to discriminate and increase the size of the class space.",
+                    "sid": 66,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible drawback is that senses which one might want to keep separate, e.g., the most common sense box/container (1), can be collapsed with others.",
+                    "sid": 67,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One might argue that all \u201cartifact\u201d senses share semantic properties which differentiate them from the other senses and can support useful semantic inferences.",
+                    "sid": 68,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, there are no general solutions to the problem of sense granularity.",
+                    "sid": 69,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, major senses identified by Wordnet are maintained at the supersense level.",
+                    "sid": 70,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, supersensedisambiguated words are also, at least partially, synsetdisambiguated.",
+                    "sid": 71,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since Wordnet includes both proper and common nouns, the new tagset suggests an extended notion of named entity.",
+                    "sid": 72,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As well as the usual NER categories, \u201cperson\u201d, \u201cgroup\u201d, \u201clocation\u201d, and \u201ctime\u201d2, supersenses include categories such as artifacts, which can be fairly frequent, but usually neglected.",
+                    "sid": 73,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To a greater extent than in standard NER, research in BioNER has focused on the adoption of richer ontologies for information extraction.",
+                    "sid": 74,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Genia (Ohta et al., 2002), for example, is an ontology of 46 classes \u2013 with annotated 2 The supersense category \u201cgroup\u201d is rather a superordinate of \u201corganization\u201d and has wider scope.",
+                    "sid": 75,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "corpus \u2013 designed for supporting information extraction in the molecular biology domain.",
+                    "sid": 76,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, there is growing interest for extracting relations between entities, as a more useful type of IE (cf.",
+                    "sid": 77,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Rosario and Hearst, 2004)).",
+                    "sid": 78,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Supersense tagging is inspired by similar considerations, but in a domain-independent setting; e.g., verb supersenses can label semantic interactions between nominal concepts.",
+                    "sid": 79,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following sentence (Example 1), extracted from the data \u2013 further described in Section 5.1 \u2013 shows the information captured by the supersense tagset: (1) Clara Harrisn.person, one of the guestsn.person in the boxn.artif act, stood upv.motion and demandedv.communication watern.substance.",
+                    "sid": 80,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As Example 1 shows there is more information that can be extracted from a sentence than just the names; e.g. the fact that \u201cClara Harris\u201d and the following \u201cguests\u201d are both tagged as \u201cperson\u201d might suggest some sort of coreferentiality, while the coordination of verbs of motion and communication, as in \u201cstood up and demanded\u201d, might be useful for language modeling purposes.",
+                    "sid": 81,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such a setting, structured learning methods, e.g., sequential, can help tagging by taking the senses of the neighboring words into account.",
+                    "sid": 82,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Sequential models are common in NER, POS tagging, shallow parsing, etc..",
+                    "sid": 83,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the work in WSD, instead, has focused on labeling each word individually, possibly revising the assignments of senses at the document level; e.g., following the \u201cone sense per discourse\u201d hypothesis (Gale et al., 1992).",
+                    "sid": 84,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although it seems reasonable to assume that occurrences of word senses in a sentence can be correlated, hence that structured learning methods could be successful, there has not been much work on sequential WSD.",
+                    "sid": 85,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Segond et al.",
+                    "sid": 86,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1997) are possibly the first to have applied an HMM tag- ger to semantic disambiguation.",
+                    "sid": 87,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, to make the method more tractable, they also used the supersense tagset and estimated the model on Semcor.",
+                    "sid": 88,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By cross-validation they show a marked improvement over the first sense baseline.",
+                    "sid": 89,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in (Segond et al., 1997) the tagset is used differently, by defining equivalence classes of words with the same set of senses.",
+                    "sid": 90,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From a similar perspective, de Loupy et al.",
+                    "sid": 91,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(de Loupy et al., 1998) also investigated the potential advantages of using HMMs for disambiguation.",
+                    "sid": 92,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More recently, variants of the generative HMM have been applied to WSD (Molina et al., 2002; Molina et al., 2004) and evaluated also on Senseval data, showing performance comparable to the first sense baseline.",
+                    "sid": 93,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous work on prediction at the supersense level (Ciaramita and Johnson, 2003; Curran, 2005) has focused on lexical acquisition (nouns exclusively), thus aiming at word type classification rather than tagging.",
+                    "sid": 94,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As far as applications are concerned, it has been shown that supersense information can support supervised WSD, by providing a partial disambiguation step (Ciaramita et al., 2003).",
+                    "sid": 95,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In syntactic parse re-ranking supersenses have been used to build useful latent semantic features (Koo and Collins, 2005).",
+                    "sid": 96,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe that supersense tagging has the potential to be useful, in combination with other sources of information such as part of speech, domain-specific NER models, chunking or shallow parsing, in tasks such as question answering and information extraction and retrieval, where large amounts of text need to be processed.",
+                    "sid": 97,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also possible that this kind of shallow semantic information can help build vation/label sequence (x, y), is defined as: P (y, x) = n P (yi|yi\u22121)P (xi|yi)), (2) i where yi is the ith label in the sequence and xi is the ith word.",
+                    "sid": 98,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the NLP literature, a common approach is to model the conditional distribution of label sequences given the label sequences.",
+                    "sid": 99,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These models have several advantages over generative models, such as not requiring questionable independence assumptions, optimizing the conditional likelihood directly and employing richer feature representations.",
+                    "sid": 100,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This task can be represented as learning a discriminant function F : X \u00d7 Y \u2192 IR, on a training data of observation/label sequences, where F is linear in a feature representation \u03a6 defined over the joint input/output space F (x, y; w) = (w, \u03a6(x, y)).",
+                    "sid": 101,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) \u03a6 is a global feature representation, mapping each (x, y) pair to a vector of feature counts \u03a6(x, y) \u2208 IRd, where d is the total number of features.",
+                    "sid": 102,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This vector is given by d |y| ing more sophisticated linguistic analysis as in full syntactic parsing and semantic role labeling.",
+                    "sid": 103,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03a6(x, y) = \u03c6i(yj i=1 j=1 \u22121, yj , x).",
+                    "sid": 104,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4)",
+                    "sid": 105,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "sequence tagging. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We take a sequence labeling approach to learning a model for supersense tagging.",
+                    "sid": 106,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal is to learn a function from input vectors, the observations from labeled data, to response variables, the supersense labels.",
+                    "sid": 107,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "POS tagging, shallow parsing, NPchunking and NER are all examples of sequence labeling tasks in which performance can be significantly improved by optimizing the choice of labeling over whole sequences of words, rather than individual words.",
+                    "sid": 108,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The limitations of the generative approach to sequence tagging, i. e. Hidden Markov Models, have been overcome by discriminative approaches proposed in recent years (McCallum et al., 2000; Lafferty et al., 2001; Collins, 2002; Altun et al., 2003).",
+                    "sid": 109,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we apply perceptron trained HMMs originally proposed in (Collins, 2002).",
+                    "sid": 110,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Perceptron-trained HMM.",
+                    "sid": 111,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "HMMs define a probabilistic model for observation/label sequences.",
+                    "sid": 112,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The joint model of an obser Each individual feature \u03c6i typically represents a morphological, contextual, or syntactic property, or also the interdependence of consecutive labels.",
+                    "sid": 113,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features are described in detail in Section 4.2.",
+                    "sid": 114,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given an observation sequence x, we make a prediction by maximizing F over the response variables: fw (x) = arg max F (x, y; w).",
+                    "sid": 115,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) y\u2208Y This involves computing the Viterbi decoding with respect to the parameter vector w \u2208 IRd.",
+                    "sid": 116,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complexity of the Viterbi algorithm scales linearly with the length of the sequence.",
+                    "sid": 117,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are different ways of estimating w for the described model.",
+                    "sid": 118,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the perceptron algorithm for sequence tagging (Collins, 2002).",
+                    "sid": 119,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The per- ceptron algorithm focuses on minimizing the error rate, without involving any normalization factors.",
+                    "sid": 120,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This property makes it very efficient which is a desirable feature in a task dealing with a large tagset such as ours.",
+                    "sid": 121,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, the performance of perceptron-trained HMMs is very competitive on a number of tasks; e.g., in shallow parsing, where Algorithm 1 Hidden Markov average perceptron algorithm.",
+                    "sid": 122,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1: Initialize w0 = --0 2: for t = 1...., T do 3: Choose xi 4: Compute y\u02c6 = arg maxy\u2208Y F (x , y; w) Word features (1) are morphologically simplified using the morphological functions of the Word- net library.",
+                    "sid": 123,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first sense feature (2) is the label predicted for xi by the baseline model, cf.",
+                    "sid": 124,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5.3.",
+                    "sid": 125,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "POS labels (4) were generated using Brants\u2019 TnT tagger (Brants, 2002).",
+                    "sid": 126,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "POS features [0] extract the first character from 5: if yi /= y\u02c6 then of the form posi 6: wt+1 \u2190 wt + \u03a6(xi, yi) \u2212 \u03a6(xi, y\u02c6) 7: end if 8: w = 1 2:t wt 9: end for 10: return w the perceptron performance is comparable to that of Conditional Random Field models (Sha and Pereira, 2003), The tendency to overfit of the per- ceptron can be mitigated in a number of ways including regularization and voting.",
+                    "sid": 127,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we apply averaging and straightforwardly extended Collins algorithm, summarized in Algorithm 1.",
+                    "sid": 128,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Features.",
+                    "sid": 129,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the following combination of spelling/morphological and contextual features.",
+                    "sid": 130,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each observed word xi in the data \u03c6 extracts the following features: 1.",
+                    "sid": 131,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Words: xi, xi\u22121, xi\u22122, xi+1, xi+2;.",
+                    "sid": 132,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 133,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First sense: supersense baseline prediction.",
+                    "sid": 134,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "for xi, fs(xi), cf.",
+                    "sid": 135,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5.3; 3.",
+                    "sid": 136,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combined (1) and (2): xi + fs(xi);.",
+                    "sid": 137,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 138,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pos: posi (the POS of xi), posi\u22121, posi\u22122,.",
+                    "sid": 139,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "posi+1, posi+2, posi[0], posi\u22121[0], posi\u22122[0], posi+1[0], posi+2[0], pos commi if xi\u2019s POS tags is \u201cNN\u201d or \u201cNNS\u201d (common nouns), and pos propi if xi\u2019s POS is \u201cNNP\u201d or \u201cNNPS\u201d (proper nouns);",
+                    "sid": 140,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "word shape: sh(xi), sh(xi\u22121), sh(xi\u22122),. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "sh(xi+1), sh(xi+2), where sh(xi) is as described below.",
+                    "sid": 141,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition shi = low if the first character of xi is lowercase, shi = cap brk if the first character of xi is uppercase and xi\u22121 is a full stop, question or exclamation mark, or xi is the first word of the sentence, shi = cap nobrk otherwise;",
+                    "sid": 142,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "previous label: supersense label yi\u22121.. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "the POS label, thus providing a simplified repre sentation of the POS tag.",
+                    "sid": 143,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, word shape features (5) are regular expression-like transformation in which each character c of a string s is substituted with X if c is uppercase, if lowercase, c is substituted with x, if c is a digit it is substituted with d and left as it is otherwise.",
+                    "sid": 144,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition each sequence of two or more identical characters c is substituted with c\u2217.",
+                    "sid": 145,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, for s = \u201cMerrill Lynch& Co.\u201d, sh(s) = Xx \u2217 Xx \u2217 &Xx..",
+                    "sid": 146,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exploratory experiments with richer feature sets, including syntactic information, affixes, and topic labels associated with words, did not result in improvements in terms of performance.",
+                    "sid": 147,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While more experiments are needed to investigate the usefulness of other sources of information, the feature set described above, while basic, offers good generalization properties.",
+                    "sid": 148,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Experiments.",
+                    "sid": 149,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Data.",
+                    "sid": 150,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented with the following data-sets3.",
+                    "sid": 151,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Semcor corpus (Miller et al., 1993), a fraction of the Brown corpus (Kuc\u02d8era and Francis, 1967) which has been manually annotated with Wordnet synset labels.",
+                    "sid": 152,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Named entities of the categories \u201cperson\u201d, \u201clocation\u201d and \u201cgroup\u201d are also annotated.",
+                    "sid": 153,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The original annotation with Wordnet 1.6 synset IDs has been converted to the most recent version 2.0 of Wordnet.",
+                    "sid": 154,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Semcor is divided in three parts: \u201cbrown1\u201d and \u201cbrown2\u201d, here referred to as \u201cSEM\u201d, in which nouns, verbs, adjectives and adverbs are annotated.",
+                    "sid": 155,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the section \u201cbrownv\u201d, \u201cSEMv\u201d here, contains annotations only for verbs.",
+                    "sid": 156,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also experimented with the Senseval3 English all-words tasks data (Snyder and Palmer, 2004), here called \u201cSE3\u201d.",
+                    "sid": 157,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Senseval all-words task evaluates the performance of WSD systems on all open class words in complete documents.",
+                    "sid": 158,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Senseval3 data consists of two Wall Street Journal Articles, \u201cwsj 1778\u201d and 3 These datasets are available in a consistent format and can be downloaded from http://www.cs.unt.edu/ rada/downloads.html Dataset Counts SE3 SEM SEMv Sentences Tokens Supersenses Verbs Nouns Avgpoly-N-WS Avgpoly-N-SS Avgpoly-V-WS Avgpoly-V-SS 300 20,138 17,038 5,630 434,774 385,546 1,617 135,135 40,911 725 47,710 40,911 892 87,425 0 4.66 4.41 4.33 2.86 2.75 2.66 11.17 10.87 11.05 4.20 4.11 4.16 Table 3.",
+                    "sid": 159,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistics of the datasets.",
+                    "sid": 160,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The row \u201cSuper- senses\u201d lists the number of instances of supersense labels, partitioned, in the following two rows, between verb and noun supersense labels.",
+                    "sid": 161,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lowest four rows summarize average polysemy figures at the synset and supersense level for both nouns and verbs.",
+                    "sid": 162,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cwsj 1695\u201d, and a fiction excerpt, \u201ccl 23\u201d, from the unannotated portion of the Brown corpus.",
+                    "sid": 163,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 summarizes a few statistics about the composition of the datasets.",
+                    "sid": 164,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The four lower rows report the average polysemy of nouns (\u201cN\u201d) and verbs (\u201cV\u201d), in each dataset, both at the synset level (\u201cWS\u201d) and supersense (\u201cSS\u201d) level.",
+                    "sid": 165,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average number of senses decreases significantly when the more general sense inventory is considered.",
+                    "sid": 166,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We substituted the corresponding supersense to each noun and verb synset in all three data-sets: SEM, SEMv and SE3.",
+                    "sid": 167,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All other tokens were labeled \u201c0\u201d.",
+                    "sid": 168,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The supersense label \u201cnoun.Tops\u201d refers to 45 synsets which lie at the very top of the Wordnet noun hierarchy.",
+                    "sid": 169,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of these synsets are expressed by very general nouns such as \u201cbiont\u201d, \u201cbenthos\u201d, \u201cwhole\u201d, and \u201cnothing\u201d.",
+                    "sid": 170,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, others undoubtedly refer to other super- senses, for which they provide the label, such as \u201cfood\u201d, \u201cperson\u201d, \u201cplant\u201d or \u201canimal\u201d.",
+                    "sid": 171,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these nouns tend to be fairly frequent, it is confusing and inconsistent to label them \u201cnoun.Tops\u201d; e.g., nouns such as \u201cchowder\u201d and \u201cSwedish meatball\u201d would be tagged as \u201cnoun.food\u201d, but the noun \u201cfood\u201d would be tagged as \u201cnoun.Tops\u201d.",
+                    "sid": 172,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, in all obvious cases, we substituted the \u201cnoun.Tops\u201d label with the more specific super- sense label for the noun4.",
+                    "sid": 173,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SEMv dataset only includes supersense labels for verbs.",
+                    "sid": 174,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to avoid unwanted false negatives, that is, thousands of nouns labeled \u201c0\u201d, we applied the following procedure.",
+                    "sid": 175,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than using the full sentences from the SEMv dataset, from each sentence we generated the fragments including a verb but no common or proper nouns; e.g., from a sentence such as \u201cKarns\u2019 ruling per- tainedverb.stative to eight of the 10 cases.\u201d only the fragment \u201cpertainedverb.stative to eight of the 10\u201d is extracted and used for training.",
+                    "sid": 176,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sometimes more than one label is assigned to a word, in all data-sets.",
+                    "sid": 177,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In these cases we adopted the heuristic of only using the first label in the data as the correct synset/supersense.",
+                    "sid": 178,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave the extension of the tagger to the multilabel case for future research.",
+                    "sid": 179,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for now, we can expect that this solution will simply lower, somewhat, both the baseline and the tagger performance.",
+                    "sid": 180,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we adopted a beginning (B) and continuation of entity (I) plus no label (0), encoding; i.e., the actual class space defines 83 labels.",
+                    "sid": 181,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Setup.",
+                    "sid": 182,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The supersense tagger was trained on the Semcor datasets SEM and SEMv.",
+                    "sid": 183,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only free parameter to set in evaluation is the number of iterations to perform T (cf.",
+                    "sid": 184,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 1).",
+                    "sid": 185,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated the model\u2019s accuracy on Semcor by splitting the SEM data randomly in training, development and evaluation.",
+                    "sid": 186,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a 5-fold cross-validation setup the tagger was trained on 4/5 of the SEM data, the remaining data was split in two halves, one used to fix T the other for evaluating performance on test.",
+                    "sid": 187,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The full SEMv data was always added to the training portion of SEM.",
+                    "sid": 188,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also evaluated the model on the Senseval3 data, using the same value for T set by cross-validation on the SEM data5.",
+                    "sid": 189,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ordering of the training instances is randomized across different runs, therefore the algorithm outputs different results after each run, even if the evaluation set is fixed, as is the case for the Senseval evaluation.",
+                    "sid": 190,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The variance in the results on the SE3 data was measured in this way.",
+                    "sid": 191,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Baseline tagger.",
+                    "sid": 192,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first sense baseline is the supersense of the most frequent synset for a word, according to Wordnet\u2019s sense ranking.",
+                    "sid": 193,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This baseline is very competitive in WSD tasks, and it is extremely hard to improve upon even slightly.",
+                    "sid": 194,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, the baseline has been proposed as a good alternative to WSD 4 The nouns which are left with the \u201cnoun.Top\u201d label are:.",
+                    "sid": 195,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "entity, thing, anything, something, nothing, object, living thing, organism, benthos, heterotroph, life, and biont.",
+                    "sid": 196,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 On average T is equal to 12 times the size of the training.",
+                    "sid": 197,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "data.",
+                    "sid": 198,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Semcor Senseval3 Method Recall Precision F-score [\u03c3] Recall Precision F-score [\u03c3] Rand Baseline SupersenseTagger 42.99 38.17 40.44 69.25 63.90 66.47 77.71 76.65 77.18 0.45 42.09 35.84 38.70 68.65 60.10 64.09 73.74 67.60 70.54 0.21 Table 4.",
+                    "sid": 199,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Summary of results for random and first sense baselines and supersense tagger, \u03c3 is the standard error computed on the five trials results.",
+                    "sid": 200,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "altogether (cf.",
+                    "sid": 201,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(McCarthy et al., 2004)).",
+                    "sid": 202,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason we include the first sense prediction as one of the features of our tagging model.",
+                    "sid": 203,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply the heuristic as follows.",
+                    "sid": 204,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, in each sentence, we identify the longest sequence which has an entry in Wordnet as either noun or verb.",
+                    "sid": 205,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We carry out this step using the Wordnet\u2019s library functions, which perform also morphological simplification.",
+                    "sid": 206,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, in Example 1 the entry \u201cstand up\u201d is detected, although also \u201cstand\u201d has an entry in Wordnet.",
+                    "sid": 207,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, each word identified in this way is assigned its most frequent sense \u2013 the only one available if the word is unambiguous.",
+                    "sid": 208,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce the number of candidate supersenses we distinguish between common and proper nouns; e.g. \u201cSavannah\u201d (city/river) is distinguished from \u201csavannah\u201d (grassland).",
+                    "sid": 209,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method improves slightly the accuracy of the baseline which does not distinguish between different types of nouns.",
+                    "sid": 210,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Results.",
+                    "sid": 211,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 summarizes overall performance6.",
+                    "sid": 212,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first line shows the accuracy of a baseline which assigns possible supersenses of identified words at random.",
+                    "sid": 213,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second line shows the performance of the first sense baseline (cf.",
+                    "sid": 214,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5.3), the marked difference between the two is a measure of the robustness of the first sense heuristic.",
+                    "sid": 215,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the Semcor data the tagger improves over the baseline by 10.71%, 31.19% error reduction, while on Senseval3 the tagger improves over the baseline by 6.45%, 17.96% error reduction.",
+                    "sid": 216,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can put these results in context, although indirectly, by comparison with the results of the Senseval 3 all words task systems.",
+                    "sid": 217,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There, with a baseline of 62.40%, only 4 out of 26 systems performed above the baseline, with the two best systems (Mihalcea and Faruque, 2004; Decadt et al., 2004) achieving an F-score of 65.2% (2.8% improvement, 7.45% error reduction).",
+                    "sid": 218,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system based on the HMM tagger (Molina et al., 2004), 6 Scoring was performed with a re-implementation of the.",
+                    "sid": 219,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cconlleval\u201d script . achieved an F-score of 60.9%.",
+                    "sid": 220,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The supersense tagger improves mostly on precision, while also improving on recall.",
+                    "sid": 221,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall the tagger achieves F-scores between 70.5 and 77.2%.",
+                    "sid": 222,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we compare these figures with the accuracy of NER taggers the results are very encouraging.",
+                    "sid": 223,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the considerably larger \u2013 one order of magnitude \u2013 class space some loss has to be expected.",
+                    "sid": 224,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments with augmented tagsets in the biomedical domain also show performance loss with respect to smaller tagsets; e.g., Kazama et al.",
+                    "sid": 225,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2002) report an F- score of 56.2% on a tagset of 25 Genia classes, compared to the 75.9% achieved on the simplest binary case.",
+                    "sid": 226,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sequence fragments from SEMv contribute about 1% F-score improvement.",
+                    "sid": 227,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 focuses on subsets of the evaluation.",
+                    "sid": 228,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The upper part summarizes the results on Semcor for the classes comparable to standard NER\u2019s: \u201cperson\u201d, \u201cgroup\u201d, \u201clocation\u201d and \u201ctime\u201d.",
+                    "sid": 229,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these categories here are composed of common nouns as well as proper names/named entities.",
+                    "sid": 230,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On this four tags the tagger achieves an average 82.46% F-score, not too far from NER results.",
+                    "sid": 231,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lower portion of Table 5 summarizes the results on the five most frequent noun and verb supersense labels on the Senseval3 data, providing more specific evidence for the supersense tagger\u2019s disambiguation accuracy.",
+                    "sid": 232,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tagger outperforms the first sense baseline on all categories, with the exception of \u201cverb.cognition\u201d and \u201cnoun.person\u201d.",
+                    "sid": 233,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The latter case has a straightforward explanation, named entities (e.g., \u201cPhil Haney\u201d, \u201cChevron\u201d or \u201cMarina District\u201d) are not annotated in the Sense- val data, while they are in Semcor.",
+                    "sid": 234,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence the tag- ger learns a different model for nouns than the one used to annotate the Senseval data.",
+                    "sid": 235,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of this discrepancy the tagger tends to return false positives for some categories.",
+                    "sid": 236,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, the other noun categories on which the tagger performs poorly in SE3 are \u201cgroup\u201d and \u201clocation\u201d (baseline 52.10 tagger 44.72 and baseline 47.62% tagger 47.54% F-score).",
+                    "sid": 237,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Naturally, the lower performance on Senseval is also explained by the fact that the eval NER supersenses in Semcor SupersenseTagger Baseline Supersense # Supersenses R P F R P F n.person n.group n.location n.time 1526 665 459 412 92.04 87.94 75.38 79.56 77.21 75.37 88.36 84.30 89.94 77.40 76.25 86.27 56.29 77.35 62.42 66.81 67.88 63.33 78.26 83.88 65.16 64.54 65.53 80.98 5 most frequent verb supersenses in Senseval3 Supersense # Supersenses R P F R P F v.stative v.communication v.motion v.cognition v.change 184 88 81 61 60 80.33 81.30 77.53 83.36 69.63 64.54 73.44 67.91 68.33 67.47 80.81 80.33 66.98 70.56 67.89 72,83 63.81 71.91 74.42 58.02 60.26 75.41 71.87 56.67 57.63 68.02 73.14 59.12 73.60 57.14 5 most frequent noun supersenses in Senseval3 Supersense # Supersenses R P F R P F n.person n.artifact n.act n.cognition n.event 148 131 96 67 60 92.24 60.49 80.91 77.73 61.46 72.37 45.80 52.87 70.33 89.83 73.06 79.29 66.45 49.06 78.87 89.12 79.39 74.24 75.97 58.33 65.12 49.28 46.58 71.67 75.44 83.97 75.10 61.54 47.89 73.50 Table 5.",
+                    "sid": 238,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Summary of results of baseline and tagger on selected subsets of labels: NER categories evaluated on Semcor (upper section), and 5 most frequent verb (middle) and noun (bottom) categories evaluated on Senseval.",
+                    "sid": 239,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "uation comes from different sources than training.",
+                    "sid": 240,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 Conclusions.",
+                    "sid": 241,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we presented a novel approach to broad-coverage word sense disambiguation and information extraction.",
+                    "sid": 242,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We defined a tagset based on Wordnet supersenses, a much simpler and general semantic model than Wordnet which, however, preserves significant polysemy information and includes standard named entity recognition categories.",
+                    "sid": 243,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We showed that in this framework it is possible to perform accurate broad-coverage tagging with state of the art sequence learning methods.",
+                    "sid": 244,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tagger considerably outperformed the most competitive baseline on both Semcor and Senseval data.",
+                    "sid": 245,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To the best of our knowledge the results on Senseval data provide the first convincing evidence of the possibility of improving by considerable amounts over the first sense baseline.",
+                    "sid": 246,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe both the tagset and the structured learning approach contribute to these results.",
+                    "sid": 247,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplified representation obviously helps by reducing the number of possible senses for each word (cf.",
+                    "sid": 248,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3).",
+                    "sid": 249,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, the relative improvement in performance is not as large as the relative reduction in polysemy.",
+                    "sid": 250,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This indicates that sense granularity is only one of the problems in WSD.",
+                    "sid": 251,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More needs to be understood concerning sources of information, and processes, that affect word sense selection in context.",
+                    "sid": 252,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As far as the tag- ger is concerned, we applied the simplest feature representation, more sophisticated features can be used, e.g., based on kernels, which might contribute significantly by allowing complex feature combinations.",
+                    "sid": 253,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results also suggest new directions of research within this model.",
+                    "sid": 254,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, the labels occurring in each sequence tend to coincide with predicates (verbs) and arguments (nouns and named entities).",
+                    "sid": 255,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A sequential dependency model might not be the most accurate at capturing the grammatical dependencies between these elements.",
+                    "sid": 256,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other conditional models, e.g., designed on head to head, or similar, dependencies could prove more appropriate.",
+                    "sid": 257,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another interesting issue is the granularity of the tagset.",
+                    "sid": 258,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Supersenses seem more practical then synsets for investigating the impact of broad- coverage semantic tagging, but they define a very simplistic ontological model.",
+                    "sid": 259,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A natural evolution of this kind of approach might be one which starts by defining a semantic model at an intermediate level of abstraction (cf.",
+                    "sid": 260,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Ciaramita et al., 2005)).",
+                    "sid": 261,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

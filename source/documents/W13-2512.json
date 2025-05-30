@@ -1,0 +1,1355 @@
+{
+    "ID": "W13-2512",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We present a novel method to recognise semantic equivalents of biomedical terms in language pairs.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hypothesise that biomedical term are formed by semantically similar textual units across languages.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on this hypothesis, we employ a Random Forest (RF) classifier that is able to automatically mine higher order associations between textual units of the source and target language when trained on a corpus of both positive and negative examples.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply our method on two language pairs: one that uses the same character set and another with a different script, English-French and EnglishChinese, respectively.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that English-French pairs of terms are highly transliterated in contrast to the EnglishChinese pairs.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonetheless, our method performs robustly on both cases.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate RF against a state-of-the-art alignment method, GIZA++, and we report a statistically significant improvement.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we compare RF against Support Vector Machines and analyse our results.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Given a term in a source language and term in a target language the task of this paper is to classify this pair as a translation or not.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We investigate the performance of the proposed classifier by applying it on a balanced classification problem, i.e. our experimental datasets contain an equal number of positive and negative examples.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposed classification model can be used as a component of a larger system that automatically compiles bilingual dictionaries of technical terms across languages.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bilingual dictionaries of terms are important resources for many Natural Language Processing (NLP) applications including Statistical Machine Translation (SMT) (Feng et al., 2004; Huang and Vogel, 2002; Wu et al., 2008), Cross- Language Information Retrieval (Ballesteros and Croft, 1997) and Question Answering systems (AlOnaizan and Knight, 2002).",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Especially in the biomedical domain, manually creating and more importantly updating such resources is an expensive process, due to the vast amount of neologisms, i.e. newly introduced terms (Pustejovsky et al., 2001).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The UMLS metathesaurus which is one the most popular hub of multilingual resources in the biomedical domain, contains technical terms in 21 languages that are linked together using a concept identifier.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Spanish, the second most popular language in UMLS, only 16.44% of the 7.6M English terms are covered while other languages fluctuate between 0.0052% (for Hebrew terms) to 3.26% (for Japanese terms).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, these lexica are far for complete and methods that semi- automatically (i.e., in a post-processing step, curators can manually remove erroneous dictionary entries) discover pairs of terms across languages are needed to enrich such multilingual resources.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method can be applied to parallel, aligned corpora, where we expect approximately the same, balanced classification problem.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in comparable corpora the search space of candidate alignments is of vast size, i.e., quadratic the the size of the input data.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To cope with this heavily unbalanced classification problem, we would need to narrow down the number of negative instances before classification.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hypothesise that there are language independent rules that apply to biomedical terms across many languages.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Often the same or similar textual units (e.g., morphemes and suffixes) are concatenated to realise the same terms in different languages.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Table 1 illustrates how a morpheme expressing pain (ache in English) is used to realise the same terms in English, Chinese and French.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The realisations of the term \u201chead 95 Proceedings of the 6th Workshop on Building and Using Comparable Corpora, pages 95\u2013104, Sofia, Bulgaria, August 8, 2013.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2013 Association for Computational Linguistics English Morpheme: -ache Chinese Morpheme: \u75db French Morpheme: -mal headache \u5934-\u75db mal de te\u02c6te backache \u8170-\u75db mal au dos earache \u8033\u6735-\u75db mal d\u2019oreille Table 1: An example of English, Chinese and French terms consisting of the same morphemes ache\u201d is expected to consist of the units for \u201chead\u201d and \u201cache\u201d regardless of the language of realisation.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, knowing the translations of \u201chead\u201d and \u201cache\u201d allows the reconstruction \u201cheadache\u201d in a target language.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our method, we use a Random Forest (RF) classifier (Breiman, 2001) to learn the underlying rules according to which terms are being constructed across languages.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An RF is an ensemble of Decision Trees voting for the most popular class.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RF classifiers are popular in the biomedical domain for various tasks: classification of microarray data (D\u00b4\u0131azUriarte and De Andres, 2006), compound classification in cheminformatics (Svetnik et al., 2003), classification of microRNA data (Jiang et al., 2007) and protein-protein interactions in Systems Biology (Chen and Liu, 2005).",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In NLP, RF classifiers have been used for: Language Modelling (Xu and Jelinek, 2004) and semantic parsing (Nielsen and Pradhan, 2004).",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To the best of the authors\u2019 knowledge, this is the first attempt to employ RF for identifying translation equivalents of biomedical terms.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We prefer RF over other traditional machine learning approaches such as Support Vector Machines (SVMs) for a number of reasons.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, RF is able to automatically construct correlation paths from the feature space, i.e. decision rules that correspond to the translation rules that we intend to capture.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, RF is considered one of the most accurate classifier available (D\u00b4\u0131azUriarte and De Andres, 2006; Jiang et al., 2007).",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, RF is reported to cope well with datasets where the number of features is larger than the number of observations (D\u00b4\u0131azUriarte and De Andres, 2006).",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our dataset, the number of features is almost four times more than that of the observations.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We represent pairs of terms using character gram features (i.e., first order features).",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such shallow features have been proven effective in a number of NLP applications including: Named Entity Recognition (Klein et al., 2003), Multilingual Named Entity Transliteration (Klementiev and Roth, 2006; Freitag and Khadivi, 2007) and predicting authorship (Stamatatos, 2006).",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, by selecting character n-grams instead of word n-grams, one avoids to segment words in Chinese which has been proven to be a challenging topic (Sproat and Emerson, 2003).",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate our proposed method on two datasets of biomedical terms (English-French and EnglishChinese) that contain equal numbers of positive and negative instances.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RF achieves higher classification performance than baseline methods.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To boost SVM\u2019s performance further, we used a second order feature space to represent the data.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It consists of pairs of character grams that co-occur in translation pairs.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second order feature space, the performance of SVMs improved significantly.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rest of the paper is structured as follows.",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 2, we present previous approaches in identifying translation equivalents of terms or named entities.",
+                    "sid": 45,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 3, we define the classification problem, we formulate the RF classifier and we discuss the first and second order feature space that we use to represent pairs of terms.",
+                    "sid": 46,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 4, we show that RF achieves superior classification performance.",
+                    "sid": 47,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 5, we overview our method and we discuss how it can be used to compile large-scale bilingual dictionaries of terms from comparable corpora.",
+                    "sid": 48,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "In this section, we review previous approaches that exploit the internal structure of sequences to align terms or named entities across languages.",
+                    "sid": 49,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Klementiev and Roth, 2006; Freitag and Khadivi, 2007) use character gram features, similar to the feature space that we propose in this paper, to train discriminative, supervised models.",
+                    "sid": 50,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Klementiev and Roth (2006) introduce a supervised Perceptron model for English and Russian named entities.",
+                    "sid": 51,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They construct a character gram feature space as follows: firstly, they extract all distinct character grams from both source and target named entity.",
+                    "sid": 52,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, they pair character grams of the source named entity with character grams of the corresponding target named entity into features.",
+                    "sid": 53,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In or der to reduce the number of features, they link only those character grams whose position offsets in the source and target sequence differs by -1, 0 or 1.",
+                    "sid": 54,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Freitag and Khadivi (2007) employ the same character gram feature space but they do not constraint the included character-grams to their relative position offsets in the source and target sequence.",
+                    "sid": 55,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The boolean features are defined for every distinct character-grams observed in the data of length k or shorter.",
+                    "sid": 56,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using this feature space they train an Averaged Perceptron model, able to incorporate an arbitrary number of features in the input vectors, for English and Arabic named entities.",
+                    "sid": 57,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The above character gram based methods mainly focused on aligning named entities of the general domain, i.e. person names, locations, organizations, etc., that are transliterated, i.e. present phonetic similarities, across languages.",
+                    "sid": 58,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SMT-based approaches built on top of existing SMT frameworks to identify translation pairs of terms (Tsunakawa et al., 2008; Wu et al., 2008).",
+                    "sid": 59,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tsunakawa et al.",
+                    "sid": 60,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008), align terms between a source language Ls and a target language Lt using a pivot language Lp.",
+                    "sid": 61,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They assume that two bilingual dictionaries exist: from Ls to Lp and from Lp to Lt. Then, they train GIZA++ (Och and Ney, 2003) on both directions and they merge the resulting phrase tables into one table between Ls and Lt, using grow-diag-final heuristics (Koehn et al., 2007).",
+                    "sid": 62,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wu et al.",
+                    "sid": 63,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008), use morphemes instead of words as translation units to train a phrase based SMT system for technical terms in English and Chinese.",
+                    "sid": 64,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of shorter lexical fragments, e.g. lemmas, stems and suffixes, as translation units has reportedly reduced the Out-Of-Vocabulary problem (Virpioja et al., 2007; Popovic and Ney, 2004; Oflazer and ElKahlout, 2007).",
+                    "sid": 65,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hybrid methods exploit that a term or a named entity can be translated in various ways across languages (Shao and Ng, 2004; Feng et al., 2004; Lu and Zhao, 2006).",
+                    "sid": 66,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, person names are usually translated by transliteration (i.e., words exhibiting pronunciation similarities across languages, are likely to be mutual translations) while technical terms are likely to be translated by meaning (i.e., the same semantic units are used to generate the translation of the term in the target Lepage and Denoual (2005) presented an analog- ical learning machine translation system as part of the IWSLT task (Eck and Hori, 2005) that requires no training process and it is able to achieve state-of-the art performance.",
+                    "sid": 67,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The core method of their system models relationships between sequences of characters, e.g., sentences, phrases or words, across languages using proportional analogies, i.e., [a : b = c : d], \u201ca is to b as c is to d\u201d, and is able to solve unknown analogical equations, i.e., [x : y = z :?]",
+                    "sid": 68,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Lepage, 1998).",
+                    "sid": 69,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Analogical learning has been proven effective in translating unseen words (Langlais and Patry, 2007).",
+                    "sid": 70,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, analogical learning is reported to achieve a better precision but a lower recall than a phrase- based machine translation system when translating medical terms (Langlais et al., 2009).",
+                    "sid": 71,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Methodology Let em = (e1, \u00b7 \u00b7 \u00b7 , em) be an English term consisting of m translation units and f n = (f1, \u00b7 \u00b7 \u00b7 , fn) a French or Chinese term consist ing of n units.",
+                    "sid": 72,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As translation units, we con sider character grams.",
+                    "sid": 73,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a function f : (em, f n) \u2212\u2192 {0, 1}: ( 1, if em translates into f n f (em, f n) = 0, otherwise The function can be learned by training a Random Forest (RF) classifier1.",
+                    "sid": 74,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let N be the number of training instances, |\u2126| the total number of features, i.e. the number of dimensions of the feature space, |\u03c4 | a predefined number of random decision trees and |\u03c6| a predefined number of random features.",
+                    "sid": 75,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An RF classifier is defined as a collection of fully grown decision tree classifiers, \u03b4i(X ) (Breiman, 200 1): RF = {\u03b41(X ), \u00b7 \u00b7 \u00b7 , \u03b4\u03c4 (X )}, X = (em, chn) (1) A pair of terms is classified as a translation pair if the majority of the trees is voting for this class label.",
+                    "sid": 76,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let I (\u03b4i(X )) be the vote of the ith tree in the forest and avj\u2208{0,1} the average number of votes for class labels 0 (translation) and 1 (non- translation).",
+                    "sid": 77,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The function f of \u03c4 decision trees can be written as the majority function: f (em, chn) = Maj (I (\u03b41(X )), \u00b7 \u00b7 \u00b7 , I (\u03b4\u03c4 (X )))language).",
+                    "sid": 78,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting hybrid systems were re = 1 I (\u03b4i(X )) + 1/2(\u22121) (2) ported to perform at least as well as existing SMT 2 \u03c4 systems (Feng et al., 2004).",
+                    "sid": 79,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 The WEKA.",
+                    "sid": 80,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "implementation (Hall et al., 2009) of RF was used for all experiments of this paper.",
+                    "sid": 81,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The majority function returns 1 if the majority of I (\u03b4i(X )) is 1, or returns 0 if the majority of I (\u03b4i(X )) is 0.",
+                    "sid": 82,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adding or subtracting 1/2 controls whether a tie is resolved towards 1 or 0, respectively.",
+                    "sid": 83,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In RF ties are resolved randomly.",
+                    "sid": 84,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To rep resent this, the negative unit (\u22121) is raised to a randomly chosen positive integer r \u2208 N+.",
+                    "sid": 85,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tuned the RF classifier using 140 random trees and |\u03c6| = log2 |\u2126| + 1 features as suggested in Breiman (Breiman, 2001).",
+                    "sid": 86,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The RF mechanism that triggers term construction rules across languages lies in the decision trees.",
+                    "sid": 87,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A RF grows a decision tree by selecting the most informative feature, i.e. corresponding to the lowest entropy, out of \u03c6 random features.",
+                    "sid": 88,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each selected feature, a node is created and this process is repeated for all \u03c6 random features of the unprunned decision trees.",
+                    "sid": 89,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, the process starts with the most informative feature and builds association rules between all random features.",
+                    "sid": 90,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are the construction rules that we are interested in.",
+                    "sid": 91,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 illustrates a path in one of the decision trees of an RF classifier taken from the experiments we conducted on the EnglishChinese dataset.",
+                    "sid": 92,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In only one of thousands of branches of the forest, the classifier is able to partially trigger the construction rule of kinase, a type of enzyme, between English and Chinese.",
+                    "sid": 93,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation rule correctly associates the English n-grams kin and as with their Chinese translation \u6fc0\u9176.",
+                    "sid": 94,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the translation rule contains both positive and negative associations between features.",
+                    "sid": 95,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English n-grams ing and or are negatively correlated with the term kinase.",
+                    "sid": 96,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each pair of terms is represented as a feature vector of character n-grams.",
+                    "sid": 97,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further define two types of character n-gram features, namely first order and second order.",
+                    "sid": 98,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First order character n- grams are boolean features that designate the occurrence of a corresponding character gram of predefined length in the input term.",
+                    "sid": 99,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features are monolingual, extracted separately from the source and target term.",
+                    "sid": 100,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The RF classifier is shown to benefit from only monolingual features and achieves the best observed performance.",
+                    "sid": 101,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, SVMs were shown not to perform well using the first order feature space because they cannot directly associate the source with the target character grams.",
+                    "sid": 102,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To enhance the performance of SVMs, we constructed a second order feature space that contains associations between first order features.",
+                    "sid": 103,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A second order feature is a tuple of a source and a target character gram that co-occur in one or more translation pairs.",
+                    "sid": 104,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 illustrates an example.",
+                    "sid": 105,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second order character n-grams are multilingual features and are defined over true translation pairs.",
+                    "sid": 106,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, we extract second order features from the training data only.",
+                    "sid": 107,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all experiments, the features were sorted in decreasing order of frequency of occurrence.",
+                    "sid": 108,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained a RF and two SVM classifiers, namely linear-SVM and RBFSVM, using a gradually increasing number of features, always starting from the top of the list.",
+                    "sid": 109,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SMT frameworks cannot be trained on an increasing number of features because each training instance needs to correspond to at least one known translation unit (i.e., first order features).",
+                    "sid": 110,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, GIZA++ is trained on the complete set of translation units.",
+                    "sid": 111,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Experiments.",
+                    "sid": 112,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we discuss the employed datasets of biomedical terms in English-French and EnglishChinese and three baseline methods.",
+                    "sid": 113,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare and discuss RF and SVMs trained on the first order and second order features.",
+                    "sid": 114,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we report results of all classification methods evaluated on the same datasets.",
+                    "sid": 115,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Datasets.",
+                    "sid": 116,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our experiments, we used an online bilingual dictionary2 for EnglishChinese terms and the UMLS metathesaurus3 for English-French terms.",
+                    "sid": 117,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The former contains 31, 700 entries while the latter is a much larger dictionary containing 84, 000 entries.",
+                    "sid": 118,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For training, we used the same number of instances for both language pairs (i.e., 21, 000 entries) in order not to bias the performance towards the larger English-French dataset.",
+                    "sid": 119,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remaining instances were used for testing (i.e., 10, 7000 and 63, 000 EnglishChinese and English-French respectively).",
+                    "sid": 120,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case where a source term corresponded to more that one target terms according to the seed dictionary, we randomly selected only one translation.",
+                    "sid": 121,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Negative instances were created by randomly matching non-translation pairs of terms.",
+                    "sid": 122,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we are dealing with a balanced clas 2 www2.chkd.cnki.net/kns50/ 3 nlm.nih.gov/research/umls Figure 1: Example of a term construction rule as a branch in a decision tree.",
+                    "sid": 123,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Input pair of English-French terms : (e1, e2, e3, f1, f2, f3) English first order French first order Second order \u03c61(e1, e2) \u03c61(e2, e3) \u03c61(f1, f2) \u03c61(f2, f3) \u03c61(e1e2, f1f2), \u03c61(e1e2, f2f3) \u03c61(e2e3, f1f2), \u03c61(e2e3, f2f3) Table 2: Example of first and second order features using a predefined n-gram size of 2.",
+                    "sid": 124,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "sification problem, we created as many negative instances as the positive ones in all our datasets.",
+                    "sid": 125,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all experiments we performed a 3-fold cross- validation.",
+                    "sid": 126,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Baselines.",
+                    "sid": 127,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated RF against three classification methods, namely SVMs, GIZA++ and a Levenshtein distance-based classifier.",
+                    "sid": 128,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SVMs coordinate a hyperplane in the hyperspace defined by the features to best separate the positive and negative instances, i.e. aligned from nonaligned pairs.",
+                    "sid": 129,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to RF, SVMs do not support building association rules between features, i.e., translation units, which in our task seems to be a deficiency.",
+                    "sid": 130,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SVMs produce one final association rule, i.e. the classification boundary which separates positive from negative examples.",
+                    "sid": 131,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its ability to distinguish aligned from nonaligned pair of terms depends on how separable the two clusters are.",
+                    "sid": 132,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated several settings for the open source implementation of the 5 IBM-models (Brown et al., 1993).",
+                    "sid": 133,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GIZA++ is traditionally trained on a bilingual, parallel corpus of aligned sentences and estimates the probability P (s|t) of a source translation unit (typically a word), s, given a target unit t. To apply GIZA++ on our dataset, we consider the list of terms as parallel sentences.",
+                    "sid": 134,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GIZA++, trained on a list of terms, estimates the alignment probability of EnglishChinese and English-French textual units, i.e. character n- grams.",
+                    "sid": 135,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each entry i, j in the translation table is the probability P (si|tj ), where si and tj are the source and target character n-grams in row i and column j, respectively.",
+                    "sid": 136,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further details about training a SMT toolkit for aligning technical terms can be found in (Tsunakawa et al., 2008; Freitag and Khadivi, 2007; Wu et al., 2008).",
+                    "sid": 137,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After training GIZA++ we estimate the posterior probabil ity P (cf n|em) that a test, Chinese or French termcf n = {cf1, \u00b7 \u00b7 \u00b7 , cfn} is aligned with a given En glish term em = {e1, \u00b7 \u00b7 \u00b7 , em} as follows: SVM classifier.",
+                    "sid": 138,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Apart from the default linear ker- n m nel function, we applied a radial basis function, i.e. RBFSVM.",
+                    "sid": 139,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RBFSVM uses the kernel trick to project the instances in a higher dimensional space to better separate the two clusters.",
+                    "sid": 140,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While tuning the SVM\u2019s classification cost C, we observed optimal performance for a value of 100.",
+                    "sid": 141,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, p(cf n|em) = n\u2212m P (cfi|ej ) (3) i=1 j=1 A threshold \u03be was defined to classify a pair of terms into translations or non-translations: ( 1, if p(cf n|em) \u2265 \u03be we seeded the association rules of translation units to the SVM classifier by creating a second or f (em, cf n) = 0, otherwise (4) der feature space, discussed in detail in section 3.1.",
+                    "sid": 142,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employed the LIBSVM implementation.",
+                    "sid": 143,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Chang and Lin, 2011) of SVMs using both the linear and RBF kernels.",
+                    "sid": 144,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second baseline method is GIZA++, an We experimented with different values of \u03be (greedy search) and we selected a value that maximizes classification performance.",
+                    "sid": 145,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to estimate how phonetically similar the two language pairs are, we employed a third base (a) English-French dataset (b) EnglishChinese dataset Figure 2: F-Score of the RF and SVM, GIZA++ and Levenshtein distance-based classifier on the first order dataset line method that uses the Edit/Levenshtein distance of pairs of terms to classify instances as translations or not.",
+                    "sid": 146,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Levenshtein distance is defined as the minimum edit operations, i.e., insertion, deletions and substitution, required to transform one sequence of characters to another.",
+                    "sid": 147,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We cannot directly calculate the Levenshtein distance between EnglishChinese pairs of terms since the two languages are using different scripts.",
+                    "sid": 148,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, before we applied the Levenshtein distance- based classifier, we converted the Chinese terms to their pinyin form, i.e., Romanization system of Chinese characters.",
+                    "sid": 149,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As with GIZA++, we selected a threshold \u03be that maximizes the performance of the classifier.",
+                    "sid": 150,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Results.",
+                    "sid": 151,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hypothesise that a RF classifier is able to form association paths between first order features.",
+                    "sid": 152,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also have the theoretical intuition that SVM classifiers are not able to form such association paths.",
+                    "sid": 153,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, we expect limited performance on the first order feature set, because it does not contain any associations among character grams.",
+                    "sid": 154,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows the F-Score achieved by RF, linear- SVM, RBFSVM, GIZA++ and Levenshtein/Edit distance-based classifier on the English-French and EnglishChinese datasets.",
+                    "sid": 155,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RF and SVMs are trained on an increasing number of features.",
+                    "sid": 156,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The behaviour of the classifiers is approximately the same in both datasets.",
+                    "sid": 157,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance is greater on the English-French dataset since English is more similar to French than to Chinese.",
+                    "sid": 158,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also observe that linear-SVM and RBFSVM do not behave consistently.",
+                    "sid": 159,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RBFSVM\u2019s performance quickly climbs to a maximum and after wards it declines while linear-SVM\u2019s performance is constantly increasing until it balances to a very high error rate, almost corresponding to random classification.",
+                    "sid": 160,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The linear-SVM classifier performs poorly using first order features only, indicating that this feature space is non-linearly separable, i.e. there exists no hyperplane that separates translation from non-translation instances.",
+                    "sid": 161,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Contrary, RBFSVM is able to construct a higher dimensional space by applying the kernel trick so as to take full advantage of a small number of frequent and informative first order features.",
+                    "sid": 162,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this higher dimensional space of few but informative first order features, the RBFSVM classifier coordinates a hyperplane that effectively separates positive from negative instances.",
+                    "sid": 163,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, increasing the number of features introduces noise that affects the performance.",
+                    "sid": 164,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The RF is able to profit from larger sets of first order features; thus, its performance is continuously increasing until it stabilises at 6, 000 features.",
+                    "sid": 165,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The branches of the decision trees are shown to manage features correctly to construct most of the translation rules.",
+                    "sid": 166,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Increasing the size of the feature space minimises the classification error, because more translation rules that generalize well on unseen data are constructed.",
+                    "sid": 167,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bilingual dictionary that we use for our experiments contains heterogeneous biomedical terms of diverse semantic categories.",
+                    "sid": 168,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, our data-set contains common medical terms such as Intellectual Products (e.g. Pain Management, prise en charge de la douleur, \u63a7 \u5236 \u75bc \u75db) or complex biological concepts such as Enzymes (e.g. homogentisate 1,2dioxygenase, (a) English-French dataset (b) EnglishChinese dataset Figure 3: F-Score of the RF and SVM, GIZA++ and Levenshtein distance-based classifier on the second order dataset English-French pairs EnglishChinese pairs P R F1 P R F1 GIZA++ Levenshtein Distance SV M -RBFsecond-order Linear-SV Msecond-order RFf irst-order 0.901 0.826 0.862 0.907 0.742 0.816 0.762 0.821 0.791 0.501 0.990 0.668 0.946 0.884 0.914 0.750 0.899 0.818 0.866 0.887 0.8763 0.765 0.893 0.824 0.962 0.874 0.916 0.779 0.940 0.851 Table 3: Best observed performance of RF, SVM and GIZA++ and Levenshtein Distance acide homogentisiqueoxydase, \u5c3f \u9ed1 \u91781,2-\u53cc \u6c27\u9176).",
+                    "sid": 169,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we would expect poor perfor mance of the supervised methods using only a small portion of the total set of first order features due to the high diversity of the terms.",
+                    "sid": 170,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For exam ple the morpheme ache/ mal/ \u75db is more frequent in Disease or Syndrome named entities rather than Enzyme named entities.",
+                    "sid": 171,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the results indicate that RF can generalize well on heterogeneous terms.",
+                    "sid": 172,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows that the RF classifier outperforms SMT based methods, using only 1000 features.",
+                    "sid": 173,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Levenshtein distance-based classifier performs considerably better in the English-French dataset than in EnglishChinese.",
+                    "sid": 174,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, its best performance for the EnglishChinese dataset is achieved when classifying every pair of terms as a translation, i.e. 100% recall but 50% precision.",
+                    "sid": 175,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a second experiment, we attempted to explore whether the performance of SVMs can be improved by providing cross-language association features.",
+                    "sid": 176,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employed the second order feature set discussed in subsection 3.1.",
+                    "sid": 177,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a constant number of 6, 000 first order features, the number of features that achieved maximum F-Score for RF in the previous experiment.",
+                    "sid": 178,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides these first order features, we added an increasing number of second order ones.",
+                    "sid": 179,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 shows the F- Score curves of the RF, linear-SVM, RBFSVM, GIZA++ and Levenshtein distance using this feature space.",
+                    "sid": 180,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe that second order features improved the performance of both SVMs considerably.",
+                    "sid": 181,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to the previous experiment, the two SVMs present consistent bevaviour.",
+                    "sid": 182,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, the performance of the RF slightly decreased when using a small number of second order features.",
+                    "sid": 183,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A possible explanation of this behaviour is that the second order associative features added noise, since the RF had already formed the association rules from first order features.",
+                    "sid": 184,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, for m English and n Chinese or French first order fea tures there were m \u00d7 n possible combinations of second order features as explained in Subsection 3.1.",
+                    "sid": 185,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, there was a large number of second.",
+                    "sid": 186,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "order features that we excluded from the training process.",
+                    "sid": 187,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, decision tree branches were populated with incomplete association rules while the RF was able to form these associations automatically.",
+                    "sid": 188,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nevertheless, as more second order features were added, more association rules were explored and the RF performance in creased.",
+                    "sid": 189,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 summarises the highest performance achieved by the RF, SVMs, GIZA++ and Levenshtein distance all trained and tested on the same dataset.",
+                    "sid": 190,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting performance of the RF compared with GIZA++ is statistically significant (p < 0.0001) in all experiments.",
+                    "sid": 191,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing the RF with the SVMs, we note that in the English- French dataset, the performance of the SVMRBF is approximately the same with the performance of our proposed method.",
+                    "sid": 192,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this comes with a cost.",
+                    "sid": 193,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, SVMs can possibly achieve a comparable performance to the RF when using multilingual, second order features.",
+                    "sid": 194,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, our experiments show that RF benefit from monolingual, first order features only.",
+                    "sid": 195,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, SVMs need a large number of additional multilingual features, (6.000 second order features or more) to perform similarly to RF.",
+                    "sid": 196,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a consequence, the resulting models of the SVM classifiers are more complex.",
+                    "sid": 197,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We measured the average time needed by the two classifiers to decide for a single pair of terms.",
+                    "sid": 198,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The RF is approximately 30 times faster than SVMs (on average 0.010 and 0.292 seconds, respectively).",
+                    "sid": 199,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, in the EnglishChinese dataset the RF performed significantly better than both SVMs.",
+                    "sid": 200,
+                    "ssid": 152,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Discussion And Future Work.",
+                    "sid": 201,
+                    "ssid": 153,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we presented a novel classification method that uses Random Forest (RF) to recognise translations of biomedical terms across languages.",
+                    "sid": 202,
+                    "ssid": 154,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is based on the hypothesis that in many languages, there exist some rules for combining textual units, e.g. n-grams, to form biomedical terms.",
+                    "sid": 203,
+                    "ssid": 155,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on this assumption, we defined a first order feature space of character grams and demonstrated that an RF classifier is able to discover such cross language translation rules for terms.",
+                    "sid": 204,
+                    "ssid": 156,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented with two diverse language pairs: English-French and EnglishChinese.",
+                    "sid": 205,
+                    "ssid": 157,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the former case, pairs of terms exhibit high phonetic similarity while in the latter case they do not.",
+                    "sid": 206,
+                    "ssid": 158,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results showed that the proposed method performs robustly in both cases and achieves a significantly better performance than GIZA++.",
+                    "sid": 207,
+                    "ssid": 159,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also evaluated Support Vector Machines (SVM) classifiers on the same first order feature space and showed that they fail to form translation rules in both language pairs, possibly because it cannot associate first order features with each other successfully.",
+                    "sid": 208,
+                    "ssid": 160,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We attempted to boost the performance of the SVM classifier by adding association evidence of textual units to the features.",
+                    "sid": 209,
+                    "ssid": 161,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extracted second order features from the training data and we defined a new feature set consisting of both first order and second order features.",
+                    "sid": 210,
+                    "ssid": 162,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this feature space, the performance of the SVMs improved significantly.",
+                    "sid": 211,
+                    "ssid": 163,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to this, we observe from the reported experiments that RF achieves a better F-Score performance than GIZA++ in all datasets.",
+                    "sid": 212,
+                    "ssid": 164,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonetheless, GIZA++ presents a better precision (but lower recall) in one dataset, i.e., English/Chinese.",
+                    "sid": 213,
+                    "ssid": 165,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on this observation we plan to investigate the performance of a hybrid system combining RF with MT approaches.",
+                    "sid": 214,
+                    "ssid": 166,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One trivial approach to apply the proposed method for compiling large-scale bilingual dictionaries of terms from comparable corpora would be to directly classify all possible pairs of terms into translations or non-translations.",
+                    "sid": 215,
+                    "ssid": 167,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in comparable corpora, the size of the search space is quadratic to the input data.",
+                    "sid": 216,
+                    "ssid": 168,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, the classification task is much more challenging since the distribution of positive and negative instances is highly skewed.",
+                    "sid": 217,
+                    "ssid": 169,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To cope with the vast search space of comparable corpora, we plan to incorporate context-based approaches with the RF classification method.",
+                    "sid": 218,
+                    "ssid": 170,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Context-based approaches, such as distributional vector similarity (Fung and McKe- own, 1997; Rapp, 1995; Koehn and Knight, 2002; Haghighi et al., 2008), can be used to limit the number of candidate translations by filtering out pairs of terms with low contextual similarity.",
+                    "sid": 219,
+                    "ssid": 171,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the proposed method can be also used to online augment the phrase table of Statistical Machine Translation (SMT) in order to better handle the Out-of-Vocabulary problem i.e. inability to translate textual units that consist of one or more words and do not occur in the training data (Habash, 2008).",
+                    "sid": 220,
+                    "ssid": 172,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgements",
+            "number": "",
+            "sents": [
+                {
+                    "text": "The work described in this paper is partially funded by the European Community\u2019s Seventh Framework Program (FP7/20072013) under grant agreement no. 318736 (OSSMETER).",
+                    "sid": 221,
+                    "ssid": 173,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

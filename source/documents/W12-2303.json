@@ -1,0 +1,1145 @@
+{
+    "ID": "W12-2303",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Fast retraining of word segmentation models is required for adapting to new resources or domains in NLP of many Asian languages without word delimiters.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The traditional tokenization model is efficient but inaccurate.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper proposes a phrase-based model that factors sentence tokenization into phrase tokenizations, the dependencies of which are also taken into account.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model has a good OOV recognition ability, which improves the overall performance significantly.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training is a linear time phrase extraction and MLE procedure, while the decoding is via dynamic programming based algorithms.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "In many Asian languages, including Chinese, a sentence is written as a character sequence without word delimiters, thus word segmentation remains a key research topic in language processing for these languages.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although many reports from evaluation tasks present quite positive results, a fundamental problem for real word applications is that most systems heavily depend on the data they were trained on.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to utilize increasingly available language resources such as user contributed annotations and web lexicon and/or to dynamically construct models for new domains, we have to either frequently rebuild models or rely on techniques such as incremental learning and transfer learning, which are unsolved problems themselves.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case of frequent model rebuilding, the most efficient approach is the tokenization model (using the terminology in Huang et al., 2007), in which the retraining is just the update of the dictionary and the segmentation is a greedy string matching procedure using the dictionary and some disambiguation heuristics, e.g. Liang (1986) and Wang et al.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1991).",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An extension of this approach is the dynamic programming search of the most probable word combination on the word lattice, such as Ma (1996) and Sproat et al.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996), which utilize information such as word frequency statistics in a corpus to build the model and are less efficient but more accurate.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, all the methods mentioned above are mostly based on the knowledge of in-vocabulary words and usually suffer from poor performance, as the out of-vocabulary words (OOV) rather than segmentation ambiguities turn out to the dominant error source for word segmentation on real corpora (Huang and Zhao, 2007).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This fact has led to a shift of the research focus to modeling the roles of individual characters in the word formation process to tackle the OOV problem.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xue (2003) proposes a character classification model, which classifies characters according to their positions in a word using the maximum entropy classifier (Berger et al., 1996).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Peng et al.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) has further extended this model to its sequential form, i.e. sequence labeling, by adopting linear-chain conditional random fields (CRFs, Lafferty et al., 2001).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As it is capable of capturing the morphological behaviors of characters, the character classification model has significantly better performance in OOV recognition and overall segmentation accuracy, and has been the state-of-art since its introduction, suggested by the leading performances of systems based on it in recent international Chinese word 17 Proceedings of the Twelfth Meeting of the Special Interest Group on Computational Morphology and Phonology (SIGMORPHON2012), pages 17\u201325, Montre\u00b4al, Canada, June 7, 2012.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2012 Association for Computational Linguistics segmentation bakeoffs (Emerson, 2005; Levow, 2006; Zhao and Liu, 2010).",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tokenization model has advantages in simplicity and efficiency, as the basic operation in segmentation is string matching with linear time complexity to the sentence length and it only needs a dictionary thus requires no training as in the character classification model, which can easily have millions of features and require hundreds of iterations in the training phase.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, it has inferior performance, caused by its poor OOV induction ability.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work proposes a framework called phrase- based tokenization as a generalization of the tokenization model to cope with its deficiencies in OOV recognition, while preserving its advantages of simplicity and efficiency, which are important for adaptive word segmentation.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmentation hypothesis unit is extended from a word to a phrase, which is a character string of arbitrary length, i.e. combinations of partial and/or complete words.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And the statistics of different tokenizations of the same phrase are collected and used for parameters estimation, which leads to a linear time model construction procedure.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This extension makes hypothesis units capable of capturing richer context and describing morphological behavior of characters, which improves OOV recognition.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, overlapping hypothesis units can be combined once certain consistency conditions are satisfied, which avoids the unrealistic assumption of independence among the tokenizations of neighboring phrases.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase-based tokenization decomposes the sentence tokenization into phrase tokenizations.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a graph called phrase tokenization lattice to represent all the hypotheses of phrase tokenization in a given sentence.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under such a formulation, tokenizing a sentence is transformed to the shortest path search problem on the graph, which can be efficiently solved by dynamic programming techniques similar to the Viterbi (1967) algorithm.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "phrase-based model. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The hypothesis unit of the tokenization model is the word, i.e. it selects the best word sequence from all the words that can be matched by substrings of the sentence (usually in a greedy manner).",
+                    "sid": 30,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once a word is chosen, the corresponding boundaries are determined.",
+                    "sid": 31,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This implies that as the characters in a word are always considered as a whole, the morphological behavior of an individual character, e.g. the distribution of its positions in words, is ignored thus makes it impossible to model the word formation process and recognize OOV.",
+                    "sid": 32,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Critical tokenization (Guo, 1997) suggests a method of discovering all and only unambiguous token boundaries (critical points) and generating longest substrings with all inner positions ambiguous (critical fragments) under the assumption of complete dictionary.",
+                    "sid": 33,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then an example-based method using the context can be adopted to disambiguate the tokenization of critical fragments (Hu et al, 2004).",
+                    "sid": 34,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the complete dictionary assumption is not realistic in practice, as the word formation is so dynamic and productive that there is no dictionary that is even close to the complete lexicon.",
+                    "sid": 35,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the presence of OOV, a word, including a monosyllabic word, in the original dictionary may be a substring, i.e. a partial word, of an OOV.",
+                    "sid": 36,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, the critical points found by the dictionary are not guaranteed to be unambiguous.",
+                    "sid": 37,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the complete dictionary does not exist as a static object, a possible solution is to make a dynamic dictionary, which induces words on the fly.",
+                    "sid": 38,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But this will not be discussed in this paper.",
+                    "sid": 39,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we attempt to generalize the tokenization model to work without the complete dictionary.",
+                    "sid": 40,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different from making distinctions of critical fragments and \u201cnon-critical\u201d fragments in critical tokenization, we suggest using phrases to represent potentially ambiguous fragments of sentences in a unified way.",
+                    "sid": 41,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a phrase as a substring of a sentence, the boundaries of which, depending on the tokenization, may or may not necessarily match word boundaries.",
+                    "sid": 42,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fact that partial words, including single characters, may appear on both ends of a phrase makes it possible to describe \u201cmorphemes in the context\u201d for OOV induction.",
+                    "sid": 43,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A consequence of introducing phrase in tokenization is that a manually segmented corpus is needed in order to collect phrases.",
+                    "sid": 44,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Tokenization.",
+                    "sid": 45,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tokenization is the process of separating words or word-like units from sentences or character strings.",
+                    "sid": 46,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can consider sentence tokenization as a mapping from each position in the sentence to a binary value, which indicates the presence (denoted as #) or the absence of word boundary (denoted as $) at that position.",
+                    "sid": 47,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A specific tokenization realization of a sentence can be represented by a list of binary values, which can be generated by the concatenations of its sub-lists.",
+                    "sid": 48,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, a tokenization of a given sentence can be represented as the concatenation of the tokenizations of its component phrases.",
+                    "sid": 49,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we assume that the tokenization of a phrase is independent of other phrases in the same sentence, the sentence tokenization problem is decomposed to smaller phrase tokenization problems, which are unrelated to each other.",
+                    "sid": 50,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The independency assumption is not necessarily true but in general is a good approximation.",
+                    "sid": 51,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take this assumption by default, unless there exists evidence that suggests otherwise.",
+                    "sid": 52,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In that case, we introduce a method called backward dependency match to fix the problem, which will be discussed in Section 3.3.",
+                    "sid": 53,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Phrase Tokenization Lattice.",
+                    "sid": 54,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Informally a phrase tokenization lattice, or lattice in short, is a set of hypothesized tokenization of phrases in the given sentence, which is a compact representation of all the possible tokenization for that sentence.",
+                    "sid": 55,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the notations in Mohri (2002), we formally define a lattice as a weighted directed graph < V, E > with a mapping W : E ! A , where V is the set of nodes, E is the set of edges, and the mapping W assigns each edge a weight w from the semiring < A, !, \", 0,1 > 1.",
+                    "sid": 56,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given sentence S[0...m] , each node v ! V , denotes a sentence position (the position between a pair of adjacent characters in a untokenized sentence).",
+                    "sid": 57,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each edge e ! E from node va to node vb , denotes a tokenization of the phrase between the positions defined by va and vb . And for each edge e , a weight w is determined by the mapping W , denotes the phrase tokenization probability, the probability of the phrase defined by the two nodes of the edge being tokenized as the tokenization defined by that edge.",
+                    "sid": 58,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A path ! in the lattice is a sequence of consecutive edges, i.e. ! = e1e2 ...ek , where ei and ei+1 are connected with a node.",
+                    "sid": 59,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weight for the path ! can be defined as: k w(!",
+                    "sid": 60,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ") = ! w(ei ) (1) i=1 which is the product of the weights of its component edges.",
+                    "sid": 61,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A path from the source node to the sink node, represents a tokenization of the sentence being factored as the concatenation of tokenizations of phrases represented by those edges of on that path.",
+                    "sid": 62,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, with some edges being pruned, the lattice for the sentence \u6709\u4eba\u8d28\u7591\u4ed6 \u2018Someone questions him\u2019 is shown in Figure 1.",
+                    "sid": 63,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1.",
+                    "sid": 64,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A pruned phrase tokenization lattice.",
+                    "sid": 65,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Edges are tokenizations of phrases, e.g. e5 represents tokenizing \u8d28\u7591 \u2018question\u2019 into a word and e7 represents tokenizing \u7591\u4ed6 \u2018doubt him\u2019 into a partial word \u7591 \u2018doubt\u2019 followed by a word \u4ed6 \u2018him\u2019.",
+                    "sid": 66,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.3 Tokenization as the Best Path Search.",
+                    "sid": 67,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After the introduction of the lattice, we formally describe the tokenization (disambiguation) problem as the best path searching on the lattice: T!",
+                    "sid": 68,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= arg max w (T ) (2) T !D where D is the set of all paths from the source node to the sink node, and T!",
+                    "sid": 69,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is the path with the highest weight, which represents the best tokenization of the sentence.",
+                    "sid": 70,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuitively, we consider the product of phrase tokenization probabilities as the probability of the sentence tokenization that is generated from the concatenation of these phrase tokenizations.",
+                    "sid": 71,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that every edge in the lattice is from a node represents an earlier sentence position to a node that represents a later one.",
+                    "sid": 72,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, the lattice is acyclic and has a clear topological order.",
+                    "sid": 73,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 A semiring defines an algebra system with certain rules to compute path probabilities and the max probabilities from a node to another.",
+                    "sid": 74,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "See Mohri (2002) for details.",
+                    "sid": 75,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, the best path can be found using the Viterbi (1967) algorithm efficiently2.",
+                    "sid": 76,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "training and inference algorithms. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 Model Training.",
+                    "sid": 77,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to use the lattice to tokenize unseen sentences, we first have to build a model that can generate the edges and their associated weight, i.e. the tokenization of all the possible phrases and their corresponding phrase tokenization probability.",
+                    "sid": 78,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do it by collecting all the phrases that have occurred in a training corpus and use maximum likelihood estimation (MLE) to estimate the phrase tokenization probabilities.",
+                    "sid": 79,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The estimation of the shown in Figure 2) can be considered as the phrase tokenization lattice version of the evalUtterance algorithm in Venkataraman (2001).",
+                    "sid": 80,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best tokenization of the partial sentence up to a certain position is yielded by the best combination of one previous best tokenization and one of the phrase tokenizations under consideration at the current step.",
+                    "sid": 81,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The upper bound of the time complexity of Algorithm 1 is O(kn2 ) , where n is the sentence length and k is the maximum number of the possible tokenization for a phrase.",
+                    "sid": 82,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But in practice, it is neither necessary nor possible (due to data sparseness) to consider phrases of arbitrary length, so we set a constraint of maximum phrase length probability that a particular phrase A = a a ...a of about 10, which makes the time complexity de facto linear.",
+                    "sid": 83,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "being tokenized as the tokenization T = t1t2 ...tm is given in equation (3), where C (\u2022) represents the empirical count, and the set of all T ' stands for all possible tokenizations of A . To avoid extreme cases in which there is no path at all, techniques such as smoothing can be applied.",
+                    "sid": 84,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "!\"#$%&'()*+,**-&).\"/*0123)&4*5%$#%3))&2# !\"#\"#$%&'&(#)**!+\",'#*-./#0&1,(&.0*-,23#*4!-5* 62.7')***6#0(#07#**689:::;< 62&'&3\"&83'&$2, =#'(67.\"#>*!?@&A#0'&.0*1#\".*B#7(.\"",
+                    "sid": 85,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "=#'(-./#0&1,(&.0>*!?@&A#0'&.0*0%33?'(\"&0C*B#7(.\"",
+                    "sid": 86,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(T | A) = C (T ,A ) !T ' = C (T ,A ) (3) C (T ',A ) C ( A ) !\"#$%&'()9, :$%*\">D***(.***;***;$*,*************EE*\")*7%\"\"#0(*F.'&( &.0*&0*(+#*'#0(#07# The result of the MLE estimation is stored in a data structure called phase tokenization table, from which one can retrieval all the possible tokenizations with their corresponding probabilities for the every phrase that has occurred in the training corpus.",
+                    "sid": 87,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this model, we can construct the lattice, i.e. determine the set of edges E and the mapping function W (defining nodes is trivial) for a given sentence in a simple string matching and table retrieval manner: when a substring of sentence is matched to a stored phrase, an edge is built from the its starting and ending node to represent a tokenization of that phrase, with the weight of the edge equals to the MLE estimation of the stored phrase-tokenization pair.",
+                    "sid": 88,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Simple Dynamic Programming.",
+                    "sid": 89,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the model is built, we can tokenize a given sentence by the inference on the lattice which represents that sentence.",
+                    "sid": 90,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposed simple dynamic programming algorithm (Algorithm 1, as 2 More rigid mathematical descriptions of this family of.",
+                    "sid": 91,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "problems and generic algorithms based on semirings are discussed in Mohri (2002) and Huang (2008).",
+                    "sid": 92,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "********:$%***#>\"?D***(.***9****;$*,****EE*#)*'(,\"(&0C*F.'&(&.0*.G*(+#*3,'(*F+\",'# ****************$%&'()>68#)\"<************* ****************&:***$%&'()***&0***!-*,** ************************+,-).\"/'+\",.>H#(-.F-./#0&1,(&.04!-I*$%&'()5** ************************+,-).\"/'+\",.0$&,1>H#(!\".2,2&3&(J4!-I*+,-).\"/'+\",.5 ************************(2,&)>=#'(67.\"#8#<*K*+,-).\"/'+\",.0$&,1* ************************&:***(2,&)L=#'(67.\"#8\"<*, ********************************=#'(-./#0&1,(&.08\"<>+,-).\"/'+\",.",
+                    "sid": 93,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "********************************=#'(67.\"#8\"<3(2,&) ********************************1'20$,\".+)&4\"53#*************** ****************/\"9/) ************************<%/3=****EE*&G*(+#*F+\",'#*0.(*&0*!-I*#M&'(*(+#*&00#\"*3..F * =#'(!,(+*N**!,(+*(\",7#@*2,7/*G\".A*2,7/OF.&0(#\"8;<* 6#0(#07#-./#0&1,(&.0N*P.07,(#0,(&.0*.G*(+#*=#'(-./#0&1,&(.0* #0(\"&#'*.G*(+#*#@C#'*.0*(+#*=#'(!,(+*4Q+&7+*,\"#*F+\",'#*(./#0&1,(&.0'5* >7'.7')****6#0(#07#-./#0&1,(&.0!!",
+                    "sid": 94,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2.",
+                    "sid": 95,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pseudo code of Algorithm 1.",
+                    "sid": 96,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key difference to a standard word-lattice based dynamic programming lies in the phrase lattice representation that the algorithm runs on.",
+                    "sid": 97,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of representing a word candidate as in Venkataraman (2001), each edge now represents a tokenization of a phrase defined by two nodes of the edge, which can include full and partial words.",
+                    "sid": 98,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combination of phrase tokenizations may yield new words that are not in the dictionary, i.e. our method can recognize OOVs.",
+                    "sid": 99,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us consider a slightly modified version of the lattice in Figure 1.",
+                    "sid": 100,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose edge e5 =#\u8d28$\u7591# does not exist , i.e. the word \u8d28\u7591 \u2018question\u2019 is not in the dictionary, and there is new edge e!",
+                    "sid": 101,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= #\u8d28 $ that links node 2 and node 3 and represents a partial word.",
+                    "sid": 102,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two of possible tokenizations of the sentence are path p1 = e1e4 e6 e8 and path p2 = e2 e!e . Note that p recognizes the word \u8d28 \u7591 \u2018question\u2019 by combining two partial words, even though the word itself has not seen before.",
+                    "sid": 103,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, this OOV is finally recognized only if a path that can yield it is the best path found by the decoding algorithm.",
+                    "sid": 104,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the best path is found, the procedure of mapping it back to segmented words is as follows.",
+                    "sid": 105,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The phrase tokenizations represented by the edges of the best path are concatenated, before substituting meta symbols # and $ into white space and empty string, respectively.",
+                    "sid": 106,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if p2 = e2 e!e is the best path, the concatenation of the phrase tokenizations of the three edges on the path will be #\u6709#\u4eba##\u8d28$$\u7591#\u4ed6#, and removal of $ and substitution of # into the white space will tokenization at all for some positions.",
+                    "sid": 107,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, we have to maintain the top k hypotheses and use the k-best path search algorithms instead of 1-best (Mohri, 2002).",
+                    "sid": 108,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopt the na\u00efve k-best path search, but it is possible to use more advanced techniques (Huang and Chiang, 2005).",
+                    "sid": 109,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The compatibility problem is just the most salient example of the general problem of variable independency assumptions, which is the \"unigram model\" of phrase tokenization.",
+                    "sid": 110,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A natural extension is a higher order Markov model.",
+                    "sid": 111,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But that is inflexible, as it assumes a fixed variable dependency structure (the current variable is always dependent on previous n variables).",
+                    "sid": 112,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So we propose a method called backward dependency match, in which we start from the independency assumption, then try to explore the longest sequence of adjacent dependencies that we can reach via string match for a given phrase and its precedent.",
+                    "sid": 113,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To simplify the discussion, we use sequence labeling, or conditional probability notation of the tokenization.",
+                    "sid": 114,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A tokenization of the given character sequence (sentence) is represented as a specific label sequence of same length.",
+                    "sid": 115,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The label can be those in the standard 4-tag set of word segmentation (Huang and Zhao, 2007) or the #/$ labels indicating the presence or absence of a word boundary after a specific character.",
+                    "sid": 116,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The possible tokenizations of character sequence a1a2 a3 are represented as the probability further transform it into \u6709 \u4eba \u8d28\u7591 \u4ed6 distribution P(t t t | a a a ) , where t t t are labels 1 2 3 1 2 3 1 2 3 \u2018Somebody questions him\u2019, which is the final of a a a . If a tokenization hypothesis of.",
+                    "sid": 117,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 2 3 result of the algorithm.",
+                    "sid": 118,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a a a decomposes its tokenizat ion into the 1 2 3 3.3 Compatibility and Backward Dependency.",
+                    "sid": 119,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "concatenation of the tokenization of a a and the Match tokenization of a , this factorization can be As mentioned in Section 2, the independency assumption of phrase tokenization is not always expressed as P(t1t2 | a1a2 ) ! P(t3 | a3 ) , as shown in Figure 3a.",
+                    "sid": 120,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a specific assignment true.",
+                    "sid": 121,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering the example in Figure 1, e4 and < a a a ; t t t > , if we find that < a a > can be 1 2 3 1 2 3 2 3 and e7 are not really compatible, as e4 represents a tokenized as < t t > , it suggests that t3 may be word while e7 represents a partial word that dependent on a2 and t2 as well, so we update the expects the suffix of its preceding phrase to form a second part of the factorization (at least for this word with its prefix.",
+                    "sid": 122,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To solve this problem, we require that the last (meta) symbol of the preceding tokenization must equal to the first (meta) symbol assignment) to: P(t estimated as: 3 | a3; a2t2 ) , which can be of the following tokenization in order to P(t | a ; a t C (a a t t ) ) = 2 3 2 3 (4) concatenate the two.",
+                    "sid": 123,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This, however, has the 3 3 2 2 ! C (a a t t ) consequence that there may be no valid 2 3 2 3 t3 In this case, the factorization of the tokenization extreme cases, where no tokenization hypothesis P(t t t | a a a ) is P(t t | a a ) ! P(t | a ; a t ) , as survive s the compat ibility check, the algorit hm 1 2 3 1 2 3 1 2 1 2 3 3 2 2 shown in Figure 3b.",
+                    "sid": 124,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "backs off to Algorithm 1.",
+                    "sid": 125,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Figure 3a.",
+                    "sid": 126,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The factorization of P(t t t | a a a ) We use the training and testing sets from the second international Chinese word segmentation bakeoff (Emerson, 2005), which are freely available and most widely used in evaluations.",
+                    "sid": 127,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two corpora in simplified Chinese provided by Peking University (PKU) and Microsoft Research (MSR) and two corpora in traditional Chinese provided by Academic Sinica (AS) and the City University of Hong Kong (CityU).",
+                    "sid": 128,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experiments are conducted in a closed-test manner, in which no extra recourse other than the training corpora is used.",
+                    "sid": 129,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the same criteria and the official script for evaluation from the bakeoff, which measure the overall segmentation performance in terms of F-scores, and the OOV recognition capacity in terms of into P(t1t2 | a1a2 ) ! P(t3 | a3 ) . 1 2 3 1 2 3 R o o v . Precision is defined as the number of correctly segmented words divided by the total number of words in the segmentation result, where the correctness of the segmented words is determined by matching the segmentation with the gold standard test set.",
+                    "sid": 130,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall is defined as the number of correctly segmented words divided by the total number of words in the gold standard test set.",
+                    "sid": 131,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The evenly-weighted F-score is calculated by: F = 2 ! p ! r / ( p + r ) (5) Roov is the recall of all the OOV words.",
+                    "sid": 132,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And Riv is the recall of words that have occurred in the training corpus.",
+                    "sid": 133,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The evaluation in this experiment is done automatically using the script provided with the second bakeoffs data.",
+                    "sid": 134,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3b.",
+                    "sid": 135,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The factorization of P(t t t | a a a ) 1 2 3 1 2 3 nd We have implemented both Algorithm 1 and into P(t1t2 | a1a2 ) ! P(t3 | a3 ; a2 t2 ) . Note that in the 2 factor, in addition to a3, a2 and t2 are also observed variables and all of them are treated as a unit (shown by the L-shape).",
+                    "sid": 136,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The shadowed parts (a2 and t2) represent the matched items.",
+                    "sid": 137,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 2 is based on the k-best search algorithm, which calls the backward dependency match after a successful compatibility check, and match as far as possible to get the largest probability of each tokenization hypothesis.",
+                    "sid": 138,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Algorithm 2 in Python with some simplifications, e.g. only processing phrase up to the length of 10 characters, ignoring several important details such as pruning.",
+                    "sid": 139,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performances are compared with the baseline algorithm maximum matching (MM), described in Wang et al.",
+                    "sid": 140,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1991), and the best bakeoff results.",
+                    "sid": 141,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The F-score, Roov and Riv are summarized in Table 1, Table 2, and Table 3, respectively.",
+                    "sid": 142,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the algorithms have quite similar recall for the in-vocabulary words (Riv), but their Roov vary greatly, which leads to the differences in F-score.",
+                    "sid": 143,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general both Algorithm 1 and Algorithm 2 improves OOV Recall significantly, compared with the baseline algorithm, maximum matching, which has barely any OOV recognition capacity.",
+                    "sid": 144,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This confirms the effectiveness of the proposed phrase-based model in modeling morphological behaviors of characters.",
+                    "sid": 145,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, Algorithm 2 works consistently better than Algorithm 1, which suggests the usefulness of its strategy of dealing with dependencies among phrase tokenizations.",
+                    "sid": 146,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides, the proposed method has the linear training and testing (when setting a maximum phrase length) time complexity, while the training complexity of CRF is the proportional to the feature numbers, which are often over millions.",
+                    "sid": 147,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even with current prototype, our method takes only minutes to build the model, in contrast with several hours that CRF segmenter needs to train the model for the same corpus on the same machine.",
+                    "sid": 148,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Admittedly, our model still underperforms the best systems in the bakeoff.",
+                    "sid": 149,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may be resulted from that 1) our system is still a prototype that ignores many minor issues and lack optimization and 2) as a generative model, our model may suffer more from the data sparseness problem, compared with discriminative models, such as CRF.",
+                    "sid": 150,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As mentioned earlier, the OOV recognition is the dominant factor that influences the overall accuracy.",
+                    "sid": 151,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different from the mechanism of tokenization combination in our approach, state-of- art systems such as those based on MaxEnt or CRF, achieve OOV recognition basically in the same way as in-dictionary word recognition.",
+                    "sid": 152,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmentation is modeled as assigning labels to characters.",
+                    "sid": 153,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And the probability of the label assignment for a character token is mostly determined by its features, which are usually local contexts in the form of character co-occurrences.",
+                    "sid": 154,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are many other OOV recognition methods proposed in literature before the rise of machine learning in the field.",
+                    "sid": 155,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the Sproat et al.",
+                    "sid": 156,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996) system can successfully recognize OOVs of strong patterns, such as Chinese personal names, transliterations, using finite-state techniques.",
+                    "sid": 157,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another typical example is Ma and Chen (2003), which proposed context free grammar like rules together with a recursive bottom-up merge algorithm that merges possible morphemes after an initial segmentation using maximum matching.",
+                    "sid": 158,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It would be fairer to compare the OOV recognition performance of our approach with these methods, rather than maximum matching.",
+                    "sid": 159,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But most earlier works are not evaluated on standard bake-off corpora and the implementations are not openly available, so it is difficult to make direct comparisons.F sco re A s Cit yU MS R PK U Bes t Bak eoff 0.9 52 0.9 43 0.9 64 0.9 50 Alg orit hm 2 0.9 19 0.9 11 0.9 46 0.9 12 Alg orit hm 1 0.8 97 0.8 88 0.9 22 0.8 90 M M 0.8 82 0.8 33 0.9 33 0.8 69 Table 1.",
+                    "sid": 160,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The F-score over the bakeoff2 data.",
+                    "sid": 161,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ro ov A S Cit yU MS R PK U Bes t Bak eoff 0.6 96 0.6 98 0.7 17 0.6 36 Alg orit hm 2 0.4 40 0.4 89 0.4 29 0.4 34 Alg orit hm 1 0.3 29 0.3 67 0.4 11 0.4 16 M M 0.0 04 0.0 00 0.0 00 0.0 59 Table 2.",
+                    "sid": 162,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Roov over the bakeoff2 data.",
+                    "sid": 163,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Riv A S Cit yU MS R PK U Bes t Bak eoff 0.9 63 0.9 61 0.9 68 0.9 72 Alg orit hm 2 0.9 61 0.9 61 0.9 70 0.9 51 Alg orit hm 1 0.9 55 0.9 40 0.9 50 0.9 40 M M 0.9 50 0.9 52 0.9 81 0.9 56 Table 3.",
+                    "sid": 164,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Riv over the bakeoff2 data.",
+                    "sid": 165,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this paper, we have presented the phrase-based tokenization for adaptive word segmentation.",
+                    "sid": 166,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposed model is efficient in both training and decoding, which is desirable for fast model reconstruction.",
+                    "sid": 167,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It generalizes the traditional tokenization model by considering the phrase instead of the word as the segmentation hypothesis unit, which is capable of describing \u201cmorphemes in the context\u201d and improves the OOV recognition performance significantly.",
+                    "sid": 168,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach decomposes sentence tokenization into phrase tokenizations.",
+                    "sid": 169,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final tokenization of the sentence is determined by finding the best combination of the tokenizations of phrases that cover the whole sentence.",
+                    "sid": 170,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tokenization hypotheses of a sentence are represented by a weighed directed acyclic graph called phrase tokenization lattice.",
+                    "sid": 171,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using this formalism, the sentence tokenization problem becomes a shortest path search problem on the graph.",
+                    "sid": 172,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our model, one only needs to estimate the phrase tokenization probabilities in order to segment new sentences.",
+                    "sid": 173,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training is thus a linear time phrase extraction and maximum likelihood estimation procedure.",
+                    "sid": 174,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopted a Viterbi-style dynamic programming algorithm to segment unseen sentences using the lattice.",
+                    "sid": 175,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also proposed a method called backward dependency match to model the dependencies of adjacent phrases to overcome the limitations of the assumption that tokenizations of neighboring phrases is independent.",
+                    "sid": 176,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experiment showed the effectiveness of the proposed phrase-based model in recognizing out-of-vocabulary words and its superior overall performance compared with the traditional tokenization model.",
+                    "sid": 177,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has both the efficiency of the tokenization model and the high performance of the character classification model.",
+                    "sid": 178,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible extension of the proposed model is to apply re-ranking techniques (Collins and Koo, 2005) to the k-best list generated by Algorithm 2.",
+                    "sid": 179,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A second improvement would be to combine our model with other models in a log linear way as in Jiang et al.",
+                    "sid": 180,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008).",
+                    "sid": 181,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since phrase-based tokenization is a model that can be accompanied by different training algorithms, it is also interesting to see whether discriminative training can lead to better performance.",
+                    "sid": 182,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "The research leading to these results has received funding from the European Commission\u2019s 7th Framework Program under grant agreement n\u00b0 238405 (CLARA).",
+                    "sid": 183,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

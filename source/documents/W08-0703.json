@@ -1,0 +1,989 @@
+{
+    "ID": "W08-0703",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "A stochastic approach to learning phonology.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model presented captures 715% more phonologically plausible underlying forms than a simple majority solution, because it prefers \u201cpure\u201d alternations.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It could be useful in cases where an approximate solution is needed, or as a seed for more complex models.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A similar process could be involved in some stages of child language acquisition; in particular, early learning of phonotactics.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Sound changes in natural language, such as stem variation in inflected forms, can be described as phonological processes.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are governed by a constraint hierarchy as in Optimality Theory (OT), or by a set of ordered rules.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both rely on a single lexical representation of each morpheme (i.e., its underlying form), and context-sensitive transformations to surface forms.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phonological changes often affect segments near morpheme boundaries, but can also apply over an entire prosodic word, as in vowel harmony.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It does not seem straightforward to incorporate context into a Bayesian model of phonology, although a clever solution may yet be found.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A standard way of incorporating conditioning environments is to treat them as factors in a Gibbs model (Liang and Klein, 2007), but such models require an explicit calculation of the partition function.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unless the rule contexts possess some kind of locality, we don\u2019t know how to compute this partition function efficiently.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some context could be captured by generating underlying phonemes from an n-gram model, or by annotating surface forms with neighborhood features.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the effects of autosegmental phonology and other long-range dependencies (like vowel harmony) cannot be easily Bayesianized.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.1 Related Work.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the last decade, finite-state approaches to phonology (Gildea and Jurafsky, 1996; Beesley and Karttunen, 2000) have effectively brought theoretical linguistic work on rewrite rules into the computational realm.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A finite-state approximation of optimality theory (Karttunen, 1998) was later refined into a compact treatment of gradient constraints (Gerdemann and van Noord, 2000).",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent work on Bayesian models of morphological segmentation (Johnson et al., 2007) could be combined with phonological rule induction (Goldwater and Johnson, 2004) in a variety of ways, some of which will be explored in our discussion of future work.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, the Hierarchical Bayes Compiler (Daume III, 2007) could be used to generate a model similar to the one presented here, but less con- strained1 which makes correspondingly more random, less accurate predictions.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.2 Dataset.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we describe the model and its implementation in this and subsequent sections, we will refer to a sam 1 Recent updates to HBC, inspired by discussions with the author, have addressed some of these limitations.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12 Proceedings of the Tenth Meeting of the ACL Special Interest Group on Computational Morphology and Phonology, pages 12\u201319, Columbus, Ohio, USA June 2008.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2008 Association for Computational Linguistics ple dataset (in Figure 1), consisting of a paradigm2 of verb stems and person/number suffixes.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The head of each row or column is an /underlying/ form, which in 3rd person singular is a phonologically null segment (represented as /\u00f8/).",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In [surface] forms, the realization of each morpheme is affected by phonological processes.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the combination of /tieta\u00a8/ + /vat/, the result is [tieta\u00a8+va\u00a8t], where the 3rd person plural /a/ becomes [a\u00a8] due to vowel harmony.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.3 Bayesian Approach.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a baseline model, we select the most frequently occurring allophone as the underlying form.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal is to outperform this baseline using a Bayesian model.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, what patterns in phonological processes can be inferred with such a statistical model?",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This simple framework begins learning with the assumption that the underlying forms are faithful to the surface (i.e., without considering markedness or phonotactics).",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We model the generation of surface forms from underlying ones on the segmental (character) level.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Input is an inflectional paradigm, with tokens of the form stem+suffix.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Morphology is limited to a single suffix (no agglutination), and is already identified.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each character of an underlying stem or suffix (ui ) generates surface characters (sij ) in an entire row or column of the input.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To capture the phonology of a variety of languages with a single model, we need constraints from linguistically plausible priors (universal grammar).",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We prefer that underlying characters be preserved in surface forms, especially when there is no alternation.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also reasonable that there be fewer underlying forms (phonemes) than surface forms (phones, phonetic inventory), to account for allo- phones.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We expect to be able to capture a significant subset of phonological processes using a simple model (only faithfulness constraints).",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.4 Pure Generators.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model has an advantage over the baseline in its preference for \u201cpurity\u201d in underlying forms.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each underlying segment should generate as few distinct 2 The paradigm format lends itself to analysis of word types, but if supplemented with surface counts, can also handle tokens.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "surface segments as possible: if it generates non- alternating (identical) segments, it will be less likely to generate an alternation in addition.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that when two segments alternate, the underlying form should be the one that appears less frequently in other contexts, irrespective of the majority within the alternation.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first stem of our Finnish verb conjugation (Figure 1), we see a [t,d] alternation (a case of consonant gradation), as well as unalternating [t].",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we isolate three of the surface forms where /tieta\u00a8/ is inflected (1st person singular, and 3rd person singular and plural), and consider only the dental segments in the stem of each, we have two underlying segments.",
+                    "sid": 45,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, we use question marks to indicate unknown underlying segments.",
+                    "sid": 46,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "/??/ [dt] [tt] [tt] In this subset of the data, the reasonable candidate underlying forms are /t/ and /d/.",
+                    "sid": 47,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These two compete to explain the observed data (surface forms).",
+                    "sid": 48,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The nature of the prior probability distribution determines whether the majority is hypothesized for each underlying form, so /t/ produces both alternating and unalternating surface segments, or /d/ is hypothesized as the source of the alternation (and /t/ remains \u201cpure\u201d).",
+                    "sid": 49,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a Bayesian setting, we impose a sparse prior over underlying forms conditioned on the surface forms they generate.If u2 is hypothesized to be /t/, the posterior prob ability of u1 being /t/ goes down: P (u1 = /t/|u2 = /t/) < P (u1 = /t/) The probability of u1 being the competitor, /d/, correspondingly increases: P (u1 = /d/|u2 = /t/) > P (u1 = /d/) Even though the majority in this case would be /t/, the favored candidate for the alternating form was /d/.",
+                    "sid": 50,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This happened because of how we defined the model\u2019s prior, in combination with the evidence that /t/ (assigned to u2) generated the sequence of [t].",
+                    "sid": 51,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So selection bias prefers /d/ as the source of an ambiguous segment, leaving /t/ to always generate itself.",
+                    "sid": 52,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A similar effect can occur if there are both unalternating [t]\u2019s and [d]\u2019s on the surface, in addition to the [t,d] alternation.",
+                    "sid": 53,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The candidate (/t/ or /d/) that is \u275b S Figure 1: Sample dataset (constructed by hand): Finnish verbs, with inflection for person and number.",
+                    "sid": 54,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "generating fewer unalternating segments is preferred to explain the alternation.",
+                    "sid": 55,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if there were 1000 cases of [t], 500 [d] and 500 [t,d], we would expect the following hypotheses: /t/ \u2192 [t], /d/ \u2192 [d] and /d/ \u2192 [t, d].",
+                    "sid": 56,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because one of the two candidates must be responsible for both unalternating and alternating segments, but we prefer to have as much \u201c\u2018purity\u201d as possible, to minimize ambiguity.",
+                    "sid": 57,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this solution, we still have 1000 pure /t/ \u2192 [t], and only the 500 /d/ \u2192 [d] are now indistinct from /d/ \u2192 [t, d].",
+                    "sid": 58,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we had selected /t/ as the source of the alternation, there would be only 500 remaining \u201cpure\u201d (/d/) segments, and 1500 ambiguous /t/.",
+                    "sid": 59,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our Bayesian model should prefer the less prior over underlying form encourages sparse solutions, so \u03b2u < 1 for all u. The prior over surface form given underlying encourages identity mapping, /x/ \u2192 [x], so \u03b1xx > 1, and discourages different segments, /x/ \u2192 [y], so \u03b1xy < 1 for all x /= y. \u03b2 \u03b1 \u03c6 \u03b8 ambiguous (\u201cpurer\u201d) solution, given an appropriate nc prior.",
+                    "sid": 60,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "model. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We will use boldface to indicate vectors, and subscripts to identify an element from a vector or matrix.",
+                    "sid": 61,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The variable N(u) is a vector of observed counts with the current underlying form hypothe ses.",
+                    "sid": 62,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The notation we use for a vector u with one u s mnu nuFigure 2: Bayesian network: \u03b1 and \u03b2 are vectors of hy element i removed is u\u2212i, so we can exclude the counts associated with a particular underlying form perparameters, and \u03b8i (for i \u2208 {1, . . .",
+                    "sid": 63,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", nc}) and \u03c6 are by indicating that in the parenthesized variable (i.e., N(u\u22124) is all the counts except those associated with the fourth underlying form).",
+                    "sid": 64,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ni (u) is the number of times character i is used as an underlying form, and Nij (u) is the number of times character i generated surface character j. The priors over surface s and underlying u segments in Figure 2 are captured by Dirichlet priors \u03b1 and \u03b2, which generate the multinomial distributions \u03b8 and \u03c6, respectively (see Figure 3).",
+                    "sid": 65,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The distributions.",
+                    "sid": 66,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "u is a vector of underlying forms, generated from \u03c6, and si (for i \u2208 nu) is a set of observed surface forms generated from the hidden variable ui according to \u03b8i Phones and phonemes are drawn from a set of characters (e.g., IPA, unicode) C used to represent them.",
+                    "sid": 67,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03c6i is the probability of a character (Ci for i \u2208 nc) being an underlying form, irrespective of current alignments or its position in the paradigm.\u03b8ij is the conditional probability of a surface char \u03b8c | \u03b1 \u223c DIR(\u03b1), c = 1, . . .",
+                    "sid": 68,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", nc \u03c6 | \u03b2 \u223c DIR(\u03b2) ui | \u03c6i \u223c MU LTI(\u03c6i), i = 1, . . .",
+                    "sid": 69,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", nu sij | ui , \u03b8ui \u223c MU LTI(\u03b8 ui ), i = 1, . . .",
+                    "sid": 70,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", nu, j = 1, . . .",
+                    "sid": 71,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", mi Figure 3: Model parameters: nc is # different segments, nu is # underlying segments acter (skn = Cj for j \u2208 nc, n \u2208 mk ) given the underlying character it is generated from (uk = Cifor i \u2208 nc, k \u2208 nu), which is determined by its po sition in the paradigm.",
+                    "sid": 72,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our Finnish example (Figure 1), if k = 1, we are looking at the first underlying character, which is /t/ (from /tieta\u00a8/), so assuming our character set is the Finnish alphabet, of which \u2018t\u2019 is the 20th char put in the paradigm.",
+                    "sid": 73,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than reestimate \u03b8 and \u03c6 at each iteration before sampling from u, we can marginalize these intermediate probability distributions in order to ease implementation and speed convergence.",
+                    "sid": 74,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our search procedure tries to sample from the posterior probability, according to Bayes\u2019 rule.",
+                    "sid": 75,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "posterior \u221d likelihood \u2217 prior P (u, s|\u03b2, \u03b1) \u221d P (u|\u03b2)P (s, u|\u03b1) Each of these probabilities is drawn from a Dirichlet distribution, which is defined in terms of the multivariate Beta function, C . The prior \u03b2 added to underlying counts N(u) forms the posterior Dirichlet corresponding to P (u|\u03b2).",
+                    "sid": 76,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In P (s|u, \u03b1), each \u03b1i vector is supplemented by the observed counts of (si).",
+                    "sid": 77,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "acter, u1 = C20 = t. It generates the first character of each inflected form (1st, 2nd, 3rd person, singu (underlying, surface) pairs N (\u03b2 + N (u)) lar and plural) of that stem, so m1 = 6, and since there is no alternation s1n = t (for n \u2208 {1, . . .",
+                    "sid": 78,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", 6}).",
+                    "sid": 79,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C P (u, s|\u03b2, \u03b1) = C (\u03b2)Given the phonologically plausible (gold) underly nc C (\u03b1c + i:ui =c N (si)) ing forms, the probability of /t/ is \u03c620 = 7/41.On the other hand, k = 33 identifies the 3rd per c=1 C (\u03b1) son singular /\u00f8/, which inflects each of the seven stems, so m33 = 7.",
+                    "sid": 80,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we need our alphabet to identify a null character, we\u2019ll give it index zero (i.e., u33 = C0 = \u00f8).",
+                    "sid": 81,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each of the (underlying, surface) alignments in this alternation (caused by vowel gemination), we can identify the probability in \u03b8.",
+                    "sid": 82,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For 3rd person singular [tieta\u00a8+a\u00a8], where s33,1 = C28 = a\u00a8, the conditional probability \u03b80,28 = 1/7.",
+                    "sid": 83,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The prior hyperparameters can be understood as follows.",
+                    "sid": 84,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As \u03b2i gets smaller, an underlying form ukThe collapsed update procedure consists of re sampling each underlying form, u, incorporating the prior hyperparameters \u03b1, \u03b2 and counts N over the rest of the dataset.",
+                    "sid": 85,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relevant counts for a candidate k being the underlying form ui are Nk (u\u2212i) and Nksij (u\u2212i) for j \u2208 mi.",
+                    "sid": 86,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P (ui = k|u\u2212i, \u03b1, \u03b2) is proportional to the probability of generating ui = k, given the other u\u2212i and all sij (for j \u2208 mi), given s\u2212i and u\u2212i. Nc(u\u2212i ) + \u03b2cis less likely to be Ci.",
+                    "sid": 87,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As \u03b1ij gets smaller, an un P (ui = c|u\u2212i, \u03b1, \u03b2) \u221d n \u2212 1 + \u03b2\u2022 derlying uk = Ci is less likely to generate a surface segment skn = Cj \u2200n \u2208 mk . In our experiments, C (\u03b1 + i = i:u =c N (s! ) + N (si))we will vary \u03b1i=j (prior over identity map from un C (\u03b1 + i =i:u =c N (s! )) derlying to surface) and \u03b1i =j . Our implementation of this model uses Gibbs sampling (c.f., (Bishop, 2006), pp 5428), an algorithm that produces samples from the posterior distribution.",
+                    "sid": 88,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each sample is an assignment of the hidden variables, u (i.e., a set of hypothesized underlying forms).",
+                    "sid": 89,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our sampler initializes u from a uniform distribution over segments in the training data, and resamples underlying forms in a fixed order, as in Suppose we were updating this sampler running on the Finnish verb inflections.",
+                    "sid": 90,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we had all segments as in Figure 1, but wanted to resample u31 (1st person singular /n/), we would consider the counts N excluding that form (i.e., under u\u221231).",
+                    "sid": 91,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The prior for /n/, \u03b214, is fixed, and there are no other occurrences, so N14(u\u221231) = 0.",
+                    "sid": 92,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another potential underlying form, like /t/, would have higher unconditioned posterior probability, because of the counts (7, in this case) added to its prior from \u03b2.",
+                    "sid": 93,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we have to multiply by the probability of each generated surface segment (all are [n], so 7 \u2217 P ([n]|c, \u03b1) for a given hypothesis u31 = c).",
+                    "sid": 94,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We select a given character c \u2208 C for u31 from a distribution at random.",
+                    "sid": 95,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on the prior, /n/ will be the most likely choice, but other values are 3.2 Convergence.",
+                    "sid": 96,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Testing convergence, we run again on the sample data (Figure 1), using \u03b1ij = 0.1 when i /= j and 10 when i = j and \u03b2 = 0.1, starting from different initializations, we get the same solution.",
+                    "sid": 97,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 x 10 still possible with smaller probability.",
+                    "sid": 98,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The counts used for the next resampling, N (u\u221231), are affected by this choice, because the new identity of u31 has contributed to the posterior distribution.",
+                    "sid": 99,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After unbounded iterations, Gibbs sampling is guaranteed to converge and produce samples from the true posterior (Geman and Geman, 1984).",
+                    "sid": 100,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "evaluation. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "This model provides a language agnostic solution to a subset of phonological problems.",
+                    "sid": 101,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will first examine performance on the sample Finnish data (from Figure 1), and then look more closely at the issue of convergence.",
+                    "sid": 102,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we present results from larger corpora 3 . 3.1 Finnish.",
+                    "sid": 103,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Output from a trial run on Finnish verbs (from Figure 1) follows, with hyperparameters \u03b1ij {100 \u21d0\u21d2 i = j, 0.05 \u21d0\u21d2 i /= j} and \u03b2i = {0.1}.",
+                    "sid": 104,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the paradigm (a sample after 1000 iterations), each [sur+face] form is followed by its hypothesized /under/ + /lying/ morphemes.",
+                    "sid": 105,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "[tieda\u00a8+n] : /tieda\u00a8/ + /n/ [tieda\u00a8+t] : /tieda\u00a8/ + /t/ [tieta\u00a8+a\u00a8] : /tieda\u00a8/ + /a\u00a8/ [tieda\u00a8+mme] : /tieda\u00a8/ + /mme/ [tieda\u00a8+tte] : /tieda\u00a8/ + /tte/ [tieta\u00a8+va\u00a8t] : /tieda\u00a8/ + /va\u00a8t/ [ai\u00f8o+n] : /ai\u00f8o/ + /n/ ...",
+                    "sid": 106,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "[pelka\u00a8a\u00a8+va\u00a8t] : /pelka\u00a8a\u00a8/ + /vat/ With strong enough priors (faithfulness constraints), our sampler often selects the most common surface form aligned with an underlying segment.",
+                    "sid": 107,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although [vat] is more common than [va\u00a8t], we choose the latter as the purer underlying form.",
+                    "sid": 108,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So /a/ is always [a], but /a\u00a8/ can be either [a\u00a8] or [a].",
+                    "sid": 109,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 2.8 million word types from Morphochallenge2007 (Kurimo et al., 2007) 3.05 3.04 3.03 3.02 3.01 3 2.99 2.98 2.97 0 10 20 30 40 50 60 70 80 90 100 Iteration Figure 4: Posterior likelihood at each of the first 100 iterations, from 4 runs (with different random seeds) on 10% of the Morphochallenge dataset (\u03b1i/=j = 0.001, \u03b1i=j = 100, \u03b2 = 0.1), indicating convergence within the first 15 iterations.",
+                    "sid": 110,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To confirm that the sampler has converged, we output and plot trace statistics at each iteration, including marginal probability, log likelihood, and changes in underlying forms (i.e., variables resam- pled).",
+                    "sid": 111,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the sampler has converged, there should no longer be a trend (consistent slope) in any of these statistics (as in Figure 4).",
+                    "sid": 112,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examining the posterior probability of each selected underlying form reveals interesting patterns that also help explain the variation.",
+                    "sid": 113,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the above run, the ambiguous segments (with surface alternations) were drawn from the distributions (with improbable segments elided) in Figure 5.",
+                    "sid": 114,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We expect this model to maximize the probability of either the \u201cmajority\u201d solution or a solution demonstrating selection bias.",
+                    "sid": 115,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare likelihood of the posterior sample with that of a \u201cphono- logically plausible\u201d solution (in which underlying forms are determined by referring to formal linguistic accounts of phonological derivation) and a \u201cmajority solution\u201d (see Figure 6 for a log-log plot, where lower is more likely).",
+                    "sid": 116,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The posterior sample has optimal likelihood with each parameter setting, as expected.",
+                    "sid": 117,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The majority parse is selected with \u03b1i=j = 0.5 With lower values of \u03b1i=j , the \u201cphonologically plausible\u201d parse is u4=/d/ s4=[d,d,t,d,d,t] P (ui = c) \u2248 d 0.99968 t 0.00014 u8=/k/ s8 =[\u00f8,\u00f8,k,\u00f8,\u00f8,k] (same behavior as u12) P (ui = c) \u2248 \u00f8 0.642 k 0.124 u33=/e/ s33=[a\u00a8,o,e,u,\u00f8,e,\u00f8] P (ui = c) \u2248 a \u00a8 , o , u 0.0 02 9 \u00f8 0.2 15 a 0.0 00 3 e 0.2 97 Figure 5: Resampling probabilities for alternations, after 1000 iterations.",
+                    "sid": 118,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "posterior sample majority solution phonologically plausible 4.26 10 4.25 10 M ajo rit y Ba ye sia n ty p e s 5 0 . 8 4 6 9 . 5 3 tok en s 6 5 . 2 3 7 2 . 1 1 Figure 7: Accuracy of underlying segment hypotheses.",
+                    "sid": 119,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "notated morphemes.",
+                    "sid": 120,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the word ajavalle is listed in the corpus as follows: ajavalle aja:ajaa|V va:PCP1 lle:ALL The word is segmented into a verb stem, \u2018aja\u2019 (drive), a present participle marker \u2018va\u2019, and the allative suffix (\u201cfor\u201d).",
+                    "sid": 121,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each surface realization of a given morpheme is identified by the same tag (e.g., PCP1).",
+                    "sid": 122,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in this corpus, insertion and deletion are not explicitly marked (as they were in the paradigm, by \u00f8).",
+                    "sid": 123,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than introduce another component to determine which segments in the form were dropped, we ignore these cases.",
+                    "sid": 124,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sampling algorithm proceeds as described in section 2.",
+                    "sid": 125,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To run on tokens (as opposed to types), we incorporate another input file that contains counts from the original text (ajavalle appeared 8 times).",
+                    "sid": 126,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The counts of each morpheme\u2019s surface forms then reflect the number of times that form appeared in any word in the corpus.",
+                    "sid": 127,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.24 10 \u22122 \u22121 10 10 alpha Figure 6: Parse likelihood 3.",
+                    "sid": 128,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3. 1 T y p e o r T o k e n 0 In Finnish verb conjugation, 3rd person (esp. sin gular) forms have high frequency and tend to be unmarked (i.e., closer to underlying).",
+                    "sid": 129,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In types, unmarked is a minority (one third), but incorporating token frequency shifts that balance, benefitingmore likely than the majority.",
+                    "sid": 130,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the sam pler does not converge to this solution, because in this [t,d] alternation, the \u201cphonologically plausible\u201d solution identifies /t/, but neither selection bias nor majority rules would lead to that with the given data.",
+                    "sid": 131,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Morphologically segmented corpora.",
+                    "sid": 132,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our search for appropriate data for additional, larger-scale experiments, we found several viable alternatives.",
+                    "sid": 133,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The correct morphological segmentations for Finnish data used in Morphochallenge2007 (Kurimo et al., 2007) provide a rich and varied set of words, and are readily analyzable by our sampler.",
+                    "sid": 134,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than associating each surface form with a position in the paradigm, we use the an the \u201cmajority learner.\u201d Among noun inflections, unmarked has higher frequency in speech, but marked tokens may still dominate in text.",
+                    "sid": 135,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We might expect that it is easier to learn from tokens than types, in part because more data is often helpful.",
+                    "sid": 136,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Testing on half of the Morphochallenge 2007 Finnish data (1M word types, 5M morph types, 17.5M word tokens, 48M morph tokens), we ran both our Bayesian model and a majority solver on the morphological analyses, and compared against phonologically plausible (gold) underlying forms.",
+                    "sid": 137,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results are reported in Figure 7.",
+                    "sid": 138,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Bayesian estimate consistently outperformed the majority solution, and cases where the two differ could often be ascribed to the preference for \u201cpure\u201d analyses.",
+                    "sid": 139,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We have described a model where surface forms are generated from underlying representations segment by segment.",
+                    "sid": 140,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Taking this approach allowed us to investigate the properties of a Bayesian statistical learner, and how these can be useful in the context of sound systems, a basic component of language.",
+                    "sid": 141,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments with our implementation of a collapsed sampler have produced results largely confirming our hypotheses.",
+                    "sid": 142,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without context, we can often learn about 60 to 80 percent of the mapping from underlying phonemes to surface phones.",
+                    "sid": 143,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Especially with lower values of \u03b1i=j , closer to 0, our model does prefer pure alternations.",
+                    "sid": 144,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gibbs sampling tends to select the majority underlying form, particularly with \u03b1i=j relatively high, closer to 1.",
+                    "sid": 145,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So, a sparser prior leads us further from the baseline, and often closer to a phonologically plausible solution.",
+                    "sid": 146,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Directions.",
+                    "sid": 147,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future research, we hope to integrate morphological analysis into this sort of a treatment of phonology.",
+                    "sid": 148,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a natural approach for children learning their first language.",
+                    "sid": 149,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They intuitively discover phonotactics, and how it affects the prosodic shape of each word, as they learn meaningful units and compose them together.",
+                    "sid": 150,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is clear that many layers of linguistic information interact in the early stages of child language acquisition (Demuth and Ellis, 2005 in press), so they should also interact in our models.",
+                    "sid": 151,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As discussed above, the present model should be applicable to analysis of language- learners\u2019 speech errors, and this connection should be explored in greater depth.",
+                    "sid": 152,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It might be interesting to predispose the sampler to select underlying forms from open syllables.",
+                    "sid": 153,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, set \u03b1 to increase the probability of matching one of the surface segments if its context (feature annotations) includes a vocalic segment or a word boundary immediately following.",
+                    "sid": 154,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability of phonological processes like assimilation could be similarly modeled, with the prior higher for choosing a segment that appears on the surface in a con- trastive context (where it shares few features with neighboring segments).",
+                    "sid": 155,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we define a MaxEnt distribution over Optimal- ity Theoretic constraints, we might use that to inform our selection of underlying forms.",
+                    "sid": 156,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (Goldwater and Johnson, 2003), the learning algorithm was given a set of candidate surface forms associated with an underlying form, and tried to optimize the constraint weights.",
+                    "sid": 157,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the constraint weights, we must also optimize the underlying form, since our goal is to take as input only observable data.",
+                    "sid": 158,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sampling from this type of complex distribution is quite difficult, but some approaches (e.g., (Murray et al., 2006)) may help reduce the intractability.",
+                    "sid": 159,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

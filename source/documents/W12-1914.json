@@ -1,0 +1,545 @@
+{
+    "ID": "W12-1914",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We propose an unsupervised approach to POS tagging where first we associate each word type with a probability distribution over word classes using Latent Dirichlet Allocation.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we create a hierarchical clustering of the word types: we use an agglomerative clustering algorithm where the distance between clusters is defined as the JensenShannon divergence between the probability distributions over classes associated with each word-type.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When assigning POS tags, we find the tree leaf most similar to the current word and use the prefix of the path leading to this leaf as the tag.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This simple labeler outperforms a baseline based on Brown clusters on 9 out of 10 datasets.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Unsupervised induction of word categories has been approached from three broad perspectives.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, it is of interest to cognitive scientists who model syntactic category acquisition by children (Redington et al. 1998, Mintz 2003, Parisien et al. 2008, Chrupa\u0142a and Alishahi 2010), where the primary concern is matching human performance patterns and satisfying cog- nitively motivated constraints such as incremental learning.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, learning categories has been cast as unsupervised part-of-speech tagging task (recent work includes Ravi and Knight (2009), Lee et al.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010), Lamar et al.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010), Christodoulopoulos et al.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011)), and primarily motivated as useful for tagging under-resourced languages.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, learning categories has also been researched from the point of view of feature learning, 100 where the induced categories provide an intermediate level of representation, abstracting away and generalizing over word form features in an NLP application (Brown et al. 1992, Miller et al. 2004, Lin and Wu 2009, Turian et al. 2010, Chrupala 2011, Ta\u00a8ckstro\u00a8 m et al. 2012).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main difference from the part-of-speech setting is that the focus is on evaluating the performance of the learned categories in real tasks rather than on measuring how closely they match gold part-of-speech tags.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some researchers have used both approaches to evaluation.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This difference in evaluation methodology also naturally leads to differing constraints on the nature of the induced representations.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For part-of-speech tagging what is needed is a mapping from word tokens to a small set of discrete, atomic labels.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For feature learning, there are is no such limitation, and other types of representations have been used, such as low-dimensional continuous vectors learned by neural network language models as in Bengio et al.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006), Mnih and Hinton (2009), or distributions over word classes learned using Latent Dirichlet Allocation as in Chrupala (2011).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we propose a simple method of mapping distributions over word classes to a set of discrete labels by hierarchically clustering word class distributions using JensenShannon divergence as a distance metric.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This allows us to effectively use the algorithm of Chrupala (2011) and similar ones in settings where using distributions directly is not possible or desirable.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equivalently, our approach can be seen as a generic method to convert a soft clustering to hard clustering while conserving much of the information encoded in the original soft cluster assignments.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate this method on the unsupervised part-of-speech tagging task on ten datasets NAACLHLT Workshop on the Induction of Linguistic Structure, pages 100\u2013104, Montre\u00b4al, Canada, June 38, 2012.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2012 Association for Computational Linguistics in nine languages as part of the shared task at the NAACLHLT 2012 Workshop on Inducing Linguistic Structure.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "architecture. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Our system consists of the following components (i) a soft word-class induction model (ii) a hierarchical clustering algorithm which builds a tree of word class distributions (iii) a labeler which for each word type finds the leaf in the tree with the most similar word-class distribution and outputs a prefix of the path leading to that leaf.",
+                    "sid": 23,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Soft word-class model.",
+                    "sid": 24,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the probabilistic soft word-class model proposed by Chrupala (2011), which is based on Latent Dirichlet Allocation (LDA).",
+                    "sid": 25,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LDA was introduced by Blei et al.",
+                    "sid": 26,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2003) and applied to modeling the topic structure in document collections.",
+                    "sid": 27,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is a generative, probabilistic hierarchical Bayesian model which induces a set of latent variables, which correspond to the topics.",
+                    "sid": 28,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The topics themselves are multinomial distributions over words.",
+                    "sid": 29,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generative structure of the LDA model is the following: \u03c6k \u223c Dirichlet(\u03b2), k \u2208 [1, K ] on \u03b8d which we use to represent a word type d as a distribution over word classes.",
+                    "sid": 30,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Soft word classes are more expressive than hard categories.",
+                    "sid": 31,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They make it easy and efficient to express shared ambiguities: Chrupala (2011) gives an example of words used as either first names or surnames, where this shared ambiguity is reflected in the similarity of their word class distributions.",
+                    "sid": 32,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another important property of soft word classes is that they make it easy to express graded similarity between words types.",
+                    "sid": 33,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With hard classes, a pair of words either belong to the same class or to different classes, i.e. similarity is a binary indicator.",
+                    "sid": 34,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With soft word classes, we can use standard measures of similarity between probability distributions to judge how similar words are to each other.",
+                    "sid": 35,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take advantage of this feature to build a hierarchical clustering of word types.",
+                    "sid": 36,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Hierarchical clustering of word types.",
+                    "sid": 37,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In some settings, e.g. in the unsupervised part-of- speech tagging scenario, words should be labeled with a small set of discrete labels.",
+                    "sid": 38,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The question then arises how to map a probability distribution over word classes corresponding to each word type in the soft word class setting to a discrete label.",
+                    "sid": 39,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most obvious method would be to simply output the highest scoring word class, but this has the disadvantage \u03b8d \u223c Dirichlet(\u03b1), d \u2208 [1, D] znd \u223c Categorical(\u03b8d), nd \u2208 [1, Nd] wnd \u223c Categorical(\u03c6znd ), nd \u2208 [1, Nd] (1) of discarding much of the information present in the soft labeling.",
+                    "sid": 40,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What we do instead is to create a hierarchical clustering of word types using the JensenShannon Chrupala (2011) interprets the LDA model in terms of word classes as follows: K is the number of classes, D is the number of unique word types, Nd is the number of context features (such as right or left neighbor) associated with word type d, znd is the class of word type d in the nth context, and (JS) divergence between the word-class distributions as a distance function.",
+                    "sid": 41,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "JS divergence is an information-theoretic measure of dissimilarity between two probability distributions (Lin 1991).",
+                    "sid": 42,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is defined as follows: wnd is the nd context feature of word type d. Hyperparameters \u03b1 and \u03b2 control the sparseness of the 1 JS (P, Q) = 2 (DKL (P, M ) + DKL (Q, M )) (2) vectors \u03b8d and \u03c6k .Inference in LDA in general can be performed us ing either variational EM or Gibbs sampling.",
+                    "sid": 43,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here where M is the mean distribution P +Q and DKL is the KullbackLeibler (KL) divergence: P (i) we use a collapsed Gibbs sampler to estimate two sets of parameters: the \u03b8d parameters correspond DKL(P, Q) = ) P (i) log2 i Q(i) (3) to word class probability distributions given a word type while the \u03c6k correspond to feature distributions given a word class.",
+                    "sid": 44,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the current paper we focus Unlike KL divergence, JS divergence is symmetric and is defined for any pair of discrete probability distributions over the same domain.",
+                    "sid": 45,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a simple agglomerative clustering algorithm to build a tree hierarchy over the word class distributions corresponding to word types (see Algorithm 1).",
+                    "sid": 46,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We start with a set of leaf nodes, one for each of D word types, containing the unnormalized word-class probabilities for the corresponding word type: i.e. the co-occurrence counts of word-type and word-class, n(z, d), output by the Gibbs sampler.",
+                    "sid": 47,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then merge that pair of nodes (P, Q) whose JS divergence is the smallest, remove these two nodes from the set, and add the new merged node with two branches.",
+                    "sid": 48,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We proceed in this fashion until we obtain a single root node.",
+                    "sid": 49,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When merging two nodes we sum their co- occurrence count tables: thus the nodes always contain unnormalized probabilities which are normalized only when computing JS scores.",
+                    "sid": 50,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "those these can that could Fraser it goin(g) Paul going Mommy \u2019ll Daddy Algorithm 1 Bottom-up clustering of word types S = {n(\u00b7, d) | d \u2208 [1, D]} while |S| > 1 do (P, Q) = argmin(P,Q)\u2208S\u00d7S JS (P, Q) S \u2190 S \\ {P, Q} \u222a {merge(P, Q)} The algorithm is simple but not very efficient: if implemented carefully it can be at best quadratic in the number of word types.",
+                    "sid": 51,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in practice it is unnecessary to run it on more than a few hundred word types which can be done very quickly.",
+                    "sid": 52,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the experiments reported on below we build the tree based only on the 1000 most frequent words.",
+                    "sid": 53,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows two small fragments of a hierarchy built from 200 most frequent words of the English CHILDES dataset using 10 LDA word classes.",
+                    "sid": 54,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.3 Tree paths as labels.",
+                    "sid": 55,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the tree is built, it can be used to assign a label to any word which has an associated word class distribution.",
+                    "sid": 56,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, it could be used to perform either type-level or token-level tagging: token-level distributions could be composed from the distributions associated with current word type (\u03b8) and the distributions associated with the current context features (\u03c6).",
+                    "sid": 57,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since preliminary experiments with token- level tagging were not successful, here we focus exclusively on type-level tagging.",
+                    "sid": 58,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the tree and a word-type paired with a class distribution, we generate a path to a leaf in the tree Figure 1: Two fragments of a hierarchy over word class distrib utions as follows.",
+                    "sid": 59,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the word is one of the ones used to construct the tree, we simply record the path from the root to the leaf containing this word.",
+                    "sid": 60,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the word is not at any of the leaves (i.e. it is not one of the 1000 most frequent words), we traverse the tree, at each node comparing the JS divergence between the word and the left and right branches, and then descend along the branch for which JS is smaller.",
+                    "sid": 61,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We record the path until we reach a leaf node.",
+                    "sid": 62,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can control the granularity of the labeling by varying the length of the prefix of the path from the root to the leaf.",
+                    "sid": 63,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Experiment s We evaluate our method on the unsupervised part- of-speech tagging task on ten dataset in nine languages as part of the shared task.",
+                    "sid": 64,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each dataset we run LDA word class induction1 on the union of the unlabeled sentences in the train, development and test sets, setting the num ber of classes K \u2208 {10, 20, 40, 80}, and build a hierarchy on top of the learned word-class proba bility distributions as explained above.",
+                    "sid": 65,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then label the development set using path prefixes of length L \u2208 {8, 9, . . .",
+                    "sid": 66,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", 20} for each of the trees, and record 1 We ran 200 Gibbs sampling passes, and set the LDA hyper- parameters to \u03b1 = 10 and \u03b2 = 0.1.",
+                    "sid": 67,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u25cf ar\u25cf nl \u25cf eu English PTB 40 8 61.6 60.2 Portuguese 80 10 51.7 52.4 \u25cf da \u25cf en\u2212ch \u25cf sv \u25cf sl \u25cf pt \u25cf cz Swedish 20 17 51.8 56.1 Table 1: Evaluation of coarse-grained POS tagging on test data \u25cf en\u2212ptb 0 20 40 60 80 100 120 Vocabulary size in thousands Table 2: Evaluation of coarse-grained POS tagging on test data the V-measure (Rosenberg and Hirschberg 2007) against gold part-of-speech tags.",
+                    "sid": 68,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We choose the best-performing pair of K and L and use this setting to label the test set.",
+                    "sid": 69,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tune separately for coarse- grained and fine-grained POS tags.",
+                    "sid": 70,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other than using the development set labels to tune these two parameters our system is unsupervised and uses no data other than the sentences in the provided data files.",
+                    "sid": 71,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 and Table 2 show the best settings for the coarse- and fine-grained POS tagging for all the datasets, and the V-measure scores on the test set achieved by our labeler (HCD for Hierarchy over Class Distributions).",
+                    "sid": 72,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also included are the scores of the official baseline, i.e. labeling with Brown clusters (Brown et al. 1992), with the number of clusters set to match the number of POS tags in each dataset.",
+                    "sid": 73,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best K stays the same when increasing the granularity in the majority of cases (7 out of 10).",
+                    "sid": 74,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the CHILDES dataset of child-directed speech, Figure 2: Error reduction as a function of vocabulary size which has the smallest vocabulary of all, the optimal number of LDA classes is also the smallest (10).",
+                    "sid": 75,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As expected, the best path prefix length L is typically larger for the fine-grained labeling.",
+                    "sid": 76,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our labels outperform the baseline on 9 out of 10 datasets, for both levels of granularity.",
+                    "sid": 77,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only exception is the English Penn Treebank dataset, where the HCD V-measure scores are slightly lower than Brown cluster scores.",
+                    "sid": 78,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may be taken as an illustration of the danger arising if NLP systems are exclusively evaluated on a single dataset: such a dataset may well prove to not be very representative.",
+                    "sid": 79,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Part of the story seems to be that our method tends to outperform the baseline by larger margins on datasets with smaller vocabularies2.",
+                    "sid": 80,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The scatter- plot in Figure 2 illustrates this tendency for coarse grained POS tagging: Pearson\u2019s correlation is \u22120.6.",
+                    "sid": 81,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Conclusion We have proposed a simple method of converting a set of soft class assignments to a set of discrete labels by building a hierarchical clustering over word-class distributions associated with word types.",
+                    "sid": 82,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This allows to use the efficient and effective LDA- based word-class induction method in cases where a hard clustering is required.",
+                    "sid": 83,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have evaluated this 2 We suspect performance on datasets with large vocabularies could be improved by increasing the number of frequent words used to build the word-type hierarchy; due to time constraints we had to postpone verifying it.",
+                    "sid": 84,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "method on the POS tagging task on which our approach outperforms a baseline based on Brown clusters in 9 out of 10 cases, often by a substantial margin.",
+                    "sid": 85,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future it would be interesting to investigate whether the hierarchy over word-class distributions would also be useful as a source of features in a semi-supervised learning scenario, instead, or in addition to using word-class probabilities as features directly.",
+                    "sid": 86,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We would also like to revisit and further investigate the challenging problem of token-level labeling.",
+                    "sid": 87,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

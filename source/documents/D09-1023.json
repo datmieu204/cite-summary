@@ -1,0 +1,1643 @@
+{
+    "ID": "D09-1023",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Feature-Rich Translation by Quasi-Synchronous Lattice Parsing",
+                    "sid": 0,
+                    "ssid": 0,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a machine translation framework that can incorporate arbitrary features of both input and output sentences.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The core of the approach is a novel decoder based on lattice parsing with quasi- synchronous grammar (Smith and Eisner, 2006), a syntactic formalism that does not require source and target trees to be isomorphic.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using generic approximate dynamic programming techniques, this decoder can handle \u201cnon-local\u201d features.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar approximate inference techniques support efficient parameter estimation with hidden variables.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the decoder to conduct controlled experiments on a German-to-English translation task, to compare lexical phrase, syntax, and combined models, and to measure effects of various restrictions on non- isomorphism.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "We have seen rapid recent progress in machine translation through the use of rich features and the development of improved decoding algorithms, often based on grammatical formalisms.1 If we view MT as a machine learning problem, features and formalisms imply structural independence assumptions, which are in turn exploited by efficient inference algorithms, including decoders (Koehn et al., 2003; Yamada and Knight, 2001).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence a tension is visible in the many recent research efforts aiming to decode with \u201cnon-local\u201d features (Chiang, 2007; Huang and Chiang, 2007).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lopez (2009) recently argued for a separation between features/formalisms (and the indepen 1 Informally, features are \u201cparts\u201d of a parallel sentence pair and/or their mutual derivation structure (trees, alignments, etc.).",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features are often implied by a choice of formalism.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "dence assumptions they imply) from inference algorithms in MT; this separation is widely appreciated in machine learning.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we take first steps toward such a \u201cuniversal\u201d decoder, making the following contributions:Arbitrary feature model (\u00a72): We define a sin gle, direct log-linear translation model (Papineni et al., 1997; Och and Ney, 2002) that encodes most popular MT features and can be used to encode any features on source and target sentences, dependency trees, and alignments.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The trees are optional and can be easily removed, allowing simulation of \u201cstring-to-tree,\u201d \u201ctree-to-string,\u201d \u201ctree- to-tree,\u201d and \u201cphrase-based\u201d models, among many others.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We follow the widespread use of log-linear modeling for direct translation modeling; the novelty is in the use of richer feature sets than have been previously used in a single model.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Decoding as QG parsing (\u00a73\u20134): We present anovel decoder based on lattice parsing with quasi synchronous grammar (QG; Smith and Eisner, 2006).2 Further, we exploit generic approximate inference techniques to incorporate arbitrary \u201cnon- local\u201d features in the dynamic programming algorithm (Chiang, 2007; Gimpel and Smith, 2009).Parameter estimation (\u00a75): We exploit simi lar approximate inference methods in regularized pseudolikelihood estimation (Besag, 1975) with hidden variables to discriminatively and efficiently train our model.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because we start with inference (the key subroutine in training), many other learning algorithms are possible.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental platform (\u00a76): The flexibility of our model/decoder permits carefully controlled experiments.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare lexical phrase and dependency syntax features, as well as a novel com 2 To date, QG has been used for word alignment (Smith and Eisner, 2006), adaptation and projection in parsing (Smith and Eisner, 2009), and various monolingual recognition and scoring tasks (Wang et al., 2007; Das and Smith, 2009); this paper represents its first application to MT. 219 Proceedings of the 2009 Conference on Empirical Methods in Natural Language Processing, pages 219\u2013228, Singapore, 67 August 2009.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2009 ACL and AFNLP \u03a3, T Trans : \u03a3 \u222a {NULL} \u2192 2T s = (s0 , . . .",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", sn ) \u2208 \u03a3n t = (t1 , . . .",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", tm ) \u2208 Tm \u03c4s : {1, . . .",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", n} \u2192 {0, . . .",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", n} \u03c4t : {1, . . .",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", m} \u2192 {0, . . .",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", m} a : {1, . . .",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", m} \u2192 2{1,...,n} \u03b8 source and target language vocabularies, respectively function mapping each source word to target words to which it may translate source language sentence (s0 is the NULL word) target language sentence, translation of s dependency tree of s, where \u03c4s (i) is the index of the parent of si (0 is the root, $) dependency tree of t, where \u03c4t (i) is the index of the parent of ti (0 is the root, $) alignments from words in t to words in s; \u2205 denotes alignment to NULL parameters of the model gtrans (s, a, t) f lex (s, t) j f phr (si , tk ) lexical translation features (\u00a72.1): word-to-word translation features for translating s as t phrase-to-phrase translation features for translating sj as t i k glm (t) j f N (tj\u2212N +1 ) language model features (\u00a72.2): N -gram probabilities gsyn (t, \u03c4t ) f att (t, j, tl, k) f val (t, j, I ) target syntactic features (\u00a72.3): syntactic features for attaching target word tl at position k to target word t at position j syntactic valence features with word t at position j having children I \u2286 {1, . . .",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", m} greor (s, \u03c4s , a, t, \u03c4t ) f dist (i, j) reordering features (\u00a72.4): distortion features for a source word at position i aligned to a target word at position j gtree 2 (\u03c4s , a, \u03c4t ) f qg (i, il, j, k) tree-to-tree syntactic features (\u00a73): configuration features for source pair si /sil being aligned to target pair tj /tk gcov (a) f scov (a), f zth (a), f sunc (a) coverage features (\u00a74.2) counters for \u201ccovering\u201d each s word each time, the zth time, and leaving it \u201cuncovered\u201d Table 1: Key notation.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature factorings are elaborated in Tab.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "bination of the two.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We quantify the effects of our approximate inference.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We explore the effects of various ways of restricting syntactic non-isomorphism between source and target trees through the QG.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not report state-of-the-art performance, but these experiments reveal interesting trends that will inform continued research.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "model. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "(Table 1 explains notation.)",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a sentence s and its parse tree \u03c4s, we formulate the translation on the feasibility of inference, including decoding.",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typically these feature functions are chosen to factor into local parts of the overall structure.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We next define some key features used in current MT systems, explaining how they factor.",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use subscripts on g to denote different groups of features, which may depend on subsets of the structures t, \u03c4t, a, s, and \u03c4s. When these features factor into parts, we will use f to denote the factored vectors, so that if x is an object that breaks into parts {xi}i, then g(x) = \ufffdi f (xi).",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 problem as finding the target sentence t\u2217 (along with its parse tree \u03c4 \u2217 source tree) such that3 and alignment a\u2217 to the 2.1 Lexical.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translations Classical lexical translation features depend on s and t and the alignment a between them.",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sim (t\u2217, \u03c4 \u2217, a\u2217) = argmax p(t, \u03c4t, a | s, \u03c4s) (1) t,\u03c4t ,aa In order to include overlapping features and permit hidden variables during training, we use a single globally-normalized conditional log-linear model.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, p(t, \u03c4t, a | s, \u03c4s) = exp{\u03b8Tg(s, \u03c4s, a, t, \u03c4t)} plest are word-to-word features, estimated as the conditional probabilities p(t | s) and p(s | t) for s \u2208 \u03a3 and t \u2208 T. Phrase-to-phrase features generalize these, estimated as p(tl | sl) and p(sl | tl) where sl (respectively, tl) is a substring of s (t).",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A major difference between the phrase features used in this work and those used elsewhere is that we do not assume that phrases segment into \ufffdal,tl,\u03c4 l exp{\u03b8Tg(s, \u03c4s, al, tl, \u03c4 l)} (2) disjoint parts of the source and target sentences t t 4 There are two conventional definitions of feature func-.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where the g are arbitrary feature functions and the \u03b8 are feature weights.",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If one or both parse trees or the word alignments are unavailable, they can be ignored or marginalized out as hidden variables.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a log-linear model over structured objects, the choice of feature functions g has a huge effect 3 We assume in this work that s is parsed.",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, we might include source-side parsing as part of decoding.",
+                    "sid": 46,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tions.",
+                    "sid": 47,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One is to let the range of these functions be conditional probability estimates (Och and Ney, 2002).",
+                    "sid": 48,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These estimates are usually heuristic and inconsistent (Koehn et al., 2003).",
+                    "sid": 49,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An alternative is to instantiate features for different structural patterns (Liang et al., 2006; Blunsom et al., 2008).",
+                    "sid": 50,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This offers more expressive power but may require much more training data to avoid overfitting.",
+                    "sid": 51,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, and to keep training fast, we opt for the former convention, though our decoder can handle both, and the factorings we describe are agnostic about this choice.",
+                    "sid": 52,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Koehn et al., 2003); they can overlap.5 Additionally, since phrase features can be any func g (s, a, t) = Pm i\u2208a(j) f lex (si , tj ) (3) tion of words and alignments, we permit features + P f (slast (i,j) , tj ) that consider phrase pairs in which a target word g (t) = P i,j:1\u2264i<j\u2264m Pm+1 phr first (i,j) i j lm N \u2208{2,3} j=1 f N (tj\u2212N +1 ) (4) outside the target phrase aligns to a source word inside the source phrase, as well as phrase pairs with gaps (Chiang, 2005; Ittycheriah and Roukos, gsyn (t, \u03c4t ) = Pm j \u03c4 (j) , \u03c4t (j)) val t (j)) (5) 2007).",
+                    "sid": 53,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "g (s, \u03c4s , a, t, \u03c4t ) = Pm m P i\u2208a(j) f dist (i, j) (6) Lexical translation features factor as in Eq. 3 (Tab.",
+                    "sid": 54,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2).",
+                    "sid": 55,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We score all phrase pairs in a sentence pair that pair a target phrase with the smallest gtree 2 (\u03c4s , a, \u03c4t ) = X f qg (a(j), a(\u03c4t (j)), j, \u03c4t (j)) (7) j=1 source phrase that contains all of the alignments in Table 2: Factoring of global feature collections g into f . xj denotes (xi , . . .",
+                    "sid": 56,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "xj ) in sequence x = (x1 , . . .).",
+                    "sid": 57,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the target phrase; if k:i\u2264k\u2264j a(k) = \u2205, no phrase i first (i, j) = mink:i\u2264k\u2264j (min(a(k))) and last (i, j) = feature fires for tj . maxk:i\u2264k\u2264j (max(a(k))).",
+                    "sid": 58,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 N -gram Language Model N -gram language models have become standard in machine translation systems.",
+                    "sid": 59,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For bigrams and trigrams (used in this paper), the factoring is in Eq. 4 (Tab.",
+                    "sid": 60,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2).",
+                    "sid": 61,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.3 Target Syntax.",
+                    "sid": 62,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There have been many features proposed that consider source- and target-language syntax during translation.",
+                    "sid": 63,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Syntax-based MT systems often use features on grammar rules, frequently maximum likelihood estimates of conditional probabilities in a probabilistic grammar, but other syntactic features are possible.",
+                    "sid": 64,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Quirk et al.",
+                    "sid": 65,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) use features involving phrases and source- side dependency trees and Mi et al.",
+                    "sid": 66,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) use features from a forest of parses of the source sentence.",
+                    "sid": 67,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is also substantial work in the use of target-side syntax (Galley et al., 2006; Marcu et al., 2006; Shen et al., 2008).",
+                    "sid": 68,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, researchers have recently added syntactic features to phrase-based and hierarchical phrase-based models (Gimpel and Smith, 2008; Haque et al., 2009; Chiang et al., 2008).",
+                    "sid": 69,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, we focus on syntactic features of target-side dependency trees, \u03c4t, along with the words t. These include attachment features that relate a word to its syntactic parent, and valence features.",
+                    "sid": 70,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They factor as in Eq. 5 (Tab.",
+                    "sid": 71,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2).",
+                    "sid": 72,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features that consider only target-side syntax and words without considering s can be seen as \u201csyntactic language model\u201d features (Shen et al., 2008).",
+                    "sid": 73,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Segmentation might be modeled as a hidden variable in future work.",
+                    "sid": 74,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.4 Reordering Reordering features take many forms in MT. In phrase-based systems, reordering is accomplished both within phrase pairs (local reordering) as well as through distance-based distortion models (Koehn et al., 2003) and lexicalized reordering models (Koehn et al., 2007).",
+                    "sid": 75,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In syntax-based systems, reordering is typically parameterized by grammar rules.",
+                    "sid": 76,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For generality we permit these features to \u201csee\u201d all structures and denote them greor (s, \u03c4s, a, t, \u03c4t).",
+                    "sid": 77,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eq. 6 (Tab.",
+                    "sid": 78,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2) shows a factoring of reordering features based on absolute positions of aligned words.",
+                    "sid": 79,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We turn next to the \u201cbackbone\u201d model for our decoder; the formalism and the properties of its decoding algorithm will inspire two additional sets of features.",
+                    "sid": 80,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "quasi-synchronous. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Grammars A quasi-synchronous dependency grammar (QDG; Smith and Eisner, 2006) specifies a conditional model p(t, \u03c4t, a | s, \u03c4s).",
+                    "sid": 81,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a source sentence s and its parse \u03c4s, a QDG induces a probabilistic monolingual dependency grammar over sentences \u201cinspired\u201d by the source sentence and tree.",
+                    "sid": 82,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We denote this grammar by Gs,\u03c4s ; its (weighted) language is the set of translations of s. Each word generated by Gs,\u03c4s is annotated with a \u201csense,\u201d which consists of zero or more words from s. The senses imply an alignment (a) between words in t and words in s, or equivalently, between nodes in \u03c4t and nodes in \u03c4s. In principle, any portion of \u03c4t may align to any portion of \u03c4s, but in practice we often make restrictions on the alignments to simplify computation.",
+                    "sid": 83,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Smith and Eisner, for example, restricted |a(j)| for all words tj to be at most one, so that each target word aligned to at most one source word, which we also do here.6 lem.)",
+                    "sid": 84,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As usual, the normalization constant is not required for decoding; it suffices to solve: t , a ) = argmax \u03b8 g(s, \u03c4 , a, t, \u03c4 ) (8)Which translations are possible depends heav ily on the configurations that the QDG permits.",
+                    "sid": 85,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(t\u2217, \u03c4 \u2217 \u2217 T s t t,\u03c4t ,aa Formally, for a parent-child pair (t\u03c4t (j), tj ) in \u03c4t, we consider the relationship between a(\u03c4t(j)) and a(j), the source-side words to which t\u03c4t (j) and tj align.",
+                    "sid": 86,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If, for example, we require that, for all j, a(\u03c4t(j)) = \u03c4s(a(j)) or a(j) = 0, and that the root of \u03c4t must align to the root of \u03c4s or to NULL, then strict isomorphism must hold between \u03c4s and \u03c4t, and we have implemented a synchronous CF dependency grammar (Alshawi et al., 2000; Ding and Palmer, 2005).",
+                    "sid": 87,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Smith and Eisner (2006) grouped all possible configurations into eight classes and explored the effects of permitting different sets of classes in word alignment.",
+                    "sid": 88,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(\u201ca(\u03c4t(j)) = \u03c4s(a(j))\u201d corresponds to their \u201cparent-child\u201d configuration; see Fig.",
+                    "sid": 89,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 in Smith and Eisner (2006) for illustrations of the rest.)",
+                    "sid": 90,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More generally, we can define features on tree pairs that factor into these local configurations, as shown in Eq. 7 (Tab.",
+                    "sid": 91,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2).",
+                    "sid": 92,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the QDG instantiates the model in Eq. 2.",
+                    "sid": 93,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the features discussed in \u00a72, f lex , f att , f val , and f dist can be easily incorporated into theQDG as described while respecting the indepen dence assumptions implied by the configuration features.",
+                    "sid": 94,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The others (f phr , f 2, and f 3) are non- local, or involve parts of the structure that, from the QDG\u2019s perspective, are conditionally independent given intervening material.",
+                    "sid": 95,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that \u201cnon locality\u201d is relative to a choice of formalism; in \u00a72 we did not commit to any formalism, so it is only now that we can describe phrase and N -gram features as non-local.",
+                    "sid": 96,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-local features will present a challenge for decoding and training (\u00a74.3).",
+                    "sid": 97,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "decoding. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Given a sentence s and its parse \u03c4s, at decoding time we seek the target sentence t\u2217, the target tree For a QDG model, the decoding problem has not been addressed before.",
+                    "sid": 98,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It equates to finding the most probable derivation under the s/\u03c4s-specific grammar Gs,\u03c4s . We solve this by lattice parsing, assuming that an upper bound on m (the length of t) is known.",
+                    "sid": 99,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The advantage offered by this approach (like most other grammar-based translation approaches) is that decoding becomes dynamic programming (DP), a technique that is both widely understood in NLP and for which practical, efficient, generic techniques exist.",
+                    "sid": 100,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A major advantage of DP is that, with small modifications, summing over structures is also possible with \u201cinside\u201d DP algorithms.",
+                    "sid": 101,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will exploit this in training(\u00a75).",
+                    "sid": 102,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Efficient summing opens up many possibilities for training \u03b8, such as likelihood and pseudo likelihood, and provides principled ways to handle hidden variables during learning.",
+                    "sid": 103,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Translation as Monolingual Parsing.",
+                    "sid": 104,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We decode by performing lattice parsing on a lattice encoding the set of possible translations.",
+                    "sid": 105,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lattice is a weighted \u201csausage\u201d lattice that permits sentences up to some maximum length \u00a3; \u00a3 is derived from the source sentence length.",
+                    "sid": 106,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let the states be numbered 0 to \u00a3; states from l\u03c1\u00a3J to \u00a3 are final states (for some \u03c1 \u2208 (0, 1)).",
+                    "sid": 107,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every position between consecutive states j \u2212 1 and j (0 < j \u2264 \u00a3), and for every word si in s, and for every word t \u2208 Trans(si), we instantiate an arc annotated with t and i. The weight of such an arc is exp{\u03b8Tf }, where f is the sum of feature functions that fire when si translates as t in target position j (e.g., f lex (si, t) and f dist (i, j)).",
+                    "sid": 108,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the lattice and Gs,\u03c4s , lattice parsing is a straightforward generalization of standard context-free dependency parsing DP algorithms \u03c4t , and the alignments a\u2217 that are most probable, (Eisner, 1997).",
+                    "sid": 109,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This decoder accounts for f lex ,as defined in Eq. 1.7 (In \u00a75 we will consider kbest and all-translations variations on this prob 6 I.e., from here on, a : {1, . . .",
+                    "sid": 110,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", m} \u2192 {0, . . .",
+                    "sid": 111,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", n} where 0 denotes alignment to NULL.",
+                    "sid": 112,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "f att , f val , f dist , and f qg as local features.",
+                    "sid": 113,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 gives an example, showing a German sentence and dependency tree from an automatic parser, an English reference, and a lattice repre 7 Arguably, we seek argmax.",
+                    "sid": 114,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p(t | s), marginalizing out senting possible translations.",
+                    "sid": 115,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each bundle, the everything else.",
+                    "sid": 116,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Approximate solutions have been proposed for that problem in several settings (Blunsom and Osborne, 2008; Sun and Tsujii, 2009); we leave their combination with our approach to future work.",
+                    "sid": 117,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "arcs are listed in decreasing order according to weight and for clarity only the first five are shown.",
+                    "sid": 118,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The output of the decoder consists of lattice arcs Source: $ konnten sie es \u00fcbersetzen ? Reference: could you translate it ? Decoder output: $ konnten:could konnten:could es:it ?:?",
+                    "sid": 119,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00fcbersetzen: ?:?",
+                    "sid": 120,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00fcbersetzen: sie:you sie:you konnten:could translate \u00fcbersetzen: translate \u00fcbersetzen: konnten:couldn es:it sie :you translated translated konnten:might es:it sie:let sie:them ?:?",
+                    "sid": 121,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00fcbersetzen: translate es:it konnten:could es:it NULL:to ...",
+                    "sid": 122,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1: Decoding as lattice parsing, with the highest-scoring translation denoted by black lattice arcs (others are grayed out) and thicker blue arcs forming a dependency tree over them.",
+                    "sid": 123,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "selected at each position and a dependency tree over them.",
+                    "sid": 124,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Source-Side Coverage Features.",
+                    "sid": 125,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most MT decoders enforce a notion of \u201ccoverage\u201d covered the zth time (z \u2208 {2, 3, 4}) and fire again all subsequent times it is covered; these are denoted f 2nd, f 3rd, and f 4th.",
+                    "sid": 126,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 A counter of uncovered source words: of the source sentence during translation: all parts f sunc (a) = \ufffdn \u03b4(|a\u22121(i)|, 0).",
+                    "sid": 127,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of s should be aligned to some part of t (alignment to NULL incurs an explicit cost).",
+                    "sid": 128,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase-based systems such as Moses (Koehn et al., 2007) explicitly search for the highest-scoring string in which all source words are translated.",
+                    "sid": 129,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Systems based on synchronous grammars proceed by parsing the source sentence with the synchronous grammar, ensuring that every phrase and word has an analogue in \u03c4t (or a deliberate choice is made by the decoder to translate it to NULL).",
+                    "sid": 130,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such systems, we do not need to use features to implement source-side coverage, as it is assumed as a hard constraint always respected by the decoder.",
+                    "sid": 131,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our QDG decoder has no way to enforce coverage; it does not track any kind of state in \u03c4s apart from a single recently aligned word.",
+                    "sid": 132,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a problem with other direct translation models, such as IBM model 1 used as a direct model rather than a channel model (Brown et al., 1993).",
+                    "sid": 133,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thissacrifice is the result of our choice to use a condi Of these, only f scov is local.",
+                    "sid": 134,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Non-Local Features.",
+                    "sid": 135,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lattice QDG parsing decoder incorporates many of the features we have discussed, but not all of them.",
+                    "sid": 136,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase lexicon features f phr , language model features f N for N > 1, and most coverage features are non-local with respect to our QDG.",
+                    "sid": 137,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently Chiang (2007) introduced \u201ccube pruning\u201d as an approximate decoding method that extends a DP decoder with the ability to incorporate features that break the Markovian independence assumptions DP exploits.",
+                    "sid": 138,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Techniques like cube pruning can be used to include the non-local features in our decoder.8",
+                    "sid": 139,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "training. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Training requires us to learn values for the parameters \u03b8 in Eq. 2.",
+                    "sid": 140,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given T training examples of the tional model (\u00a72).",
+                    "sid": 141,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "form (t (i) , \u03c4 (i), s (i) , \u03c4 (i)), for i = 1, ..., T , max The solution is to introduce a set of coverageimum likelihood estimation for this model con 9 features gcov (a).",
+                    "sid": 142,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, these include: sists of solving Eq. 9 (Tab.",
+                    "sid": 143,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3).",
+                    "sid": 144,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the \u2022 A counter for the number of times each source 8 A full discussion is omitted for space, but in fact we use \u201ccube decoding,\u201d a slightly less approximate, slightly more word is covered: f scov (a) = \ufffdn |a\u22121(i)|.",
+                    "sid": 145,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "expensive method that is more closely related to the approximate inference methods we use for training, discussed in \u00a75.",
+                    "sid": 146,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Features that fire once when a source word is 9 In practice, we regularize by including a term \u2212c \u03b8 2 ..",
+                    "sid": 147,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T T P exp{\u03b8Tg(s(i) , \u03c4 (i) , a, t(i) , \u03c4 (i) )} T \u201cnumerator\u201d LL(\u03b8) = X log p(t(i) , \u03c4 (i) | s(i) , \u03c4 (i) ) = X log a s t = X log (9) i=1 t s i=1 T t,\u03c4t ,a exp{\u03b8 g(s (i) , \u03c4 (i) , a, t, \u03c4 )} T i=1 \u201cdenominator\u201d PL(\u03b8) = X log\u201eX p(t(i) , a \u00ab \u03c4 (i) , s(i) , \u03c4 (i) ) X log\u201eX p(\u03c4 (i) , a \u00ab t(i) , s(i) , \u03c4 (i) ) (10) \u201cdenominator\u201d of i=1 a n X X 1 | t s l n T ` + t | i=1 a l l s o (11) term 1 in Eq. 10 = i=0 tl \u2208Trans(si ) S(\u03c4t (0), i, t ) \u00d7 exp \u03b8 f lex (si , t ) + f att ($, 0, t , k) + f qg (0, i, 0, k)\u00b4 n S(j, i, t) = Y X X S(k, il, tl) \u00d7 exp \u03b8T \u201e lex (sil , tl) + f 1 att (t, j, tl, k)+ \u00abff (12) k\u2208\u03c4 \u22121 (j) il =0 tl \u2208Trans(sil ) f val (t, j, \u03c4 \u2212 (j)) + f qg (i, il, j, k) S(j, i, t) = exp n\u03b8T `f (t, j, \u03c4 \u22121 (j))\u00b4o if \u03c4 \u22121 (j) = \u2205 (13) val t t Table 3: Eq. 9: Log-likelihood.",
+                    "sid": 148,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eq. 10: Pseudolikelihood.",
+                    "sid": 149,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both cases we maximize w.r.t. \u03b8.",
+                    "sid": 150,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eqs.",
+                    "sid": 151,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11\u201313: Recursive DP equations for summing over t and a. alignments are treated as a hidden variable to be marginalized out.10 Optimization problems of this form are by now widely known in NLP (Koo and Collins, 2005), and have recently been used for machine translation as well (Blunsom et al., 2008).",
+                    "sid": 152,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such problems are typically solved using variations of gradient ascent; in our experiments, we will use an online method called stochastic gradient ascent (SGA).",
+                    "sid": 153,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This requires us to calculate the function\u2019s gradient (vector of first derivatives) with respect to \u03b8.11 Computing the numerator in Eq. 9 involves summing over all possible alignments; with QDG and a hard bound of 1 on |a(j)| for all j, a fast \u201cinside\u201d DP solution is known (Smith and Eisner, 2006; Wang et al., 2007).",
+                    "sid": 154,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It runs in O(mn2) time and O(mn) space.",
+                    "sid": 155,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computing the denominator in Eq. 9 requires summing over all word sequences and dependency trees for the target language sentence and all word alignments between the sentences.",
+                    "sid": 156,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With a maximum length imposed, this is tractable using the \u201cinside\u201d version of the maximizing DP algorithm of Sec.",
+                    "sid": 157,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4, but it is prohibitively expensive.",
+                    "sid": 158,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore optimize pseudo-likelihood instead, making the following approximation (Be 10 Alignments could be supplied by automatic word alignment algorithms.",
+                    "sid": 159,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We chose to leave them hidden so that we could make the best use of our parsed training data when configuration constraints are imposed, since it is not always possible to reconcile automatic word alignments with automatic parses.",
+                    "sid": 160,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 When the function\u2019s value is computed by \u201cinside\u201d DP, the corresponding \u201coutside\u201d algorithm can be used to obtain the gradient.",
+                    "sid": 161,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because outside algorithms can be automatically derived from inside ones, we discuss only inside algorithms in this paper; see Eisner et al.",
+                    "sid": 162,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005).",
+                    "sid": 163,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "sag, 1975): p(t, \u03c4t | s, \u03c4s) \u2248 p(t | \u03c4t, s, \u03c4s) \u00d7 p(\u03c4t | t, s, \u03c4s) Plugging this into Eq. 9, we arrive at Eq. 10 (Tab.",
+                    "sid": 164,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3).",
+                    "sid": 165,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The two parenthesized terms in Eq. 10 each have their own numerators and denominators (not shown).",
+                    "sid": 166,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The numerators are identical to each other and to that in Eq. 9.",
+                    "sid": 167,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The denominators are much more manageable than in Eq. 9, never requiring summation over more than two structures at a time.",
+                    "sid": 168,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We must sum over target word sequences and word alignments (with fixed \u03c4t), and separately over target trees and word alignments (with fixed t).",
+                    "sid": 169,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Summing over t and a. The summation over target word sequences and alignments given fixed \u03c4t bears a resemblance to the inside algorithm, except that the tree structure is fixed (Pereira and Schabes, 1992).",
+                    "sid": 170,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let S(j, i, t) denote the sum of all translations rooted at position j in \u03c4t such that a(j) = i and tj = t. Tab.",
+                    "sid": 171,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 gives the equations for this DP: Eq. 11 is the quantity of interest, Eq. 12 is the recursion, and Eq. 13 shows the base cases for leaves of \u03c4t.Letting q = max0\u2264i\u2264n |Trans(si)|, this algo rithm runs in O(mn2q2) time and O(mnq) space.",
+                    "sid": 172,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For efficiency we place a hard upper bound on q during training (details in \u00a76).",
+                    "sid": 173,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Summing over \u03c4t and a. For the summation over dependency trees and alignments given fixed t, required for p(\u03c4t | t, s, \u03c4s), we perform \u201cinside\u201d lattice parsing with Gs,\u03c4s . The technique is the summing variant of the decoding method in \u00a74, except for each state j, the sausage lattice only includes arcs from j \u2212 1 to j that are labeled with the known target word tj . If a is the number of arcs in the lattice, which is O(mn), this algorithm runs in O(a3) time and requires O(a2) space.",
+                    "sid": 174,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because we use a hard upper bound on |Trans(s)| for all s \u2208 \u03a3, this summation is much faster in practice than the one over words and alignments.",
+                    "sid": 175,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Handling Non-Local Features.",
+                    "sid": 176,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So far, all of our algorithms have exploited DP, disallowing any non-local features (e.g., f phr , f N for N > 1, f zth, f sunc ).",
+                    "sid": 177,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We recently proposed \u201ccube summing,\u201d an approximate technique that permits the use of non-local features for inside DP algorithms (Gimpel and Smith, 2009).",
+                    "sid": 178,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cube summing is based on a slightly less greedy variation of cube pruning (Chiang, 2007) that maintains k-best lists of derivations for each DP chart item.",
+                    "sid": 179,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cube summing augments the k-best list with a residual term that sums over remaining structures not in the k-best list, albeit without their non-local features.",
+                    "sid": 180,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the machinery of cube summing, it is straightforward to include the desired non-local features in the summations required for pseudo- likelihood, as well as to compute their approximate gradients.",
+                    "sid": 181,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ment set of 934 sentences, and a test set of 500 sentences.",
+                    "sid": 182,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate translation output using case-insensitive BLEU (Papineni et al., 2001), as provided by NIST, and METEOR (Banerjee and Lavie, 2005), version 0.6, with Porter stemming and WordNet synonym matching.",
+                    "sid": 183,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our base system uses features as discussed in \u00a72.",
+                    "sid": 184,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To obtain lexical translation features gtrans (s, a, t), we use the Moses pipeline (Koehn et al., 2007).",
+                    "sid": 185,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We perform word alignment using GIZA++ (Och and Ney, 2003), symmetrize the alignments using the \u201cgrow-diag-final-and\u201d heuristic, and extract phrases up to length 3.",
+                    "sid": 186,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define f lex by the lexical probabilities p(t | s) and p(s | t) estimated from the symmetrized align ments.",
+                    "sid": 187,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After discarding phrase pairs with only one target-side word (since we only allow a target word to align to at most one source word), we define f phr by 8 features: {2, 3} target words \u00d7 phrase conditional and \u201clexical smoothing\u201d probabilities \u00d7 two conditional directions.",
+                    "sid": 188,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bigram and trigam language model features, f 2 and f 3, are estimated using the SRI toolkit (Stolcke, 2002) with modified KneserNey smoothing (Chen and Goodman, 1998).Our approach permits an alternative to mini mum error-rate training (MERT; Och, 2003); it is For our target-language syntactic features g syn , discriminative but handles latent structure and regularization in more principled ways.",
+                    "sid": 189,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pseudo- likelihood calculations for a sentence pair, taken together, are faster than (k-best) decoding, making SGA\u2019s inner loop faster than MERT\u2019s inner loop.",
+                    "sid": 190,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Our decoding framework allows us to perform many experiments with the same feature representation and inference algorithms, including combining and comparing phrase-based and syntax-based features and examining how isomorphism constraints of synchronous formalisms affect translation output.",
+                    "sid": 191,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.1 Data and Evaluation.",
+                    "sid": 192,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the GermanEnglish portion of the Basic Travel Expression Corpus (BTEC).",
+                    "sid": 193,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corpus has approximately 100K sentence pairs.",
+                    "sid": 194,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We filter sentences of length more than 15 words, which only removes 6% of the data.",
+                    "sid": 195,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We end up with a training set of 82,299 sentences, a develop we use features similar to lexicalized CFG events (Collins, 1999), specifically following the dependency model of Klein and Manning (2004).",
+                    "sid": 196,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These include probabilities associated with individual attachments (f att ) and child-generation valence probabilities (f val ).",
+                    "sid": 197,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These probabilities are estimated on the training corpus parsed using the Stanford factored parser (Klein and Manning, 2003).",
+                    "sid": 198,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same probabilities are also included using 50 hard word classes derived from the parallel corpus using the GIZA++ mkcls utility (Och and Ney, 2003).",
+                    "sid": 199,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In total, there are 7 lexical and 7 word-class syntax features.",
+                    "sid": 200,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For reordering, we use a single absolute distortion feature f dist (i, j) that returns |i\u2212j| whenever a(j) = i and i, j > 0.",
+                    "sid": 201,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Unlike the other feature functions, which returned probabilities, this feature function returns a nonnegative integer.)",
+                    "sid": 202,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tree-to-tree syntactic features gtree 2 in our model are binary features f qg that fire for particular QG configurations.",
+                    "sid": 203,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use one feature for each of the configurations in (Smith and Eisner, 2006), adding 7 additional features that score configura Phrase Syntactic Features: features: +f att \u222a f val +f qg (base) (target) (tree-to-tree) (base) 0.3727 0.4458 0.4424 +f phr 0.4682 0.4971 0.5142 Table 4: Feature set comparison (BLEU).",
+                    "sid": 204,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tions involving root words and NULL-alignments more finely.",
+                    "sid": 205,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are 14 features in this category.",
+                    "sid": 206,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Coverage features gcov are as described in \u00a74.2.",
+                    "sid": 207,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all, 46 feature weights are learned.",
+                    "sid": 208,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.3 Experimental Procedure.",
+                    "sid": 209,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model permits training the system on the full set of parallel data, but we instead use the parallel data to estimate feature functions and learn \u03b8 on the development set.12 We trained using three iterations of SGA over the development data with a batch size of 1 and a fixed step size of 0.01.",
+                    "sid": 210,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used \u00a32 regularization with a fixed, untuned coefficient of 0.1.",
+                    "sid": 211,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cube summing used a 10-best list for training and a 7-best list for decoding unless otherwise specified.",
+                    "sid": 212,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To obtain the translation lexicon (Trans) we first included the top three target words t for each s using p(s | t) \u00d7 p(t | s) to score target words.",
+                    "sid": 213,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For any training sentence (s, t) and tj for which gcov . The results are shown in Table 4.",
+                    "sid": 214,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second row contains scores when adding in the eight f phr features.",
+                    "sid": 215,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second column shows scores when adding the 14 target syntax features (f att and f val ), and the third column adds to them the 14 additional tree-to-tree features (f qg ).",
+                    "sid": 216,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find large gains in BLEU by adding more features, and find that gains obtained through phrase features and syntactic features are partially additive, suggesting that these feature sets are making complementary contributions to translation quality.",
+                    "sid": 217,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.5 Varying k During Decoding.",
+                    "sid": 218,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For models without syntactic features, we constrained the decoder to produce dependency trees in which every word\u2019s parent is immediately to its right and ignored syntactic features while scoring structures.",
+                    "sid": 219,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This causes decoding to proceed left- to-right in the lattice, the way phrase-based decoders operate.",
+                    "sid": 220,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these models do not search over trees, they are substantially faster during decoding than those that use syntactic features and do not require any pruning of the lattice.",
+                    "sid": 221,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we explored varying the value of k used during k-best cube decoding; results are shown in Fig.",
+                    "sid": 222,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 223,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scores improve when we increase k up tj /\u2208 n Trans(si), we added tj to Trans(si) to 10, but not much beyond, and there is still a i l l substantial gap (2.5 BLEU) between using phrase for = arg ma xil\u2208 I p(si |tj ) \u00d7 p(tj |si ), wh ere I i i n Trans(si)| < qi}.",
+                    "sid": 224,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "features with k = 20 and using all features with We used q0 = 10 and q>0 = 5, restricting k = 5.",
+                    "sid": 225,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Models without syntax perform poorly |Trans(NULL)| \u2264 10 and |Trans(s)| \u2264 5 for anys \u2208 \u03a3.",
+                    "sid": 226,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This made 191 of the development sentences unreachable by the model, leaving 743 sen tences for learning \u03b8.",
+                    "sid": 227,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During decoding, we generated lattices with all t \u2208 Trans(si) for 0 \u2264 i \u2264 n, for every position.",
+                    "sid": 228,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used \u03c1 = 0.9, causing states within 90% of the source sentence length to be final states.",
+                    "sid": 229,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Between each pair of consecutive states, we pruned edges that fell outside a beam of 70% of the sum of edge weights (see \u00a74.1; edge weights use f lex , f dist , and f scov ) of all edges between those two states.",
+                    "sid": 230,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.4 Feature Set Comparison.",
+                    "sid": 231,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our first set of experiments compares feature sets commonly used in phrase- and syntax-based trans when using a very small k, due to their reliance on non-local language model and phrase features.",
+                    "sid": 232,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, models with syntactic features, which are local in our decoder, perform relatively well even with k = 1.",
+                    "sid": 233,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.6 QG Configuration Comparison.",
+                    "sid": 234,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We next compare different constraints on isomorphism between the source and target dependency 0.55 0.50 0.45 0.40 0.35 Phrase + Syntactic lation.",
+                    "sid": 235,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, we compare the effects of combining phrase features and syntactic features.",
+                    "sid": 236,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The base model contains f lex , glm , greor , and 12 We made this choice both for similarity to standard MT. 0.30 0.25 0.20 Phrase Syntactic Neither 0 5 10 15 20 Value of k for Decoding systems and a more rapid experiment cycle.",
+                    "sid": 237,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2: Comparison of size of k-best list for cube decoding with various feature sets.",
+                    "sid": 238,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "QD G Co nfi gu rati on s BL E U M ET E O R sy nc hr on ou s + nul ls, root an y + child par ent , sa me no de + sib lin g + gr an dp ar ent /ch ild + c co m ma nd + oth er 0.4 00 8 0.4 10 8 0.4 33 7 0.4 88 1 0.5 01 5 0.5 15 6 0.5 14 2 0 . 6 9 4 9 0 . 6 9 3 1 0 . 6 8 1 5 0 . 7 2 1 6 0 . 7 3 6 5 0 . 7 4 4 1 0 . 7 4 7 2 Table 5: QG configuration comparison.",
+                    "sid": 239,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The name of each configuration, following Smith and Eisner (2006), refers to the relationship between a(\u03c4t (j)) and a(j) in \u03c4s . trees.",
+                    "sid": 240,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this, we impose harsh penalties on some QDG configurations (\u00a73) by fixing their feature weights to \u22121000.",
+                    "sid": 241,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence they are permit ted only when absolutely necessary in training and rarely in decoding.13 Each model uses all phrase and syntactic features; they differ only in the sets of configurations which have fixed negative weights.",
+                    "sid": 242,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tab.",
+                    "sid": 243,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 shows experimental results.",
+                    "sid": 244,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The base \u201csynchronous\u201d model permits parent-child (a(\u03c4t(j)) = \u03c4s(a(j))), any configuration where a(j) = 0, including both words being linked to NULL, and requires the root word in \u03c4t to be linked to the root word in \u03c4s or to NULL(5 of our 14 configurations).",
+                    "sid": 245,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second row allows any configuration involving NULL, including those where tj aligns to a non-NULL word in s and its parent aligns to NULL, and allows the root in \u03c4t to be linked to any word in \u03c4s. Each subsequent row adds additional configurations (i.e., trains its \u03b8 rather than fixing it to \u22121000).",
+                    "sid": 246,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, wesee large improvements as we permit more con figurations, and the largest jump occurs when we add the \u201csibling\u201d configuration (\u03c4s(a(\u03c4t(j))) = \u03c4s(a(j))).",
+                    "sid": 247,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU score does not increase, however, when we permit all configurations in the final row of the table, and the METEOR score increases only slightly.",
+                    "sid": 248,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While allowing certain categories of non-isomorphism clearly seems helpful, permitting arbitrary violations does not appear to be necessary for this dataset.",
+                    "sid": 249,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.7 Discussion.",
+                    "sid": 250,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that these results are not state-of-the- art on this dataset (on this task, Moses/MERT achieves 0.6838 BLEU and 0.8523 METEOR with maximum phrase length 3).14 Our aim has been to 13 In fact, the strictest \u201csynchronous\u201d model used the almost-forbidden configurations in 2% of test sentences; this behavior disappears as configurations are legalized.",
+                    "sid": 251,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14 We believe one cause for this performance gap is the generation of the lattice and plan to address this in future work by allowing the phrase table to inform lattice generation.",
+                    "sid": 252,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "illustrate how a single model can provide a controlled experimental framework for comparisons of features, of inference methods, and of constraints.",
+                    "sid": 253,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our findings show that phrase features and dependency syntax produce complementary improvements to translation quality, that tree-to- tree configurations (a new feature in MT) are helpful for translation, and that substantial gains can be obtained by permitting certain types of non- isomorphism.",
+                    "sid": 254,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have validated cube summing and decoding as practical methods for approximate inference.",
+                    "sid": 255,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our framework permits exploration of alternative objectives, alternative approximate inference techniques, additional hidden variables (e.g., Moses\u2019 phrase segmentation variable), and, of course, additional feature representations.",
+                    "sid": 256,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system is publicly available at www.ark.cs.",
+                    "sid": 257,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "cmu.edu/Quipu.",
+                    "sid": 258,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We presented feature-rich MT using a principled probabilistic framework that separates features from inference.",
+                    "sid": 259,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our novel decoder is based on efficient DP-based QG lattice parsing extended to handle \u201cnon-local\u201d features using generic techniques that also support efficient parameter estimation.",
+                    "sid": 260,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Controlled experiments permitted with this system show interesting trends in the use of syntactic features and constraints.",
+                    "sid": 261,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We thank three anonymous EMNLP reviewers, David Smith, and Stephan Vogel for helpful comments and feedback that improved this paper.",
+                    "sid": 262,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This research was supported by NSF IIS0836431 and IIS0844507, a grant from Google, and computational resources provided by Yahoo.",
+                    "sid": 263,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1499 @@
+{
+    "ID": "A92-1018",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We present an implementation of a part-of-speech tagger based on a hidden Markov model.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The methodology enables robust and accurate tagging with few resource requirements.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only a lexicon and some unlabeled training text are required.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accuracy exceeds 96%.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe implementation strategies and optimizations which result in high-speed operation.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Three applications for tagging are described: phrase recognition; word sense disambiguation; and grammatical function assignment.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 Desiderata Many words are ambiguous in their part of speech.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \"tag\" can be a noun or a verb.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when a word appears in the context of other words, the ambiguity is often reduced: in '% tag is a part-of-speech label,\" the word \"tag\" can only be a noun.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A part-of-speech tagger is a system that uses context to assign parts of speech to words.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Automatic text tagging is an important first step in discovering the linguistic structure of large text corpora.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Part-of-speech information facilitates higher-level analysis, such as recognizing noun phrases and other patterns in text.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a tagger to function as a practical component in a language processing system, we believe that a tagger must be: Robust Text corpora contain ungrammatical constructions, isolated phrases (such as titles), and non- linguistic data (such as tables).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corpora are also likely to contain words that are unknown to the tagger.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is desirable that a tagger deal gracefully with these situations.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Efficient If a tagger is to be used to analyze arbitrarily large corpora, it must be efficient--performing in time linear in the number of words tagged.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any training required should also be fast, enabling rapid turnaround with new corpora and new text genres.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accurate A tagger should attempt to assign the correct part-of-speech tag to every word encountered.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tunab le A tagger should be able to take advantage of linguistic insights.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One should be able to correct systematic errors by supplying appropriate a priori \"hints.\"",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It should be possible to give different hints for different corpora.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Reusable The effort required to retarget a tagger to new corpora, new tagsets, and new languages should be minimal.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "background",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Several different approaches have been used for building text taggers.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Greene and Rubin used a rule-based approach in the TAGGIT program [Greene and Rubin, 1971], which was an aid in tagging the Brown corpus [Francis and Ku~era, 1982].",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TAGGIT disambiguated 77% of the corpus; the rest was done manually over a period of several years.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More recently, Koskenniemi also used a rule-based approach implemented with finite-state machines [Koskenniemi, 1990].",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical methods have also been used (e.g., [DeRose, 1988], [Garside et al., 1987]).",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These provide the capability of resolving ambiguity on the basis of most likely interpretation.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A form of Markov model has been widely used that assumes that a word depends probabilistically on just its part-of-speech category, which in turn depends solely on the categories of the preceding two words.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two types of training (i.e., parameter estimation) have been used with this model.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first makes use of a tagged training corpus.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Derouault and Merialdo use a bootstrap method for training [Derouault and Merialdo, 1986].",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At first, a relatively small amount of text is manually tagged and used to train a partially accurate model.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model is then used to tag more text, and the tags are manually corrected and then used to retrain the model.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Church uses the tagged Brown corpus for training [Church, 1988].",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These models involve probabilities for each word in the lexicon, so large tagged corpora are required for reliable estimation.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second method of training does not require a tagged training corpus.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this situation the Baum-Welch algorithm (also known as the forward-backward algorithm) can be used [Baum, 1972].",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under this regime the model is called a hidden Markov model (HMM), as state transitions (i.e., part-of-speech categories) are assumed to be unobservable.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Jelinek has used this method for training a text tagger [Jelinek, 1985].",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parameter smoothing can be conveniently achieved using the method of deleted interpolation in which weighted estimates are taken from second- and first-order models and a uniform probability distribution [Jelinek and Mercer, 1980].",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kupiec used word equivalence classes (referred to here as ambiguity classes) based on parts of speech, to pool data from individual words [Kupiec, 1989b].",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most common words are still represented individually, as sufficient data exist for robust estimation.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "133 However all other words are represented according to the set of possible categories they can assume.",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this manner, the vocabulary of 50,000 words in the Brown corpus can be reduced to approximately 400 distinct ambiguity classes [Kupiec, 1992].",
+                    "sid": 45,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To further reduce the number of parameters, a first-order model can be employed (this assumes that a word's category depends only on the immediately preceding word's category).",
+                    "sid": 46,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In [Kupiec, 1989a], networks are used to selectively augment the context in a basic first- order model, rather than using uniformly second-order dependencies.",
+                    "sid": 47,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We next describe how our choice of techniques satisfies the criteria listed in section 1.",
+                    "sid": 48,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of an HMM permits complete flexibility in the choice of training corpora.",
+                    "sid": 49,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Text from any desired domain can be used, and a tagger can be tailored for use with a particular text database by training on a portion of that database.",
+                    "sid": 50,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexicons containing alternative tag sets can be easily accommodated without any need for relabeling the training corpus, affording further flexibility in the use of specialized tags.",
+                    "sid": 51,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the resources required are simply a lexicon and a suitably large sample of ordinary text, taggers can be built with minimal effort, even for other languages, such as French (e.g., [Kupiec, 1992]).",
+                    "sid": 52,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of ambiguity classes and a first-order model reduces the number of parameters to be estimated without significant reduction in accuracy (discussed in section 5).",
+                    "sid": 53,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This also enables a tagger to be reliably trained using only moderate amounts of text.",
+                    "sid": 54,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have produced reasonable results training on as few as 3,000 sentences.",
+                    "sid": 55,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fewer parameters also reduce the time required for training.",
+                    "sid": 56,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Relatively few ambiguity classes are sufficient for wide coverage, so it is unlikely that adding new words to the lexicon requires retraining, as their ambiguity classes are already accommodated.",
+                    "sid": 57,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Vocabulary independence is achieved by predicting categories for words not in the lexicon, using both context and suffix information.",
+                    "sid": 58,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Probabilities corresponding to category sequences that never occurred in the training data are assigned small, nonzero values, ensuring that the model will accept any sequence of tokens, while still providing the most likely tagging.",
+                    "sid": 59,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By using the fact that words are typically associated with only a few part-of- speech categories, and carefully ordering the computation, the algorithms have linear complexity (section 3.3).",
+                    "sid": 60,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 H idden Markov Mode l ing The hidden Markov modeling component of our tagger is implemented as an independent module following the specification given in [Levinson et al., 1983], with special attention to space and time efficiency issues.",
+                    "sid": 61,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only first-order modeling is addressed and will be presumed for the remainder of this discussion.",
+                    "sid": 62,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Formalism.",
+                    "sid": 63,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In brief, an HMM is a doubly stochastic process that generates sequence of symbols S = { Si, S2,...,ST}, Si E W I< i<T, where W is some finite set of possible symbols, by composing an underlying Markov process with a state-dependent symbol generator (i.e., a Markov process with noise), i Th Markov process captures the notion of sequence depen dency and is described by a set of N states, a matrix c transition probabilities A = {aij} 1 <_ i, j <_ N where ai is the probability of moving from state i to state j, and vector of initial probabilities H = {rq} 1 < i < N where is the probability of starting in state i. The symbol ger erator is a state-dependent measure on V described by matrix of symbol probabilities B = {bjk} 1 _< j <__ N an 1 < k < M where M = IWI and bjk is the probability generating symbol s~ given that the Markov process is i state j.2 In part-of-speech tagging, we will model word order d, pendency through an underlying Markov process that ot crates in terms of lexical tags, 'yet we will only be ab to observe the sets of tags, or ambiguity classes, that aJ possible for individual words.",
+                    "sid": 64,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ambiguity class of eac word is the set of its permitted parts of speech, only or of which is correct in context.",
+                    "sid": 65,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the parameters A, and H, hidden Markov modeling allows us to compute tt most probable sequence of state transitions, and hence tt mostly likely sequence of lexical tags, corresponding to sequence of ambiguity classes.",
+                    "sid": 66,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the following, N can identified with the number of possible.tags, and W wit the set of all ambiguity classes.",
+                    "sid": 67,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Applying an HMM consists of two tasks: estimating tt model parameters A, B and H from a training set; ar computing the most likely sequence of underlying sta transitions given new observations.",
+                    "sid": 68,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Maximum likeliho( estimates (that is, estimates that maximize the probabili of the training set) can be found through application of ternating expectation in a procedure known as the Baur Welch, or forward-backward, algorithm [Baum, 1972].",
+                    "sid": 69,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "proceeds by recursively defining two sets of probabiliti, the forward probabilities, at+i(J)= [ ~-~at(i)ai~]i=i b,(St+i) 1 <t <Tl , ( where at( i ) = ribi(Si) for all i; and the backward prob bilities, N = Ti < t < i , ( j= i where [3T(j) = 1 for all j. The forward probabili at(i) is the joint probability of the sequence up to tir t, {Si, S2, . . .",
+                    "sid": 70,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ",St} , and the event that the Markov pr cess is in state i at time t. Similarly, the backwa probability [3t(j) is the probability of seeing the sequen {St+i, St+2 ....",
+                    "sid": 71,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ST} given that the Markov process is state i at time t. It follows that the probability of t entire sequence is N N P = E E \u00b0~t(i)ai~bJ(St+i)/3t+i(j) imi j= i for any t in the range l<t <T- 1.a iFor an introduction to hidden Markov modeling see [l: biner and Juang, 1986].",
+                    "sid": 72,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2In the following we will write hi(St ) for bjk if St = s~.",
+                    "sid": 73,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3This is most conveniently evaluated at t = T - 1, in whi ca e P = 134 Given an initial choice for the parameters A, B, and II the expected number of transitions, 7ij, from state i to state j conditioned on the observation sequence S may be computed as follows: T-1 1 7ij = -fi E at(i)aijbj(St+l)~t+l(j).",
+                    "sid": 74,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "t= l Hence we can estimate aij by: _ ET: 5'i = N Ej=l 7ij ET:I 1 at(i)~t(i) Similarly, bj~ and 7ri can be estimated as follows: bjk = Et~s,: , , at(j)~t(j) ET=I at(j)Zt (j) and (3) (4) 1 ~i---- ~Ot1(i)~1(i).",
+                    "sid": 75,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) In summary, to find maximum likelihood estimates for A, B, and II, via the Baum-Welch algorithm, one chooses some starting values, applies equations 35 to compute new values, and then iterates until convergence.",
+                    "sid": 76,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It can be shown that this algorithm will converge, although possibly to a non-global maximum [Baum, 1972].",
+                    "sid": 77,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once a model has been estimated, selecting the most likely underlying sequence of state transitions corresponding to an observation S can be thought of as a maximization over all sequences that might generate S. An efficient dynamic programming procedure, known as the Viterbi algorithm [Viterbi, 1967], arranges for this computation to proceed in time proportional to T. Suppose V = {v(t)} 1 < t < T is a state sequence that generates S, then the probability that V generates S is, T P(v) = %(ub~(1)(S1) H a~(t-1)~(t)b~(t)(St).",
+                    "sid": 78,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "t=2 \u2022 To find the most probable such sequence we start by defining \u00a21(i) = ~rib~(S1) for 1 < i < N and then perform the recursion et( j) = ~a<x[\u00a2t-l(i)aij]bj(St) (6) and Ct(j) = maxtCt_ l ( i ) I<i<N for 2 < t < T and i _< j _< N. The crucial observation is-that-for each time t and each state i one need only consider the most probable sequence arriving at state i at time t. The probability of the most probable sequence is maxl<_i<.N[\u00a2T(i)] while the sequence itself can be reconstructed by defining v(T) = maxl--<_li<g eT(i) and v(tI) = et (q t ) for T > t > 2.",
+                    "sid": 79,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Numer ica l Stab i l i ty.",
+                    "sid": 80,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Baum-Welch algorithm (equations 15) and the Viterbi algorithm (equation 6) involve operations on products of numbers constrained to be between 0 and 1.",
+                    "sid": 81,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these products can easily underflow, measures must be taken to rescale.",
+                    "sid": 82,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One approach premultiplies the a and 13 probabilities with an accumulating product depending on t [Levin- son et al., 1983].",
+                    "sid": 83,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let 51(i) = al(i) and define ct = 5t i l<t<T. Now define &t(i) = ctK~t(i) and use a in place of a in equation 1 to define & for the next iteration: 5t+l( j ) = &t(i)aij bj(St+l) l<t<T-1 . Note that E in__=l ~t(i) = 1 for 1 < t < T. Similarly, let ~T(i) = ~T(i) and define 3t(i) = ct~t(i) for T > t > 1 where N ~t(i) = E aiJ bj(St+l)3t+l(j) j=l Tl<t<l . The scaled backward and forward probabilities, 5 and ~, can be exchanged for the unscaled probabilities in equations 35 without affecting the value of the ratios.",
+                    "sid": 84,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To see this, note that at(i) = C[at(i) and ~t(i) = ~t(i)C/+l where J C~=Hct . Now, in terms of the scaled probabilities, equation 5, for example, can be seen to be unchanged: (~ 1 (i)f}l (i) _ EN=I aT(i) E~=l CTaT(i) = ~'i.",
+                    "sid": 85,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A slight difficulty occurs in equation 3 that can be cured by the addition of a new term, ct+l, in each product of the upper sum: T-1 ^ \u2022 ^ . ~~t=l at(z)aijbj(St+, )~t+l(J)Ct+l ^ ET_~ll &t( i)~t( i) = a,j. Numerical instability in the Viterbi algorithm can be ameliorated by operating on a logarithmic scale [Levinson et al., 1983].",
+                    "sid": 86,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, one maximizes the log probability of each sequence of state transitions, log(P(v)) = + log(b (1)(Sl)) + T E log(a~(t_ 1)~(t)) + log(b~(t)(St)).",
+                    "sid": 87,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "t=2 Hence, equation 6 is replaced by et(J) = max [\u00a2t-1(i) + log(ao)] + logbj(St).",
+                    "sid": 88,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I< i<N Care must be taken with zero probabilities.",
+                    "sid": 89,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this can be elegantly handled through the use of IEEE negative infinity [P754, 1981].",
+                    "sid": 90,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "135 3.3 Reduc ing T ime Complex i ty.",
+                    "sid": 91,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As can be seen from equations 15, the time cost of training is O(TN~).",
+                    "sid": 92,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, as given in equation 6, the Viterbi algorithm is also O(TN2).",
+                    "sid": 93,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in part-of-speech tagging, the problem structure dictates that the matrix of symbol probabilities B is sparsely populated.",
+                    "sid": 94,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, bij 3\u00a3 0 iff the ambiguity class corresponding to symbol j includes the part-of-speech tag associated with state i. In practice, the degree of overlap between ambiguity classes is relatively low; some tokens are assigned unique tags, and hence have only one nonzero symbol probability.",
+                    "sid": 95,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sparseness of B leads one to consider restructuring equations 16 so a check for zero symbol probability can obviate the need for further computation.",
+                    "sid": 96,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equation 1 is already conveniently factored so that the dependence on bj(St+l) is outside the inner sum.",
+                    "sid": 97,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, ifk is the average number of nonzero entries in each row of B, the cost of computing equation 1 can be reduced to O(kTN).",
+                    "sid": 98,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equations 24 can be similarly reduced by switching the order of iteration.",
+                    "sid": 99,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in equation 2, rather than for a given t computing/3t(i) for each i one at a time, one can accumulate terms for all i in parallel.",
+                    "sid": 100,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The net effect of this rewriting is to place a bj(St+l) = 0 check outside the innermost iteration.",
+                    "sid": 101,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equations 3 and 4 submit to a similar approach.",
+                    "sid": 102,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equation 5 is already only O(N).",
+                    "sid": 103,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, the overall cost of training can be reduced to O(kTN), which, in our experience, amounts to an order of magnitude speed- upfl The time complexity of the Viterbi algorithm can also be reduced to O(kTN) by noting that bj(St) can be factored out of the maximization of equation 6.",
+                    "sid": 104,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.4 Controlling Space Complexity Adding up the sizes of the probabil ity matrices A, B, and H, it is easy to see that the storage cost for directly representing one model is proportional to N(N -t- M + 1).",
+                    "sid": 105,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Running the Baum-Welch algorithm requires storage for the sequence of observations, the a and /3 probabilities, the vector {ci}, and copies of the A and B matrices (since the originals cannot be overwritten until the end of each iteration).",
+                    "sid": 106,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, the grand total of space required for training is proportional to T q- 2N(T q- N + M + 1)..",
+                    "sid": 107,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since N and M are fixed by the model, the only parameter that can be varied to reduce storage costs is T. Now, adequate training requires processing from tens of thousands to hundreds of thousands of tokens [Kupiec, 1989a].",
+                    "sid": 108,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training set can be considered one long sequence, it which case T is very large indeed, or it can be broken up into a number of smaller sequences at convenient boundaries.",
+                    "sid": 109,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In first-order hidden Markov modeling, the stochastic process effectively restarts at unambiguous tokens, such as sentence and paragraph markers, hence these tokens are convenient points at which to break the training set.",
+                    "sid": 110,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the BaumWeleh algorithm is run separately (from the same starting point) on each piece, the resulting trained models must be recombined in some way.",
+                    "sid": 111,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One obvious approach is simply to average.",
+                    "sid": 112,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this fails if any two 4An equivalent approach maintains a mapping from states i to nonzero symbol probabilities and simply avoids, in the inner iteration, computing products which must be zero [Kupiec, 1992].",
+                    "sid": 113,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "states are indistinguishable (in the sense that they had the same transition probabilities and the same symbol probabilities at start), because states are then not matched across trained models.",
+                    "sid": 114,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is therefore important that each state have a distinguished role, which is relatively easy to achieve in part-of-speech tagging.",
+                    "sid": 115,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our implementation of the Baum-Welch algorithm breaks up the input into fixed-sized pieces of training text.",
+                    "sid": 116,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Baum-Welch algorithm is then run separately on each piece and the results are averaged together.",
+                    "sid": 117,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Running the Viterbi algorithm requires storage for the sequence of observations, a vector of current maxes, a scratch array of the same size, and a matrix of \u00a2 indices, for a total proportional to T + N(2 + T) and a grand total (including the model) of T -t- N(N H- M + T \u00f7 3).",
+                    "sid": 118,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, N and M are fixed.",
+                    "sid": 119,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, T need not be longer than a single sentence, since, as was observed above, the HMM, and hence the Viterbi algorithm, restarts at sentence boundaries.",
+                    "sid": 120,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.5 Mode l Tun ing.",
+                    "sid": 121,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An HMM for part-of-speech tagging can be tuned in a variety of ways.",
+                    "sid": 122,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the choice of tagset and lexicon determines the initial model.",
+                    "sid": 123,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, empirical and a priori information can influence the choice of starting values for the Baum-Welch algorithm.",
+                    "sid": 124,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, counting instances of ambiguity classes in running text allows one to assign non-uniform starting probabilities in A for a particular tag's realization as a particular ambiguity class.",
+                    "sid": 125,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alternatively, one can state a priori that a particular ambiguity class is most likely to be the reflection of some subset of its component tags.",
+                    "sid": 126,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if an ambiguity class consisting of the open class tags is used for unknown words, one may encode the fact that most unknown words are nouns or proper nouns by biasing the initial probabilities in B. Another biasing of starting values can arises from noting that some tags are unlikely to be followed by others.",
+                    "sid": 127,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the lexical item \"to\" maps to an ambiguity class containing two tags, infinitive-marker and to-as- preposition, neither of which occurs in any other ambiguity class.",
+                    "sid": 128,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If nothing more were stated, the HMM would have two states which were indistinguishable.",
+                    "sid": 129,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be remedied by setting the initial transition probabilities from infinitive-marker to strongly favor transitions to such states as verb-uninflected and adverb.",
+                    "sid": 130,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our implementation allows for two sorts of biasing of starting values: ambiguity classes can be annotated with favored tags; and states can be annotated with favored transitions.",
+                    "sid": 131,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These biases may be specified either as sets or as set complements.",
+                    "sid": 132,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Biases are implemented by replacing the disfavored probabilities with a small constant (machine epsilon) and redistributing mass to the other possibilities.",
+                    "sid": 133,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has the effect of disfavoring the indicated outcomes without disallowing them; sufficient converse data can rehabilitate these values.",
+                    "sid": 134,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Arch i tec ture.",
+                    "sid": 135,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In support of this and other work, we have developed a system architecture for text access [Cutting et al., 1991].",
+                    "sid": 136,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This architecture defines five components for such systems: 136 Search Index Analysis Corpus \u00b04 \u00b0\u00b0\u00b0\u00b0 . . .",
+                    "sid": 137,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "~\u00b0\u00b0\u00b0\u00b0\u00b0\u00b0\u00b0 \" ' - .\u00b0\u00b0 o.O\u00b0 \u00b0\u00b0\u00b0oo ....\"\"(further analysis) \"\"\" stem, tag l //~:/ Tagging -~ Training . / ? ~t ra inedHMM/ ambiguityelass,<stem,tag>* ~/ambigu i tyc lass Lexicon token l Tokenizer -... character ~'\u00b0o~,oQ.\u00b0\u00b0 . . \u00b0 , . , \u00b0 \u00b0\u00b0\u00b0\u00b0\u00b0\u00b0\u00b0~ \u00b0\u00b0 . . .",
+                    "sid": 138,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \u2022 Figure 1: Tagger Modules in System Context corpus, which provides text in a generic manner; analysis, which extracts terms from the text; index which stores term occurrence statistics; and search, which utilizes these statistics to resolve queries.",
+                    "sid": 139,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The part-of-speech tagger described here is implemented as an analysis module.",
+                    "sid": 140,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 illustrates the overall architecture, showing the tagger analysis implementation in detail.",
+                    "sid": 141,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tagger itself has a modular architecture, isolating behind standard protocols those elements which may vary, enabling easy substitution of alternate implementations.",
+                    "sid": 142,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also illustrated here are the data types which flow between tagger components.",
+                    "sid": 143,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an analysis implementation, the tagger must generate terms from text.",
+                    "sid": 144,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this context, a term is a word stem annotated with part of speech.",
+                    "sid": 145,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Text enters the analysis subsystem where the first processing module it encounters is the tokenizer, whose duty is to convert text (a sequence of characters) into a sequence of tokens.",
+                    "sid": 146,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentence boundaries are also identified by the tokenizer and are passed as reserved tokens.",
+                    "sid": 147,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tokenizer subsequently passes tokens to the lexicon.",
+                    "sid": 148,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here tokens are converted into a set of stems, each annotated with a part-of-speech tag.",
+                    "sid": 149,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of tags identifies an ambiguity class.",
+                    "sid": 150,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The identification of these classes is also the responsibility of the lexicon.",
+                    "sid": 151,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the lexicon delivers a set of stems paired with tags, and an ambiguity c lass . The training module takes long sequences of ambiguity classes as input.",
+                    "sid": 152,
+                    "ssid": 152,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It uses the Baum-Welch algorithm to produce a trained HMM, an input to the tagging module.",
+                    "sid": 153,
+                    "ssid": 153,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training is typically performed on a sample of the corpus at hand, with the trained HMM being saved for subsequent use on the corpus at large.",
+                    "sid": 154,
+                    "ssid": 154,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tagging module buffers sequences of ambiguity classes between sentence boundaries.",
+                    "sid": 155,
+                    "ssid": 155,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These sequences are disambiguated by computing the maximal path through the HMM with the Viterbi algorithm.",
+                    "sid": 156,
+                    "ssid": 156,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Operating at sentence granularity provides fast throughput without loss of accuracy, as sentence boundaries are unambiguous.",
+                    "sid": 157,
+                    "ssid": 157,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting sequence of tags is used to select the appropriate stems.",
+                    "sid": 158,
+                    "ssid": 158,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pairs of stems and tags are subsequently emitted.",
+                    "sid": 159,
+                    "ssid": 159,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tagger may function as a complete analysis component, providing tagged text to search and indexing components, or as a subsystem of a more elaborate analysis, such as phrase recognition.",
+                    "sid": 160,
+                    "ssid": 160,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Token izer Implementation The problem of tokenization has been well addressed by much work in compilation of programming languages.",
+                    "sid": 161,
+                    "ssid": 161,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The accepted approach is to specify token classes with regular expressions.",
+                    "sid": 162,
+                    "ssid": 162,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These may be compiled into a single deterministic finite state automaton which partitions character streams into labeled tokens [Aho et al., 1986, Lesk, 1975]..",
+                    "sid": 163,
+                    "ssid": 163,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the context of tagging, we require at least two token classes: sentence boundary and word.",
+                    "sid": 164,
+                    "ssid": 164,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other classes may include numbers, paragraph boundaries and various sorts of punctuation (e.g., braces of various types, commas).",
+                    "sid": 165,
+                    "ssid": 165,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, for simplicity, we will henceforth assume only words and sentence boundaries are extracted.",
+                    "sid": 166,
+                    "ssid": 166,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Just as with programming languages, with text it is not always possible to unambiguously specify the required token classes with regular expressions.",
+                    "sid": 167,
+                    "ssid": 167,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However the addition of a simple lookahead mechanism which allows specification of right context ameliorates this [Aho et al., 1986, Lesk, 1975].",
+                    "sid": 168,
+                    "ssid": 168,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a sentence boundary in English text might be identified by a period, followed by white- space, followed by an uppercase letter.",
+                    "sid": 169,
+                    "ssid": 169,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However the up- 137 percase letter must not be consumed, as it is the first component of the next token.",
+                    "sid": 170,
+                    "ssid": 170,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A lookahead mechanism allows us to specify in the sentence-boundary regular expression that the final character matched should not be considered a part of the token.",
+                    "sid": 171,
+                    "ssid": 171,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method meets our stated goals for the overall system.",
+                    "sid": 172,
+                    "ssid": 172,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is efficient, requiring that each character be examined only once (modulo lookahead).",
+                    "sid": 173,
+                    "ssid": 173,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is easily parameter- izable, providing the expressive power to concisely define accurate and robust token classes.",
+                    "sid": 174,
+                    "ssid": 174,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Lex icon Imp lementat ion.",
+                    "sid": 175,
+                    "ssid": 175,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lexicon module is responsible for enumerating parts of speech and their associated stems for each word it is given.",
+                    "sid": 176,
+                    "ssid": 176,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the English word \"does,\" the lexicon might return \"do, verb\" and \"doe, plural-noun.\"",
+                    "sid": 177,
+                    "ssid": 177,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also responsible for identifying ambiguity classes based upon sets of tags.",
+                    "sid": 178,
+                    "ssid": 178,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have employed a three-stage implementation: First, we consult a manually-constructed lexicon to find stems and parts of speech.",
+                    "sid": 179,
+                    "ssid": 179,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exhaustive lexicons of this sort are expensive, if not impossible, to produce.",
+                    "sid": 180,
+                    "ssid": 180,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fortunately, a small set of words accounts for the vast majority of word occurences.",
+                    "sid": 181,
+                    "ssid": 181,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus high coverage can be obtained without prohibitive effort.",
+                    "sid": 182,
+                    "ssid": 182,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Words not found in the manually constructed lexicon are generally both open class and regularly inflected.",
+                    "sid": 183,
+                    "ssid": 183,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a second stage, a language-specific method can be employed to guess ambiguity classes for unknown words.",
+                    "sid": 184,
+                    "ssid": 184,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For many languages (e.g., English and French), word suffixes provide strong cues to words' possible categories.",
+                    "sid": 185,
+                    "ssid": 185,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Probabalistic predictions of a word's category can be made by analyzing suffixes in untagged text [Kupiec, 1992, Meteer e* al., 1991].",
+                    "sid": 186,
+                    "ssid": 186,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a final stage, if a word is not in the manually constructed lexicon, and its suffix is not recognized, a default ambiguity class is used.",
+                    "sid": 187,
+                    "ssid": 187,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This class typically contains all the open class categories in the language.",
+                    "sid": 188,
+                    "ssid": 188,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dictionaries and suffix tables are both efficiently implementable as letter trees, or tries [Knuth, 1973], which require that each character of a word be examined only once during a lookup.",
+                    "sid": 189,
+                    "ssid": 189,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Per fo rmance.",
+                    "sid": 190,
+                    "ssid": 190,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we detail how our tagger meets the desiderata that we outlined in section 1.",
+                    "sid": 191,
+                    "ssid": 191,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Efficient The system is implemented in Common Lisp [Steele, 1990].",
+                    "sid": 192,
+                    "ssid": 192,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All timings reported are for a Sun SPARCStation2.",
+                    "sid": 193,
+                    "ssid": 193,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English lexicon used contains 38 tags (M -- 38) and 174 ambiguity classes (N -- 174)..",
+                    "sid": 194,
+                    "ssid": 194,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training was performed on 25,000 words in articles selected randomly from Grolier's Encyclopedia.",
+                    "sid": 195,
+                    "ssid": 195,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Five iterations of training were performed in a total time of 115 CPU seconds.",
+                    "sid": 196,
+                    "ssid": 196,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following is a time breakdown by component: Training: average #seconds per token tokenizer lexicon 1 iteration 5 iterations total 640 400 680 3400 4600 Tagging was performed on 115,822 words in a collection of articles by the journalist Dave Barry.",
+                    "sid": 197,
+                    "ssid": 197,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This required a total of of 143 CPU seconds.",
+                    "sid": 198,
+                    "ssid": 198,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The time breakdown for this was as follows: Tagging: average #seconds per token tokenizer lexicon Viterbi total 604 388 233 1235 It can be seen from these figures that training on a new corpus may be accomplished in a matter of minutes, and that tens of megabytes of text may then be tagged per hour.",
+                    "sid": 199,
+                    "ssid": 199,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Accurate and Robust.",
+                    "sid": 200,
+                    "ssid": 200,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When using a lexicon and tagset built from the tagged text of the Brown corpus [Francis and Ku~era, 1982], training on one half of the corpus (about 500,000 words) and tagging the other, 96% of word instances were assigned the correct tag.",
+                    "sid": 201,
+                    "ssid": 201,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eight iterations of training were used.",
+                    "sid": 202,
+                    "ssid": 202,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This level of accuracy is comparable to the best achieved by other taggers [Church, 1988, Merialdo, 1991].",
+                    "sid": 203,
+                    "ssid": 203,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Brown Corpus contains fragments and ungrammaticalities, thus providing a good demonstration of robustness.",
+                    "sid": 204,
+                    "ssid": 204,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Tunable and Reusable.",
+                    "sid": 205,
+                    "ssid": 205,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A tagger should be tunable, so that systematic tagging errors and anomalies can be addressed.",
+                    "sid": 206,
+                    "ssid": 206,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, it is important that it be fast and easy to target the tagger to new genres and languages, and to experiment with different tagsets reflecting different insights into the linguistic phenomena found in text.",
+                    "sid": 207,
+                    "ssid": 207,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In section 3.5, we describe how the HMM implementation itself supports tuning.",
+                    "sid": 208,
+                    "ssid": 208,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, our implementation supports a number of explicit parameters to facilitate tuning and reuse, including specification of lexicon and training corpus.",
+                    "sid": 209,
+                    "ssid": 209,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is also support for a flexible tagset.",
+                    "sid": 210,
+                    "ssid": 210,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if we want to collapse distinctions in the lexicon, such as those between positive, comparative, and superlative adjectives, we only have to make a small change in the mapping from lexicon to tagset.",
+                    "sid": 211,
+                    "ssid": 211,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, if we wish to make finer grain distinctions than those available in the lexicon, such as case marking on pronouns, there is a simple way to note such exceptions.",
+                    "sid": 212,
+                    "ssid": 212,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 Applications.",
+                    "sid": 213,
+                    "ssid": 213,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have used the tagger in a number of applications.",
+                    "sid": 214,
+                    "ssid": 214,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wc describe three applications here: phrase recognition; word sense disambiguation; and grammatical function assignment.",
+                    "sid": 215,
+                    "ssid": 215,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These projects are part of a research effort to use shallow analysis techniques to extract content from unrestricted text.",
+                    "sid": 216,
+                    "ssid": 216,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.1 Phrase Recognition.",
+                    "sid": 217,
+                    "ssid": 217,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have constructed a system that recognizes simpl~ phrases when given as input the sequence of tags for a sentence.",
+                    "sid": 218,
+                    "ssid": 218,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are recognizers for noun phrases, verb groups adverbial phrases, and prepositional phrases.",
+                    "sid": 219,
+                    "ssid": 219,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each of thes~ phrases comprises a contiguous sequence of tags that satis.",
+                    "sid": 220,
+                    "ssid": 220,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ties a simple grammar.",
+                    "sid": 221,
+                    "ssid": 221,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a noun phrase can b~ a unary sequence containing a pronoun tag or an arbitrar.",
+                    "sid": 222,
+                    "ssid": 222,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ily long sequence of noun and adjective tags, possibly pre.",
+                    "sid": 223,
+                    "ssid": 223,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ceded by a determiner tag and possibly with an embeddec possessive marker.",
+                    "sid": 224,
+                    "ssid": 224,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The longest possible sequence is fount (e.g., \"the program committee\" but not \"the program\") 138 Conjunctions are not recognized as part of any phrase; for example, in the fragment \"the cats and dogs,\" \"the cats\" and \"dogs\" will be recognized as two noun phrases.",
+                    "sid": 225,
+                    "ssid": 225,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Prepositional phrase attachment is not performed at this stage of processing.",
+                    "sid": 226,
+                    "ssid": 226,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach to phrase recognition in some cases captures only parts of some phrases; however, our approach minimizes false positives, so that we can rely on the recognizers' results.",
+                    "sid": 227,
+                    "ssid": 227,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.2 Word Sense Disamblguatlon Part-of-speech tagging in and of itself is a useful tool in lexical disambiguation; for example, knowing that \"dig\" is being used as a noun rather than as a verb indicates the word's appropriate meaning.",
+                    "sid": 228,
+                    "ssid": 228,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But many words have multiple meanings even while occupying the same part of speech.",
+                    "sid": 229,
+                    "ssid": 229,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To this end, the tagger has been used in the implementation of an experimental noun homograph disambiguation algorithm [Hearst, 1991].",
+                    "sid": 230,
+                    "ssid": 230,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm (known as CatchWord) performs supervised training over a large text corpus, gathering lexical, orthographic, and simple syntactic evidence for each sense of the ambiguous noun.",
+                    "sid": 231,
+                    "ssid": 231,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After a period of training, CatchWord classifies new instances of the noun by checking its context against that of previously observed instances and choosing the sense for which the most evidence is found.",
+                    "sid": 232,
+                    "ssid": 232,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the sense distinctions made are coarse, the disambiguation can be accomplished without the expense of knowledge bases or inference mechanisms.",
+                    "sid": 233,
+                    "ssid": 233,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initial tests resulted in accuracies of around 90% for nouns with strongly distinct senses..",
+                    "sid": 234,
+                    "ssid": 234,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm uses the tagger in two ways: (i) to determine the part of speech of the target word (filtering out the non-noun usages) and (ii) as a step in the phrase recognition analysis of the context surrounding the noun.",
+                    "sid": 235,
+                    "ssid": 235,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.3 Grammatical Function Assignment The phrase recognizers also provide input to a system, Sopa [Sibun, 1991], which recognizes nominal arguments of verbs, specifically, Subject, Object, and Predicative Arguments.",
+                    "sid": 236,
+                    "ssid": 236,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sopa does not rely on information (such as arity or voice) specific to the particular verbs involved.",
+                    "sid": 237,
+                    "ssid": 237,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first step in assigning grammatical functions is to partition the tag sequence of each sentence into phrases.",
+                    "sid": 238,
+                    "ssid": 238,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The phrase types include those mentioned in section 6.1, additional types to account for conjunctions, complementizers, and indicators of sentence boundaries, and an \"unknown\" type.",
+                    "sid": 239,
+                    "ssid": 239,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After a sentence has been partitioned, each simple noun phrase is examined in the context of the phrase to its left and the phrase to its right.",
+                    "sid": 240,
+                    "ssid": 240,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the basis of this local context and a set of rules, the noun phrase is marked as a syntactic Subject, Object, Predicative, or is not marked at all.",
+                    "sid": 241,
+                    "ssid": 241,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A label of Predicative is assigned only if it can be determined that the governing verb group is a form of a predicating verb (e.g., a form of \"be\").",
+                    "sid": 242,
+                    "ssid": 242,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because this cannot always be determined, some Predicatives are labeled Objects.",
+                    "sid": 243,
+                    "ssid": 243,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a noun phrase is labeled, it is also annotated as to whether the governing verb is the closest verb group to the right or to the left.",
+                    "sid": 244,
+                    "ssid": 244,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm has an accuracy of approximately 800\"/o in assigning grammatical functions..",
+                    "sid": 245,
+                    "ssid": 245,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We would like to thank Marti Hearst for her contributions to this paper, Lauri Karttunen and Annie Zaenen for their work on lexicons, and Kris Halvorsen for supporting this project.",
+                    "sid": 246,
+                    "ssid": 246,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

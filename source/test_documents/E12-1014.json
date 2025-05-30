@@ -1,0 +1,1205 @@
+{
+    "ID": "E12-1014",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Toward Statistical Machine Translation without Parallel Corpora",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We estimate the parameters of a phrasebased statistical machine translation sysfrom instead of a corpus.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extend existing research on bilingual lexicon induction estimate and phrasal translation probabilities for MT-scale phrasetables.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose a novel algorithm to estimate reordering probabilities from monolingual data.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report translation results for an end-to-end translation system using these monolingual features alone.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method only requires monolingual corpora in source and target languages, a small bilingual dictionary, and a small bitext for tuning feature weights.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we examine an idealization where a phrase-table is given.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We examine the degradation in translation performance when bilingually estimated translation probabilities are removed and show that 80%+ of the loss can be recovered with monolingually estimated features alone.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further show that our monolingual features add 1.5 BLEU points when combined with standard bilingually estimated phrase table features.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The parameters of statistical models of translation are typically estimated from large bilingual parallel corpora (Brown et al., 1993).",
+                    "sid": 9,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these resources are not available for most language pairs, and they are expensive to produce in quantities sufficient for building a good translation system (Germann, 2001).",
+                    "sid": 10,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We attempt an entirely different approach; we use cheap and plentiful monolingual resources to induce an end-toend statistical machine translation system.",
+                    "sid": 11,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, we extend the long line of work on inducing translation lexicons (beginning with Rapp (1995)) and propose to use multiple independent cues present in monolingual texts to estimate lexical and phrasal translation probabilities for large, MT-scale phrase-tables.",
+                    "sid": 12,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then introduce a novel algorithm to estimate reordering features from monolingual data alone, and we report the performance of a phrase-based statistical model (Koehn et al., 2003) estimated using these monolingual features.",
+                    "sid": 13,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the prior work on lexicon induction is motivated by the idea that it could be applied to machine translation but stops short of actually doing so.",
+                    "sid": 14,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexicon induction holds the potential to create machine translation systems for languages which do not have extensive parallel corpora.",
+                    "sid": 15,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training would only require two large monolingual corpora and a small bilingual dictionary, if one is available.",
+                    "sid": 16,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea is that intrinsic properties of monolingual data (possibly along with a handful of bilingual pairs to act as example mappings) can provide independent but informative cues to learn translations because words (and phrases) behave similarly across languages.",
+                    "sid": 17,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work is the first attempt to extend and apply these ideas to an end-to-end machine translation pipeline.",
+                    "sid": 18,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While we make an explicit assumption that a table of phrasal translations is given a priori, we induce every other parameter of a full phrasebased translation system from monolingual data alone.",
+                    "sid": 19,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contributions of this work are:",
+                    "sid": 20,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 background",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We begin with a brief overview of the standard phrase-based statistical machine translation model.",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, we define the parameters which we later replace with monolingual alternatives.",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We continue with a discussion of bilingual lexicon induction; we extend these methods to estimate the monolingual parameters in Section 3.",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach allows us to replace expensive/rare bilingual parallel training data with two large monolingual corpora, a small bilingual dictionary, and \u22482,000 sentence bilingual development set, which are comparatively plentiful/inexpensive.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical machine translation (SMT) was first formulated as a series of probabilistic models that learn word-to-word correspondences from sentence-aligned bilingual parallel corpora (Brown et al., 1993).",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Current methods, including phrase-based (Och, 2002; Koehn et al., 2003) and hierarchical models (Chiang, 2005), typically start by word-aligning a bilingual parallel corpus (Och and Ney, 2003).",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They extract multiword phrases that are consistent with the Viterbi word alignments and use these phrases to build new translations.",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A variety of parameters are estimated using the bitexts.",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we review the parameters of the standard phrase-based translation model (Koehn et al., 2007).",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Later we will show how to estimate them using monolingual texts instead.",
+                    "sid": 30,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These parameters are: age word translation probabilities, w(ez|fj), are calculated via phrase-pair-internal word alignments.",
+                    "sid": 31,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features are combined in a log linear model, and their weights are set through minimum error rate training (Och, 2003).",
+                    "sid": 32,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the same log linear formulation and MERT but propose alternatives derived directly from monolingual data for all parameters except for the phrase pairs themselves.",
+                    "sid": 33,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our pipeline still requires a small bitext of approximately 2,000 sentences to use as a development set for MERT parameter tuning.",
+                    "sid": 34,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bilingual lexicon induction describes the class of algorithms that attempt to learn translations from monolingual corpora.",
+                    "sid": 35,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rapp (1995) was the first to propose using non-parallel texts to learn the translations of words.",
+                    "sid": 36,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using large, unrelated English and German corpora (with 163m and 135m words) and a small German-English bilingual dictionary (with 22k entires), Rapp (1999) demonstrated that reasonably accurate translations could be learned for 100 German nouns that were not contained in the seed bilingual dictionary.",
+                    "sid": 37,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "His algorithm worked by (1) building a context vector representing an unknown German word by counting its co-occurrence with all the other words in the German monolingual corpus, (2) projecting this German vector onto the vector space of English using the seed bilingual dictionary, (3) calculating the similarity of this sparse projected vector to vectors for English words that were constructed using the English monolingual corpus, and (4) outputting the English words with the highest similarity as the most likely translations.",
+                    "sid": 38,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A variety of subsequent work has extended the original idea either by exploring different measures of vector similarity (Fung and Yee, 1998) or by proposing other ways of measuring similarity beyond co-occurence within a context window.",
+                    "sid": 39,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, Schafer and Yarowsky (2002) demonstrated that word translations tend to cooccur in time across languages.",
+                    "sid": 40,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Koehn and Knight (2002) used similarity in spelling as another kind of cue that a pair of words may be translations of one another.",
+                    "sid": 41,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Garera et al. (2009) defined context vectors using dependency relations rather than adjacent words.",
+                    "sid": 42,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bergsma and Van Durme (2011) used the visual similarity of labeled web images to learn translations of nouns.",
+                    "sid": 43,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additional related work on learning translations from monolingual corpora is discussed in Section 6.",
+                    "sid": 44,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we apply bilingual lexicon induction methods to statistical machine translation.",
+                    "sid": 45,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the obvious benefits of not having to rely on scarce bilingual parallel training data, it is surprising that bilingual lexicon induction has not been used for SMT before now.",
+                    "sid": 46,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are several open questions that make its applicability to SMT uncertain.",
+                    "sid": 47,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous research on bilingual lexicon induction learned translations only for a small number of high frequency words (e.g.",
+                    "sid": 48,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "100 nouns in Rapp (1995), 1,000 most frequent words in Koehn and Knight (2002), or 2,000 most frequent nouns in Haghighi et al. (2008)).",
+                    "sid": 49,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although previous work reported high translation accuracy, it may be misleading to extrapolate the results to SMT, where it is necessary to translate a much larger set of words and phrases, including many low frequency items.",
+                    "sid": 50,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a preliminary study, we plotted the accuracy of translations against the frequency of the source words in the monolingual corpus.",
+                    "sid": 51,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows the result for translations induced using contextual similarity (defined in Section 3.1).",
+                    "sid": 52,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsurprisingly, frequent terms have a substantially better chance of being paired with a correct translation, with words that only occur once having a low chance of being translated accurately.1 This problem is exacerbated when we move to multi-token phrases.",
+                    "sid": 53,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As with phrase translation features estimated from parallel data, longer phrases are more sparse, making similarity scores less reliable than for single words.",
+                    "sid": 54,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another impediment (not addressed in this paper) for using lexicon induction for SMT is the number of translations that must be learned.",
+                    "sid": 55,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning translations for all words in the source language requires n2 vector comparisons, since each word in the source language vocabulary must be compared against the vectors for all words in the target language vocabulary.",
+                    "sid": 56,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size of the n2 comparisons hugely increases if we compare vectors for multi-word phrases instead of just words.",
+                    "sid": 57,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, we avoid this problem by assuming that a limited set of phrase pairs is given a priori (but without scores).",
+                    "sid": 58,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By limiting ourselves to phrases in a phrase table, we vastly limit the search space of possible translations.",
+                    "sid": 59,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an idealization because high quality translations are guaranteed to be present.",
+                    "sid": 60,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, as our lesion experiments in Section 5.1 show, a phrase table without accurate translation probability estimates is insufficient to produce high quality translations.",
+                    "sid": 61,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that lexicon induction methods can be used to replace bilingual estimation of phrase- and lexical-translation probabilities, making a significant step towards SMT without parallel corpora.",
+                    "sid": 62,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 monolingual parameter estimation",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We use bilingual lexicon induction methods to estimate the parameters of a phrase-based translation model from monolingual data.",
+                    "sid": 63,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of scores estimated from bilingual parallel data, we make use of cues present in monolingual data to provide multiple orthogonal estimates of similarity between a pair of phrases.",
+                    "sid": 64,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Contextual similarity.",
+                    "sid": 65,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extend the vector space approach of Rapp (1999) to compute similarity between phrases in the source and target languages.",
+                    "sid": 66,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More formally, assume that (s1, s2, ... sN) and (t1, t2,... tM) are (arbitrarily indexed) source and target vocabularies, respectively.",
+                    "sid": 67,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A source phrase f is represented with an N- and target phrase e with an M-dimensional vector (see Figure 3).",
+                    "sid": 68,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The component values of the vector representing a phrase correspond to how often each of the words in that vocabulary appear within a two word window on either side of the phrase.",
+                    "sid": 69,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These counts are collected using monolingual corpora.",
+                    "sid": 70,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After the values have been computed, a contextual vector f is projected onto the English vector space using translations in a seed bilingual dictionary to map the component values into their appropriate English vector positions.",
+                    "sid": 71,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This sparse projected vector is compared to the vectors representing all English phrases e. Each phrase pair in the phrase table is assigned a contextual similarity score c(f, e) based on the similarity between e and the projection of f. Various means of computing the component values and vector similarity measures have been proposed in literature (e.g.",
+                    "sid": 72,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rapp (1999), Fung and Yee (1998)).",
+                    "sid": 73,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Fung and Yee (1998), we compute the value of the k-th component of f\u2019s contextual vector as follows: where nf,k and nk are the number of times sk appears in the context of f and in the entire corpus, and n is the maximum number of occurrences of any word in the data.",
+                    "sid": 74,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuitively, the more frequently sk appears with f and the less common it is in the corpus in general, the higher its component value.",
+                    "sid": 75,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarity between two vectors is measured as the cosine of the angle between them.",
+                    "sid": 76,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Temporal similarity.",
+                    "sid": 77,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to contextual similarity, phrases in two languages may be scored in terms of their temporal similarity (Schafer and Yarowsky, 2002; Klementiev and Roth, 2006; Alfonseca et al., 2009).",
+                    "sid": 78,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The intuition is that news stories in different languages will tend to discuss the same world events on the same day.",
+                    "sid": 79,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The frequencies of translated phrases over time give them particular signatures that will tend to spike on the same dates.",
+                    "sid": 80,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, if the phrase asian tsunami is used frequently during a particular time span, the Spanish translation maremoto asi\u00b4atico is likely to also be used frequently during that time.",
+                    "sid": 81,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 illustrates how the temporal distribution of terrorist is more similar to Spanish terrorista than to other Spanish phrases.",
+                    "sid": 82,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We calculate the temporal similarity between a pair of phrases t(f, e) using the method defined by Klementiev and Roth (2006).",
+                    "sid": 83,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We generate a temporal signature for each phrase by sorting the set of (time-stamped) documents in the monolingual corpus into a sequence of equally sized temporal bins and then counting the number of phrase occurrences in each bin.",
+                    "sid": 84,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we set the window size to 1 day, so the size of temporal signatures is equal to the number of days spanned by our corpus.",
+                    "sid": 85,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use cosine distance to compare the normalized temporal signatures for a pair of phrases (f, e).",
+                    "sid": 86,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Topic similarity.",
+                    "sid": 87,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrases and their translations are likely to appear in articles written about the same topic in two languages.",
+                    "sid": 88,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, topic or category information associated with monolingual data can also be used to indicate similarity between a phrase and its candidate translation.",
+                    "sid": 89,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to score a pair of phrases, we collect their topic signatures by counting their occurrences in each topic and then comparing the resulting vectors.",
+                    "sid": 90,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We again use the cosine similarity measure on the normalized topic signatures.",
+                    "sid": 91,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we use interlingual links between Wikipedia articles to estimate topic similarity.",
+                    "sid": 92,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We treat each linked article pair as a topic and collect counts for each phrase across all articles in its corresponding language.",
+                    "sid": 93,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, the size of a phrase topic signature is the number of article pairs with interlingual links in Wikipedia, and each component contains the number of times the phrase appears in (the appropriate side of) the corresponding pair.",
+                    "sid": 94,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our Wikipedia-based topic similarity feature, w(f, e), is similar in spirit to polylingual topic models (Mimno et al., 2009), but it is scalable to full bilingual lexicon induction.",
+                    "sid": 95,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the three phrase similarity features used in our model \u2013 c(f, e), t(f, e) and w(f, e) \u2013 we include four additional lexical similarity features for each of phrase pair.",
+                    "sid": 96,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first three lexical features clex(f, e), tlex(f, e) and wlex(f, e) are the lexical equivalents of the phrase-level contextual, temporal and wikipedia topic similarity scores.",
+                    "sid": 97,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They score the similarity of individual words within the phrases.",
+                    "sid": 98,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compute these lexical similarity features, we average similarity scores over all possible word alignments across the two phrases.",
+                    "sid": 99,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because individual words are more frequent than multiword phrases, the accuracy of clex, tlex, and wlex tends to be higher than their phrasal equivalents (this is similar to the effect observed in Figure 2).",
+                    "sid": 100,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Orthographic / phonetic similarity.",
+                    "sid": 101,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final lexical similarity feature that we incorporate is o(f, e), which measures the orthographic similarity between words in a phrase pair.",
+                    "sid": 102,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Etymologically related words often retain similar spelling across languages with the same writing system, and low string edit distance sometimes signals translation equivalency.",
+                    "sid": 103,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Berg-Kirkpatrick and Klein (2011) present methods for learning correspondences between the alphabets of two languages.",
+                    "sid": 104,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can also extend this idea to language pairs not sharing the same writing system since many cognates, borrowed words, and names remain phonetically similar.",
+                    "sid": 105,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transliterations can be generated for tokens in a source phrase (Knight and Graehl, 1997), with o(f, e) calculating phonetic similarity rather than orthographic.",
+                    "sid": 106,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The three phrasal and four lexical similarity scores are incorporated into the log linear translation model as feature functions, replacing the bilingually estimated phrase translation probabilities 0 and lexical weighting probabilities w. Our seven similarity scores are not the only ones that could be incorporated into the translation model.",
+                    "sid": 107,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Various other similarity scores can be computed depending on the available monolingual data and its associated metadata (see, e.g.",
+                    "sid": 108,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Schafer and Yarowsky (2002)).",
+                    "sid": 109,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remaining component of the phrase-based SMT model is the reordering model.",
+                    "sid": 110,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce a novel algorithm for estimating Input: Source and target phrases f and e, Source and target monolingual corpora Cf and Ce, Phrase table pairs T = {(f(i), e(i))}Ni=1.",
+                    "sid": 111,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Output: Orientation features (pm, ps, pd).",
+                    "sid": 112,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sf +\u2014 sentences containing fin Cf; Se +\u2014 sentences containing e in Ce; po(orientation|f, e) from two monolingual corpora instead a bitext.",
+                    "sid": 113,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 illustrates how the phrase pair orientation statistics are estimated in the standard phrasebased SMT pipeline.",
+                    "sid": 114,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a phrase pair like (f = \u201cProfils\u201d, e = \u201cprofile\u201d), we count its orientation with the previously translated phrase pair (f' = \u201cin Facebook\u201d, e' = \u201cFacebook\u201d) across all translated sentence pairs in the bitext.",
+                    "sid": 115,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our pipeline we do not have translated sentence pairs.",
+                    "sid": 116,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we look for monolingual sentences in the source corpus which contain the source phrase that we are interested in, like f = \u201cProfils\u201d, and at least one other phrase that we have a translation for, like f' = \u201cin Facebook\u201d.",
+                    "sid": 117,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then look for all target language sentences in the target monolingual corpus that contain the translation of f (here e = \u201cprofile\u201d) and any translation of f'.",
+                    "sid": 118,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 illustrates that it is possible to find evidence for po(swapped|Profils, profile), even from the nonparallel, non-translated sentences drawn from two independent monolingual corpora.",
+                    "sid": 119,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By looking for foreign sentences containing pairs of adjacent foreign phrases (f, f') and English sentences containing their corresponding translations (e, e'), we are able to increment orientation counts for (f, e) by looking at whether e and e' are adjacent, swapped, or discontinuous.",
+                    "sid": 120,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The orientations correspond directly to those shown in Figure 1.",
+                    "sid": 121,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One subtly of our method is that shorter and more frequent phrases (e.g. punctuation) are more likely to appear in multiple orientations with a given phrase, and therefore provide poor evidence of reordering.",
+                    "sid": 122,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we (a) collect the longest contextual phrases (which also appear in the phrase table) for reordering feature estimation, and (b) prune the set of sentences so that we only keep a small set of least frequent contextual phrases (this has the effect of dropping many function words and punctuation marks and and relying more heavily on multi-word content phrases to estimate the reordering).2 Our algorithm for learning the reordering parameters is given in Figure 5.",
+                    "sid": 123,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm estimates a probability distribution over monotone, swap, and discontinuous orientations (pm, ps, pd) for a phrase pair (f, e) from two monolingual corpora Cf and Ce.",
+                    "sid": 124,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It begins by calling CollectOccurs to collect the longest matching phrase table phrases that precede f in source monolingual data (Bf), as well as those that precede (Be), follow (Ae), and are discontinuous (De) with e in the target language data.",
+                    "sid": 125,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each unique phrase f' preceding f, we look up translations in the phrase table T. Next, we count3 how many translations e' of f' appeared before, after or were discontinuous with e in the target language data.",
+                    "sid": 126,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the counts are normalized and returned.",
+                    "sid": 127,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These normalized counts are the values we use as estimates of po(orientationjf, e).",
+                    "sid": 128,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experimental setup",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We use the Spanish-English language pair to test our method for estimating the parameters of an SMT system from monolingual corpora.",
+                    "sid": 129,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This allows us to compare our method against the normal bilingual training procedure.",
+                    "sid": 130,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We expect bilingual training to result in higher translation quality because it is a more direct method for learning translation probabilities.",
+                    "sid": 131,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We systematically remove different parameters from the standard phrase-based model, and then replace them with our monolingual equivalents.",
+                    "sid": 132,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal is to recover as much of the loss as possible for each of the deleted bilingual components.",
+                    "sid": 133,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The standard phrase-based model that we use as our top-line is the Moses system (Koehn et al., 2007) trained over the full Europarl v5 parallel corpus (Koehn, 2005).",
+                    "sid": 134,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With the exception of maximum phrase length (set to 3 in our experiments), we used default values for all of the parameters.",
+                    "sid": 135,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All experiments use a trigram language model trained on the English side of the Europarl corpus using SRILM with Kneser-Ney smoothing.",
+                    "sid": 136,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To tune feature weights in minimum error rate training, we use a development bitext of 2,553 sentence pairs, and we evaluate performance on a test set of 2,525 single-reference translated newswire articles.",
+                    "sid": 137,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These development and test datasets were distributed in the WMT shared task (Callison-Burch et al., 2010).4 MERT 4Specifcially, news-test2008 plus news-syscomb2009 for dev and newstest2009 for test. was re-run for every experiment.",
+                    "sid": 138,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We estimate the parameters of our model from two sets of monolingual data, detailed in Table 1: contextual similarity, and 6x as many paired dates for temporal similarity.",
+                    "sid": 139,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Topical similarity is estimated using Spanish and English Wikipedia articles that are paired with interlanguage links.",
+                    "sid": 140,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To project context vectors from Spanish to English, we use a bilingual dictionary containing entries for 49,795 Spanish words.",
+                    "sid": 141,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that end-toend translation quality is robust to substantially reducing dictionary size, but we omit these experiments due to space constraints.",
+                    "sid": 142,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The context vectors for words and phrases incorporate cooccurrence counts using a two-word window on either side.",
+                    "sid": 143,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The title of our paper uses the word towards because we assume that an inventory of phrase pairs is given.",
+                    "sid": 144,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Future work will explore inducing the phrase table itself from monolingual texts.",
+                    "sid": 145,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Across all of our experiments, we use the phrase table that the bilingual model learned from the Europarl parallel corpus.",
+                    "sid": 146,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We keep its phrase pairs, but we drop all of its scores.",
+                    "sid": 147,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 gives details of the phrase pairs.",
+                    "sid": 148,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we estimated similarity and reordering scores for more than 3 million phrase pairs.",
+                    "sid": 149,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each source phrase, the set of possible translations was constrained and likely to contain good translations.",
+                    "sid": 150,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the average number of possible translations was high (ranging from nearly 100 translations for each unigram to 14 for each trigram).",
+                    "sid": 151,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These contain a lot of noise and result in low end-to-end translation quality without good estimates of translation quality, as the experiments in Section 5.1 show.",
+                    "sid": 152,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Software.",
+                    "sid": 153,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because many details of our estimation procedures must be omitted for space, we distribute our full set of code along with scripts for running our experiments and output translations.",
+                    "sid": 154,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These may be downed from http://www.cs. jhu.edu/\u02dcanni/papers/lowresmt/ 12 1 14 15 1 17 18 19 based model when each of the bilingually estimated features are removed.",
+                    "sid": 155,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It shows how much of the performance loss can be recovered using our monolingual features when they are estimated from the Europarl training corpus but treating each side as an independent, monolingual corpus.",
+                    "sid": 156,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 8 shows the recovery when using truly monolingual corpora to estimate the parameters.",
+                    "sid": 157,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments 1-4 remove bilingually estimated parameters from the standard model.",
+                    "sid": 158,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For SpanishEnglish, the relative contribution of the phrasetable features (which include the phrase translation probabilities 0 and the lexical weights w) is greater than the reordering probabilities.",
+                    "sid": 159,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the reordering probability po(orientation|f, e) is eliminated and replaced with a simple distancebased distortion feature that does not require a bitext to estimate, the score dips only marginally since word order in English and Spanish is similar.",
+                    "sid": 160,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when both the reordering and the phrase table features are dropped, leaving only the LM feature and the phrase penalty, the resulting translation quality is abysmal, with the score dropping a total of over 17 BLEU points.",
+                    "sid": 161,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments 5-10 show how much our monolingual equivalents could recover when the monolingual corpora are drawn from the two sides of the bitext.",
+                    "sid": 162,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, our algorithm for estimating reordering probabilities from monolingual data (\u2013 /M) adds 5 BLEU points, which is 73% of the potential recovery going from the model (\u2013/\u2013) to the model with bilingual reordering features (\u2013/B).",
+                    "sid": 163,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the temporal, orthographic, and contextual monolingual features the temporal feature performs the best.",
+                    "sid": 164,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Together (M/\u2013), they recover more than each individually.",
+                    "sid": 165,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combining monolingually estimated reordering and phrase table features (M/M) yields a total gain of 13.5 BLEU points, or over 75% of the BLEU score loss that occurred when we dropped all features from the phrase table.",
+                    "sid": 166,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these results use \u201cmonolingual\u201d corpora which have practically identical phrasal and temporal distributions.",
+                    "sid": 167,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments 12-18 estimate all of the features from truly monolingual corpora.",
+                    "sid": 168,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our novel algorithm for estimating reordering holds up well and recovers 69% of the loss, only 0.4 BLEU points less than when estimated from the Europarl monolingual texts.",
+                    "sid": 169,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The temporal similarity feature does not perform as well as when it was estimated using Europarl data, but the contextual feature does.",
+                    "sid": 170,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The topic similarity using Wikipedia performs the strongest of the individual features.",
+                    "sid": 171,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combining the monolingually estimated reordering features with the monolingually estimated similarity features (M/M) yields a total gain of 14.8 BLEU points, or over 82% of the BLEU point loss that occurred when we dropped all features from the phrase table.",
+                    "sid": 172,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is equivalent to training the standard system on a bitext with roughly 60,000 lines or nearly 2 million words (learning curve omitted for space).",
+                    "sid": 173,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we supplement the standard bilingually estimated model parameters with our monolingual features (BM/B), and we see a 1.5 BLEU point increase over the standard model.",
+                    "sid": 174,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, our monolingually estimated scores capture some novel information not contained in the standard feature set.",
+                    "sid": 175,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 additional related work",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Carbonell et al. (2006) described a data-driven MT system that used no parallel text.",
+                    "sid": 176,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It produced translation lattices using a bilingual dictionary and scored them using an n-gram language model.",
+                    "sid": 177,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their method has no notion of translation similarity aside from a bilingual dictionary.",
+                    "sid": 178,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, S\u00b4anchez-Cartagena et al. (2011) supplement an SMT phrase table with translation pairs extracted from a bilingual dictionary and give each a frequency of one for computing translation scores.",
+                    "sid": 179,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ravi and Knight (2011) treat MT without parallel training data as a decipherment task and learn a translation model from monolingual text.",
+                    "sid": 180,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They translate corpora of Spanish time expressions and subtitles, which both have a limited vocabulary, into English.",
+                    "sid": 181,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their method has not been applied to broader domains of text.",
+                    "sid": 182,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most work on learning translations from monolingual texts only examine small numbers of frequent words.",
+                    "sid": 183,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Huang et al. (2005) and Daum\u00b4e and Jagarlamudi (2011) are exceptions that improve MT by mining translations for OOV items.",
+                    "sid": 184,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A variety of past research has focused on mining parallel or comparable corpora from the web (Munteanu and Marcu, 2006; Smith et al., 2010; Uszkoreit et al., 2010).",
+                    "sid": 185,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Others use an existing SMT system to discover parallel sentences within independent monolingual texts, and use them to re-train and enhance the system (Schwenk, 2008; Chen et al., 2008; Schwenk and Senellart, 2009; Rauf and Schwenk, 2009; Lambert et al., 2011).",
+                    "sid": 186,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are complementary but orthogonal to our research goals.",
+                    "sid": 187,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusion",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "This paper has demonstrated a novel set of techniques for successfully estimating phrase-based SMT parameters from monolingual corpora, potentially circumventing the need for large bitexts, which are expensive to obtain for new languages and domains.",
+                    "sid": 188,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated the performance of our algorithms in a full end-to-end translation system.",
+                    "sid": 189,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assuming that a bilingual-corpus-derived phrase table is available, we were able utilize our monolingually-estimated features to recover over 82% of BLEU loss that resulted from removing the bilingual-corpus-derived phrase-table probabilities.",
+                    "sid": 190,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also showed that our monolingual features add 1.5 BLEU points when combined with standard bilingually estimated features.",
+                    "sid": 191,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus our techniques have stand-alone efficacy when large bilingual corpora are not available and also make a significant contribution to combined ensemble performance when they are.",
+                    "sid": 192,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

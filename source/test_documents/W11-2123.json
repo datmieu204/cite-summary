@@ -1,0 +1,1787 @@
+{
+    "ID": "W11-2123",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "KenLM: Faster and Smaller Language Model Queries",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present KenLM, a library that implements two data structures for efficient language model queries, reducing both time and costs.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The structure uses linear probing hash tables and is designed for speed.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared with the widely- SRILM, our is 2.4 times as fast while using 57% of the mem- The structure is a trie with bit-level packing, sorted records, interpolation search, and optional quantization aimed lower memory consumption. simultaneously uses less memory than the smallest lossless baseline and less CPU than the baseline.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our code is thread-safe, and integrated into the Moses, cdec, and Joshua translation systems.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper describes the several performance techniques used and presents benchmarks against alternative implementations.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Language models are widely applied in natural language processing, and applications such as machine translation make very frequent queries.",
+                    "sid": 6,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper presents methods to query N-gram language models, minimizing time and space costs.",
+                    "sid": 7,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Queries take the form p(wn|wn\u22121 1 ) where wn1 is an n-gram.",
+                    "sid": 8,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Backoff-smoothed models estimate this probability based on the observed entry with longest matching history wnf , returning where the probability p(wn|wn\u22121 f ) and backoff penalties b(wn\u22121 i ) are given by an already-estimated model.",
+                    "sid": 9,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem is to store these two values for a large and sparse set of n-grams in a way that makes queries efficient.",
+                    "sid": 10,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many packages perform language model queries.",
+                    "sid": 11,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Throughout this paper we compare with several packages: SRILM 1.5.12 (Stolcke, 2002) is a popular toolkit based on tries used in several decoders.",
+                    "sid": 12,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IRSTLM 5.60.02 (Federico et al., 2008) is a sorted trie implementation designed for lower memory consumption.",
+                    "sid": 13,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MITLM 0.4 (Hsu and Glass, 2008) is mostly designed for accurate model estimation, but can also compute perplexity.",
+                    "sid": 14,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RandLM 0.2 (Talbot and Osborne, 2007) stores large-scale models in less memory using randomized data structures.",
+                    "sid": 15,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BerkeleyLM revision 152 (Pauls and Klein, 2011) implements tries based on hash tables and sorted arrays in Java with lossy quantization.",
+                    "sid": 16,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sheffield Guthrie and Hepple (2010) explore several randomized compression techniques, but did not release code.",
+                    "sid": 17,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPT Germann et al. (2009) describe tries with better locality properties, but did not release code.",
+                    "sid": 18,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These packages are further described in Section 3.",
+                    "sid": 19,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We substantially outperform all of them on query speed and offer lower memory consumption than lossless alternatives.",
+                    "sid": 20,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance improvements transfer to the Moses (Koehn et al., 2007), cdec (Dyer et al., 2010), and Joshua (Li et al., 2009) translation systems where our code has been integrated.",
+                    "sid": 21,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our open-source (LGPL) implementation is also available for download as a standalone package with minimal (POSIX and g++) dependencies.",
+                    "sid": 22,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 data structures",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We implement two data structures: PROBING, designed for speed, and TRIE, optimized for memory.",
+                    "sid": 23,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of n-grams appearing in a model is sparse, and we want to efficiently find their associated probabilities and backoff penalties.",
+                    "sid": 24,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An important subproblem of language model storage is therefore sparse mapping: storing values for sparse keys using little memory then retrieving values given keys using little time.",
+                    "sid": 25,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use two common techniques, hash tables and sorted arrays, describing each before the model that uses the technique.",
+                    "sid": 26,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hash tables are a common sparse mapping technique used by SRILM\u2019s default and BerkeleyLM\u2019s hashed variant.",
+                    "sid": 27,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Keys to the table are hashed, using for example Austin Appleby\u2019s MurmurHash2, to integers evenly distributed over a large range.",
+                    "sid": 28,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This range is collapsed to a number of buckets, typically by taking the hash modulo the number of buckets.",
+                    "sid": 29,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Entries landing in the same bucket are said to collide.",
+                    "sid": 30,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several methods exist to handle collisions; we use linear probing because it has less memory overhead when entries are small.",
+                    "sid": 31,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear probing places at most one entry in each bucket.",
+                    "sid": 32,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When a collision occurs, linear probing places the entry to be inserted in the next (higher index) empty bucket, wrapping around as necessary.",
+                    "sid": 33,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, a populated probing hash table consists of an array of buckets that contain either one entry or are empty.",
+                    "sid": 34,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-empty buckets contain an entry belonging to them or to a preceding bucket where a conflict occurred.",
+                    "sid": 35,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Searching a probing hash table consists of hashing the key, indexing the corresponding bucket, and scanning buckets until a matching key is found or an empty bucket is encountered, in which case the key does not exist in the table.",
+                    "sid": 36,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear probing hash tables must have more buckets than entries, or else an empty bucket will never be found.",
+                    "sid": 37,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ratio of buckets to entries is controlled by space multiplier m > 1.",
+                    "sid": 38,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the name implies, space is O(m) and linear in the number of entries.",
+                    "sid": 39,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fraction of buckets that are empty is m\u22121 m , so average lookup time is O( m 1) and, crucially, constant in the number of entries.",
+                    "sid": 40,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When keys are longer than 64 bits, we conserve space by replacing the keys with their 64-bit hashes.",
+                    "sid": 41,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With a good hash function, collisions of the full 64bit hash are exceedingly rare: one in 266 billion queries for our baseline model will falsely find a key not present.",
+                    "sid": 42,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collisions between two keys in the table can be identified at model building time.",
+                    "sid": 43,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further, the special hash 0 suffices to flag empty buckets.",
+                    "sid": 44,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The PROBING data structure is a rather straightforward application of these hash tables to store Ngram language models.",
+                    "sid": 45,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unigram lookup is dense so we use an array of probability and backoff values.",
+                    "sid": 46,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For 2 < n < N, we use a hash table mapping from the n-gram to the probability and backoff3.",
+                    "sid": 47,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Vocabulary lookup is a hash table mapping from word to vocabulary index.",
+                    "sid": 48,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all cases, the key is collapsed to its 64-bit hash.",
+                    "sid": 49,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given counts cn1 where e.g. c1 is the vocabulary size, total memory consumption, in bits, is Our PROBING data structure places all n-grams of the same order into a single giant hash table.",
+                    "sid": 50,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This differs from other implementations (Stolcke, 2002; Pauls and Klein, 2011) that use hash tables as nodes in a trie, as explained in the next section.",
+                    "sid": 51,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our implementation permits jumping to any n-gram of any length with a single lookup; this appears to be unique among language model implementations.",
+                    "sid": 52,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sorted arrays store key-value pairs in an array sorted by key, incurring no space overhead.",
+                    "sid": 53,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SRILM\u2019s compact variant, IRSTLM, MITLM, and BerkeleyLM\u2019s sorted variant are all based on this technique.",
+                    "sid": 54,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a sorted array A, these other packages use binary search to find keys in O(log |A|) time.",
+                    "sid": 55,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We reduce this to O(log log |A|) time by evenly distributing keys over their range then using interpolation search4 (Perl et al., 1978).",
+                    "sid": 56,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interpolation search formalizes the notion that one opens a dictionary near the end to find the word \u201czebra.\u201d Initially, the algorithm knows the array begins at b +\u2014 0 and ends at e +\u2014 |A|\u22121.",
+                    "sid": 57,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a key k, it estimates the position If the estimate is exact (A[pivot] = k), then the algorithm terminates succesfully.",
+                    "sid": 58,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If e < b then the key is not found.",
+                    "sid": 59,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, the scope of the search problem shrinks recursively: if A[pivot] < k then this becomes the new lower bound: l +\u2014 pivot; if A[pivot] > k then u +\u2014 pivot.",
+                    "sid": 60,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interpolation search is therefore a form of binary search with better estimates informed by the uniform key distribution.",
+                    "sid": 61,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the key distribution\u2019s range is also known (i.e. vocabulary identifiers range from 0 to the number of words), then interpolation search can use this information instead of reading A[0] and A[|A |\u2212 1] to estimate pivots; this optimization alone led to a 24% speed improvement.",
+                    "sid": 62,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement is due to the cost of bit-level reads and avoiding reads that may fall in different virtual memory pages.",
+                    "sid": 63,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Vocabulary lookup is a sorted array of 64-bit word hashes.",
+                    "sid": 64,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The index in this array is the vocabulary identifier.",
+                    "sid": 65,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has the effect of randomly permuting vocabulary identifiers, meeting the requirements of interpolation search when vocabulary identifiers are used as keys.",
+                    "sid": 66,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While sorted arrays could be used to implement the same data structure as PROBING, effectively making m = 1, we abandoned this implementation because it is slower and larger than a trie implementation.",
+                    "sid": 67,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The trie data structure is commonly used for language modeling.",
+                    "sid": 68,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our TRIE implements the popular reverse trie, in which the last word of an n-gram is looked up first, as do SRILM, IRSTLM\u2019s inverted variant, and BerkeleyLM except for the scrolling variant.",
+                    "sid": 69,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows an example.",
+                    "sid": 70,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nodes in the trie are based on arrays sorted by vocabulary identifier.",
+                    "sid": 71,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We maintain a separate array for each length n containing all n-gram entries sorted in suffix order.",
+                    "sid": 72,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, for n-gram wn1 , all leftward extensions wn0 are an adjacent block in the n + 1-gram array.",
+                    "sid": 73,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The record for wn1 stores the offset at which its extensions begin.",
+                    "sid": 74,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Reading the following record\u2019s offset indicates where the block ends.",
+                    "sid": 75,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This technique was introduced by Clarkson and Rosenfeld (1997) and is also implemented by IRSTLM and BerkeleyLM\u2019s compressed option.",
+                    "sid": 76,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SRILM inefficiently stores 64-bit pointers.",
+                    "sid": 77,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unigram records store probability, backoff, and an index in the bigram table.",
+                    "sid": 78,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Entries for 2 < n < N store a vocabulary identifier, probability, backoff, and an index into the n + 1-gram table.",
+                    "sid": 79,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The highestorder N-gram array omits backoff and the index, since these are not applicable.",
+                    "sid": 80,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Values in the trie are minimally sized at the bit level, improving memory consumption over trie implementations in SRILM, IRSTLM, and BerkeleyLM.",
+                    "sid": 81,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given n-gram counts {cn}Nn=1, we use Flog2 c1] bits per vocabulary identifier and Flog2 cn] per index into the table of ngrams.",
+                    "sid": 82,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When SRILM estimates a model, it sometimes removes n-grams but not n + 1-grams that extend it to the left.",
+                    "sid": 83,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a model we built with default settings, 1.2% of n + 1-grams were missing their ngram suffix.",
+                    "sid": 84,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This causes a problem for reverse trie implementations, including SRILM itself, because it leaves n+1-grams without an n-gram node pointing to them.",
+                    "sid": 85,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We resolve this problem by inserting an entry with probability set to an otherwise-invalid value (\u2212oc).",
+                    "sid": 86,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Queries detect the invalid probability, using the node only if it leads to a longer match.",
+                    "sid": 87,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, BerkeleyLM\u2019s hash and compressed variants will return incorrect results based on an n \u22121-gram.",
+                    "sid": 88,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Floating point values may be stored in the trie exactly, using 31 bits for non-positive log probability and 32 bits for backoff5.",
+                    "sid": 89,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To conserve memory at the expense of accuracy, values may be quantized using q bits per probability and r bits per backoff6.",
+                    "sid": 90,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We allow any number of bits from 2 to 25, unlike IRSTLM (8 bits) and BerkeleyLM (17\u221220 bits).",
+                    "sid": 91,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To quantize, we use the binning method (Federico and Bertoldi, 2006) that sorts values, divides into equally sized bins, and averages within each bin.",
+                    "sid": 92,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cost of storing these averages, in bits, is Because there are comparatively few unigrams, we elected to store them byte-aligned and unquantized, making every query faster.",
+                    "sid": 93,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unigrams also have 64-bit overhead for vocabulary lookup.",
+                    "sid": 94,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using cn to denote the number of n-grams, total memory consumption of TRIE, in bits, is plus quantization tables, if used.",
+                    "sid": 95,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size of TRIE is particularly sensitive to F1092 c11, so vocabulary filtering is quite effective at reducing model size.",
+                    "sid": 96,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 related work",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "SRILM (Stolcke, 2002) is widely used within academia.",
+                    "sid": 97,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is generally considered to be fast (Pauls 29 \u2212 1 probabilities and 2' \u2212 2 non-zero backoffs. and Klein, 2011), with a default implementation based on hash tables within each trie node.",
+                    "sid": 98,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each trie node is individually allocated and full 64-bit pointers are used to find them, wasting memory.",
+                    "sid": 99,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The compact variant uses sorted arrays instead of hash tables within each node, saving some memory, but still stores full 64-bit pointers.",
+                    "sid": 100,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With some minor API changes, namely returning the length of the n-gram matched, it could also be faster\u2014though this would be at the expense of an optimization we explain in Section 4.1.",
+                    "sid": 101,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The PROBING model was designed to improve upon SRILM by using linear probing hash tables (though not arranged in a trie), allocating memory all at once (eliminating the need for full pointers), and being easy to compile.",
+                    "sid": 102,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IRSTLM (Federico et al., 2008) is an open-source toolkit for building and querying language models.",
+                    "sid": 103,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The developers aimed to reduce memory consumption at the expense of time.",
+                    "sid": 104,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their default variant implements a forward trie, in which words are looked up in their natural left-to-right order.",
+                    "sid": 105,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, their inverted variant implements a reverse trie using less CPU and the same amount of memory7.",
+                    "sid": 106,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each trie node contains a sorted array of entries and they use binary search.",
+                    "sid": 107,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared with SRILM, IRSTLM adds several features: lower memory consumption, a binary file format with memory mapping, caching to increase speed, and quantization.",
+                    "sid": 108,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our TRIE implementation is designed to improve upon IRSTLM using a reverse trie with improved search, bit level packing, and stateful queries.",
+                    "sid": 109,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IRSTLM\u2019s quantized variant is the inspiration for our quantized variant.",
+                    "sid": 110,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, we were unable to correctly run the IRSTLM quantized variant.",
+                    "sid": 111,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The developers suggested some changes, such as building the model from scratch with IRSTLM, but these did not resolve the problem.",
+                    "sid": 112,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our code has been publicly available and intergrated into Moses since October 2010.",
+                    "sid": 113,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Later, BerkeleyLM (Pauls and Klein, 2011) described ideas similar to ours.",
+                    "sid": 114,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most similar is scrolling queries, wherein left-to-right queries that add one word at a time are optimized.",
+                    "sid": 115,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both implementations employ a state object, opaque to the application, that carries information from one query to the next; we discuss both further in Section 4.2.",
+                    "sid": 116,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "State is implemented in their scrolling variant, which is a trie annotated with forward and backward pointers.",
+                    "sid": 117,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hash variant is a reverse trie with hash tables, a more memory-efficient version of SRILM\u2019s default.",
+                    "sid": 118,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the paper mentioned a sorted variant, code was never released.",
+                    "sid": 119,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The compressed variant uses block compression and is rather slow as a result.",
+                    "sid": 120,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A direct-mapped cache makes BerkeleyLM faster on repeated queries, but their fastest (scrolling) cached version is still slower than uncached PROBING, even on cache-friendly queries.",
+                    "sid": 121,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all variants, we found that BerkeleyLM always rounds the floating-point mantissa to 12 bits then stores indices to unique rounded floats.",
+                    "sid": 122,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 1-bit sign is almost always negative and the 8-bit exponent is not fully used on the range of values, so in practice this corresponds to quantization ranging from 17 to 20 total bits.",
+                    "sid": 123,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lossy compressed models RandLM (Talbot and Osborne, 2007) and Sheffield (Guthrie and Hepple, 2010) offer better memory consumption at the expense of CPU and accuracy.",
+                    "sid": 124,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These enable much larger models in memory, compensating for lost accuracy.",
+                    "sid": 125,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typical data structures are generalized Bloom filters that guarantee a customizable probability of returning the correct answer.",
+                    "sid": 126,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Minimal perfect hashing is used to find the index at which a quantized probability and possibly backoff are stored.",
+                    "sid": 127,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These models generally outperform our memory consumption but are much slower, even when cached.",
+                    "sid": 128,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 optimizations",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In addition to the optimizations specific to each datastructure described in Section 2, we implement several general optimizations for language modeling.",
+                    "sid": 129,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Applications such as machine translation use language model probability as a feature to assist in choosing between hypotheses.",
+                    "sid": 130,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dynamic programming efficiently scores many hypotheses by exploiting the fact that an N-gram language model conditions on at most N \u2212 1 preceding words.",
+                    "sid": 131,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call these N \u2212 1 words state.",
+                    "sid": 132,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When two partial hypotheses have equal state (including that of other features), they can be recombined and thereafter efficiently handled as a single packed hypothesis.",
+                    "sid": 133,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If there are too many distinct states, the decoder prunes low-scoring partial hypotheses, possibly leading to a search error.",
+                    "sid": 134,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we want state to encode the minimum amount of information necessary to properly compute language model scores, so that the decoder will be faster and make fewer search errors.",
+                    "sid": 135,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We offer a state function s(wn1) = wn\ufffd where substring wn\ufffd is guaranteed to extend (to the right) in the same way that wn1 does for purposes of language modeling.",
+                    "sid": 136,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The state function is integrated into the query process so that, in lieu of the query p(wnjwn\u22121 1 ), the application issues query p(wnjs(wn\u22121 1 )) which also returns s(wn1 ).",
+                    "sid": 137,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The returned state s(wn1) may then be used in a followon query p(wn+1js(wn1)) that extends the previous query by one word.",
+                    "sid": 138,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These make left-to-right query patterns convenient, as the application need only provide a state and the word to append, then use the returned state to append another word, etc.",
+                    "sid": 139,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have modified Moses (Koehn et al., 2007) to keep our state with hypotheses; to conserve memory, phrases do not keep state.",
+                    "sid": 140,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Syntactic decoders, such as cdec (Dyer et al., 2010), build state from null context then store it in the hypergraph node for later extension.",
+                    "sid": 141,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Language models that contain wi must also contain prefixes wi for 1 G i G k. Therefore, when the model is queried for p(wnjwn\u22121 1 ) but the longest matching suffix is wnf , it may return state s(wn1) = wnf since no longer context will be found.",
+                    "sid": 142,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IRSTLM and BerkeleyLM use this state function (and a limit of N \u22121 words), but it is more strict than necessary, so decoders using these packages will miss some recombination opportunities.",
+                    "sid": 143,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "State will ultimately be used as context in a subsequent query.",
+                    "sid": 144,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the context wnf will never extend to the right (i.e. wnf v is not present in the model for all words v) then no subsequent query will match the full context.",
+                    "sid": 145,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the log backoff of wnf is also zero (it may not be in filtered models), then wf should be omitted from the state.",
+                    "sid": 146,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This logic applies recursively: if wnf+1 similarly does not extend and has zero log backoff, it too should be omitted, terminating with a possibly empty context.",
+                    "sid": 147,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We indicate whether a context with zero log backoff will extend using the sign bit: +0.0 for contexts that extend and \u22120.0 for contexts that do not extend.",
+                    "sid": 148,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RandLM and SRILM also remove context that will not extend, but SRILM performs a second lookup in its trie whereas our approach has minimal additional cost.",
+                    "sid": 149,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4.1 explained that state s is stored by applications with partial hypotheses to determine when they can be recombined.",
+                    "sid": 150,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we extend state to optimize left-to-right queries.",
+                    "sid": 151,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All language model queries issued by machine translation decoders follow a left-to-right pattern, starting with either the begin of sentence token or null context for mid-sentence fragments.",
+                    "sid": 152,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Storing state therefore becomes a time-space tradeoff; for example, we store state with partial hypotheses in Moses but not with each phrase.",
+                    "sid": 153,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To optimize left-to-right queries, we extend state to store backoff information: where m is the minimal context from Section 4.1 and b is the backoff penalty.",
+                    "sid": 154,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because b is a function, no additional hypothesis splitting happens.",
+                    "sid": 155,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As noted in Section 1, our code finds the longest matching entry wnf for query p(wn|s(wn\u22121 f ) The probability p(wn|wn\u22121 f ) is stored with wnf and the backoffs are immediately accessible in the provided state s(wn\u22121 When our code walks the data structure to find wnf , it visits wnn, wnn\u22121, ... , wnf .",
+                    "sid": 156,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each visited entry wni stores backoff b(wni ).",
+                    "sid": 157,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are written to the state s(wn1) and returned so that they can be used for the following query.",
+                    "sid": 158,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Saving state allows our code to walk the data structure exactly once per query.",
+                    "sid": 159,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other packages walk their respective data structures once to find wnf and again to find {b(wn\u22121 i )}f\u22121 i=1if necessary.",
+                    "sid": 160,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both cases, SRILM walks its trie an additional time to minimize context as mentioned in Section 4.1.",
+                    "sid": 161,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BerkeleyLM uses states to optimistically search for longer n-gram matches first and must perform twice as many random accesses to retrieve backoff information.",
+                    "sid": 162,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further, it needs extra pointers in the trie, increasing model size by 40%.",
+                    "sid": 163,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This makes memory usage comparable to our PROBING model.",
+                    "sid": 164,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The PROBING model can perform optimistic searches by jumping to any n-gram without needing state and without any additional memory.",
+                    "sid": 165,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this optimistic search would not visit the entries necessary to store backoff information in the outgoing state.",
+                    "sid": 166,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Though we do not directly compare state implementations, performance metrics in Table 1 indicate our overall method is faster.",
+                    "sid": 167,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only IRSTLM does not support threading.",
+                    "sid": 168,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our case multi-threading is trivial because our data structures are read-only and uncached.",
+                    "sid": 169,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Memory mapping also allows the same model to be shared across processes on the same machine.",
+                    "sid": 170,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Along with IRSTLM and TPT, our binary format is memory mapped, meaning the file and in-memory representation are the same.",
+                    "sid": 171,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is especially effective at reducing load time, since raw bytes are read directly to memory\u2014or, as happens with repeatedly used models, are already in the disk cache.",
+                    "sid": 172,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lazy mapping reduces memory requirements by loading pages from disk only as necessary.",
+                    "sid": 173,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, lazy mapping is generally slow because queries against uncached pages must wait for the disk.",
+                    "sid": 174,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is especially bad with PROBING because it is based on hashing and performs random lookups, but it is not intended to be used in low-memory scenarios.",
+                    "sid": 175,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TRIE uses less memory and has better locality.",
+                    "sid": 176,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, TRIE partitions storage by n-gram length, so walking the trie reads N disjoint pages.",
+                    "sid": 177,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPT has theoretically better locality because it stores ngrams near their suffixes, thereby placing reads for a single query in the same or adjacent pages.",
+                    "sid": 178,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not experiment with models larger than physical memory in this paper because TPT is unreleased, factors such as disk speed are hard to replicate, and in such situations we recommend switching to a more compact representation, such as RandLM.",
+                    "sid": 179,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all of our experiments, the binary file (whether mapped or, in the case of most other packages, interpreted) is loaded into the disk cache in advance so that lazy mapping will never fault to disk.",
+                    "sid": 180,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is similar to using the Linux MAP POPULATE flag that is our default loading mechanism.",
+                    "sid": 181,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 benchmarks",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "This section measures performance on shared tasks in order of increasing complexity: sparse lookups, evaluating perplexity of a large file, and translation with Moses.",
+                    "sid": 182,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our test machine has two Intel Xeon E5410 processors totaling eight cores, 32 GB RAM, and four Seagate Barracuda disks in software RAID 0 running Linux 2.6.18.",
+                    "sid": 183,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sparse lookup is a key subproblem of language model queries.",
+                    "sid": 184,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare three hash tables: our probing implementation, GCC\u2019s hash set, and Boost\u2019s8 unordered.",
+                    "sid": 185,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For sorted lookup, we compare interpolation search, standard C++ binary search, and standard C++ set based on red-black trees.",
+                    "sid": 186,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data structure was populated with 64-bit integers sampled uniformly without replacement.",
+                    "sid": 187,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For queries, we uniformly sampled 10 million hits and 10 million misses.",
+                    "sid": 188,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same numbers were used for each data structure.",
+                    "sid": 189,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Time includes all queries but excludes random number generation and data structure population.",
+                    "sid": 190,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows timing results.",
+                    "sid": 191,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the PROBING implementation, hash table sizes are in the millions, so the most relevant values are on the right size of the graph, where linear probing wins.",
+                    "sid": 192,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It also uses less memory, with 8 bytes of overhead per entry (we store 16-byte entries with m = 1.5); linked list implementations hash set and unordered require at least 8 bytes per entry for pointers.",
+                    "sid": 193,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further, the probing hash table does only one random lookup per query, explaining why it is faster on large data.",
+                    "sid": 194,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interpolation search has a more expensive pivot but performs less pivoting and reads, so it is slow on small data and faster on large data.",
+                    "sid": 195,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests a strategy: run interpolation search until the range narrows to 4096 or fewer entries, then switch to binary search.",
+                    "sid": 196,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, reads in the TRIE data structure are more expensive due to bit-level packing, so we found that it is faster to use interpolation search the entire time.",
+                    "sid": 197,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Memory usage is the same as with binary search and lower than with set.",
+                    "sid": 198,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the perplexity and translation tasks, we used SRILM to build a 5-gram English language model on 834 million tokens from Europarl v6 (Koehn, 2005) and the 2011 Workshop on Machine Translation News Crawl corpus with duplicate lines removed.",
+                    "sid": 199,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model was built with open vocabulary, modified Kneser-Ney smoothing, and default pruning settings that remove singletons of order 3 and higher.",
+                    "sid": 200,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike Germann et al. (2009), we chose a model size so that all benchmarks fit comfortably in main memory.",
+                    "sid": 201,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Benchmarks use the package\u2019s binary format; our code is also the fastest at building a binary file.",
+                    "sid": 202,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As noted in Section 4.4, disk cache state is controlled by reading the entire binary file before each test begins.",
+                    "sid": 203,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For RandLM, we used the settings in the documentation: 8 bits per value and false positive probability 1 256.",
+                    "sid": 204,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate the time and memory consumption of each data structure by computing perplexity on 4 billion tokens from the English Gigaword corpus (Parker et al., 2009).",
+                    "sid": 205,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tokens were converted to vocabulary identifiers in advance and state was carried from each query to the next.",
+                    "sid": 206,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows results of the benchmark.",
+                    "sid": 207,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to decoding, this task is cache-unfriendly in that repeated queries happen only as they naturally occur in text.",
+                    "sid": 208,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, performance is more closely tied to the underlying data structure than to the cache.",
+                    "sid": 209,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, we found that enabling IRSTLM\u2019s cache made it slightly slower, so results in Table 1 use IRSTLM without caching.",
+                    "sid": 210,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moses sets the cache size parameter to 50 so we did as well; the resulting cache size is 2.82 GB.",
+                    "sid": 211,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results in Table 1 show PROBING is 81% faster than TRIE, which is in turn 31% faster than the fastest baseline.",
+                    "sid": 212,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Memory usage in PROBING is high, though SRILM is even larger, so where memory is of concern we recommend using TRIE, if it fits in memory.",
+                    "sid": 213,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For even larger models, we recommend RandLM; the memory consumption of the cache is not expected to grow with model size, and it has been reported to scale well.",
+                    "sid": 214,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another option is the closedsource data structures from Sheffield (Guthrie and Hepple, 2010).",
+                    "sid": 215,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Though we are not able to calculate their memory usage on our model, results reported in their paper suggest lower memory consumption than TRIE on large-scale models, at the expense of CPU time.",
+                    "sid": 216,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This task measures how well each package performs in machine translation.",
+                    "sid": 217,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We run the baseline Moses system for the French-English track of the 2011 Workshop on Machine Translation,9 translating the 3003-sentence test set.",
+                    "sid": 218,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on revision 4041, we modified Moses to print process statistics before terminating.",
+                    "sid": 219,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Process statistics are already collected by the kernel (and printing them has no meaningful impact on performance).",
+                    "sid": 220,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SRILM\u2019s compact variant has an incredibly expensive destructor, dwarfing the time it takes to perform translation, and so we also modified Moses to avoiding the destructor by calling exit instead of returning normally.",
+                    "sid": 221,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our destructor is an efficient call to munmap, bypassing the destructor favors only other packages.",
+                    "sid": 222,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The binary language model from Section 5.2 and text phrase table were forced into disk cache before each run.",
+                    "sid": 223,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Time starts when Moses is launched and therefore includes model loading time.",
+                    "sid": 224,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These conaUses lossy compression. bThe 8-bit quantized variant returned incorrect probabilities as explained in Section 3.",
+                    "sid": 225,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It did 402 queries/ms using 1.80 GB. cMemory use increased during scoring due to batch processing (MIT) or caching (Rand).",
+                    "sid": 226,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first value reports use immediately after loading while the second reports the increase during scoring. dBerkeleyLM is written in Java which requires memory be specified in advance.",
+                    "sid": 227,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Timing is based on plentiful memory.",
+                    "sid": 228,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we ran binary search to determine the least amount of memory with which it would run.",
+                    "sid": 229,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first value reports resident size after loading; the second is the gap between post-loading resident memory and peak virtual memory.",
+                    "sid": 230,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The developer explained that the loading process requires extra memory that it then frees. eBased on the ratio to SRI\u2019s speed reported in Guthrie and Hepple (2010) under different conditions.",
+                    "sid": 231,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Memory usage is likely much lower than ours. fThe original paper (Germann et al., 2009) provided only 2s of query timing and compared with SRI when it exceeded available RAM.",
+                    "sid": 232,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The authors provided us with a ratio between TPT and SRI under different conditions. aLossy compression with the same weights. bLossy compression with retuned weights. ditions make the value appropriate for estimating repeated run times, such as in parameter tuning.",
+                    "sid": 233,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows single-threaded results, mostly for comparison to IRSTLM, and Table 3 shows multi-threaded results.",
+                    "sid": 234,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Part of the gap between resident and virtual memory is due to the time at which data was collected.",
+                    "sid": 235,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistics are printed before Moses exits and after parts of the decoder have been destroyed.",
+                    "sid": 236,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moses keeps language models and many other resources in static variables, so these are still resident in memory.",
+                    "sid": 237,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further, we report current resident memory and peak virtual memory because these are the most applicable statistics provided by the kernel.",
+                    "sid": 238,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, language modeling significantly impacts decoder performance.",
+                    "sid": 239,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In line with perplexity results from Table 1, the PROBING model is the fastest followed by TRIE, and subsequently other packages.",
+                    "sid": 240,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We incur some additional memory cost due to storing state in each hypothesis, though this is minimal compared with the size of the model itself.",
+                    "sid": 241,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The TRIE model continues to use the least memory of ing (-P) with MAP POPULATE, the default.",
+                    "sid": 242,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IRST is not threadsafe.",
+                    "sid": 243,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Time for Moses itself to load, including loading the language model and phrase table, is included.",
+                    "sid": 244,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Along with locking and background kernel operations such as prefaulting, this explains why wall time is not one-eighth that of the single-threaded case. aLossy compression with the same weights. bLossy compression with retuned weights. the non-lossy options.",
+                    "sid": 245,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For RandLM and IRSTLM, the effect of caching can be seen on speed and memory usage.",
+                    "sid": 246,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is most severe with RandLM in the multi-threaded case, where each thread keeps a separate cache, exceeding the original model size.",
+                    "sid": 247,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As noted for the perplexity task, we do not expect cache to grow substantially with model size, so RandLM remains a low-memory option.",
+                    "sid": 248,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Caching for IRSTLM is smaller at 0.09 GB resident memory, though it supports only a single thread.",
+                    "sid": 249,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BerkeleyLM direct-mapped cache is in principle faster than caches implemented by RandLM and by IRSTLM, so we may write a C++ equivalent implementation as future work.",
+                    "sid": 250,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RandLM\u2019s stupid backoff variant stores counts instead of probabilities and backoffs.",
+                    "sid": 251,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It also does not prune, so comparing to our pruned model would be unfair.",
+                    "sid": 252,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using RandLM and the documented settings (8-bit values and 1 256 false-positive probability), we built a stupid backoff model on the same data as in Section 5.2.",
+                    "sid": 253,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used this data to build an unpruned ARPA file with IRSTLM\u2019s improved-kneser-ney option and the default three pieces.",
+                    "sid": 254,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows the results.",
+                    "sid": 255,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We elected run Moses single-threaded to minimize the impact of RandLM\u2019s cache on memory use.",
+                    "sid": 256,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RandLM is the clear winner in RAM utilization, but is also slower and lower quality.",
+                    "sid": 257,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the point of RandLM is to scale to even larger data, compensating for this loss in quality.",
+                    "sid": 258,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 future work",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "There any many techniques for improving language model speed and reducing memory consumption.",
+                    "sid": 259,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For speed, we plan to implement the direct-mapped cache from BerkeleyLM.",
+                    "sid": 260,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Much could be done to further reduce memory consumption.",
+                    "sid": 261,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Raj and Whittaker (2003) show that integers in a trie implementation can be compressed substantially.",
+                    "sid": 262,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Quantization can be improved by jointly encoding probability and backoff.",
+                    "sid": 263,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For even larger models, storing counts (Talbot and Osborne, 2007; Pauls and Klein, 2011; Guthrie and Hepple, 2010) is a possibility.",
+                    "sid": 264,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Beyond optimizing the memory size of TRIE, there are alternative data structures such as those in Guthrie and Hepple (2010).",
+                    "sid": 265,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, other packages implement language model estimation while we are currently dependent on them to generate an ARPA file.",
+                    "sid": 266,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While we have minimized forward-looking state in Section 4.1, machine translation systems could also benefit by minimizing backward-looking state.",
+                    "sid": 267,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, syntactic decoders (Koehn et al., 2007; Dyer et al., 2010; Li et al., 2009) perform dynamic programming parametrized by both backward- and forward-looking state.",
+                    "sid": 268,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If they knew that the first four words in a hypergraph node would never extend to the left and form a 5-gram, then three or even fewer words could be kept in the backward state.",
+                    "sid": 269,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This information is readily available in TRIE where adjacent records with equal pointers indicate no further extension of context is possible.",
+                    "sid": 270,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exposing this information to the decoder will lead to better hypothesis recombination.",
+                    "sid": 271,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generalizing state minimization, the model could also provide explicit bounds on probability for both backward and forward extension.",
+                    "sid": 272,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This would result in better rest cost estimation and better pruning.10 In general, tighter, but well factored, integration between the decoder and language model should produce a significant speed improvement.",
+                    "sid": 273,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusion",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We have described two data structures for language modeling that achieve substantial reductions in time and memory cost.",
+                    "sid": 274,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The PROBING model is 2.4 times as fast as the fastest alternative, SRILM, and uses less memory too.",
+                    "sid": 275,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The TRIE model uses less memory than the smallest lossless alternative and is still faster than SRILM.",
+                    "sid": 276,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These performance gains transfer to improved system runtime performance; though we focused on Moses, our code is the best lossless option with cdec and Joshua.",
+                    "sid": 277,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We attain these results using several optimizations: hashing, custom lookup tables, bit-level packing, and state for left-to-right query patterns.",
+                    "sid": 278,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The code is opensource, has minimal dependencies, and offers both C++ and Java interfaces for integration.",
+                    "sid": 279,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "Alon Lavie advised on this work.",
+                    "sid": 280,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hieu Hoang named the code \u201cKenLM\u201d and assisted with Moses along with Barry Haddow.",
+                    "sid": 281,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adam Pauls provided a pre-release comparison to BerkeleyLM and an initial Java interface.",
+                    "sid": 282,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nicola Bertoldi and Marcello Federico assisted with IRSTLM.",
+                    "sid": 283,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chris Dyer integrated the code into cdec.",
+                    "sid": 284,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Juri Ganitkevitch answered questions about Joshua.",
+                    "sid": 285,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This material is based upon work supported by the National Science Foundation Graduate Research Fellowship under Grant No.",
+                    "sid": 286,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0750271 and by the DARPA GALE program.",
+                    "sid": 287,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,665 @@
+{
+    "ID": "N10-1040",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We investigate methods of generating additional bilingual phrase pairs for a phrase- based decoder by translating short sequences of source text.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because our translation task is more constrained, we can use a model that employs more linguistically rich features than a traditional decoder.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have implemented an example of this approach.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results suggest that the phrase pairs produced by our method are useful to the decoder, and lead to improved sentence translations.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Recently, there have been a number of successful attempts at improving phrase-based statistical machine translation by exploiting linguistic knowledge such as morphology, part-of-speech tags, and syntax.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many translation models use such knowledge before decoding (Xia and McCord, 2004) and during decoding (Birch et al., 2007; Gimpel and Smith, 2009; Koehn and Hoang, 2007; Chiang et al., 2009), but they are limited to simpler features for practical reasons, often restricted to conditioning left-to- right on the target sentence.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditionally, n-best rerankers (Shen et al., 2004) have applied expensive analysis after the translation process, on both the source and target side, though they suffer from being limited to whatever is on the n-best list (Hasan et al., 2007).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We argue that it can be desirable to pre-translate parts of the source text before sentence-level decoding begins, using a richer model that would typically be out of reach during sentence-level decoding.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we describe a particular method of generating additional bilingual phrase pairs for a new source text, using what we call phrase prototypes, which are are learned from bilingual training data.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal is to generate improved translations of relatively short phrase pairs to provide the SMT decoder with better phrasal choices.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We validate the idea through experiments on ArabicEnglish translation.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method produces a 1.3 BLEU score increase (3.3% relative) on a test set.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "approach. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Re-ranking tends to use expensive features of the entire source and target sentences, s and t, and alignments, a, to produce a score for the translation.",
+                    "sid": 13,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will call this scoring function \u03c6(s, t, a).",
+                    "sid": 14,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While \u03c6(\u00b7) might capture quite a bit of linguistic information, it can be problematic to use this function for decoding directly.",
+                    "sid": 15,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is due to both the expense of computing it, and the difficulty in using it to guide the decoder\u2019s search.",
+                    "sid": 16,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a choice of \u03c6(\u00b7) that relies on a top-down parser is difficult to integrate into a left-to-right decoder (Charniak et al., 2003).",
+                    "sid": 17,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our idea is to use an expensive scoring function to guide the search for potential translations for part of a source sentence, S, even if translating all of it isn\u2019t feasible.",
+                    "sid": 18,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can then provide these translations to the decoder, along with their scores, to incorporate them as it builds the complete translation of S. This differs from approaches such as (Och and Ney, 2004) because we generate new phrase pairs in isolation, rather than incorporating everything into the sentence-level decoder.",
+                    "sid": 19,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline system is the Moses phrase-based translation system (Koehn 301 Human Language Technologies: The 2010 Annual Conference of the North American Chapter of the ACL, pages 301\u2013304, Los Angeles, California, June 2010.",
+                    "sid": 20,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2010 Association for Computational Linguistics et al., 2007).",
+                    "sid": 21,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Description of Our Scoring Function.",
+                    "sid": 22,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this work, we consider a scoring function based on part-of-speech (POS) tags, \u03c6P OS (\u00b7).",
+                    "sid": 23,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It operates in two steps: it converts the source and target phrases, plus alignments, into what we call a phrase prototype, then assigns a score to it based on how common that prototype was during training.",
+                    "sid": 24,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each phrase pair prototype is a tuple containing the source prototype, target prototype, and alignment prototype, respectively.",
+                    "sid": 25,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The source and target prototypes are a mix of surface word forms and POS tags, such as the Arabic string (NN Al JJ), or the English string (NN NN).",
+                    "sid": 26,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the source and target prototypes above might be used in the phrase prototype (NN0 Al JJ1 , NN1 NN0), with the alignment prototype specified implicitly via subscripts for brevity.",
+                    "sid": 27,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity, the alignment prototype is restricted to allow a source or target word/tag to be unaligned, plus 1:1 alignments between them.",
+                    "sid": 28,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not consider 1:many, many:1, or many:many alignments in this work.",
+                    "sid": 29,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For any input (s, t, a), it is possible to construct potentially many phrase prototypes from it by choosing different subsets of the source and target words to represent as POS tags.",
+                    "sid": 30,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the above example, the Arabic determiner Al could be converted into an unaligned POS tag, making the source prototype (NN DT JJ).",
+                    "sid": 31,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this work, we convert all aligned words into POS tags.",
+                    "sid": 32,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a practical concern, we insist that unaligned words are always kept as their surface form.",
+                    "sid": 33,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03c6P OS (s, t, a) assign a score based on the probability of the resulting prototypes; more likely prototypes should yield higher scores.",
+                    "sid": 34,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We choose: \u03c6P OS (s, t, a) = p(SP, AP |T P ) \u00b7 p(T P, AP |SP ) where SP is the source prototype constructed from s, t, a. Similarly, T P and AP are the target and alignment prototypes, respectively.",
+                    "sid": 35,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compute \u03c6P OS (\u00b7), we must build a model for each of p(SP, AP |T P ) and p(T P, AP |SP ).",
+                    "sid": 36,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this, we start with a corpus of aligned, POS-tagged bilingual text.",
+                    "sid": 37,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then find phrases that are consistent with (Koehn et al., 2003).",
+                    "sid": 38,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we extract these phrase pairs, we convert each into a phrase proto type by replacing surface forms with POS tags for all aligned words in the prototype.",
+                    "sid": 39,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After we have processed the bilingual training text, we have collected a set of phrase prototypes and a count of how often each was observed.",
+                    "sid": 40,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Generating New Phrases.",
+                    "sid": 41,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To generate phrases, we scan through the source text to be translated, finding any span of source words that matches the source prototype of at least one phrase prototype.",
+                    "sid": 42,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each such phrase, and for each phrase prototype which it matches, we generate all target phrases which also match the target and alignment prototypes.",
+                    "sid": 43,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this, we use a word-to-word dictionary to generate all target phrases which honor the alignments required by the alignment prototype.",
+                    "sid": 44,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each source word which is aligned to a POS tag in the target prototype, we substitute all single-word translations in our dictionary1.",
+                    "sid": 45,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each target phrase that we generate, we must ensure that it matches the target prototype.",
+                    "sid": 46,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We give each phrase to a POS tagger, and check the resulting tags against any tags in the target prototype.",
+                    "sid": 47,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If there are no mismatches, then the phrase pair is retained for the phrase table, else it is discarded.",
+                    "sid": 48,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the latter case, \u03c6P OS (\u00b7) would assign this pair a score of zero.",
+                    "sid": 49,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.3 Computing Phrase Weights.",
+                    "sid": 50,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the Moses phrase table, each entry has four parameters: two lexical weights, and the two conditional phrase probabilities p(s|t) and p(t|s).",
+                    "sid": 51,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the lexical weights can be computed using the standard method (Koehn et al., 2003), estimating the conditional phrase probabilities is not straightforward for our approach because they are not observed in bilingual training data.",
+                    "sid": 52,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we estimate the maximum conditional phrase probabilities that would be assigned by the sentence-level decoder for this phrase pair, as if it had generated the target string from the source string using the baseline phrase table2.",
+                    "sid": 53,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this efficiently, we use some 1 Since we required that all unaligned target words are kept as surface forms in the target prototype, this is sufficient.",
+                    "sid": 54,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we did not insist this, then we might be faced with the unenviable task of choosing a target languange noun, without further guidance from the source text.",
+                    "sid": 55,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 If we use these probabilities for our generated phrase pair\u2019s. probability estimates, then the sentence-level decoder would see simplifying assumptions: we do not restrict how often a source word is used during the translation, and we ignore distortion / reordering costs.",
+                    "sid": 56,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These admit a simple dynamic programming solution.",
+                    "sid": 57,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We must also include the score from \u03c6P OS (\u00b7), to give the decoder some idea of our confidence in the generated phrase pair.",
+                    "sid": 58,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We include the phrase pair\u2019s score as an additional weight in the phrase table.",
+                    "sid": 59,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experimental setup. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "0.42 0.41 0.4 0.39 0.38 0.37 Effect of Biligual Data on Arabic Development Set Baseline BLEU Our Approach BLEU % Generated Phrases 1 0.95 0.9 0.85 0.8 0.75 0.7 0.65 The Linguistic Data Consortium ArabicEnglish 0.36 0.6 0 500 1000 1500 2000 2500 3000 3500 4000 4500 5000 corpus23 is used to train the baseline MT system (34K sentences, about one million words), and to learn phrase prototypes.",
+                    "sid": 60,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LDC multi-translation ArabicEnglish corpus (NIST2003)4 is used for tuning and testing; the tuning set consists of the first 500 sentences, and the test set consists of the next 500 sentences.",
+                    "sid": 61,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The language model is a 4-gram model built from the English side of the parallel corpus, plus the English side of the wmt07 GermanEnglish and French-English news commentary data.",
+                    "sid": 62,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline translation system is Moses (Koehn et al., 2007), with the msd-bidirectional-fe reordering model.",
+                    "sid": 63,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation is done using the BLEU (Papineni et al., 2001) metric with four references.",
+                    "sid": 64,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All text is lowercased before evaluation; recasing is not used.",
+                    "sid": 65,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the Stanford Arabic POS Tagging system, based on (Toutanova et al., 2003)5.",
+                    "sid": 66,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word-to-word dictionary that is used in the phrase generation step of our method is extracted from the highest-scoring translations for each source word in the baseline phrase table.",
+                    "sid": 67,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For some closed- class words, we use a small, manually constructed dictionary to reduce the noise in the phrase table that exists for very common words.",
+                    "sid": 68,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use this in place of a stand-alone dictionary to reduce the need for additional resources.",
+                    "sid": 69,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "To see the effect on the BLEU score of the resulting sentence-level translation, we vary the amount of bilingual data used to build the phrase prototypes.",
+                    "sid": 70,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(approximately) no difference between building the generated phrase using the baseline phrase table, or using our generated phrase pair directly.",
+                    "sid": 71,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Catalogue numbers LDC2004T17 and LDC2004T18.",
+                    "sid": 72,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Catalogue number: LDC2003T18.",
+                    "sid": 73,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "it is available at http://nlp.stanford.edu/software/tagger.shtml. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "# Bilingual Training Sentences Figure 1: Bilingual training size vs. BLEU score (middle line, left axis) and phrase table composition (top line, right axis) on Arabic Development Set.",
+                    "sid": 74,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline BLEU score (bottom line) is included for comparison.",
+                    "sid": 75,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we increase the amount of training data, we expect that the phrase prototype extraction algorithm will observe more phrase prototypes.",
+                    "sid": 76,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This will cause it to generate more phrase pairs, introducing both more noise and more good phrases into the phrase table.",
+                    "sid": 77,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because quite a few phrase prototypes are built in any case, we require that each is seen at least three times before we use it to generate phrases.",
+                    "sid": 78,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase prototypes seen fewer times than this are discarded before phrase generation begins.",
+                    "sid": 79,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Varying this minimum support parameter does not affect the results noticeably.",
+                    "sid": 80,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results on the tuning set are seen in Figure 1.",
+                    "sid": 81,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU score on the tuning set generally improves as the amount of bilingual training data is increased, even as the percentage of generated phrases approaches 100%.",
+                    "sid": 82,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Manual inspection of the phrase pairs reveals that many are badly formed; this suggests that the language model is doing its job in filtering out disfluent phrases.",
+                    "sid": 83,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the first 5,000 bilingual training sentences to train our model, we compare our method to the baseline moses system.",
+                    "sid": 84,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each system was tuned via MERT (Och, 2003) before running it on the test set.",
+                    "sid": 85,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tuned baseline system scores 38.45.",
+                    "sid": 86,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Including our generated phrases improves this by 1.3 points to 39.75.",
+                    "sid": 87,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a slightly smaller gain than exists in the tuning set experiment, due in part that we did not run MERT for experiment shown in Figure 1.",
+                    "sid": 88,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Discussion.",
+                    "sid": 89,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As one might expect, generated phrases both help and hurt individual translations.",
+                    "sid": 90,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A sentence that can be translated starting with the phrase \u201ckorea added that the syrian prime minister\u201d is translated by the baseline system as \u201ckorean | foreign minister | added | that | the syrian\u201d.",
+                    "sid": 91,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While \u201cthe syrian foreign minister\u201d is an unambiguous source phrase, the baseline phrase table does not include it; the language and reordering models must stitch the translation together.",
+                    "sid": 92,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ours method generates \u201cthe syrian foreign minister\u201d directly.",
+                    "sid": 93,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generated phrases are not always correct.",
+                    "sid": 94,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a generated phrase causes our system to choose \u201ceurope role\u201d, while the baseline system picks \u201cthe role of | europe\u201d.",
+                    "sid": 95,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the same prototype is used (correctly) for reordering Arabic \u201cNN0 JJ1\u201d constructs into English as \u201cNN1NN0\u201d in many instances, it fails in this case.",
+                    "sid": 96,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lan guage model shares the blame, since it does not prefer the correct phrase over the shorter one.",
+                    "sid": 97,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, a 5-gram language model based on the LDC Web IT 5-gram counts6 prefers the correct phrase.",
+                    "sid": 98,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We have shown that translating short spans of source text, and providing the results to a phrase-based SMT decoder can improve sentence-level machine translation.",
+                    "sid": 99,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further, it permits us to use linguistically informed features to guide the generation of new phrase pairs.",
+                    "sid": 100,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgements",
+            "number": "",
+            "sents": [
+                {
+                    "text": "This work is supported by U.S. National Science Foundation Grant IIS0745914.",
+                    "sid": 101,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thank the anonymous reviewers for their suggestions.",
+                    "sid": 102,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

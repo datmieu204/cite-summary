@@ -1,0 +1,1661 @@
+{
+    "ID": "Pbulletin",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We present efmaral, a new system for efficient and accurate word alignment using a Bayesian model with Markov Chain Monte Carlo (MCMC) inference.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Through careful selection of data structures and model architecture we are able to surpass the fast_align system, commonly used for performance-critical word alignment, both in computational efficiency and alignment accuracy.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our evaluation shows that a phrase-based statistical machine translation (SMT) system produces translations of higher quality when using word alignments from efmaral than from fast_align, and that translation quality is on par with what is obtained using giza++, a tool requiring orders of magnitude more processing time.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More generally we hope to convince the reader that Monte Carlo sampling, rather than being viewed as a slow method of last resort, should actually be the method of choice for the SMT practitioner and others interested in word alignment.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Word alignment is an essential step in several applications, perhaps most prominently phrase-based statistical machine translation (Koehn et al., 2003) and annotation transfer (e.g. Yarowsky et al., 2001).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem is this: given a pair of translationally equivalent sentences, identify which word(s) in one language corresponds to which word(s) in the other language.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A number of off-the-shelf tools exist to solve this problem, but they tend to be slow, inaccurate, or both.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce efmaral, a new open-source tool1 for word alignment based on partially collapsed Gibbs sampling in a Bayesian model.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 The source code and documentation can be found at https://github.com/robertostling/efmaral.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00a9 2016 PBML.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Distributed under CC BY-NC-ND.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corresponding author: robert.ostling@helsinki.fi Cite as: Robert \u00d6stling, J\u00f6rg Tiedemann.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E\ufb03cient Word Alignment with Markov Chain Monte Carlo.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Prague Bulletin of Mathematical Linguistics No. 106, 2016, pp.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "125\u2013146.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "doi: 10.1515/pralin2016-0013.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PBML 106 OCTOBER 2016",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "background. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "In order to understand the present work, we first need to formalize the problem and introduce the family of models used (Section 2.1), describe their Bayesian extension (Section 2.2), the Markov Chain Monte Carlo algorithm used for inference (Section 2.3) and its particular application to our problem (Section 2.4).",
+                    "sid": 18,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1.",
+                    "sid": 19,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The IBM models.",
+                    "sid": 20,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The IBM models (Brown et al., 1993) are asymmetric generative models that describe how a source language sentence generates a target language sentence though a set of latent alignment variables.",
+                    "sid": 21,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the task at hand is to align the words in the source and target language sentences, the words in both sentences are given, and we are left with inferring the values of the alignment variables.",
+                    "sid": 22,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, we denote the k:th sentence pair \u27e8s(k) , t(k) \u27e9 with the source sentence s(k) containing words s(k) (for each word index i \u2208 1 . . .",
+                    "sid": 23,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I(k) ) and the target sentence t(k) containing words t(k) (for j \u2208 1 . . .",
+                    "sid": 24,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "J(k) ).",
+                    "sid": 25,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each sentence pair \u27e8s( , t \u27e9 is associated with an alignment variable a , where a(k) (k) (k) j = i indicates that target word tj was generated by source word si . This implies an n-to-1 mapping between source and target words, since each target word is aligned to exactly one source word, while each source word can be aligned to zero or more target words.Sentences are assumed to be generated independently, so the probability of gen erating a set of parallel sentences \u27e8s, t\u27e9 is K P(t|s, a) = \u220f P(t(k) |s(k) , a(k) ) (1) k=1For simplicity of notation, we will drop the sentence index (k) in the following dis cussion and let \u27e8s, t\u27e9 instead denote a single sentence pair, without loss of generality due to the independence assumption between sentences.",
+                    "sid": 26,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A source word type e is associated with a lexical distribution, modeled by a categorical distribution with parameter vector \u03b8e . In the simplest of the IBM models (model 1), the probability of generating a target sentence t is defined as the probability of independently generating each of the J target words independently from the lexical distributions of their respective aligned source words.",
+                    "sid": 27,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "J P(t|s, a) \u221d \u220f \u03b8s j=1 ,tj (2) IBM model 1 assumes a uniform distribution for P(a), which effectively means that the word order of the sentences are considered irrelevant.",
+                    "sid": 28,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is clearly not true 126 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) in real translated sentences, and in fact aj and aj+1 tend to be strongly correlated.",
+                    "sid": 29,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most research on word alignment has assumed some version of a word order model to capture this dependency.",
+                    "sid": 30,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps the simplest version is used in IBM model 2 and the fast_align model (Dyer et al., 2013), which are based on the observation that j/J \u2248 aj /I, in other words that sentences tend to have the same order of words in both languages.",
+                    "sid": 31,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is however a very rough approximation, and Vogel et al.",
+                    "sid": 32,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996) instead proposed to directly model P(aj+1 \u2212 aj = x|I), which describes the length x of the \u201cjump\u201d in the source sentence when moving one word forward in the target sentence, conditioned on the source sentence length I. Although the IBM models allow n-to-1 alignments, not all values of n are equally likely.",
+                    "sid": 33,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, high values of n are unlikely, and a large proportion of translations are in fact 1-to-1.",
+                    "sid": 34,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The value of n depends both on the particular languages involved (a highly synthetic language like Finnish translated into English would yield higher values than a French to English translation) and on the specific word type.",
+                    "sid": 35,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the German Katze \u2018cat\u2019 would typically be translated into a single English word, whereas Unabh\u00e4ngigkeitserkl\u00e4rung would normally be translated into two (independence declaration) or three words (declaration of independence).",
+                    "sid": 36,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be modeled by defining the fertility \u03d5(i) = \u2211J \u03b4aj =i of a source token si , and introducing a distribution for P (\u03d5(i) = n|si = e) for each source word type e.A large number of models based on the same general assumptions have been ex plored (Brown et al., 1993; Toutanova et al., 2002; Och and Ney, 2003), and the interested reader may want to consult Tiedemann (2011) for a more thorough review than we are able to provide in this work.",
+                    "sid": 37,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2.",
+                    "sid": 38,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bayesian IBM models.",
+                    "sid": 39,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The IBM models make no a priori assumptions about the categorical distributions that define the model, and most authors have used maximum-likelihood estimation through the Expectation-Maximization algorithm (Dempster et al., 1977) or some approximation to it.",
+                    "sid": 40,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when translating natural languages the lexical distributions should be very sparse, reflecting the fact that a given source word tends to have a rather small number of target words as allowable translations, while the vast majority of target words are unimaginable as translations.",
+                    "sid": 41,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These constraints have recently been modeled with sparse and symmetric Dirichlet priors (Mermer and Sara\u00e7lar, 2011; Mermer et al., 2013; Riley and Gildea, 2012) which, beyond capturing the range of lexical distributions we consider likely, also turn out to be mathematically very convenient as the Dirichlet distribution is a conjugate prior to the categorical distribution.",
+                    "sid": 42,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The d-dimensional Dirichlet distribution is defined over the space of d-dimensional categorical distributions, and is parameterized by the d dimensional vector \u03b1 > 0.",
+                    "sid": 43,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If X \u223c Dir(\u03b1), the probability density function of X is 127 PBML 106 OCTOBER 2016 given by P(X = x) = 1 \u220f x\u03b1i \u22121 (3) Z i i=1 where the normalization constant Z is given by the multinomial beta function \u220fd ( ) B(\u03b1) = i=1 \u0393 \u03b1i (4) i=1 \u03b1i ) A symmetric Dirichlet distribution has \u03b1i = \u03b1j for all i, j, with the interpretation in our case that no particular translation is preferred a priori for any source word type, as this has to be estimated from the data.",
+                    "sid": 44,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By also setting \u03b1 \u226a 1 we favor sparse lexical distributions where most probabilities are close to zero.",
+                    "sid": 45,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While it is possible to treat \u03b1 as a latent variable to be inferred, good results can be obtained by using a fixed value roughly in the range of 10\u22126 to 10\u22122 (Riley and Gildea, 2012).",
+                    "sid": 46,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another direction of research has explored hierarchical distributions such as the PitmanYor process (Pitman and Yor, 1997) instead of the Dirichlet distribution for the translation distribution priors (Gal and Blunsom, 2013; \u00d6stling, 2015).",
+                    "sid": 47,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such distributions offer even greater flexibility in specifying prior constraints on the categorical distributions, but at the cost of less efficient inference.",
+                    "sid": 48,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the gain in accuracy has turned out to be limited and computational efficiency is an important concern to us, we will not further consider hierarchical priors in this work.",
+                    "sid": 49,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.3.",
+                    "sid": 50,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Markov Chain Monte Carlo.",
+                    "sid": 51,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several different methods have been used for inference in IBM alignment models.",
+                    "sid": 52,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Starting with Brown et al.",
+                    "sid": 53,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1993), maximum-likelihood estimation through the Expectation-Maximization (EM) algorithm has been a popular choice.",
+                    "sid": 54,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method is generally efficient for simple models without word order or fertility distributions, but computing the expectations becomes intractable for more complex models such as IBM model 4 so approximative hill-climbing methods are used instead.",
+                    "sid": 55,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another disadvantage of using plain EM inference with the IBM models is that it is unable to incorporate priors on the model parameters, and as was pointed out in the previous section this deprives us of a powerful tool to steer the model towards more realistic solutions.",
+                    "sid": 56,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Riley and Gildea (2012) presented a method to extend the EM algorithm to IBM models with Dirichlet priors, through Variational Bayes inference.",
+                    "sid": 57,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, their method inherits the complexity issues of earlier EM approaches.",
+                    "sid": 58,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The inference approach chosen by most authors working on Bayesian IBM models (Mermer and Sara\u00e7lar, 2011; Gal and Blunsom, 2013; \u00d6stling, 2015) is Gibbs sampling (Gelfand and Smith, 1991), a special case of the Markov Chain Monte Carlo (MCMC) method which we will briefly summarize here.",
+                    "sid": 59,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "128 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) Given a probability function pM (x) of some model M on parameter vector x, MCMC provides us with the means to draw samples from pM . This is done by constructing a Markov chain with values of x as states, such that its stationary distribution is identical to pM . In practice, this means deriving expressions for the transition probabilities P(x \u2032 |x) of going from state x to state x \u2032 . Since the number of states is enormous or infinite in typical applications, it is essential that there is some way of sampling efficiently from P(x \u2032 |x).",
+                    "sid": 60,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With Gibbs sampling, this is done by sampling one variable from the parameter vector x at a time, conditioned on all other variables:P(xi |x1 , x2 , . . .",
+                    "sid": 61,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", xi\u22121 , xi+1 , . . .",
+                    "sid": 62,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", xm ) which we will write as P(xi |x(\u2212i) ) to indicate con ditioning on all elements of x except at index i. All positions i are then sampled in some arbitrary but fixed order.",
+                    "sid": 63,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By choosing suitable distributions for the model, the goal in designing a Gibbs sampler is to make sure that this distribution is easy to sample from.",
+                    "sid": 64,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.4.",
+                    "sid": 65,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gibbs sampling for Bayesian IBM models.",
+                    "sid": 66,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Bayesian version of IBM model 1 defines the following probability over the parameter vector, which consists of the alignment vector a and the lexical distribution vectors \u03b8e for each e in the source target vocabulary: \uf8eb K J(k) \uf8f6 ( E F ) P(a, \u03b8) = P(s, t, a, \u03b8, \u03b1) \u221d \uf8ed\u220f \u220f \u03b8 (k) (k) \uf8f8 \u00b7 \u220f \u220f \u03b8\u03b1f \u22121 (5) since s, t and \u03b1 are constant.",
+                    "sid": 67,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "k=1 j=1 s (k) ,tj a j e=1 f=1 e,f A straightforward Gibbs sampler can be derived by observing that P(x) P(x(\u2212i) , xi ) which means that P(xi |x(\u2212i) ) = P(x(\u2212i) ) = P(x(\u2212i) ) P(a(\u2212j) , aj = i, \u03b8) P(aj = i|a(\u2212j) , \u03b8) = ( ) \u221d \u03b8s ,t (6) and P a(\u2212j) , \u03b8 aj j P(\u03b8(\u2212e) , \u03b8e = x|a) \u220fF x\u03b1f +ce,f \u22121 P(\u03b8e = x|a, \u03b8(\u2212e) ) = P(\u03b8(\u2212e) |a) = f=1 f B(\u03b1e + ce ) (7) where ce,f is the number of times that word e is aligned to word f given a, s and t. Equation (7) is a consequence of the fact that the Dirichlet distribution is a conjugate prior to the categorical distribution, so that if x \u223c Dir(\u03b1) z \u223c Cat(x) 129 PBML 106 OCTOBER 2016 then given a sequence z of |z| samples from Cat(x) we have x|z \u223c Dir(\u03b1 + c(z)) (8) where | z | c(z)m = \u2211 \u03b4z =m i=1 is the number of samples in z that are equal to m. This can be easily shown from the definition of the Dirichlet distribution using Bayes\u2019 theorem: P(x|\u03b1, z) \u221d P(z|\u03b1, x)P(\u03b1, x) (9) d \u220f \u221d i=1 d x\u03b1i \u22121 |z| \u220f i=1 xzi (10) = \u220f x\u03b1i \u22121 \u220f xc(z)m (11) i=1 m d = \u220f x\u03b1i +c(z)\u22121 (12) i=1 which is the (unnormalized) Dirichlet distribution with parameter \u03b1 + c(z).",
+                    "sid": 68,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equation (6) and Equation (7) can be used for sampling with standard algorithms for categorical and Dirichlet distributions, respectively, and together they define an explicit Gibbs sampler for the Bayesian IBM model 1.",
+                    "sid": 69,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While simple, this sampler suffers from poor mixing (\u00d6stling, 2015, section 3.3) and is not a competitive algorithm for word alignment.",
+                    "sid": 70,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, much better performance can be achieved by using a collapsed sampler where the parameters \u03b8e are integrated out so that we only have to derive a sampling equation for the alignment variables P(aj = i|a(\u2212j) ).",
+                    "sid": 71,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First we use Equation (5) to derive an expression for P(a|s, t, \u03b1), from which the final sampler can be computed as P(a(\u2212j) , aj = i|s, t, \u03b1) P(aj = i|a(\u2212j) , s, t, \u03b1) = ( ) (13) P a(\u2212j) |s, t, \u03b1 Since the elements of a are exchangeable, a sufficient statistic for a is the count vector c(\u00b7) where each element K J(k) c(a, e, f)e,f = \u2211 \u2211 \u03b4 (k) (k) (14) k=1 j=1 s (k) =e\u2227tj =f a j 130 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) represents the number of times that source word type e is aligned to target word type f under the alignment a. Next, we marginalize over each of the lexical distributions \u03b8e . P(a|s, t, \u03b1) = \u220f \u222b P(a |\u03b8 , s, t, \u03b1)P(\u03b8 |s, t, \u03b1) d\u03b8 (15) e=1 \u2206 {j|saj =e} e e e Substituting from Equation (5) into the integral we have P(a|s, t, \u03b1) = 1 \u222b F \u220f \u220f \u03b8c(a,s,t)e,f +\u03b1f \u22121 d\u03b8e (16) B(\u03b1) e=1 \u2206 f=1 e,f where the innermost product can be recognized as an unnormalized Dir(\u03b1+c(a, s, t))distribution which has normalization factor B(\u03b1 + c(a, s, t)), so that the final expres sion becomes E ( ) P(a|s, t, \u03b1) = \u220f B \u03b1 + c(a, s, t) B \u03b1 e=1 E = \u220f (\u2211F ) \u220f f=1 f F (\u03b1f + c(a, s, t)e,f ) (18) e=1 \u0393 (\u2211 =1 (\u03b1f + c(a, s, t)e,f )) \u220f \u0393 (\u03b1f ) f f Combining Equation (13) with Equation (18) gives us an expression where almost all of the terms are cancelled out, except when si = e and tj = f for which c(a, s, t)e,f and c(a(\u2212j) , s, t)e,f differ by 1.",
+                    "sid": 72,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are left with a remarkably simple sampling distribution: P(aj = i|a(\u2212j) , s, t, \u03b1) = \u03b1t (\u2212j) , s, t)si ,tj (19) \u2211F f=1 (\u03b1f + c(a(\u2212j) , s, t)s ,f ) By repeatedly sampling each aj in turn from Equation (19) we are guaranteed to, in the limit, obtain an unbiased sample from P(a) under the model.",
+                    "sid": 73,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What we are really interested in, however, is to estimate the marginal distributions P(aj = i) as closely as possible while using as little computation as possible, given a sequence of correlated samples a(t) for time t \u2208 1 . . .",
+                    "sid": 74,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T . Given a sequence of samples a(t) we can then approximate the marginal distributions P(aj = i) = E P(a) \u221e [\u03b4aj =i ] = \u03b4a(t) \u2248 T T \u03b4a(t) 1 (20) t= In practice a(0) will be initialized either from a uniform distribution or by using the output of a simpler model, and the samples will gradually become more independent of a(0) as t increases.",
+                    "sid": 75,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since a(0) is likely to lie in a low-probability region of the model, 131 PBML 106 OCTOBER 2016 so do the initial samples, and it is common to use a burn-in period and disregard all a(t) for t < t0 . To further ameliorate the problem of initialization bias, it is possible to run several independently initialized samplers and average their results.",
+                    "sid": 76,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combining these methods the marginal distribution approximation becomes 1 N T P(aj = i) \u2248 N(T \u2212 t + 1) \u2211 \u2211 n=1 t=t0 \u03b4a(n,t) (21) where N is the number of independent samplers and t0 is the length of the burn- in period.",
+                    "sid": 77,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, a better estimate can be obtained by applying the RaoBlackwell theorem (Blackwell, 1947; Gelfand and Smith, 1991), which allows us to reuse the computations of P(aj = i|a(\u2212j) ) during sampling and averaging these distributions rather than \u03b4a(t) . The final.",
+                    "sid": 78,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "approximation then becomes 1 N T P(aj = i) \u2248 N(T \u2212 t + 1) \u2211 \u2211 n=1 t=t0 P(a(n,t) = i|a (n,t)(\u2212j) ) (22)",
+                    "sid": 79,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "methods. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We now turn to the particular models and algorithms implemented in efmaral, presenting our Bayesian HMM model with fertility, the Gibbs sampler used as well as the details on how to make it computationally efficient.",
+                    "sid": 80,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1.",
+                    "sid": 81,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alignment model.",
+                    "sid": 82,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal in this work is to find a word alignment algorithm that is both accurate and efficient.",
+                    "sid": 83,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous studies have shown that good word order and fertility models are essential to high accuracy (Brown et al., 1993; Och and Ney, 2003), along with reasonable priors on the parameters (Mermer and Sara\u00e7lar, 2011; \u00d6stling, 2015).",
+                    "sid": 84,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As was discussed in Section 2.3, MCMC algorithms and in particular collapsed Gibbs sampling are particularly suitable for inference in this class of models, as long as the convergence of the Markov chain are sufficiently fast.",
+                    "sid": 85,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even within this class of algorithms there are some trade-offs between accuracy and computational efficiency.",
+                    "sid": 86,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, hierarchical priors have been shown to somewhat improve accuracy (\u00d6stling, 2015, p. 65), but in spite of improved sampling algorithms (Blunsom et al., 2009) it is still considerably more costly to sample from models with hierarchical priors than with Dirichlet priors.",
+                    "sid": 87,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For these reasons, we use a HMM model for word order based on Vogel et al.",
+                    "sid": 88,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996) as well as a simple fertility model, and the complete probability of an alignment is essentially the same as Equation (5) with extra factors added for the word order and 132 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) fertility model: P(s, t, a,\u03b8, \u03c8, \u03c0, \u03b1, \u03b2, \u03b3) \uf8eb K J(k) \uf8f6 ( E F ) \u220f \u220f \u221d \uf8ed k=1 j=1 \u03b8 (k) (k) a j ,t(k) \uf8f8 \u00b7 \u220f \u220f e=1 f=1 \u03b1f \u22121 e,f \uf8eb K J(k) +1 \u220f \u220f \u00b7 \uf8ed \u03c8a(k) \uf8f6 (k) \uf8f8 \u00b7 ( mmax \u220f ) \u03b2m \u22121 m (23) k=1 j=1 j \u2212aj\u22121 m=mmin \uf8eb K I(k) \uf8f6 ( E nmax ) \u220f \u220f \u00b7 \uf8ed k=1 i=1 i ,\u03d5(i,a(k) ) \uf8f8 \u220f \u220f e=1 n=0 \u03b3n \u22121 e,n where \u03c8 \u223c Dir(\u03b2) are the categorical distribution parameters for the word order model P(aj \u2212 aj\u22121 = m), and \u03c0e \u223c Dir(\u03b3) for the fertility model P(\u03d5(i, a)|si = e).",
+                    "sid": 89,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments we fix \u03b1 = 0.001, \u03c8 = 0.5 and \u03b3 = 1, but these parameters are not very critical as long as 0 < \u03b1 \u226a 1.",
+                    "sid": 90,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The IBM models naturally allow unaligned source language words, but in order to also allow target words to not be aligned we use the extension of Och and Ney (2003) to the HMM alignment model, where each source word si (from sentence s of length I) is assumed to have a special null word si+I . The null word generates lexical items from the distribution \u03b8null , and the word order model is modified so that P(aj = i + I|aj\u22121 = i \u2032 ) = pnull \u03b4i=i \u2032 (24) P(aj = i + I|aj\u22121 = i \u2032 + I) = pnull \u03b4i=i \u2032 (25) P(aj = i|aj\u22121 = i \u2032 + I) = \u03c8i\u2212i \u2032 (26) where pnull is the prior probability of a null word alignment (fixed to 0.2 in our experiments).",
+                    "sid": 91,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "133 PBML 106 OCTOBER 2016 We collapse the sampler over \u03b8 and \u03c8 in the same manner as was shown in Section 2.4 and obtain the following approximate2 sampling distribution: P(aj = i|a(\u2212j) , s, t, \u03b1, \u03b2, \u03b3) \u221d \u03b1tj + c(a (\u2212j) , s, t)si ,tj \u2211F f=1 (\u03b1f + c(a(\u2212j) , s, t)s ,f ) (\u2212j) \u03b2i\u2212aj\u22121 + c \u2032 (a )i\u2212aj\u22121 \u00b7 \u2211mmax m=mmin (\u03b2m + c \u2032 (a(\u2212j) )m ) (\u2212j) (27) \u03b2aj+1\u2212i + c \u2032 (a )aj\u22121 \u2212i \u00b7 \u2211mmax m=mmin (\u03b2m + c \u2032 (a(\u2212j) )m ) \u03c0si ,\u03d5(i,a(\u2212j) )+1 \u03c0si ,\u03d5(i,a(\u2212j) ) While collapsing over the \u03b8 is essential for acceptable mixing in the Markov chain, this is not the case for \u03c0.",
+                    "sid": 92,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we alternate between sampling from Equation (27) and \u03c0e \u223c Dir(\u03b3 + c \u2032\u2032 (a)e )) (28) where c \u2032\u2032 (a)e is the count vector over the fertility distribution for source word e given alignments a. The advantage of this is that the last product of Equation (27) can be precomputed, saving computation in the inner loop in exchange for the (relatively minor) expense of also sampling from Equation (28).",
+                    "sid": 93,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2.",
+                    "sid": 94,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computational efficiency.",
+                    "sid": 95,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From Equation (27) it is clear that the computational complexity of sampling sen tence k is O(I(k) J(k) ), since every alignment variable a(k) for each j \u2208 1 . . .",
+                    "sid": 96,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "J(k) needs to evaluate the expression in 27 once for each i \u2208 1 . . .",
+                    "sid": 97,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I(k) , and each evaluation re quires constant time assuming that the sums are cached.",
+                    "sid": 98,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since sentence lengths are approximately proportional across languages, I(k) \u2248 \u03bbJ(k) for some constant \u03bb, thisgives a total complexity of O(\u2211 I2 ) per iteration of sampling a. Note that the com plexity does not change as we go from Equation (19) for the simple IBM model 1 to Equation (27) for the more complex model with word order and fertility.",
+                    "sid": 99,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the corresponding Expectation-Maximization (EM) algorithm for IBMalignment models has O(\u2211 I2 ) complexity in the E-step only for models with sim ple or no word order model.",
+                    "sid": 100,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The HMM-based model of Vogel et al.",
+                    "sid": 101,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996) can still be implemented relatively efficiently using dynamic programming, but complexity increases to O(\u2211 I3 ).",
+                    "sid": 102,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For models with fertility computing the expectations instead becomes intractable, and previous authors have solved this by using approximative 2 The approximation consists of ignoring the dependence between the two draws from the word order jump distribution (second and third factors).",
+                    "sid": 103,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "134 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) greedy optimization techniques (Brown et al., 1993) or local Gibbs sampling (Zhao and Gildea, 2010).",
+                    "sid": 104,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main advantage of EM over a collapsed Gibbs sampler is that the former is trivial to parallelize, which makes well-implemented parallel EM based implementations of simple alignment models with O(\u2211 I2 ) complexity, such as fast_align (Dyer et al., 2013), a strong baseline performance-wise.",
+                    "sid": 105,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 1 Inner loop of our sampler for IBM model 1 function sample(a(k)(\u2212j) ) \u25b7 Initialize cumulative probability s \u2190 0 for all i \u2208 1 . . .",
+                    "sid": 106,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I(k) do \u25b7 Load denominator reciprocal (small array random access) D\u22121 \u2190 dk,i \u25b7 Load numerator index (sequential access) L \u2190 lk,i,j \u25b7 Load numerator (large array random access) N \u2190 uL \u25b7 Compute unnormalized probability (one multiplication) p\u02c6 \u2190 D\u22121 U \u25b7 Accumulate probabilities (one addition) s \u2190 s + p\u02c6 \u25b7 Store cumulative probability (sequential access) pi \u2190 s end for \u25b7 Sample from a uniform distribution on the unit interval r \u223c Uniform(0, 1,) r \u2190 r \u00b7 pI \u25b7 Find the lowest i such that pi > r i \u2190 1 while pi \u2264 r do i \u2190 i + 1 end while a(k) \u2190 end function If a collapsed Gibbs sampler is to be a viable option for performance-critical applications, we must pay attention to details.",
+                    "sid": 107,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, we propose utilizing the fixed order of computations in order to avoid expensive lookups.",
+                    "sid": 108,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that variables a(k) are sampled in order, for k = 1 . . .",
+                    "sid": 109,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "K, j = 1 . . .",
+                    "sid": 110,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "J(k) . Now, for each pair \u27e8k, j\u27e9 we need 135 PBML 106 OCTOBER 2016 to compute \u03b1tj + c(a (\u2212j) , s, t)si ,tj \u2211F f=1 (\u03b1f + c(a(\u2212j) , s, t)s ,f ) which, if the numerator sum and the reciprocal of the denominator sum are cached in memory, involves two table lookups and one multiplication.",
+                    "sid": 111,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since multiplication is fast and the denominator reciprocal is stored in a relatively small dense array, most attention has to be paid to the numerator lookup, which apart from the constant \u03b1tj is a sparse matrix with nonzero counts c(a(\u2212j) , s, t)s ,t only where si and tj are i j aligned.",
+                    "sid": 112,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The standard solution would therefore be to use a hash table with \u27e8si , tj \u27e9 as keys to ensure memory efficiency and constant-time lookup.",
+                    "sid": 113,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, most counts are in fact guaranteed to always be zero, as only words from the same parallel sentence pair can be aligned.",
+                    "sid": 114,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are therefore able to construct a count vector u and an index (\u2212j) table l such that ulk,i,j = c(a , s, t)si ,tj +\u03b1tj . At the expense of some extra memory usage we are able to achieve the lookup with only two operations, one of which is a cache-efficient sequential memory access.",
+                    "sid": 115,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this method, the inner loop of the sampler for IBM model 1 thus contains only six operations, outlined in algorithm 1.",
+                    "sid": 116,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adding the HMM word order model, two more sequential memory loads and two.",
+                    "sid": 117,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "multiplications are needed, and adding the fertility model requires one more memory load and a multiplication.",
+                    "sid": 118,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In this section we relate our work mainly to the literature on Bayesian models of word alignment, as well as computationally efficient methods for this problem.",
+                    "sid": 119,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A comprehensive survey of word alignment methods is beyond the scope of this article, for this we refer the reader to Tiedemann (2011).",
+                    "sid": 120,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Much of research into word alignment has been based on the pioneering work of Brown et al.",
+                    "sid": 121,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1993), and we have already introduced part of their family of IBM alignment models in Section 2.1.",
+                    "sid": 122,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their most advanced models still perform competitively after nearly two decades, but due to their complexity (with exact inference being intractable) many have suggested simpler alternatives, typically by keeping the lexical translation model intact and introducing computationally convenient word order and fertility models so that inference with the Expectation-Maximization (EM) algorithm remains tractable.",
+                    "sid": 123,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notable examples include the simple HMM-based model of Vogel et al.",
+                    "sid": 124,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996) and the even simpler reparametrized IBM model 2 of Dyer et al.",
+                    "sid": 125,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2013).",
+                    "sid": 126,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Neither of these include a model for word fertility, but Toutanova et al.",
+                    "sid": 127,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2002) showed that a simplified fertility model (which only counts alignments from consecutive target words) can be added to the HMM model without increasing the complexity of inference, and more recently this has also been achieved for a general fertility model (Quirk, 2013).",
+                    "sid": 128,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "136 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) The EM algorithm requires computing the expected values of the alignments, E [\u03b4aj =i ], given the current values of the model parameters.",
+                    "sid": 129,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The authors cited above all dealt with this fact by analytically deriving expressions for exact computation of these expectations in their models.",
+                    "sid": 130,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhao and Gildea (2010) instead chose to use Gibbs sampling to approximate these expectations, which allowed them to perform efficient inference with EM for a HMM model with fertility.",
+                    "sid": 131,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Riley and Gildea (2012) later showed how Variational Bayesian techniques can be used to incorporate priors on the parameters of the IBM models, with only minor modifications to the expressions for the alignment expectations.",
+                    "sid": 132,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, several authors have disposed with EM altogether, relying entirely on Gibbs sampling for inference in IBM-based models with Bayesian priors of varying complexity (Mermer and Sara\u00e7lar, 2011; Mermer et al., 2013; Gal and Blunsom, 2013; \u00d6stling, 2015).",
+                    "sid": 133,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of these, Gal and Blunsom (2013) and to some extent \u00d6stling (2015) prioritize maximizing alignment accuracy, which is obtained by using complex hierarchical models.",
+                    "sid": 134,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mermer et al.",
+                    "sid": 135,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2013) use Dirichlet priors with IBM models 1 and 2 to obtain efficient samplers, which they implement in an approximate fashion (where dependencies between variables are ignored during sampling) in order to facilitate parallelization.",
+                    "sid": 136,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This article follows previous work by the first author (\u00d6stling, 2015), which however was focused on alignment of short parallel text for applications in language typology and transfer learning, rather than efficient large-scale alignment for use with statistical machine translation systems.",
+                    "sid": 137,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "results. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this section we first investigate the effect of different parameter settings in efmaral, then we proceed with a comparison to two other influential word alignment systems with respect to the performance of statistical machine translation (SMT) systems using the alignments.",
+                    "sid": 138,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since computational efficiency is an important objective with efmaral, we report runtime for all experiments.",
+                    "sid": 139,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following three systems are used in our comparison: giza++: The standard pipeline of IBM models with standard settings of 5 iterations of IBM 1, 5 iterations of the HMM model, and 5 iterations of IBM model 3 and 4 with Viterbi alignments of the final model (Och and Ney, 2003).",
+                    "sid": 140,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Class dependencies in the final distortion model use automatically created word clusters using the mkcls tool, 50 per language.",
+                    "sid": 141,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "fast_align: An log-linear reparameterization of IBM model 2 using efficient inference procedures and parameter estimations (Dyer et al., 2013).",
+                    "sid": 142,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the options that favor monotonic alignment points including the optimization procedures that estimate how close they should be to the monotonic diagonal.",
+                    "sid": 143,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "efmaral: Our implementation of the MCMC alignment approach proposed in this article.",
+                    "sid": 144,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "137 PBML 106 OCTOBER 2016 Since these tools all use asymmetric models, we ran each aligner in both directions and applied the grow-diag-final-and (Section 5.1) or grow-diag-final (Section 5.2) symmetrization heuristic (Och and Ney, 2003, p. 33).",
+                    "sid": 145,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method assumes a set of binary alignments, so for efmaral we produce these by choosing the single most probable value for each aj : arg maxi P(aj = i).",
+                    "sid": 146,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way the results are more easily comparable to other systems, although some information is lost before the symmetrization step and methods have been explored that avoid this (Matusov et al., 2004; \u00d6stling, 2015, pp.",
+                    "sid": 147,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "46\u201347).",
+                    "sid": 148,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1.",
+                    "sid": 149,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alignment quality experiments.",
+                    "sid": 150,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As discussed in Section 2.4, there are two ways of trading off computing time for approximation accuracy: increasing the number of independent samplers, and increasing the number of sampling iterations.",
+                    "sid": 151,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we explore the effects of these trade-offs on alignment accuracy.",
+                    "sid": 152,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Och and Ney (2003), most subsequent research has compared the results of automatic word alignment to hand-annotated data consisting of two sets of links: S, containing sure tuples \u27e8i, j\u27e9 where the human judgment is that si and tj must be aligned, and S \u2286 P, containing possible tuples \u27e8i, j\u27e9 where si and tj may be linked.",
+                    "sid": 153,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a set A of alignments to be evaluated, they define the measures precision (p), recall (r), and alignment error rate (AER) as follows: |A \u2229 P| p = (29) |A| r = |A \u2229 S| (30) |P| |A \u2229 S| + |A \u2229 P| AER = 1 \u2212 (31) |A| + |S| While popular, the AER measure is biased towards precision rather than recall and correlates poorly with machine translation performance.",
+                    "sid": 154,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fraser and Marcu (2007) instead suggest to use the F-measure, which favors a balance between precision and recall as defined in Equation (29) and Equation (30): ( \u03b1 F\u03b1 = p + 1 \u2212 \u03b1 )\u22121 r (32) In our experiments, we report both AER and F0.5 .In order to evaluate alignment quality we are limited to language pairs with an notated alignment data.",
+                    "sid": 155,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, we use the corpora and test sets from the WPT 2003 and 2005 shared tasks (Mihalcea and Pedersen, 2003; Martin et al., 2005).",
+                    "sid": 156,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we also use the SwedishEnglish part of the Europarl corpus version 7 138 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) Table 1.",
+                    "sid": 157,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data sets used for our alignment quality experiments.",
+                    "sid": 158,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The total number of sentences in the respective corpora are given along with the number of sentences and gold-standard (S)ure and (P)ossible alignment links in the corresponding test set.",
+                    "sid": 159,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Co rp us Se nt en ce s Tr ai ni n g Se nt en ce s | S | Tes t | P | En glish Fr en ch 1, 1 3 0, 5 8 8 4 4 7 4, 03 8 17, 43 8 En glish Ro m an ia n 4 8 , 6 4 1 2 0 0 5, 03 4 5, 0 3 4 En gli sh In uk tit ut 3 3 3 , 1 8 5 75 2 9 3 1, 9 7 2 En gli sh Hi nd i 3 , 5 5 6 90 1, 40 9 1, 4 0 9 En gli sh S we di sh 6 9 2 , 6 6 2 1 9 2 3, 34 0 4, 5 7 7 (Koehn, 2005) with test set from Holmqvist and Ahrenberg (2011).",
+                    "sid": 160,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data sets are presented in Table 1, where it can be noted they differ both in size and in annotation style.",
+                    "sid": 161,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, the EnglishRomanian and EnglishHindi data only have one set of gold-standard links, so that S = P, the English-French and EnglishInuktitut data have |S| \u226a |P|, while the EnglishSwedish data lies somewhere in between.",
+                    "sid": 162,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2: Results of our alignment quality experiments.",
+                    "sid": 163,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All timing and accuracy figures use means from five independently initialized runs.",
+                    "sid": 164,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that lower is better for AER, higher is better for F0.5 . All experiments are run on a system with two Intel Xeon E5645 CPUs running at 2.4 GHz, in total 12 physical (24 virtual) cores.",
+                    "sid": 165,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Quality Time (seconds) Configuration AER F0.5 CPU Wall English-French fa st _a li gn 1x ite rat io ns, 2 sa m pl er s 1 5.",
+                    "sid": 166,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 86.2 8 . 2 92.3 4 , 1 2 4 243 7 4 1 2 7 0 4x ite rat io ns, 2 sa m pl er s 16 x ite rat io ns, 2 sa m pl er s 8 . 1 92.2 8 . 1 92.1 2, 7 0 0 809 10, 55 7 2,945 1x ite rat io ns, 1 sa m pl er s 1x ite rat io ns, 4 sa m pl er s 1x ite rat io ns, 8 sa m pl er s 9 . 1 91.4 7 . 8 92.6 7 . 6 92.9 4 7 0 2 4 8 1 , 3 2 4 298 2 , 4 5",
+                    "sid": 167,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "330",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Continued on next page 139 PBML 106 OCTOBER 2016 Configuration AER F0.5 CPU Wall EnglishHindi fa st _a li gn 1x ite rat io ns, 2 sa m pl er s 6 7.",
+                    "sid": 168,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 32.7 4 8.",
+                    "sid": 169,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 51.7 2 7 2 1 0 7 12 4x ite rat io ns, 2 sa m pl er s 16 x ite rat io ns, 2 sa m pl er s 4 9.",
+                    "sid": 170,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 51.0 5 1.",
+                    "sid": 171,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 49.0 4 1 6 4 6 1 , 6 6 4 183 1x ite rat io ns, 1 sa m pl er s 1x ite rat io ns, 4 sa m pl er s 1x ite rat io ns, 8 sa m pl er s 4 9.",
+                    "sid": 172,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 50.6 4 7.",
+                    "sid": 173,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 52.5 4 6.",
+                    "sid": 174,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "53.3",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "8 1 1 0 1 4 6 13 2 3 8 17 EnglishInuktitut fa st _a li gn 1x ite rat io ns, 2 sa m pl er s 2 8.",
+                    "sid": 175,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 78.1 2 2.",
+                    "sid": 176,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 81.5 7 5 2 48 1 6 0 62 4x ite rat io ns, 2 sa m pl er s 16 x ite rat io ns, 2 sa m pl er s 1 9.",
+                    "sid": 177,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 83.7 1 7.",
+                    "sid": 178,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 86.0 5 6 0 1 9 9 2 , 1 7 6 747 1x ite rat io ns, 1 sa m pl er s 1x ite rat io ns, 4 sa m pl er s 1x ite rat io ns, 8 sa m pl er s 2 3.",
+                    "sid": 179,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "80.1",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "1 9.",
+                    "sid": 180,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 84.1 1 8.",
+                    "sid": 181,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 85.3 9 8 5 6 2 5 9 64 5 1 5 72 EnglishRomanian fa st _a li gn 1x ite rat io ns, 2 sa m pl er s 3 2.",
+                    "sid": 182,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 67.5 2 8.",
+                    "sid": 183,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 71.3 2 6 6 17 1 6 7 47 4x ite rat io ns, 2 sa m pl er s 16 x ite rat io ns, 2 sa m pl er s 2 9.",
+                    "sid": 184,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 71.0 2 9.",
+                    "sid": 185,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 70.5 6 4 8 1 7 3 2 , 5 8 0 682 1x ite rat io ns, 1 sa m pl er s 1x ite rat io ns, 4 sa m pl er s 1x ite rat io ns, 8 sa m pl er s 2 9.",
+                    "sid": 186,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 70.2 2 8.",
+                    "sid": 187,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 71.8 2 7.",
+                    "sid": 188,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "72.1",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "9 7 4 3 3 2 0 53 6 5 6 59 EnglishSwedish fa st _a li gn 1x ite rat io ns, 2 sa m pl er s 2 0.",
+                    "sid": 189,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 79.8 1 3.",
+                    "sid": 190,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 87.0 12, 29 8 671 1, 6 0 6 589 4x ite rat io ns, 2 sa m pl er s 16 x ite rat io ns, 2 sa m pl er s 1 1.",
+                    "sid": 191,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 88.6 1 0.",
+                    "sid": 192,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 89.4 5, 9 8 9 1,830 23, 09 9 6,519 1x ite rat io ns, 1 sa m pl er s 1x ite rat io ns, 4 sa m pl er s 1x ite rat io ns, 8 sa m pl er s 1 3.",
+                    "sid": 193,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 86.3 1 3.",
+                    "sid": 194,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 86.8 1 1.",
+                    "sid": 195,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 88.3 1, 0 0 5 538 2, 6 8 1 626 6, 1 4 7 839 Table 2 shows the result of varying the number of samplers and iterations for all the language pairs under consideration.",
+                    "sid": 196,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a baseline for each language pair, we use fast_align as well as the default efmaral configuration of two independent sam \u221a plers, running x = \u230a100/ K\u230b sampling iterations where K is the number of parallel sentences in the data (with the additional constraint that 4 \u2264 x \u2264 250).",
+                    "sid": 197,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following 140 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) the practice set by Brown et al.",
+                    "sid": 198,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1993), each model is initialized with the output of a simpler model.",
+                    "sid": 199,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the full HMM+fertility model, we run \u230ax/4\u230b sampling iterations of IBM model 1 initialized with uniformly random alignments, use the last sample to initialize the fertility-less HMM model that we also run for \u230ax/4\u230b iterations.",
+                    "sid": 200,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, x samples are drawn from the full model and the final alignments are estimated from these using Equation (22).",
+                    "sid": 201,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experiments described in Table 2 were carried out on a system with dual Intel Xeon E5645 CPUs, with a total of 24 virtual cores available.",
+                    "sid": 202,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even though this setup strongly favors fast_align\u2019s parallel implementation, efmaral is faster for the largest corpus (where speed matters most) in terms of both wall time and CPU time, and for all but the smallest corpora in CPU time.",
+                    "sid": 203,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This trend will also be seen in Section 5.2, where even larger parallel corpora are used for our machine translation experiments.",
+                    "sid": 204,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As expected, increasing the number of independently initialized samplers consistently results in better alignments, in line with research on model averaging for a wide range of machine learning models.",
+                    "sid": 205,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When it comes to increasing the number of sampling iterations the result is less clear: for some pairs this seems even more important than the number of independent samplers, whereas for other pairs the quality metrics actually change for the worse.",
+                    "sid": 206,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that the samplers are initialized with a sample from the fertility-less HMM model, and that the correlation to this sample decreases as the number of samples from the HMM model with fertility increases.",
+                    "sid": 207,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Decreasing quality therefore indicates that for that particular language pair and annotation style, the fertility model performs worse than the mix between the fertility and fertility-less models obtained by using a small number of samples.",
+                    "sid": 208,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When interpreting these results, it is also important to keep in mind that the quality metrics are computed using discretized and symmetrized alignments, which are related in a quite complex way to the probability estimates of the underlying model.",
+                    "sid": 209,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From a practical point of view, one should also consider that additional independent samplers can be run in parallel, unlike additional sampling iterations which have a serial dependence.",
+                    "sid": 210,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason and because of the consistent improvements demonstrated in Table 2, increasing the number of samplers should be the preferred method for improving alignment quality at the cost of memory and CPU time.",
+                    "sid": 211,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2.",
+                    "sid": 212,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Machine translation experiments.",
+                    "sid": 213,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to test the effect of word alignment in a downstream task, we conducted some experiments with generic phrase-based machine translation.",
+                    "sid": 214,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our models are based on the Moses pipeline (Koehn et al., 2007) with data coming from the Workshop on Statistical Machine Translation.",
+                    "sid": 215,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our setup we use the news translation task from 2013 with translation models for English to Czech, German, Spanish, French and Russian and vice versa.",
+                    "sid": 216,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parallel training data comes from Europarl version 7 (Koehn, 2005) (for all language pairs except RussianEnglish) and the News Commentary corpus version 11.",
+                    "sid": 217,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For language modeling, we use the monolingual data sets from Eu 141 PBML 106 OCTOBER 2016 Table 3.",
+                    "sid": 218,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data used for training SMT models (all counts in millions).",
+                    "sid": 219,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parallel data sets refer to the bitexts aligned to English and their token counts include both languages.",
+                    "sid": 220,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "La ng ua ge Mo nol ing ual Parallel Se nte nc es Tokens Se nte nc es Tokens Cz ec h G e r m a n E n g l i s h S p a n i s h F r e n c h R u s s i a n 8 . 4 1 4 5 2 3 . 1 4 2 5 1 7 . 3 4 1 1 6 . 5 1 9 0 6 . 4 1 7 3 1 0 . 0 1 7 8 0 . 8 4 1 2 . 1 1 1 4 \u2013 \u2013 2 . 0 1 0 9 2 . 0 1 1 4 0 . 2 1 0 roparl and News Commentary as well as the shuffled news texts from 2012.",
+                    "sid": 221,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did not use any of the larger news data sets from more recent years to avoid possible overlaps with the 2013 test set.",
+                    "sid": 222,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply a pipeline of pre-processing tools from the Moses package to prepare all data sets including punctuation normalization, tokenization, lowercasing and corpus cleaning (for parallel corpora).",
+                    "sid": 223,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistics of the final data sets are listed in Table 3.",
+                    "sid": 224,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All language models use order five with modified KneserNey smoothing and are estimated using KenLM (Heafield et al., 2013).",
+                    "sid": 225,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word alignments are symmetrized using the grow-diag-final heuristics and we use standard settings to extract phrases and to estimate translation probabilities and lexical weights.",
+                    "sid": 226,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For reordering we use the default distance-based distortion penalty and parameters are tuned using MERT (Och, 2003) with 200-best lists.",
+                    "sid": 227,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows the performance of our SMT models given alignments from the different word alignment systems.",
+                    "sid": 228,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The left-hand part of the table contains results when using full word forms for the word alignment systems, whereas the results in the right-hand part were obtained by removing any letters after the four first from each word, as a form of approximate stemming since all the languages in our evaluation are predominantly suffixing.",
+                    "sid": 229,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Though seemingly very drastic, this method improves accuracy in most cases since data sparsity is a major problem for word alignment.",
+                    "sid": 230,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next we turn to the computational cost of the experiments just described, these are found in Table 5.",
+                    "sid": 231,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In almost all cases, efmaral runs faster by a comfortable margin.",
+                    "sid": 232,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only exception is for the smallest dataset, RussianEnglish, where fast_align uses slightly less wall time (but still much more CPU time).",
+                    "sid": 233,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This trend is also present in the alignment quality experiments in Section 5.1 with mostly smaller corpora, where efmaral is only faster for the largest corpus.3 3 Due to different computing environments, only four CPU cores were available per aligner in the SMT.",
+                    "sid": 234,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "experiments, versus 24 cores in the alignment quality experiments.",
+                    "sid": 235,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "142 R. \u00d6stling, J. Tiedemann E\ufb03cient Word Alignment with MCMC (125\u2013146) Table 4.",
+                    "sid": 236,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results from our SMT evaluation.",
+                    "sid": 237,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU scores are the maximum over the Moses parameters explored for the given word alignment con\ufb01guration.",
+                    "sid": 238,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tr an sla tio n pa ir B L E U s c o r e N o s t e m m i n g 4 p r e f i x s t e m m i n g Cz ech En gli sh En gli sh Cz ec h Ge rm an En gli sh En gli sh Ge rm an Sp an ish En gli sh En gli sh Sp an ish Fr en ch En gli sh En gli sh Fr en ch Ru ssi an En gli sh En gli sh Ru ssi an ef m ar al giz a+ + fast_align 23.",
+                    "sid": 239,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "43 23.29 22.77 16.",
+                    "sid": 240,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "22 15.97 15.69 23.",
+                    "sid": 241,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "60 23.86 22.84 17.",
+                    "sid": 242,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "83 17.69 17.50 28.",
+                    "sid": 243,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "50 28.43 28.25 27.",
+                    "sid": 244,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "39 27.51 27.08 28.",
+                    "sid": 245,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "50 28.45 28.06 27.",
+                    "sid": 246,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "73 27.57 27.22 20.",
+                    "sid": 247,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "74 20.14 19.55 15.",
+                    "sid": 248,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "89 15.55 15.07 ef m ar al giz a+ + fast_align 23.",
+                    "sid": 249,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "58 23.57 23.44 16.",
+                    "sid": 250,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 15.96 15.88 23.",
+                    "sid": 251,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "54 23.80 23.08 17.",
+                    "sid": 252,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "77 17.70 17.65 28.",
+                    "sid": 253,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "57 28.69 28.20 27.",
+                    "sid": 254,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "49 27.49 27.08 28.",
+                    "sid": 255,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "69 28.67 28.33 27.",
+                    "sid": 256,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "66 27.71 27.16 20.",
+                    "sid": 257,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 20.65 20.38 16.",
+                    "sid": 258,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "17 16.13 15.77 Table 5.",
+                    "sid": 259,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Timings from the word alignments for our SMT evaluation.",
+                    "sid": 260,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The values are averaged over both alignment directions.",
+                    "sid": 261,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For these experiments we used systems with 8-core Intel E52670 processors running at 2.6 GHz.",
+                    "sid": 262,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Time (seconds) Tr an sla tio n pa ir St e m Wall CPU ef m ar al Wall CPU g i z a + + Wall CPU fast_ align Cz ech En gli sh no 3 0 3 4 6 2 13, 08 9 13, 08 3 4 6 5 1,7 59 Cz ech En gli sh ye s 2 3 3 3 6 1 12, 03 5 12, 03 3 3 1 1 1,2 00 Ge rm an En gli sh no 5 1 1 7 6 6 42, 07 7 41, 75 4 1,1 51 4,4 07 Ge rm an En gli sh ye s 3 7 7 5 5 8 43, 04 8 43, 02 3 8 1 3 3,1 15 Sp an ish En gli sh no 5 0 0 7 8 2 39, 04 7 39, 00 3 1,0 34 3,9 40 Sp an ish En gli sh ye s 3 4 6 5 2 5 38, 89 6 38, 86 6 7 5 8 2,9 11 Fr en ch En gli sh no 6 9 6 1,0 88 41, 69 8 41, 64 6 1,6 81 6,4 23 Fr en ch En gli sh ye s 3 8 3 5 8 3 40, 98 6 40, 90 7 8 0 5 3,1 01 Ru ssi an En gli sh no 1 2 2 2 0 6 3 5 8 3 3 5 8 1 1 0 7 3 8 2 Ru ssi an En gli sh ye s 8 7 1 5 1 3 1 4 8 3 1 4 3 7 8 2 9 2 143 PBML 106 OCTOBER 2016 6.",
+                    "sid": 263,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Concluding remarks.",
+                    "sid": 264,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hope that the reader at this point is convinced that Bayesian alignment models with Markov Chain Monte Carlo inference should be the method of choice for researchers who need to align large parallel corpora.",
+                    "sid": 265,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To facilitate a practical shift towards this direction, we have released the efmaral tool which the evaluations in this article show to be both accurate, computationally efficient, and useful as a component of practical machine translation systems.",
+                    "sid": 266,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

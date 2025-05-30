@@ -1,0 +1,959 @@
+{
+    "ID": "P13-1126",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Vector Space Model for Adaptation in Statistical Machine Translation",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper proposes a new approach to domain adaptation in statistical machine translation (SMT) based on a vector space model (VSM).",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The general idea is first to create a vector profile for the in-domain development (\u201cdev\u201d) set.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This profile might, for instance, be a vector with a dimensionality equal to the number of training subcorpora; each entry in the vector reflects the contribution of a particular subcorpus to all the phrase pairs that can be extracted from the dev set.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, for each phrase pair extracted from the training data, we create a vector with features defined in the same way, and calculate its similarity score with the vector representing the dev set.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, we obtain a decoding feature whose value represents the phrase pair\u2019s closeness to the dev.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a simple, computationally cheap form of instance weighting for phrase pairs.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on large scale NIST evaluation data show improvements over strong baselines: +1.8 BLEU on Arabic to English and +1.4 BLEU on Chinese to English over a non-adapted baseline, and significant improvements in most circumstances over baselines with linear mixture model adaptation.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An informal analysis suggests that VSM adaptation may help in making a good choice among words with the same meaning, on the basis of style and genre.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The translation models of a statistical machine translation (SMT) system are trained on parallel data.",
+                    "sid": 9,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Usage of language and therefore the best translation practice differs widely across genres, topics, and dialects, and even depends on a partictypically use a rich feature set to decide on weights for the training data, at the sentence or phrase pair level.",
+                    "sid": 10,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a sentence from a subcorpus whose domain is far from that of the dev set would typically receive a low weight, but sentences in this subcorpus that appear to be of a general nature might receive higher weights.",
+                    "sid": 11,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 2012 JHU workshop on Domain Adaptation for MT 1 proposed phrase sense disambiguation (PSD) for translation model adaptation.",
+                    "sid": 12,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this approach, the context of a phrase helps the system to find the appropriate translation.",
+                    "sid": 13,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we propose a new instance weighting approach to domain adaptation based on a vector space model (VSM).",
+                    "sid": 14,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in (Foster et al., 2010), this approach works at the level of phrase pairs.",
+                    "sid": 15,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the VSM approach is simpler and more straightforward.",
+                    "sid": 16,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of using word-based features and a computationally expensive training procedure, we capture the distributional properties of each phrase pair directly, representing it as a vector in a space which also contains a representation of the dev set.",
+                    "sid": 17,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The similarity between a given phrase pair\u2019s vector and the dev set vector becomes a feature for the decoder.",
+                    "sid": 18,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It rewards phrase pairs that are in some sense closer to those found in the dev set, and punishes the rest.",
+                    "sid": 19,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In initial experiments, we tried three different similarity functions: Bhattacharyya coefficient, Jensen-Shannon divergency, and cosine measure.",
+                    "sid": 20,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They all enabled VSM adaptation to beat the non-adaptive baseline, but Bhattacharyya similarity worked best, so we adopted it for the remaining experiments.",
+                    "sid": 21,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vector space used by VSM adaptation can be defined in various ways.",
+                    "sid": 22,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the experiments described below, we chose a definition that measures the contribution (to counts of a given phrase pair, or to counts of all phrase pairs in the dev set) of each training subcorpus.",
+                    "sid": 23,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, the variant of VSM adaptation tested here bears a superficial resemblance to domain adaptation based on mixture models for TMs, as in (Foster and Kuhn, 2007), in that both approaches rely on information about the subcorpora from which the data originate.",
+                    "sid": 24,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, a key difference is that in this paper we explicitly capture each phrase pair\u2019s distribution across subcorpora, and compare it to the aggregated distribution of phrase pairs in the dev set.",
+                    "sid": 25,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In mixture models, a phrase pair\u2019s distribution across subcorpora is captured only implicitly, by probabilities that reflect the prevalence of the pair within each subcorpus.",
+                    "sid": 26,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, VSM adaptation occurs at a much finer granularity than mixture model adaptation.",
+                    "sid": 27,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More fundamentally, there is nothing about the VSM idea that obliges us to define the vector space in terms of subcorpora.",
+                    "sid": 28,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, we could cluster the words in the source language into S clusters, and the words in the target language into T clusters.",
+                    "sid": 29,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, treating the dev set and each phrase pair as a pair of bags of words (a source bag and a target bag) one could represent each as a vector of dimension S + T, with entries calculated from the counts associated with the S + T clusters (in a way similar to that described for phrase pairs below).",
+                    "sid": 30,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The (dev, phrase pair) similarity would then be independent of the subcorpora.",
+                    "sid": 31,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One can think of several other ways of defining the vector space that might yield even better results than those reported here.",
+                    "sid": 32,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, VSM adaptation is not limited to the variant of it that we tested in our experiments.",
+                    "sid": 33,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 vector space model adaptation",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Vector space models (VSMs) have been widely applied in many information retrieval and natural language processing applications.",
+                    "sid": 34,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, to compute the sense similarity between terms, many researchers extract features for each term from its context in a corpus, define a VSM and then apply similarity functions (Hindle, 1990; Lund and Burgess, 1996; Lin, 1998; Turney, 2001).",
+                    "sid": 35,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we exploited the fact that the training data come from a set of subcorpora.",
+                    "sid": 36,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the Chinese-English training data are made up of 14 subcorpora (see section 3 below).",
+                    "sid": 37,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose we have C subcorpora.",
+                    "sid": 38,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The domain vector for a phrase-pair (f, e) is defined as where wi(f, e) is a standard tf \u00b7 idf weight, i.e.",
+                    "sid": 39,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To avoid a bias towards longer corpora, we normalize the raw joint count ci(f, e) in the corpus psi by dividing by the maximum raw count of any 1286 ase pair extracted in the corpus si.",
+                    "sid": 40,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let max {ci (fj, ek) , (fj, ek) E si}.",
+                    "sid": 41,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) The idf (f, e) is the inverse document frequency: a measure of whether the phrase-pair (f, e) is common or rare across all subcorpora.",
+                    "sid": 42,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the standard formula: where df(f, e) is the number of subcorpora that (f, e) appears in, and A is an empirically determined smoothing term.",
+                    "sid": 43,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the in-domain dev set, we first run word alignment and phrases extracting in the usual way for the dev set, then sum the distribution of each phrase pair (fj, ek) extracted from the dev data across subcorpora to represent its domain information.",
+                    "sid": 44,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dev vector is thus where J, K are the total numbers of source/target phrases extracted from the dev data respectively. cdev (fj, ek) is the joint count of phrase pair fj, ek found in the dev set.",
+                    "sid": 45,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vector can also be built with other features of the phrase pair.",
+                    "sid": 46,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, we could replace the raw joint count ci(f, e) in Equation 3 with the raw marginal count of phrase pairs (f, e).",
+                    "sid": 47,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, even within the variant of VSM adaptation we focus on in this paper, where the definition of the vector space is based on the existence of subcorpora, one could utilize other definitions of the vectors of the similarity function than those we utilized in our experiments.",
+                    "sid": 48,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "VSM uses the similarity score between the vector representing the in-domain dev set and the vector representing each phrase pair as a decoder feature.",
+                    "sid": 49,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are many similarity functions we could have employed for this purpose (Cha, 2007).",
+                    "sid": 50,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tested three commonly-used functions: the Bhattacharyya coefficient (BC) (Bhattacharyya, 1943; Kazama et al., 2010), the Jensen-Shannon divergence (JSD), and the cosine measure.",
+                    "sid": 51,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to (Cha, 2007), these belong to three different families of similarity functions: the Fidelity family, the Shannon\u2019s entropy family, and the inner Product family respectively.",
+                    "sid": 52,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It was BC similarity that yielded the best performance, and that we ended up using in subsequent experiments.",
+                    "sid": 53,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To map the BC score onto a range from 0 to 1, we first normalize each weight in the vector by dividing it by the sum of the weights.",
+                    "sid": 54,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, we get the probability distribution of a phrase pair or the phrase pairs in the dev data across all subcorpora: To further improve the similarity score, we apply absolute discounting smoothing when calculating the probability distributions pi(f,e).",
+                    "sid": 55,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We subtract a discounting value \u03b1 from the non-zero pi(f, e), and equally allocate the remaining probability mass to the zero probabilities.",
+                    "sid": 56,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We carry out the same smoothing for the probability distributions pi(dev).",
+                    "sid": 57,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The smoothing constant \u03b1 is determined empirically on held-out data.",
+                    "sid": 58,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Bhattacharyya coefficient (BC) is defined as follows: The other two similarity functions we also tested are JSD and cosine (Cos).",
+                    "sid": 59,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are defined as follows:",
+                    "sid": 60,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 experiments",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We carried out experiments in two different settings, both involving data from NIST Open MT 2012.2 The first setting is based on data from the Chinese to English constrained track, comprising about 283 million English running words.",
+                    "sid": 61,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We manually grouped the training data into 14 corpora according to genre and origin.",
+                    "sid": 62,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 summarizes information about the training, development and test sets; we show the sizes of the training subcorpora in number of words as a percentage of all training data.",
+                    "sid": 63,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most training subcorpora consist of parallel sentence pairs.",
+                    "sid": 64,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The isi and lex&ne corpora are exceptions: the former is extracted from comparable data, while the latter is a lexicon that includes many named entities.",
+                    "sid": 65,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The development set (tune) was taken from the NIST 2005 evaluation set, augmented with some web-genre material reserved from other NIST corpora.",
+                    "sid": 66,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second setting uses NIST 2012 Arabic to English data, but excludes the UN data.",
+                    "sid": 67,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are about 47.8 million English running words in these training data.",
+                    "sid": 68,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We manually grouped the training data into 7 groups according to genre and origin.",
+                    "sid": 69,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 summarizes information about the training, development and test sets.",
+                    "sid": 70,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that for this language pair, the comparable isi data represent a large proportion of the training data: 72% of the English words.",
+                    "sid": 71,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the evaluation sets from NIST 2006, 2008, and 2009 as our development set and two test sets, respectively.",
+                    "sid": 72,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments were carried out with an in-house phrase-based system similar to Moses (Koehn et al., 2007).",
+                    "sid": 73,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each corpus was word-aligned using IBM2, HMM, and IBM4 models, and the phrase table was the union of phrase pairs extracted from these separate alignments, with a length limit of 7.",
+                    "sid": 74,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation model (TM) was smoothed in both directions with KN smoothing (Chen et al., 2011).",
+                    "sid": 75,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the hierarchical lexicalized reordering model (RM) (Galley and Manning, 2008), with a distortion limit of 7.",
+                    "sid": 76,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other features include lexical weighting in both directions, word count, a distance-based RM, a 4-gram LM trained on the target side of the parallel data, and a 6-gram English Gigaword LM.",
+                    "sid": 77,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system was tuned with batch lattice MIRA (Cherry and Foster, 2012).",
+                    "sid": 78,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the baseline, we simply concatenate all training data.",
+                    "sid": 79,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have also compared our approach to two widely used TM domain adaptation ap1288 proaches.",
+                    "sid": 80,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One is the log-linear combination of TMs trained on each subcorpus (Koehn and Schroeder, 2007), with weights of each model tuned under minimal error rate training using MIRA.",
+                    "sid": 81,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other is a linear combination of TMs trained on each subcorpus, with the weights of each model learned with an EM algorithm to maximize the likelihood of joint empirical phrase pair counts for in-domain dev data.",
+                    "sid": 82,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For details, refer to (Foster and Kuhn, 2007).",
+                    "sid": 83,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The value of A and \u03b1 (see Eq 4 and Section 2.1) are determined by the performance on the dev set of the Arabic-to-English system.",
+                    "sid": 84,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For both Arabic-to-English and Chinese-to-English experiment, these values obtained on Arabic dev were used to obtain the results below: A was set to 8, and \u03b1 was set to 0.01.",
+                    "sid": 85,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Later, we ran an experiment on Chinese-to-English with A and \u03b1 tuned specifically for that language pair, but the performance for the Chinese-English system only improved by a tiny, insignificant amount).",
+                    "sid": 86,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our metric is case-insensitive IBM BLEU (Papineni et al., 2002), which performs matching of n-grams up to n = 4; we report BLEU scores averaged across both test sets NIST06 and NIST08 for Chinese; NIST08 and NIST09 for Arabic.",
+                    "sid": 87,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following (Koehn, 2004), we use the bootstrapresampling test to do significance testing.",
+                    "sid": 88,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In tables 3 to 5, * and ** denote significant gains over the baseline at p < 0.05 and p < 0.01 levels, respectively.",
+                    "sid": 89,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first compare the performance of different similarity functions: cosine (COS), JensenShannon divergence (JSD) and Bhattacharyya coefficient (BC).",
+                    "sid": 90,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are shown in Table 3.",
+                    "sid": 91,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All three functions obtained improvements.",
+                    "sid": 92,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both COS and BC yield statistically significant improvements over the baseline, with BC performing better than COS by a further statistically significant margin.",
+                    "sid": 93,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Bhattacharyya coefficient is explicitly designed to measure the overlap between the probability distributions of two statistical samples or populations, which is precisely what we are trying to do here: we are trying to reward phrase pairs whose distribution is similar to that of the dev set.",
+                    "sid": 94,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, its superior performance in these experiments is not unexpected.",
+                    "sid": 95,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the next set of experiments, we compared VSM adaptation using the BC similarity function with the baseline which concatenates all training data and with log-linear and linear TM mixtures whose components are based on subcorpora.",
+                    "sid": 96,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows that log-linear combination performs worse than the baseline: the tuning algorithm failed to optimize the log-linear combination even on dev set.",
+                    "sid": 97,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Chinese, the BLEU score of the dev set on the baseline system is 27.3, while on the log-linear combination system, it is 24.0; for Arabic, the BLEU score of the dev set on the baseline system is 46.8, while on the log-linear combination system, it is 45.4.",
+                    "sid": 98,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also tried adding the global model to the loglinear combination and it didn\u2019t improve over the baseline for either language pair.",
+                    "sid": 99,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear mixture was significantly better than the baseline at the p < 0.01 level for both language pairs.",
+                    "sid": 100,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our approach, VSM, performed better than the linear mixture for both pairs, it is of course also significantly better than the baseline at the p < 0.01 level.",
+                    "sid": 101,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This raises the question: is VSM performance significantly better than that of a linear mixture of TMs?",
+                    "sid": 102,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The answer (not shown in the table) is that for Arabic to English, VSM performance is better than linear mixture at the p < 0.01 level.",
+                    "sid": 103,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Chinese to English, the argument for the superiority of VSM over linear mixture is less convincing: there is significance at the p < 0.05 for one of the two test sets (NIST06) but not for the other (NIST08).",
+                    "sid": 104,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At any rate, these results establish that VSM adaptation is clearly superior to linear mixture TM adaptation, for one of the two language pairs.",
+                    "sid": 105,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Table 4, the VSM results are based on the vector of the joint counts of the phrase pair.",
+                    "sid": 106,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the next experiment, we replace the joint counts with the source or target marginal counts.",
+                    "sid": 107,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Table 5, we first show the results based on source and target marginal counts, then the results of using feature sets drawn from three decoder VSM features: a joint count feature, a source marginal count feature, and a target marginal count feature.",
+                    "sid": 108,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the last row shows the results when all three features are used (with their weights tuned by MIRA).",
+                    "sid": 109,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It looks as though the source and target marginal counts contain useful information.",
+                    "sid": 110,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best performance is obtained by combining all three sources of information.",
+                    "sid": 111,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 3-feature version of VSM yields +1.8 BLEU over the baseline for Arabic to English, and +1.4 BLEU for Chinese to English.",
+                    "sid": 112,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we compared two sets of results in Table 4, the joint count version of VSM and linear mixture of TMs, we found that for Arabic to English, VSM performance is better than linear mixture at the p < 0.01 level; the Chinese to English significance test was inconclusive (VSM found to be superior to linear mixture at p < 0.05 for NIST06 but not for NIST08).",
+                    "sid": 113,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now have somewhat better results for the 3-feature version of VSM shown in Table 5.",
+                    "sid": 114,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "How do these new results affect the VSM vs. linear mixture comparison?",
+                    "sid": 115,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Naturally, the conclusions for Arabic don\u2019t change.",
+                    "sid": 116,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Chinese, 3-feature VSM is now superior to linear mixture at p < 0.01 on NIST06 test set, but 3-feature VSM still doesn\u2019t have a statistically significant edge over linear mixture on NIST08 test set.",
+                    "sid": 117,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A fair summary would be that 3feature VSM adaptation is decisively superior to linear mixture adaptation for Arabic to English, and highly competitive with linear mixture adaptation for Chinese to English.",
+                    "sid": 118,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our last set of experiments examined the question: when added to a system that already has some form of linear mixture model adaptation, does VSM improve performance?",
+                    "sid": 119,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (Foster and Kuhn, 2007), two kinds of linear mixture were described: linear mixture of language models (LMs), and linear mixture of translation models (TMs).",
+                    "sid": 120,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of the results reported above involved linear TM mixtures, but none of them involved linear LM mixtures.",
+                    "sid": 121,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 shows the results of different combinations of VSM and mixture models.",
+                    "sid": 122,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "* and ** denote significant gains over the row no vsm at p < 0.05 and p < 0.01 levels, respectively.",
+                    "sid": 123,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that in the table, the baseline within each box containing three results is the topmost result in the box.",
+                    "sid": 124,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, with an initial Chinese system that employs linear mixture LM adaptation (lin-lm) and has a BLEU of 32.1, adding 1-feature VSM adaptation (+vsm, joint) improves performance to 33.1 (improvement significant at p < 0.01), while adding 3-feature VSM instead (+vsm, 3 feat.) improves performance to 33.2 (also significant at p < 0.01).",
+                    "sid": 125,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Arabic, including either form of VSM adaptation always improves performance with significance at p < 0.01, even over a system including both linear TM and linear LM adaptation.",
+                    "sid": 126,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Chinese, adding VSM still always yields an improvement, but the improvement is not significant if linear TM adaptation is already in the system.",
+                    "sid": 127,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results show that combining VSM adaptation and either or both kinds of linear mixture adaptation never hurts performance, and often improves it by a significant amount.",
+                    "sid": 128,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To get an intuition for how VSM adaptation improves BLEU scores, we compared outputs from the baseline and VSM-adapted system (\u201cvsm, joint\u201d in Table 5) on the Chinese test data.",
+                    "sid": 129,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focused on examples where the two systems had translated the same source-language (Chinese) phrase s differently, and where the target-language (English) translation of s chosen by the VSMadapted system, tV , had a higher Bhattacharyya score for similarity with the dev set than did the phrase that was chosen by the baseline system, tB.",
+                    "sid": 130,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, we ignored differences in the two translations that might have been due to the secondary effects of VSM adaptation (such as a different tar\u201cno vsm\u201d at p < 0.05 and p < 0.01 levels, respectively. get phrase being preferred by the language model in the VSM-adapted system from the one preferred in the baseline system because of a Bhattacharyyamediated change in the phrase preceding it).",
+                    "sid": 131,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An interesting pattern soon emerged: the VSMadapted system seems to be better than the baseline at choosing among synonyms in a way that is appropriate to the genre or style of a text.",
+                    "sid": 132,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, where the text to be translated is from an informal genre such as weblog, the VSM-adapted system will often pick an informal word where the baseline picks a formal word with the same or similar meaning, and vice versa where the text to be translated is from a more formal genre.",
+                    "sid": 133,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To our surprise, we saw few examples where the VSMadapted system did a better job than the baseline of choosing between two words with different meaning, but we saw many examples where the VSMadapted system did a better job than the baseline of choosing between two words that both have the same meaning according to considerations of style and genre.",
+                    "sid": 134,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two examples are shown in Table 7.",
+                    "sid": 135,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first example, the first two lines show that VSM finds that the Chinese-English phrase pair (\u6bb4\u6253, assaulted) has a Bhattacharyya (BC) similarity of 0.556163 to the dev set, while the phrase pair (\u6bb4 \u6253, beat) has a BC similarity of 0.780787 to the dev.",
+                    "sid": 136,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this situation, the VSM-adapted system thus prefers \u201cbeat\u201d to \u201cassaulted\u201d as a translation for \u6bb4\u6253.",
+                    "sid": 137,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next four lines show the source sentence (SRC), the reference (REF), the baseline output (BSL), and the output of the VSM-adapted system.",
+                    "sid": 138,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the result of VSM adaptation is that the rather formal word \u201cassaulted\u201d is replaced by its informal near-synonym \u201cbeat\u201d in the translation of an informal weblog text.",
+                    "sid": 139,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201capprehend\u201d might be preferable to \u201carrest\u201d in a legal text.",
+                    "sid": 140,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it looks as though the VSM-adapted system has learned from the dev that among synonyms, those more characteristic of news stories than of legal texts should be chosen: it therefore picks \u201carrest\u201d over its synonym \u201capprehend\u201d.",
+                    "sid": 141,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What follows is a partial list of pairs of phrases (all single words) from our system\u2019s outputs, where the baseline chose the first member of a pair and the VSM-adapted system chose the second member of the pair to translate the same Chinese phrase into English (because the second word yields a better BC score for the dev set we used).",
+                    "sid": 142,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It will be seen that nearly all of the pairs involve synonyms or near-synonyms rather than words with radically different senses (one exception below is \u201ccenter\u201d vs \u201cheart\u201d).",
+                    "sid": 143,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, the differences between the two words tend to be related to genre or style: gunmen-mobsters, champion-star, updated-latest, caricatures-cartoons, spill-leakage, hiv-aids, inkling-clues, behaviour-actions, deceittrick, brazen-shameless, aristocratic-noble, circumvent-avoid, attack-criticized, descent-born, hasten-quickly, precipice-cliff, center-heart, blessing-approval, imminent-approaching, stormed-rushed, etc.",
+                    "sid": 144,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 conclusions and future work",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "This paper proposed a new approach to domain adaptation in statistical machine translation, based on vector space models (VSMs).",
+                    "sid": 145,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach measures the similarity between a vector representing a particular phrase pair in the phrase table and a vector representing the dev set, yielding a feature associated with that phrase pair that will be used by the decoder.",
+                    "sid": 146,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach is simple, easy to implement, and computationally cheap.",
+                    "sid": 147,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the two language pairs we looked at, it provided a large performance improvement over a non-adaptive baseline, and also compared favourably with linear mixture adaptation techniques.",
+                    "sid": 148,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, VSM adaptation can be exploited in a number of different ways, which we have only begun to explore.",
+                    "sid": 149,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we based the vector space on subcorpora defined by the nature of the training data.",
+                    "sid": 150,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was done purely out of convenience: there are many, many ways to define a vector space in this situation.",
+                    "sid": 151,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An obvious and appealing one, which we intend to try in future, is a vector space based on a bag-of-words topic model.",
+                    "sid": 152,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A feature derived from this topicrelated vector space might complement some features derived from the subcorpora which we explored in the experiments above, and which seem to exploit information related to genre and style.",
+                    "sid": 153,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

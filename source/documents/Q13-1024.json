@@ -1,0 +1,1463 @@
+{
+    "ID": "Q13-1024",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Dependency cohesion refers to the observation that phrases dominated by disjoint dependency subtrees in the source language generally do not overlap in the target language.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has been verified to be a useful constraint for word alignment.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, previous work either treats this as a hard constraint or uses it as a feature in discriminative models, which is ineffective for large-scale tasks.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we take dependency cohesion as a soft constraint, and integrate it into a generative model for large-scale word alignment experiments.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also propose an approximate EM algorithm and a Gibbs sampling algorithm to estimate model parameters in an unsupervised manner.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on large-scale ChineseEnglish translation tasks demonstrate that our model achieves improvements in both alignment quality and translation quality.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Word alignment is the task of identifying word correspondences between parallel sentence pairs.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word alignment has become a vital component of statistical machine translation (SMT) systems, since it is required by almost all state-of-the-art SMT systems for the purpose of extracting phrase tables or even syntactic transformation rules (Koehn et al., 2007; Galley et al., 2004).",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During the past two decades, generative word alignment models such as the IBM Models (Brown et al., 1993) and the HMM model (Vogel et al., 1996) have been widely used, primarily because they are trained on bilingual sentences in an unsupervised manner and the implementation is freely available in the GIZA++ toolkit (Och and Ney, 2003).",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the word alignment quality of generative models is still far from satisfactory for SMT systems.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In recent years, discriminative alignment models incorporating linguistically motivated features have become increasingly popular (Moore, 2005; Taskar et al., 2005; Riesa and Marcu, 2010; Saers et al., 2010; Riesa et al., 2011).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These models are usually trained with manually annotated parallel data.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when moving to a new language pair, large amount of hand-aligned data are usually unavailable and expensive to create.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A more practical way to improve large-scale word alignment quality is to introduce syntactic knowledge into a generative model and train the model in an unsupervised manner (Wu, 1997; Yamada and Knight, 2001; Lopez and Resnik, 2005; DeNero and Klein, 2007; Pauls et al., 2010).",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we take dependency cohesion (Fox, 2002) into account, which assumes phrases dominated by disjoint dependency subtrees tend not to overlap after translation.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of treating dependency cohesion as a hard constraint (Lin and Cherry, 2003) or using it as a feature in discriminative models (Cherry and Lin, 2006b), we treat dependency cohesion as a distortion constraint, and integrate it into a modified HMM word alignment model to softly influence the probabilities of alignment candidates.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also propose an approximate EM algorithm and an explicit Gibbs sampling algorithm to train the model in an unsupervised manner.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on a large-scale ChineseEnglish translation task demonstrate that our model achieves improvements in both word alignment quality and machine translation quality.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remainder of this paper is organized as follows: Section 2 introduces dependency cohesion 291 Transactions of the Association for Computational Linguistics, 1 (2013) 291\u2013300.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Action Editor: Chris CallisonBurch.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Submitted 5/2013; Published 7/2013.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c\ufffd2013 Association for Computational Linguistics.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "constraint for word alignment.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 presents our generative model for word alignment using dependency cohesion constraint.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 describes algorithms for parameter estimation.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discuss and analyze the experiments in Section 5.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 6 gives the related work.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we conclude this paper and mention future work in Section 7.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "dependency cohesion constraint for. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Word Alignment Given a source (foreign) sentence f 1 = fi, f2, ...",
+                    "sid": 29,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", fj and a target (English) sentence ell = el, e2, ..., el, the alignment A between fi and el is defined as a subset of the Cartesian product of word positions: A E {(j, i): j = 1,..., J; i = 1, ..., I) When given the source side dependency tree T, we can project dependency subtrees in T onto the target sentence through the alignment A . Dependency cohesion assumes projection spans of disjoint subtrees tend not to overlap.",
+                    "sid": 30,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let T(fi) be the subtree of T rooted at fi, we define two kinds of projection span for the node fi: subtree span and head span.",
+                    "sid": 31,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The subtree span is the projection span of the total subtree T(fi), while the head span is the projection span of the node fi itself.",
+                    "sid": 32,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Fox (2002) and Lin and Cherry (2003), weconsider two types of dependency cohesion: head modifier cohesion and modifier-modifier cohesion.",
+                    "sid": 33,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Head-modifier cohesion is defined as the subtree span of a node does not overlap with the head span of its head (parent) node, while modifier-modifier cohesion is defined as subtree spans of two nodes under the same head node do not overlap each other.",
+                    "sid": 34,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call a situation where cohesion is not maintained crossing.",
+                    "sid": 35,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the dependency tree in Figure 1 as an example, given the correct alignment \u201cR\u201d, the subtree span of \u201c\u6709/have\u201d is [8, 14] , and the head span of its head node \u201c\u4e4b\u4e00/one of\u201d is [3, 4].",
+                    "sid": 36,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They do not overlap each other, so the head-modifier cohesion is maintained.",
+                    "sid": 37,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, the subtree span of \u201c\u5c11\u6570/few\u201d is [6, 6], and it does not overlap the subtree span of \u201c\u6709/have\u201d, so a modifier-modifier cohesion is maintained.",
+                    "sid": 38,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when \u201cR\u201d is replaced with the incorrect alignment \u201cW\u201d, the subtree span of \u201c\u6709/have\u201d becomes [3, 14], and it overlaps the head span of its head \u201c\u4e4b\u4e00/one of\u201d, so a head-modifier crossing occurs.",
+                    "sid": 39,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Meanwhile, the subtree spans of the two nodes \u201c\u6709/have\u201d and\u201c \u5c11 \u6570 /few\u201d overlap each other, so a modifier modifier crossing occurs.",
+                    "sid": 40,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u662f \u4e0e \u5317 \u97e9 \u6709 \u90a6 \u7684 \u6570 \u56fd \u5bb6 \u4e4b \u3002 Figure 1: A ChineseEnglish sentence pair including the word alignments and the Chinese side dependency tree.",
+                    "sid": 41,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Chinese and English words are listed horizontally and vertically, respectively.",
+                    "sid": 42,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The black grids are gold-standard alignments.",
+                    "sid": 43,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the Chinese word \u201c\u6709/have\u201d, we give two alignment positions, where \u201cR\u201d is the correct alignment and \u201cW\u201d is the incorrect alignment.",
+                    "sid": 44,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fox (2002) showed that dependency cohesion is generally maintained between English and French.",
+                    "sid": 45,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To test how well this assumption holds between Chinese and English, we measure the dependency cohesion between the two languages with a manually annotated bilingual ChineseEnglish dataset of 502 sentence pairs 1 . We use the head modifier cohesion percentage (HCP) and the modifier-modifier cohesion percentage (MCP) to measure the degree of cohesion in the corpus.",
+                    "sid": 46,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "HCP(or MCP) is used for measuring how many head modifier (or modifier-modifier) pairs are actually cohesive.",
+                    "sid": 47,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 lists the relative percentages in both Chinese-to-English (chen, using Chinese side dependency trees) and English-to-Chinese (ench, using English side dependency trees) directions.",
+                    "sid": 48,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we see from Table 1, dependency cohesion is 1 The data set is the development set used in Section 5..",
+                    "sid": 49,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 Australia.",
+                    "sid": 50,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is one of the few countries that have diplomatic relations with North Korea . 2 3 4 5 6 7 8 9 10 11 12 13 14 15 \u6fb3 \u6d32 \u5c11 \u4e00 \u4ea4 292 generally maintained between Chinese and English.",
+                    "sid": 51,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So dependency cohesion would be helpful for word alignment between Chinese and English.",
+                    "sid": 52,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there are still a number of crossings.",
+                    "sid": 53,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we restrict alignment space with a hard cohesion constraint, the correct alignments that result in crossings will be ruled out directly.",
+                    "sid": 54,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the next section, we describe an approach to integrating dependency cohesion constraint into a generative model to softly influence the probabilities of alignment candidates.",
+                    "sid": 55,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that our new approach addresses the shortcomings of using dependency cohesion as a hard constraint.",
+                    "sid": 56,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "chen ench HCP MCP HCP MCP 88.43 95.82 81.53 91.62 Table 1: Cohesion percentages (%) of a manually annotated data set between Chinese and English.",
+                    "sid": 57,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "a generative word alignment model",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "with Dependency Cohesion Constraint The most influential generative word alignment models are the IBM Models 15 and the HMM model (Brown et al., 1993; Vogel et al., 1996; Och and Ney, 2003).",
+                    "sid": 58,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These models can be classified into sequence-based models (IBM Models 1, 2 and HMM) and fertility-based models (IBM Models 3, 4 and 5).",
+                    "sid": 59,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sequence-based model is easier to implement, and recent experiments have shown that appropriately modified sequence-based model can produce comparable performance with fertility-based models (Lopez and Resnik, 2005; Liang et al., 2006; DeNero and Klein, 2007; Zhao and Gildea, 2010; Bansal et al., 2011).",
+                    "sid": 60,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So we built a generative word alignment model with dependency cohesion constraint based on the sequence-based model.",
+                    "sid": 61,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 The Sequence-based Alignment Model.",
+                    "sid": 62,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to Brown et al.",
+                    "sid": 63,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1993) and Och and Ney (2003), the sequence-based model is built as a noisy channel model, where the source sentence \ud835\udc871\ud835\udc3d and the alignment \ud835\udc821\ud835\udc3d are generated conditioning on the target sentence \ud835\udc861\ud835\udc3c . The model assumes each source word is assigned to exactly one target word, and defines an asymmetric alignment for the sentence pair as \ud835\udc821 \ud835\udc3d = \ud835\udc4e1, \ud835\udc4e2, ...",
+                    "sid": 64,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \ud835\udc4e\ud835\udc57, ...",
+                    "sid": 65,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \ud835\udc4e\ud835\udc3d, where each \ud835\udc4e\ud835\udc57 \u2208 [0, \ud835\udc3c] is an alignment from the source position j to the target position \ud835\udc4e\ud835\udc57 , \ud835\udc4e\ud835\udc57 = 0 means \ud835\udc53\ud835\udc57 is not aligned with any target words.",
+                    "sid": 66,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sequence-based model divides alignment procedure into two stages (distortion and translation) and factors as: \ud835\udc3d \ud835\udc5d(\ud835\udc871 \ud835\udc3d, \ud835\udc821 \ud835\udc3d|\ud835\udc861 \ud835\udc3c ) = \u220f \ud835\udc5d\ud835\udc51(\ud835\udc4e\ud835\udc57|\ud835\udc4e\ud835\udc57\u22121, \ud835\udc3c)\ud835\udc5d\ud835\udc61(\ud835\udc53\ud835\udc57|\ud835\udc52\ud835\udc4e\ud835\udc57) (1) \ud835\udc57=1 where \ud835\udc5d\ud835\udc51 is the distortion model and \ud835\udc5d\ud835\udc61 is the translation model.",
+                    "sid": 67,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IBM Models 1, 2 and the HMM model all assume the same translation model \ud835\udc5d\ud835\udc61 (\ud835\udc53\ud835\udc57|\ud835\udc52\ud835\udc4e\ud835\udc57) . However, they use three different distortion models.",
+                    "sid": 68,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IBM Model 1 assumes a uniform distortion probability 1/(I+1), IBM Model 2 assumes \ud835\udc5d\ud835\udc51 (\ud835\udc4e\ud835\udc57 |\ud835\udc57) that depends on word position j and HMM model assumes \ud835\udc5d\ud835\udc51(\ud835\udc4e\ud835\udc57|\ud835\udc4e\ud835\udc57\u22121,\ud835\udc3c) that depends on the previous alignment \ud835\udc4e\ud835\udc57\u22121.",
+                    "sid": 69,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, tree distance models (Lopez and Resnik, 2005; DeNero and Klein, 2007) formulate the distortion model as \ud835\udc5d\ud835\udc51(\ud835\udc4e\ud835\udc57|\ud835\udc4e\ud835\udc57\u22121,\ud835\udc47) , where the distance between \ud835\udc4e\ud835\udc57 and \ud835\udc4e\ud835\udc57\u22121 are calculated by walking through the phrase (or dependency) tree T. 3.2 Proposed Model.",
+                    "sid": 70,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To integrate dependency cohesion constraint into a generative model, we refine the sequence-based model in two ways with the help of the source side dependency tree \ud835\udc47\ud835\udc53.",
+                    "sid": 71,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we design a new word alignment order.",
+                    "sid": 72,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the sequence-based model, source words are aligned from left to right by taking source sentence as a linear sequence.",
+                    "sid": 73,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, to apply dependency cohesion constraint, the subtree span of a head node is computed based on the alignments of its children, so children must be aligned before the head node.",
+                    "sid": 74,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Riesa and Marcu (2010) propose a hierarchical search procedure to traverse all nodes in a phrase structure tree.",
+                    "sid": 75,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, we define a bottom-up topological order (BUT-order) to traverse all words in the source side dependency tree \ud835\udc47\ud835\udc53 . In the BUT-order, tree nodes are aligned bottom-up with \ud835\udc47\ud835\udc53 as a backbone.",
+                    "sid": 76,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all children under the same head node, left children are aligned from right to left, and then right children are aligned from left to right.",
+                    "sid": 77,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the BUT-order for the following dependency tree is \u201cC B E F D A H G\u201d.",
+                    "sid": 78,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A B C D E F G H 293 For the sake of clarity, we define a function to map all nodes in \ud835\udc47\ud835\udc53 into their BUT-order, and notate it as BUT(\ud835\udc47\ud835\udc53) = \ud835\udf0b1, \ud835\udf0b2, ..., \ud835\udf0b\ud835\udc57, ..., \ud835\udf0b\ud835\udc3d, where \ud835\udf0b\ud835\udc57 means the j-th node in BUT-order is the \ud835\udf0b\ud835\udc57-th word in the original source sentence.",
+                    "sid": 79,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We arrange alignment sequence \ud835\udc821\ud835\udc3d according the BUT-order and notate it as \ud835\udc82[1,\ud835\udc3d] = \ud835\udc4e\ud835\udf0b 1, ...",
+                    "sid": 80,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \ud835\udc4e\ud835\udf0b\ud835\udc57, ...",
+                    "sid": 81,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \ud835\udc4e\ud835\udf0b \ud835\udc3d , where \ud835\udc4e\ud835\udf0b\ud835\udc57 is the aligned position for a node \ud835\udc53\ud835\udf0b\ud835\udc57.",
+                    "sid": 82,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also notate the sub-sequence \ud835\udc4e\ud835\udf0b \ud835\udc56, . .., \ud835\udc4e\ud835\udf0b\ud835\udc57as \ud835\udc82[\ud835\udc56 ,\ud835\udc57].",
+                    "sid": 83,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we keep the same translation model as the sequence-based model and integrate the dependency cohesion constraints into the distortion model.",
+                    "sid": 84,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main idea is to influence the distortion procedure with the dependency cohesion constraints.",
+                    "sid": 85,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assume node \ud835\udc53\u210e and node \ud835\udc53\ud835\udc5a are a head-modifier pair in \ud835\udc47\ud835\udc53, where \ud835\udc53\u210e is the head and \ud835\udc53\ud835\udc5a is the modifier.",
+                    "sid": 86,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The head-modifier cohesion relationship between them is notated as \ud835\udcbd\u210e,\ud835\udc5a \u2208 {\ud835\udc50\ud835\udc5c\u210e\ud835\udc52\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b, \ud835\udc50\ud835\udc5f\ud835\udc5c\ud835\udc60\ud835\udc60\ud835\udc56\ud835\udc5b\ud835\udc54} . When the head-modifier cohesion is maintained \ud835\udcbd\u210e,\ud835\udc5a = \ud835\udc50\ud835\udc5c\u210e\ud835\udc52\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b, otherwise\ud835\udcbd\u210e,\ud835\udc5a = \ud835\udc50\ud835\udc5f\ud835\udc5c\ud835\udc60\ud835\udc60\ud835\udc56\ud835\udc5b\ud835\udc54.",
+                    "sid": 87,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We represent the set of headmodifier cohesion relationships for all the head modifier pairs in \ud835\udc47\ud835\udc53 as: \ud835\udc6f = {\ud835\udcbd\u210e,\ud835\udc5a |\u210e \u2208 [1,\ud835\udc3d], \ud835\udc5a \u2208 [1,\ud835\udc3d], \u210e \u2260 \ud835\udc5a, \ud835\udc53\u210e and \ud835\udc53\ud835\udc5a are a head-modifier pair in \ud835\udc47\ud835\udc53 } The set of head-modifier cohesion relationships for all the head-modifier pairs taking \ud835\udc53\u210e as the head node can be represented as: \ud835\udcf1\u210e = {\ud835\udcbd\u210e,\ud835\udc5a |\ud835\udc5a \u2208 [1,\ud835\udc3d], \ud835\udc5a \u2260 \u210e, \ud835\udc53\u210e and \ud835\udc53\ud835\udc5a are a head-modifier pair in \ud835\udc47\ud835\udc53 } Obviously, \ud835\udc6f = \u22c3 \ud835\udcf1\u210e \ud835\udc3d \u210e=0 . Similarly, we assume node \ud835\udc53\ud835\udc58 and node \ud835\udc53\ud835\udc59 are a modifier-modifier pair in \ud835\udc47\ud835\udc53.",
+                    "sid": 88,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To avoid repetition, we assume \ud835\udc53\ud835\udc58 is the node sitting at the positionafter \ud835\udc53\ud835\udc59 in BUT-order and call \ud835\udc53\ud835\udc58 as the higher order node of the pair.",
+                    "sid": 89,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The modifier-modifier cohesion relationship between them is notated as\ud835\udcc2\ud835\udc58,\ud835\udc59 \u2208 {\ud835\udc50\ud835\udc5c\u210e\ud835\udc52\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b, \ud835\udc50\ud835\udc5f\ud835\udc5c\ud835\udc60\ud835\udc60\ud835\udc56\ud835\udc5b\ud835\udc54} . When the modifier modifier cohesion is maintained \ud835\udcc2\ud835\udc58,\ud835\udc59 = \ud835\udc50\ud835\udc5c\u210e\ud835\udc52\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b, otherwise \ud835\udcc2\ud835\udc58,\ud835\udc59 = \ud835\udc50\ud835\udc5f\ud835\udc5c\ud835\udc60\ud835\udc60\ud835\udc56\ud835\udc5b\ud835\udc54.",
+                    "sid": 90,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We represent the set of modifier-modifier cohesion relationships for all the modifier-modifier pairs in \ud835\udc47\ud835\udc53 as: \ud835\udc74 = {\ud835\udcc2\ud835\udc58,\ud835\udc59 |\ud835\udc58 \u2208 [1,\ud835\udc3d], \ud835\udc59 \u2208 [1,\ud835\udc3d], \ud835\udc58 \u2260 \ud835\udc59, \ud835\udc53\ud835\udc58 and \ud835\udc53\ud835\udc59 are a modifier-modifier pair in \ud835\udc47\ud835\udc53 } The set of modifier-modifier cohesion relationships for all the modifier-modifier pairs taking \ud835\udc53\ud835\udc58 as the higher-order node can be represented as: \ud835\udcf6\ud835\udc58 = {\ud835\udcc2\ud835\udc58,\ud835\udc59 |\ud835\udc59 \u2208 [1,\ud835\udc3d], \ud835\udc59 \u2260 \ud835\udc58, \ud835\udc53\ud835\udc58 and \ud835\udc53\ud835\udc59 are a modifier-modifier pair in \ud835\udc47\ud835\udc53 } Obviously, \ud835\udc74 = \u22c3 \ud835\udcf6\ud835\udc58 \ud835\udc3d \ud835\udc58=0 . With the above notations, we formulate the distortion probability for a node \ud835\udc53\ud835\udf0b\ud835\udc57 as \ud835\udc5d\ud835\udc51 (\ud835\udc4e\ud835\udf0b\ud835\udc57, \ud835\udcf1\ud835\udf0b\ud835\udc57,\ud835\udcf6\ud835\udf0b\ud835\udc57|\ud835\udc82[1,\ud835\udc57\u22121]).",
+                    "sid": 91,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to Eq.",
+                    "sid": 92,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) and the two improvements, we formulated our model as: \ud835\udc5d(\ud835\udc871\ud835\udc3d, \ud835\udc82[1,\ud835\udc3d]|\ud835\udc861\ud835\udc3c, \ud835\udc47\ud835\udc53) = \ud835\udc5d(\ud835\udc82[1,\ud835\udc3d], \ud835\udc6f, \ud835\udc74, \ud835\udc871\ud835\udc3d, |\ud835\udc861\ud835\udc3c, \ud835\udc47\ud835\udc53 ) \u2248\u220f\ud835\udf0b\ud835\udc57\u2208\ud835\udc35\ud835\udc48\ud835\udc47(\ud835\udc47\ud835\udc53)\ud835\udc5d\ud835\udc51(\ud835\udc4e\ud835\udf0b\ud835\udc57,\ud835\udcf1\ud835\udf0b\ud835\udc57, \ud835\udcf6\ud835\udf0b\ud835\udc57|\ud835\udc82[1,\ud835\udc57\u22121]) \ud835\udc5d\ud835\udc61(\ud835\udc53\ud835\udf0b\ud835\udc57|\ud835\udc52\ud835\udc4e\ud835\udf0b\ud835\udc57) Here, we use the approximation symbol, because the right hand side is not guaranteed to be normalized.",
+                    "sid": 93,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, we only compute ratios of these terms, so it is not actually a problem.",
+                    "sid": 94,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such model is called deficient (Brown et al., 1993), and many successful unsupervised models are deficient, e.g., IBM model 3 and IBM model 4.",
+                    "sid": 95,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Dependency Cohesive Distortion Model.",
+                    "sid": 96,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume the distortion procedure is influenced by three factors: words distance, head-modifier cohesion and modifier-modifier cohesion.",
+                    "sid": 97,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we further decompose the distortion model \ud835\udc5d\ud835\udc51 into three terms as follows: \ud835\udc5d\ud835\udc51 (\ud835\udc4e\ud835\udf0b\ud835\udc57, \ud835\udcf1\ud835\udf0b\ud835\udc57, \ud835\udcf6\ud835\udf0b\ud835\udc57|\ud835\udc82[1,\ud835\udc57\u22121]) = \ud835\udc5d (\ud835\udc4e\ud835\udf0b\ud835\udc57|\ud835\udc82[1,\ud835\udc57\u22121]) \ud835\udc5d (\ud835\udcf1\ud835\udf0b\ud835\udc57 |\ud835\udc82[1,\ud835\udc57]) \ud835\udc5d (\ud835\udcf6\ud835\udf0b\ud835\udc57 |\ud835\udc82[1,\ud835\udc57], \ud835\udcf1\ud835\udf0b\ud835\udc57) \u2248\ud835\udc5d\ud835\udc64\ud835\udc51 (\ud835\udc4e\ud835\udf0b\ud835\udc57 |\ud835\udc4e\ud835\udf0b\ud835\udc57\u22121, \ud835\udc3c) \ud835\udc5d\u210e\ud835\udc50 (\ud835\udcf1\ud835\udf0b\ud835\udc57 |\ud835\udc82[1,\ud835\udc57]) \ud835\udc5d\ud835\udc5a\ud835\udc50 (\ud835\udcf6\ud835\udf0b\ud835\udc57 |\ud835\udc82[1,\ud835\udc57]) where \ud835\udc5d \ud835\udc64\ud835\udc51 is the words distance term, \ud835\udc5d\u210e\ud835\udc50 is the head-modifier cohesion term and \ud835\udc5d\ud835\udc5a\ud835\udc50 is the modifier-modifier cohesion term.",
+                    "sid": 98,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word distance term \ud835\udc5d \ud835\udc64\ud835\udc51 has been verified to be very useful in the HMM alignment model.",
+                    "sid": 99,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in our model, the word distance iscalculated based on the previous node in BUT order rather than the previous word in the original sentence.",
+                    "sid": 100,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We follow the HMM word alignment model (Vogel et al., 1996) and parameterize \ud835\udc5d \ud835\udc64\ud835\udc51 in terms of the jump width: \ud835\udc5d\ud835\udc64\ud835\udc51(\ud835\udc56|\ud835\udc56\u2032,\ud835\udc3c) = \ud835\udc50(\ud835\udc56\u2212\ud835\udc56\u2032) \u2211 \ud835\udc50(\ud835\udc56\u2032\u2032\u2212\ud835\udc56\u2032) \ud835\udc56\u2032\u2032 (4) where \ud835\udc50(\uf09f) is the count of jump width.",
+                    "sid": 101,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "294 The head-modifier cohesion term \ud835\udc5d\u210e\ud835\udc50 is used to penalize the distortion probability according to relationships between the head node and its children (modifiers).",
+                    "sid": 102,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we define \ud835\udc5d\u210e\ud835\udc50 as the product of probabilities for all head-modifier pairs taking \ud835\udc53\ud835\udf0b\ud835\udc57 as head node: \ud835\udc5d\u210e\ud835\udc50 (\ud835\udcf1\ud835\udf0b\ud835\udc57|\ud835\udc82[1,\ud835\udc57]) = \u220f \ud835\udcbd\ud835\udf0b\ud835\udc57,\ud835\udc50\u2208\ud835\udcf1\ud835\udf0b\ud835\udc57 \ud835\udc5d\u210e (\ud835\udcbd\ud835\udf0b\ud835\udc57,\ud835\udc50|\ud835\udc53\ud835\udc50, \ud835\udc52\ud835\udc4e\ud835\udf0b\ud835\udc57, \ud835\udc52\ud835\udc4e\ud835\udc50) (5)where \ud835\udcbd\ud835\udf0b\ud835\udc57,\ud835\udc50 \u2208 {\ud835\udc50\ud835\udc5c\u210e\ud835\udc52\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b, \ud835\udc50\ud835\udc5f\ud835\udc5c\ud835\udc60\ud835\udc60\ud835\udc56\ud835\udc5b\ud835\udc54} is the head modifier cohesion relationship between \ud835\udc53\ud835\udf0b \ud835\udc57 and one of its child \ud835\udc53\ud835\udc50 , \ud835\udc5d\u210e is the corresponding probability, \ud835\udc52\ud835\udc4e\ud835\udf0b \ud835\udc57 and \ud835\udc52\ud835\udc4e\ud835\udc50 are the aligned words for \ud835\udc53\ud835\udf0b \ud835\udc57 and \ud835\udc53\ud835\udc50.",
+                    "sid": 103,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, the modifier-modifier cohesion term \ud835\udc5d\ud835\udc5a\ud835\udc50 is used to penalize the distortion probability according to relationships between \ud835\udc53\ud835\udf0b\ud835\udc57 and its siblings.",
+                    "sid": 104,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we define \ud835\udc5d\ud835\udc5a\ud835\udc50 as the product of probabilities for all the modifier-modifier pairs taking \ud835\udc53\ud835\udf0b\ud835\udc57 as the higher-order node: \ud835\udc5d\ud835\udc5a\ud835\udc50 (\ud835\udcf6\ud835\udf0b\ud835\udc57 |\ud835\udc82[1,\ud835\udc57]) = \u220f\ud835\udcc2\ud835\udf0b\ud835\udc57,\ud835\udc60\u2208\ud835\udcf6\ud835\udf0b\ud835\udc57 \ud835\udc5d\ud835\udc5a (\ud835\udcc2\ud835\udf0b\ud835\udc57,\ud835\udc60 |\ud835\udc53\ud835\udc60, \ud835\udc52\ud835\udc4e\ud835\udf0b\ud835\udc57, \ud835\udc52\ud835\udc4e\ud835\udc60) (6)where \ud835\udcc2\ud835\udf0b\ud835\udc57,\ud835\udc60 \u2208 {\ud835\udc50\ud835\udc5c\u210e\ud835\udc52\ud835\udc60\ud835\udc56\ud835\udc5c\ud835\udc5b, \ud835\udc50\ud835\udc5f\ud835\udc5c\ud835\udc60\ud835\udc60\ud835\udc56\ud835\udc5b\ud835\udc54} is the modifier modifier cohesion relationship between \ud835\udc53\ud835\udf0b \ud835\udc57 and one of its sibling \ud835\udc53\ud835\udc60 , \ud835\udc5d\ud835\udc5a is the corresponding probability, \ud835\udc52\ud835\udc4e\ud835\udf0b \ud835\udc57 and \ud835\udc52\ud835\udc4e\ud835\udc60 are the aligned words for \ud835\udc53\ud835\udf0b\ud835\udc57 and \ud835\udc53\ud835\udc60. Both \ud835\udc5d\u210e and \ud835\udc5d\ud835\udc5a in Eq.",
+                    "sid": 105,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) and Eq.",
+                    "sid": 106,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(6) are conditioned on three words, which would make them very sparse.",
+                    "sid": 107,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To cope with this problem, we use the word clustering toolkit, mkcls (Och et al., 1999), to cluster all words into 50 classes, and replace the three words with their classes.",
+                    "sid": 108,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "parameter estimation. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "To align sentence pairs with the model in Eq.",
+                    "sid": 109,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2), we have to estimate some parameters: \ud835\udc5d\ud835\udc61, \ud835\udc5d\ud835\udc64\ud835\udc51, \ud835\udc5d\u210eand \ud835\udc5d\ud835\udc5a. The traditional approach for sequence based models uses Expectation Maximization (EM) algorithm to estimate parameters.",
+                    "sid": 110,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in our model, it is hard to find an efficient way to sum over all the possible alignments, which is required in the E-step of EM algorithm.",
+                    "sid": 111,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we propose an approximate EM algorithm and a Gibbs sampling algorithm for parameter estimation.",
+                    "sid": 112,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Approximate EM Algorithm.",
+                    "sid": 113,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approximate EM algorithm is similar to the training algorithm for fertility-based alignment models (Och and Ney, 2003).",
+                    "sid": 114,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main idea is to enumerate only a small subset of good alignments in the E-step, then collect expectation counts andestimate parameters among the small subset in M step.",
+                    "sid": 115,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following with Och and Ney (2003), we employ neighbor alignments of the Viterbi alignment as the small subset.",
+                    "sid": 116,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Neighbor alignments are obtained by performing one swap or move operation over the Viterbi alignment.",
+                    "sid": 117,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Obtaining the Viterbi alignment itself is not so easy for our model.",
+                    "sid": 118,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we take the Viterbi alignment of the sequence-based model (HMMmodel) as the starting point, and iterate the hill climbing algorithm (Brown et al., 1993) many times to get the best alignment greedily.",
+                    "sid": 119,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each iteration, we find the best alignment with Eq.",
+                    "sid": 120,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) among neighbor alignments of the initial point, and then make the best alignment as the initial point for the next iteration.",
+                    "sid": 121,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm iterates until no update could be made.",
+                    "sid": 122,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Gibbs Sampling Algorithm.",
+                    "sid": 123,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gibbs sampling is another effective algorithm for unsupervised learning problems.",
+                    "sid": 124,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is described in the literatures (Johnson et al., 2007; Gao and Johnson, 2008), there are two types of Gibbs samplers: explicit and collapsed.",
+                    "sid": 125,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An explicit sampler represents and samples the model parameters in addition to the word alignments, while in a collapsed sampler the parameters are integrated out and only alignments are sampled.",
+                    "sid": 126,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mermer and Sara\u00e7lar (2011) proposed a collapsed sampler for IBM Model 1.",
+                    "sid": 127,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, their sampler updates parameters constantly and thus cannot run efficiently on large-scale tasks.",
+                    "sid": 128,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we take advantage of explicit Gibbs sampling to make a highly parallelizable sampler.",
+                    "sid": 129,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our Gibbs sampler is similar to the MCMC algorithm in Zhao and Gildea (2010), but we assume Dirichlet priors when sampling model parameters and take a different sampling approach based on the source side dependency tree.",
+                    "sid": 130,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our sampler performs a sequence of consecutive iterations.",
+                    "sid": 131,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each iteration consists of two sampling steps.",
+                    "sid": 132,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first step samples the aligned positionfor each dependency node according to the BUT order.",
+                    "sid": 133,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Concretely, when sampling the aligned 295 position \ud835\udc4e\ud835\udf0b\ud835\udc57 (\ud835\udc61+1) for node \ud835\udc53\ud835\udf0b\ud835\udc57 on iteration \ud835\udc61+1, the aligned positions for \ud835\udc82[1,\ud835\udc57\u22121] are fixed on the new sampling results \ud835\udc82[1,\ud835\udc57\u22121] (\ud835\udc61+1) on iteration \ud835\udc61+1, and the aligned positions for \ud835\udc82[\ud835\udc57+1,\ud835\udc3d] are fixed on the old sampling results \ud835\udc82[\ud835\udc57+1,\ud835\udc3d] (\ud835\udc61) on iteration \ud835\udc61.",
+                    "sid": 134,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we sample the aligned position \ud835\udc4e\ud835\udf0b\ud835\udc57 (\ud835\udc61+1) as follows: \ud835\udc4e\ud835\udf0b\ud835\udc57 (\ud835\udc61+1) ~ \ud835\udc5d (\ud835\udc4e\ud835\udf0b\ud835\udc57|\ud835\udc82[1,\ud835\udc57\u22121] (\ud835\udc61+1) , \ud835\udc82[\ud835\udc57+1,\ud835\udc3d] (\ud835\udc61) , \ud835\udc531 \ud835\udc3d, \ud835\udc521 \ud835\udc3c) \ud835\udc5d(\ud835\udc871\ud835\udc3d, \ud835\udc82\u0302\ud835\udc4e\ud835\udf0b\ud835\udc57|\ud835\udc861\ud835\udc3c) \u2211 \ud835\udc5d (\ud835\udc871 \ud835\udc3d,\ud835\udc82\u0302\ud835\udc4e\ud835\udf0b\ud835\udc57|\ud835\udc861 \ud835\udc3c ) \ud835\udc4e\ud835\udf0b\ud835\udc57\u2208{0,1,...,\ud835\udc3c} (7) where \ud835\udc82\u0302\ud835\udc4e\ud835\udf0b\ud835\udc57 = \ud835\udc82[1,\ud835\udc57\u22121] (\ud835\udc61+1) \u222a \ud835\udc4e\ud835\udf0b\ud835\udc57 \u222a \ud835\udc82[\ud835\udc57+1,\ud835\udc3d] (\ud835\udc61) , the numerator is the probability of aligning \ud835\udc53\ud835\udf0b\ud835\udc57 with \ud835\udc52\ud835\udc4e\ud835\udf0b\ud835\udc57 (the alignments for other nodes are fixed at \ud835\udc82[1,\ud835\udc57\u22121] (\ud835\udc61+1) and \ud835\udc82[\ud835\udc57+1,\ud835\udc3d] (\ud835\udc61) ) calculated with Eq.",
+                    "sid": 135,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2), and the denominator is the summation of the probabilities of aligning \ud835\udc53\ud835\udf0b\ud835\udc57 with each target word.",
+                    "sid": 136,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second step of our sampler calculates parameters \ud835\udc5d\ud835\udc61, \ud835\udc5d\ud835\udc64\ud835\udc51, \ud835\udc5d\u210e and \ud835\udc5d\ud835\udc5a using their counts, where all these counts can be easily collected during the first sampling step.",
+                    "sid": 137,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because all these parameters follow multinomial distributions, we consider Dirichlet priors for them, which would greatly simplify the inference procedure.",
+                    "sid": 138,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first sampling step, all the sentence pairs are processed independently.",
+                    "sid": 139,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So we can make this step parallel and process all the sentence pairs efficiently with multi-threads.",
+                    "sid": 140,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When using the Gibbs sampler for decoding, we just ignore the second sampling step and iterate the first sampling step many times.",
+                    "sid": 141,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We performed a series of experiments to evaluate our model.",
+                    "sid": 142,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the experiments are conducted on the ChineseEnglish language pair.",
+                    "sid": 143,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employ two training sets: FBIS and LARGE.",
+                    "sid": 144,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size and source corpus of these training sets are listed in Table 2.",
+                    "sid": 145,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use the smaller training set FBIS to evaluate the characters of our model and use the LARGE training set to evaluate whether our model is adaptable for large-scale task.",
+                    "sid": 146,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For wordalignment quality evaluation, we take the hand aligned data sets from SSMT20072, which contains2 http://nlp.ict.ac.cn/guidelines/guidelines-2007 SSMT(English).doc 505 sentence pairs in the testing set and 502 sentence pairs in the development set.",
+                    "sid": 147,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Och and Ney (2003), we evaluate word alignment quality with the alignment error rate (AER), where lower AER is better.",
+                    "sid": 148,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because our model takes dependency trees as input, we parse both sides of the two training sets, the development set and the testing set with Berkeley parser (Petrov et al., 2006), and then convert the generated phrase trees into dependency trees according to Wang and Zong (2010; 2011).",
+                    "sid": 149,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model is an asymmetric model, so we perform word alignment in both forward (Chinese4English) and reverse (English4Chinese) directions.",
+                    "sid": 150,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Train Set Source Corpus # Words FBIS FBIS newswire data Ch: 7.1M En: 9.1M LARGE LDC2000T50, LDC2003E14, Ch: 27.6M LDC2003E07, LDC2004T07, En: 31.8M LDC2005T06, LDC2002L27, LDC2005T10, LDC2005T34 Table 2: The size and the source corpus of the two training sets.",
+                    "sid": 151,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Effectiveness of Cohesion Constraints.",
+                    "sid": 152,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Eq.",
+                    "sid": 153,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3), the distortion probability \ud835\udc5d\ud835\udc51 is decomposed into three terms: \ud835\udc5d\ud835\udc64\ud835\udc51, \ud835\udc5d\u210e\ud835\udc50 and \ud835\udc5d\ud835\udc5a\ud835\udc50 . To study whether cohesion constraints are effective for word alignment, we construct four sub-models as follows: (1) wd: \ud835\udc5d\ud835\udc51 = \ud835\udc5d\ud835\udc64\ud835\udc51; (2) wdhc: \ud835\udc5d\ud835\udc51 = \ud835\udc5d\ud835\udc64\ud835\udc51 \u2219 \ud835\udc5d\u210e\ud835\udc50; (3) wdmc: \ud835\udc5d\ud835\udc51 = \ud835\udc5d\ud835\udc64\ud835\udc51 \u2219 \ud835\udc5d\ud835\udc5a\ud835\udc50; (4) wdhc-mc: \ud835\udc5d\ud835\udc51 = \ud835\udc5d\ud835\udc64\ud835\udc51 \u2219 \ud835\udc5d\u210e\ud835\udc50 \u2219 \ud835\udc5d\ud835\udc5a\ud835\udc50.",
+                    "sid": 154,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train these four models with the approximate EM and the Gibbs sampling algorithms on the FBIS training set.",
+                    "sid": 155,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For approximate EM algorithm, we first train a HMM model (with 5 iterations of IBM model 1 and 5 iterations of HMM model), then train these four sub-models with 10 iterations of the approximate EM algorithm.",
+                    "sid": 156,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Gibbs sampling, we choose symmetric Dirichlet priors identically with all hyper-parameters equals 0.0001 to obtain a sparse Dirichlet prior.",
+                    "sid": 157,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we make the alignments produced by the HMM model as the initial points, and train these sub-models with 20 iterations of the Gibbs sampling.",
+                    "sid": 158,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AERs on the development set are listed in Table 3.",
+                    "sid": 159,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can easily find: 1) when employing the.",
+                    "sid": 160,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "head-modifier cohesion constraint, the wdhc model yields better AERs than the wd model; 2) = 296 when employing the modifier-modifier cohesion constraint, the wdmc model also yields better AERs than the wd model; and 3) when employing both head-modifier cohesion constraint and modifier-modifier cohesion constraint together, the wdhc-mc model yields the best AERs among the four sub-models.",
+                    "sid": 161,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So both head-modifier cohesion constraint and modifier-modifier cohesion constraint are helpful for word alignment.",
+                    "sid": 162,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 also shows that the approximate EM algorithm yields better AERs in the forward direction than reverse direction, while the Gibbs sampling algorithm yields close AERs in both directions.",
+                    "sid": 163,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "EM Gibbs forward reverse forward reverse wd 26.12 28.66 27.09 26.40 wdhc 24.67 25.86 26.24 24.39 wdmc 24.49 26.53 25.51 25.40 wdhc-mc 23.63 25.17 24.65 24.33 Table 3: AERs on the development set (trained on the FBIS data set).",
+                    "sid": 164,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Comparison with State-of-the-Art Models.",
+                    "sid": 165,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To show the effectiveness of our model, wecompare our model with some of the state-of-the art models.",
+                    "sid": 166,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the systems are listed as follows: 1) IBM4: The fertility-based model (IBM model 4) which is implemented in GIZA++ toolkit.",
+                    "sid": 167,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training scheme is 5 iterations of IBM model 1, 5 iterations of the HMM model and 10 iterations of IBM model 4.",
+                    "sid": 168,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2) IBM4L0: A modification to the GIZA++toolkit which extends IBM models with \u21130 norm (Vaswani et al., 2012).",
+                    "sid": 169,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training scheme is the same as IBM4.",
+                    "sid": 170,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3) IBM4-Prior: A modification to the GIZA++ toolkit which extends the translation model of IBM models with Dirichlet priors (Riley and Gildea, 2012).",
+                    "sid": 171,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training scheme is the same as IBM4.",
+                    "sid": 172,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4) Agree-HMM: The HMM alignment model by jointly training the forward and reverse models (Liang et al., 2006), which is implemented in the BerkeleyAligner.",
+                    "sid": 173,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training scheme is 5 iterations of jointly training IBM model 1 and 5 iterations of jointly training HMM model.",
+                    "sid": 174,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5) Tree-Distance: The tree distance alignment model proposed in DeNero and Klein (2007), which is implemented in the BerkeleyAligner.",
+                    "sid": 175,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training scheme is 5 iterations of jointly training IBM model 1 and 5 iterations of jointly training the tree distance model.",
+                    "sid": 176,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6) Hard-Cohesion: The implemented \u201cCohesion Checking Algorithm\u201d (Lin and Cherry, 2003) which takes dependency cohesion as a hard constraint during beam search word alignment decoding.",
+                    "sid": 177,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the model trained by the Agree-HMM system to estimate alignment candidates.",
+                    "sid": 178,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also build two systems for our soft dependency cohesion model: 7) Soft-Cohesion-EM: the wdhc-mc sub-model trained with the approximate EM algorithm as described in subsection 5.1.",
+                    "sid": 179,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8) Soft-Cohesion-Gibbs: the wdhc-mc sub-model trained with the Gibbs sampling algorithm as described in subsection 5.1.",
+                    "sid": 180,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train all these systems on the FBIS training set, and test them on the testing set.",
+                    "sid": 181,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also combine the forward and reverse alignments with the grow-diag-final-and (GDFA) heuristic (Koehn et al., 2007).",
+                    "sid": 182,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All AERs are listed in Table 4.",
+                    "sid": 183,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find our soft cohesion systems produce better AERs than the Hard-Cohesion system as well as the other systems.",
+                    "sid": 184,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 gives the head-modifiercohesion percentage (HCP) and the modifier modifier cohesion percentage (MCP) of each system.",
+                    "sid": 185,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find HCPs and MCPs of our softcohesion systems are much closer to the gold standard alignments.",
+                    "sid": 186,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "forward reverse GDFA IBM4 42.90 42.81 44.32 IBM4L0 42.59 41.04 43.19 IBM4-Prior 41.94 40.46 42.44 Agree-HMM 38.03 37.91 41.01 Tree-Distance 34.21 37.22 38.42 Hard-Cohesion 37.32 38.92 38.92 Soft-Cohesion-EM 33.65 34.74 35.85 Soft-Cohesion-Gibbs 34.45 33.72 34.46 Table 4: AERs on the testing set (trained on the FBIS data set).",
+                    "sid": 187,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To evaluate whether our model is adaptable for large-scale task, we retrained these systems using the LARGE training set.",
+                    "sid": 188,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AERs on the testing set are listed in Table3 6.",
+                    "sid": 189,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared with Table 4, we 3 Tree-Distance system requires too much memory to run on.",
+                    "sid": 190,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "our server when using the LARGE data set, so we can\u2019t get the result.",
+                    "sid": 191,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "297 find all the systems yield better performance when using more training data.",
+                    "sid": 192,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our soft cohesion systems still produce better AERs than other systems, suggesting that our soft cohesion model is very effective for large-scale word alignment tasks.",
+                    "sid": 193,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "forward reverse HCP MCP HCP MCP IBM4 60.53 63.94 56.15 64.80 IBM4L0 60.57 62.53 66.49 65.68 IBM4-Prior 66.48 74.65 67.19 72.32 Agree-HMM 75.52 66.61 73.88 66.07 Tree-Distance 81.37 74.69 78.00 71.73 Hard-Cohesion 98.70 97.43 98.25 97.84 Soft-Cohesion-EM 85.21 81.96 82.96 81.36 Soft-Cohesion-Gibbs 88.74 85.55 87.81 84.83 gold-standard 88.43 95.82 81.53 91.62 Table 5: HCPs and MCPs on the development set.",
+                    "sid": 194,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "forward reverse GDFA IBM4 37.45 39.18 40.52 IBM4L0 38.17 38.88 39.82 IBM4-Prior 35.86 36.71 37.08 Agree-HMM 35.58 35.73 39.10 Hard-Cohesion 35.04 37.59 37.63 Soft-Cohesion-EM 30.93 32.67 33.65 Soft-Cohesion-Gibbs 32.07 32.68 32.28 Table 6: AERs on the testing set (trained on the LARGE data set).",
+                    "sid": 195,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Machine Translation Quality Comparison.",
+                    "sid": 196,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then evaluate the effect of word alignment on machine translation quality using the phrase-based translation system Moses (Koehn et al., 2007).",
+                    "sid": 197,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take NIST MT03 test data as the development set, NIST MT05 test data as the testing set.",
+                    "sid": 198,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train a 5-gram language model with the Xinhua portion of English Gigaword corpus and the English side of the training set using the SRILM Toolkit (Stolcke, 2002).",
+                    "sid": 199,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train machine translation models using GDFA alignments of each system.",
+                    "sid": 200,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BLEU scores on NIST MT05 are listed in Table 7, where BLEU scores are calculated using lowercased and tokenized data (Papineni et al., 2002).",
+                    "sid": 201,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the IBM4L0, Agree-HMM, Tree-Distance and Hard-Cohesion systems improve word alignment than IBM4, they fail to outperform the IBM4 system on machine translation.",
+                    "sid": 202,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU score of our Soft-Cohesion-EM system is better than the IBM4 system when using the FBIS training set, but worse when using the LARGE training set.",
+                    "sid": 203,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our Soft-Cohesion-Gibbs system produces the best BLEU score when using both training sets.",
+                    "sid": 204,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also performed a statistical significance test using bootstrap resampling with 1000 samples (Koehn, 2004; Zhang et al., 2004).",
+                    "sid": 205,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results show the Soft-Cohesion-Gibbs system is significantly better (p&lt;0.05) than the IBM4 system.",
+                    "sid": 206,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The IBM4-Prior system slightly outperforms IBM4, but it\u2019s not significant.",
+                    "sid": 207,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "FBIS LARGE IBM4 30.7 33.1 IBM4L0 30.4 32.3 IBM4-Prior 30.9 33.2 Agree-HMM 27.2 30.1 Tree-Distance 28.2 N/A Hard-Cohesion 30.4 32.2 Soft-Cohesion-EM 30.9 33.1 Soft-Cohesion-Gibbs 31.6* 33.9* Table 7: BLEU scores, where * indicates significantly better than IBM4 (p&lt;0.05).",
+                    "sid": 208,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "There have been many proposals of integrating syntactic knowledge into generative alignment models.",
+                    "sid": 209,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wu (1997) proposed the inversion transduction grammar (ITG) to model word alignment as synchronous parsing for a sentence pair.",
+                    "sid": 210,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yamada and Knight (2001) represented translation as a sequence of reordering operations over child nodes of a syntactic tree.",
+                    "sid": 211,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gildea (2003) introduced a \u201cloosely\u201d tree-based alignment technique, which allows alignments to violate syntactic constraints by incurring a cost in probability.",
+                    "sid": 212,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pauls et al.",
+                    "sid": 213,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) gave a new instance of the ITG formalism, in which one side of the synchronous derivation is constrained by the syntactic tree.",
+                    "sid": 214,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fox (2002) measured syntactic cohesion in gold standard alignments and showed syntactic cohesion is generally maintained between English and French.",
+                    "sid": 215,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "She also compared three variant syntactic representations (phrase tree, verb phrase flattening tree and dependency tree), and found the dependency tree produced the highest degree of cohesion.",
+                    "sid": 216,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So Cherry and Lin (2003; 2006a) used dependency cohesion as a hard constraint to restrict the alignment space, where all potential alignments violating cohesion constraint are ruled 298 out directly.",
+                    "sid": 217,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the alignment quality is improved, they ignored situations where a small set of correct alignments can violate cohesion.",
+                    "sid": 218,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this limitation, Cherry and Lin (2006b) proposed a soft constraint approach, which took dependency cohesion as a feature of a discriminative model, and verified that the soft constraint works better than the hard constraint.However, the training procedure is very time consuming, and they trained the model with only 100 hand-annotated sentence pairs.",
+                    "sid": 219,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, their method is not suitable for large-scale tasks.",
+                    "sid": 220,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we also use dependency cohesion as a soft constraint.",
+                    "sid": 221,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But, unlike Cherry and Lin (2006b), we integrate the soft dependency cohesion constraint into a generative model that is more suitable for large-scale word alignment tasks.",
+                    "sid": 222,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion and future work. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We described a generative model for word alignment that uses dependency cohesion as a soft constraint.",
+                    "sid": 223,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We proposed an approximate EM algorithm and an explicit Gibbs sampling algorithm for parameter estimation in an unsupervised manner.",
+                    "sid": 224,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results performed on a large-scale data set show that our model improves word alignment quality as well as machine translation quality.",
+                    "sid": 225,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experimental results also indicate that the soft constraint approach is much better than the hard constraint approach.",
+                    "sid": 226,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is possible that our word alignment model can be improved further.",
+                    "sid": 227,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we generated word alignments in both forward and reverse directions separately, but it might be helpful to use dependency trees of the two sides simultaneously.",
+                    "sid": 228,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we only used the one-best automatically generated dependency trees in the model.",
+                    "sid": 229,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, errors are inevitable in those trees, so we will investigate how to use N-best dependency trees or dependency forests (Hayashi et al., 2011) to see if they can improve our model.",
+                    "sid": 230,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We would like to thank Nianwen Xue for insightful discussions on writing this article.",
+                    "sid": 231,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are grateful to anonymous reviewers for many helpful suggestions that helped improve the final version of this article.",
+                    "sid": 232,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The research work has been funded by the Hi-Tech Research and Development Program (&amp;quot;863&amp;quot; Program) of China under Grant No. 2011AA01A207, 2012AA011101, and 2012AA011102 and also supported by the Key Project of Knowledge Innovation Program of Chinese Academy of Sciences under Grant No.KGZDEW-501.",
+                    "sid": 233,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work is also supported inpart by the DAPRA via contract HR001111-C 0145 entitled &amp;quot;Linguistic Resources for Multilingual Processing&amp;quot;.",
+                    "sid": 234,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

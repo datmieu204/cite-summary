@@ -1,0 +1,2237 @@
+{
+    "ID": "PTASL_n09",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Syntax-based models can significantly improve the translation performance due to their grammatical modeling on one or both language side(s).",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the translation rules such as the non-lexical rule \u201c \u201d in string-to-tree models do not consider any lexicalized information on the source or target side.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rule is so generalized that any subtree rooted at VP can substitute for the nonterminal . Because rules containing nonterminals are frequently used when generating the target-side tree structures, there is a risk that rules of this type will potentially be severely misused in decoding due to a lack of lexicalization guidance.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this article, inspired by lexicalized PCFG, which is widely used in monolingual parsing, we propose to upgrade the STSG (synchronous tree substitution grammars)-based syntax translation model with bilingually lexicalized STSG.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the string-to-tree translation model as a case study, we present generative and discriminative models to integrate lexicalized STSG into the translation model.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both small- and large-scale experiments on Chinese-to-English translation demonstrate that the proposed lexicalized STSG can provide superior rule selection in decoding and substantially improve the translation quality.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Index Terms\u2014Bilingually lexicalized synchronous tree substitution grammars, discriminative model, generative model, syntax- based statistical machine translation.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "N RECENT years, interest in the syntax-based translation models has flourished, and these models have led to encouraging progress in the improvement of translation quality [2], [4], [8], [9], [13], [15], [17], [21], [29], [35], [38], [39].",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to [7] and [14], translations using syntax-based models can be cast as a parsing problem.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on whether the input is a string or a parse tree, we divide these models into two categories: tree-based parsing models and string-based parsing models.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Manuscript received September 07, 2012; revised December 13, 2012 and March 11, 2013; accepted March 17, 2013.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Date of publication March 28, 2013; date of current version April 25, 2013.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was supported by the Natural Science Foundation of Chinaunder Grant 60975053 and the HiTech Research and Development Program (\u201c863\u201d Program) of Chinaunder Grants 2011AA01A207 and 2012AA011102.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The associate editor coordinating the review of this manuscript and approving it for publication was Dr. Gokhan Tur.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The authors are with the National Laboratory of Pattern Recognition, Institute of Automation Chinese Academy of Sciences.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Beijing 100190, China (email: jjzhang@nlpr.ia.ac.cn).",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Color versions of one or more of the figures in this paper are available online at http://ieeexplore.ieee.org.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Digital Object Identifier 10.1109/TASL.2013.2255283 Tree-based parsing models include tree-to-string models [10], [15] and tree-to-tree models [7], [13], [35].",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both of these two types of models are based on synchronous tree substitution grammars (STSG).",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the syntactic tree of a source sentence, the tree-based parsing algorithm traverses each node in a top-down manner and identifies all of the translation rules that match the local subtree rooted at the node.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the matched translation rules, the algorithm either constructs a target tree (tree-to-tree) or directly generates the best target string (tree-to-string).",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "String-based parsing models include string-to-string models [2] and string-to-tree models [8], [16], [22].",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chiang\u2019s string-to-string model (the hierarchical phrase-based model) is constructed based on a degraded synchronous context-free grammar (SCFG) without any linguistic information.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The string-to-tree model is a state-of-the-art syntax-based translation model designed to explicitly model the target grammar.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This translation model is typical of the STSG-based models [5], [8], [24].",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use the model to illustrate our ideas throughout this paper.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In string-to-tree translation models, an STSG rule consists of two right-hand sides known as the source-hand and target- hand sides.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditionally, both sides must follow tree substitution grammar (TSG) rules.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in string-to-tree translation rules, the target side follows a TSG rule, while the source side follows a CFG rule.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because CFG rules can be understood as simplified TSG rules (following Xiao et al. [24]), we use the terms STSG rule and STSG to denote the translation rules and grammar respectively in the string-to-tree model.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this model, the translation problem is similar to a monolingual parsing problem.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fig.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 provides a comparison between monolingual parsing and string-to-tree translation.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both methods convert a string into a tree structure using grammar rules.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference is that monolingual parsing applies PCFG rules to the conversion of an English string into an English parse tree, whereas the string-to-tree translation model parses the Chinese string using the source-side of the STSG rules and synchronously generates an English tree using the target-side of the STSG rules.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the monolingual parsing community, the PCFG model is often criticized for its lack of lexicalization1 in expressing syntactic preferences for lexical words, especially when constructing the high-level tree nodes.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To overcome this deficiency, lexicalized 1Here, lexicalization means considering lexicon information when building the tree nodes.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "15587916/$31.00 \u00a9 2013 IEEE Fig.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) An example in which an English sentence is parsed into a tree structure with 12 PCFG rules; (b) an instance in which a Chinese sentence (both Chinese characters and Chinese Pinyin are provided, and note that we will use Chinese Pinyin throughout the paper) is converted into an English tree using 6 STSG rules.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The symbol to the upper right of a node indicates that this node is constructed using rule . PCFG models such as the Collins\u2019 Model 1\u20133 [6] have been proposed and achieve the state-of-the-art monolingual parsing performance.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar to the monolingual PCFG parsing models, the STSG model used in the string-to-tree translation also faces the problem of lacking lexicalization.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, rule in Fig.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1(b) specifies that if the substring preceding the Chinese word can be translated into an English prepositional phrase , then we can use this rule to translate the Chinese string into the English verb phrase were killed . Note that it is correct to use this rule only when the Chinese word that is translated into the English preposition indicates the passive voice ( in Fig.",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1(b), for instance).",
+                    "sid": 45,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, it is incorrect to apply this rule.",
+                    "sid": 46,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, in the string , the Chinese substring preceding can be trans superior rule selection for constructing the target trees and can considerably improve the translation quality.",
+                    "sid": 47,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main contributions of our paper are as follows: 1) In the STSG-based string-to-tree translation model, we propose to incorporate both source- and target-side lexicalized information into the STSG rules to alleviate the overgeneralization problem of STSG and enable the model to choose appropriate translation rules during decoding.",
+                    "sid": 48,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2) To evaluate bilingually lexicalized STSG more thoroughly, we not only propose a generative model using the adapted Collins\u2019 Model 1, but also introduce a discriminative model that can incorporate arbitrary lexicalized features.",
+                    "sid": 49,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remainder of this article is organized as follows.",
+                    "sid": 50,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section II describes the related work and Section III provides a brief overview of STSG-based string-to-tree translation models and explains in detail why bilingually lexicalized parsing models are needed.",
+                    "sid": 51,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section IV, we elaborate on the lated into an English prepositional phr , but the proposed bilingually lexicalized parsing models, in which both Chinese word indicates the active voice.",
+                    "sid": 52,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without considering lexicalization (such as which lexical word generates the English preposition), rule is used, and the following poor translation may result: the police were killed in the morning gunmen.",
+                    "sid": 53,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This detailed example illustrates the importance of lexicalized information in STSG rule selection in the string-to-tree translation.",
+                    "sid": 54,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspired by the idea of lexicalized PCFG, we focus on introducing bilingually lexicalized STSG into the string-to-tree translation models.",
+                    "sid": 55,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this purpose, we propose generative as well as discriminative models.",
+                    "sid": 56,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on both small- and large-scale Chinese-to-English translation demonstrate that our proposed bilingually lexicalized STSG can provide generative and discriminative models are introduced.",
+                    "sid": 57,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Extensive experiments and their analysis are presented in Section V. Finally, we conclude in Section VI.",
+                    "sid": 58,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "II.",
+                    "sid": 59,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RELATED WORK To our knowledge, very few researchers investigated bilingually lexicalized STSG parsing models in the context of statistical machine translation.",
+                    "sid": 60,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many researchers have focused on the contribution of the lexicalized monolingual parsing models, from two directions.",
+                    "sid": 61,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One approach applies the lexicalized monolingual parsing model to syntax-based language modeling [1], [18], [20], [24].",
+                    "sid": 62,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Charniak et al. [1] first attempted to improve the grammaticality of the output of a string-to-tree system [28] using a lexicalized monolingual PCFG parsing model.",
+                    "sid": 63,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Och et al. [18] concentrated on phrase-based models.",
+                    "sid": 64,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both of these studies are based on the Penn Treebank trained PCFG parsing model and used the model for re-ranking.",
+                    "sid": 65,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they found that the lexicalized monolingual parsing model cannot improve the BLEU score.",
+                    "sid": 66,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Post and Gildea [20] demonstrated that tree substitution grammars (TSGs) may be a better choice than context-free grammars for language modeling.",
+                    "sid": 67,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xiao et al. [24] studied syntax-based language modeling using the lexicalized monolingual parsing model with TSG.",
+                    "sid": 68,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model parameters were directly learned from the automatically parsed target trees.",
+                    "sid": 69,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They reported that their approach can improve the translation quality of the string-to-tree model [8].",
+                    "sid": 70,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other approach employs the lexicalized monolingual parsing model in parsing the source string in the joint parsing and decoding stages [14].",
+                    "sid": 71,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach aims to improve the tree-to-string translation model by constructing parse trees on the source side with the help of the monolingual parsing model and generating translations on the target side simultaneously.",
+                    "sid": 72,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to these previous studies, our approach does not use the parsing model as a language model, and the model parameter learning process does not depend on the Penn Treebank.",
+                    "sid": 73,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we propose a bilingually lexicalized STSG parsing model and used the model to distinguish good rules from poor ones in the decoding stage.",
+                    "sid": 74,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model parameters can be learned easily from the extracted STSG translation rules.",
+                    "sid": 75,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the generative models, we have also investigated a discriminative model.",
+                    "sid": 76,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm using the lexicalized monolingual TSG as a language model is just a special case of our generative model.",
+                    "sid": 77,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many researchers are also concerned with the overgeneralization problem of STSG rules.",
+                    "sid": 78,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Chiang et al. [3] designed many target-side syntax features to improve the string-to-tree translation.",
+                    "sid": 79,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than using a rule lexicalization model, binary features such as rule overlap features, bad-rewrite features and insertion features are employed in the algorithm.",
+                    "sid": 80,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They argue that certain nonterminals are more reliable than others for the rule overlap feature, and they created a binary feature for each root nonterminal of a specified rule.",
+                    "sid": 81,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Regarding the bad-rewrite feature, they observed that the nonterminals in certain non-lexical rules are associated only with specific lexical words, and binary features were created to penalize the use of these rules.",
+                    "sid": 82,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features proposed by Chiang et al. are also language-dependent, based on a thorough analysis of the tuning set.",
+                    "sid": 83,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to Chiang et al., we argue that in any language pair, the newly generated nonterminal in the target parse tree depends strongly on the underlying source- and target-side lexical strings.",
+                    "sid": 84,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore propose the language-independent generative and discriminative lexicalized STSG models, and regard these models as additional strong features to be integrated into the log-linear model.",
+                    "sid": 85,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, to establish a strong baseline, we also include the discount feature used by Chiang et al. [3] in our baseline string-to-tree model.",
+                    "sid": 86,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other related work focuses on grammar or rule lexicalization.",
+                    "sid": 87,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of grammar lexicalization is the proposal of Zhang and Gildea [31], [32] to improve the word alignment using lexicalized inversion transduction grammar.",
+                    "sid": 88,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In rule lexicalization, the syntax-based translation is inherently lexical- ized using dependency structures [21], [22], [25], [27].",
+                    "sid": 89,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we concentrate on the phrase structure-based string-to- tree translation models that construct a phrase structure tree on the target side during decoding.",
+                    "sid": 90,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using our proposed bilingually lexicalized parsing models, we not only retain the merits of the phrase structure information in the string-to-tree model but also enrich it with source- and target-side lexicalized knowledge.",
+                    "sid": 91,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other approaches consider lexical information during the rule extraction in syntax-based translation models.",
+                    "sid": 92,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these approaches are not focused on using the rule lexicalization model to distinguish between competing rules.",
+                    "sid": 93,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Wu et al. [23] considered function words in forest-to-string rule extraction to alleviate the errors in word alignment between source-side words and target-side function words.",
+                    "sid": 94,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "III.",
+                    "sid": 95,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "THE STRING-TO-TREE TRANSLATION MODEL The string-to-tree translation model aims to render the target output more grammatical by explicitly constructing a parse tree on the target side.",
+                    "sid": 96,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model accepts a source string as an input, searches through all of the possible target trees, and finally identifies the tree with the highest score.",
+                    "sid": 97,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This process is performed by recursively applying STSG rules that are extracted and pa- rameterized using a word-aligned, target side-parsed parallel training corpus.",
+                    "sid": 98,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A. STSG Translation Rules Galley et al. [9] proposed the GHKM algorithm for extracting (minimal) STSG rules from a triple , where is the source-language sentence, is a target-language parse tree whose yield is the translation of , and is the set of word alignments between and . The minimal string-to-tree rules are extracted in three steps: (1) frontier set computation, (2) fragmentation; and (3) extraction.",
+                    "sid": 99,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The frontier set (FS) is the set of frontier nodes that meet the following alignment constraint.",
+                    "sid": 100,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The target phrase dominated by the frontier node and its corresponding source phrase must be consistent with the word alignment.",
+                    "sid": 101,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bold italic nodes in the English parse tree in Fig.",
+                    "sid": 102,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1(b)2 are all frontiers.",
+                    "sid": 103,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given FS, the graph composed of the triple is divided into several fragments.",
+                    "sid": 104,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each fragment takes only nodes in FS as the root and leaf nodes.",
+                    "sid": 105,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each fragment forms an STSG translation rule.",
+                    "sid": 106,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These rules are extracted through a depth-first traversal of : for each frontier visited, a rule is extracted using the fragmentation rooted at this frontier.",
+                    "sid": 107,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The extracted rules are known as minimal rules [9].",
+                    "sid": 108,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in Table I are minimal rules.",
+                    "sid": 109,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To improve the rule coverage, SPMT models [16] can be employed to obtain the phrasal rules that are not covered by the GHKM rules.",
+                    "sid": 110,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the minimal rules that share adjacent tree fragments can be connected together to form composed rules [8].",
+                    "sid": 111,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Table I, is a rule composed by combining and . The extracted STSG rules are associated with multiple probabilities, such as the phrasal-like translation probabilities and 2To some extent, we abuse the example in Fig.",
+                    "sid": 112,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1(b) in that we use it as both a translation example and a training example.",
+                    "sid": 113,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TABLE I MINIMAL AND COMPOSED RULES EXTRACTED FROM FIG.",
+                    "sid": 114,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1(b) the root-normalized translation probability.",
+                    "sid": 115,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The root-normal- ized probability is similar to the rule probability of the PCFG in monolingual parsing.",
+                    "sid": 116,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this sense, the string-to- tree translation already employs a PCFG-like model.",
+                    "sid": 117,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B. Decoding as Parsing Using the extracted STSG translation rules, we now elaborate on the decoding process in the string-to-tree model based on the example in Fig.",
+                    "sid": 118,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1(b).",
+                    "sid": 119,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoding process is usually formalized as a deductive system that performs a bottom-up CKY-style parsing algorithm [2], [8], [14].",
+                    "sid": 120,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fig.",
+                    "sid": 121,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 illustrates the deductive steps in detail.",
+                    "sid": 122,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, axiom rules , and are employed to deduce one-word translations.",
+                    "sid": 123,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, inference rules , and are applied to deduce two-word, three-word and four-word translations.",
+                    "sid": 124,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use inference rule for the following analysis.",
+                    "sid": 125,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The deductive step can be formalized as follows: (1) where (in which the subscript denotes the source-side index) is deduced using axiom rule , and is deduced using inference rule . Here, and denote the score and the partial translation, respectively.",
+                    "sid": 126,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nodes NP and VP in rule are substituted by newly deduced structures and the resulting score for is calculated as follows: (2) Here includes the increased language model score and the scores of the rule-related sub-models: (3) where denotes the phrasal-like scores, and is the PCFG-like parsing model score, which is indicative of whether the generated target tree is well-formed.",
+                    "sid": 127,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the example rule , is computed as follows (the model weight is not explicitly given): (4) Fig.",
+                    "sid": 128,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 129,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Illustration of string-to-tree decoding.",
+                    "sid": 130,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the translation process illustrated in detail in Fig.",
+                    "sid": 131,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2, we can see that when constructing the target-side lower tree nodes, both source- and target-side lexicalized information is used in the application of the axiom rules such as , and , and these axiom rules are therefore reliable.",
+                    "sid": 132,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when the target tree is extended from lower to higher levels, the inference rules containing nonterminals are increasingly utilized, and these rules are less reliable as the inside generalized nonterminals are not informed by the lexical evidence.",
+                    "sid": 133,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, rule does not consider any lexicalized information, and the PCFG-like score cannot capture the knowledge which represents the pref erence to the source- and target-side lexicalized information.",
+                    "sid": 134,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rules of this type generally suffer from a lack of reliability.",
+                    "sid": 135,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on our analysis, the string-to-tree translation model requires rich lexicalized information for reliable application of the STSG rules during decoding.",
+                    "sid": 136,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspired by Collins\u2019 lexical- ized PCFG parsing models, we therefore propose to enhance string-to-tree translation models with bilingually lexicalized STSG.",
+                    "sid": 137,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IV.",
+                    "sid": 138,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DECODING WITH BILINGUALLY LEXICALIZED STSG PARSING MODELS In this section, we first review the necessary background on bilingually lexicalized STSG parsing models, including lexical- ized STSG rule extraction and rule conversion.",
+                    "sid": 139,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then propose two parameter estimation methods (a generative model and a discriminative model).",
+                    "sid": 140,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we demonstrate how to apply lexicalized STSG parsing models in decoding.",
+                    "sid": 141,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A. Lexicalized STSG Rule Extraction Informally, we define a lexicalized STSG rule as an STSG rule in which each nonterminal is associated with source- and target-side lexicalized information.A question arises regarding the type of lexicalized informa tion that can be used.",
+                    "sid": 142,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the target-side lexicalized training Fig.",
+                    "sid": 143,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 144,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexicalized training example (POS of target headword is not explicitly given).",
+                    "sid": 145,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "parse trees, the intuitive idea is to apply the headword information3 that is used in Collins\u2019 lexicalized PCFG parsing models.",
+                    "sid": 146,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before rule extraction, we first use the head finding rules to annotate every interior node of the target-side parse tree with the node\u2019s headword and its part-of-speech.",
+                    "sid": 147,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the source-side lexicalized information, we here use a heuristic and associate each node with the source word that is aligned to the target headword of the node.",
+                    "sid": 148,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we may often encounter many-to-one alignment situations when handling words in the source.",
+                    "sid": 149,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, we heuristically choose the source word that is aligned to the target headword of the node with the highest probability4.",
+                    "sid": 150,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fig.",
+                    "sid": 151,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 shows the lexicalized version of the English parse tree in Fig.",
+                    "sid": 152,
+                    "ssid": 152,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1(b).After annotating the target-side tree nodes with lexicalized in formation from both sides, the extraction process for the lexical- ized STSG rules is the same as that for traditional STSG rules, except that the nonterminals in the lexicalized STSG rules are associated with lexical words.",
+                    "sid": 153,
+                    "ssid": 153,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the lexicalized version5 of rule in Table I is as follows: B. Rule Conversion for Parameterization Post and Gildea [20], and Xiao et al. [24] adopted a 3-step preprocessing approach to transform the training example (target tree, source string and word alignment) to an equivalent structure from which we can extract SCFG rules.",
+                    "sid": 154,
+                    "ssid": 154,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an effective approach; however, the headword identification process is affected by the deletion of many necessary interior nodes.",
+                    "sid": 155,
+                    "ssid": 155,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alternatively, we can focus directly on the STSG rules.",
+                    "sid": 156,
+                    "ssid": 156,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the decoding process shown in detail in Fig.",
+                    "sid": 157,
+                    "ssid": 157,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2, we can see that the interior nonterminals (such as VBD, VP and VBN in ) contribute nothing to the generation of the target translation.",
+                    "sid": 158,
+                    "ssid": 158,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, all of nonterminals of this type can be discarded before decoding.",
+                    "sid": 159,
+                    "ssid": 159,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, if a POS tag is among the useless nodes, we still keep it for calculating the Collins\u2019 Model rule probability.",
+                    "sid": 160,
+                    "ssid": 160,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All interior nonterminals except for the POS tags are therefore removed in each lexicalized STSG rule.",
+                    "sid": 161,
+                    "ssid": 161,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the following lexicalized rule is obtained for : The height of this STSG rule is one, and the rule is equivalent to an SCFG rule.",
+                    "sid": 162,
+                    "ssid": 162,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, most of STSG rules in string-to-tree models have a height greater than one on the target side (see, e.g., rules and in Table I).",
+                    "sid": 163,
+                    "ssid": 163,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our training data, we found that approximately 86.7% of the STSG rules have heights of two or more.",
+                    "sid": 164,
+                    "ssid": 164,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the Collins\u2019 lexicalized parsing model is based on PCFG rules with heights of one, we must develop an effective method of converting the STSG rules into equivalent SCFG rules of height one to apply the well-studied lexicalized PCFG parsing models.",
+                    "sid": 165,
+                    "ssid": 165,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3DeNeefe and Knight [37] also considered headword in machine translation; however their tree-adjoining grammar is more complicated.",
+                    "sid": 166,
+                    "ssid": 166,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4Based on our manual analysis of 1000 randomly chosen pairs of target-side headwords and aligned source-side words, we find that the fraction of correctly aligned source-side words is 71.8%.",
+                    "sid": 167,
+                    "ssid": 167,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to this heuristic, we can also apply other methods (such as pairwise mutual information and likelihood ratios) to choose the source-side lexical words.",
+                    "sid": 168,
+                    "ssid": 168,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave this for our future work.",
+                    "sid": 169,
+                    "ssid": 169,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5We omit target-side POS tags in the example rule for simplicity.",
+                    "sid": 170,
+                    "ssid": 170,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using rules of this kind, we can estimate and predict the Collins\u2019 lexicalized PCFG model probabilities.",
+                    "sid": 171,
+                    "ssid": 171,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As Collins\u2019 model is used only to model the generation of the monolingual grammar rules, we must perform an additional conversion for the parameterization.",
+                    "sid": 172,
+                    "ssid": 172,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After attaching the source-side words (which are aligned to the target headwords) to the target-side nonterminals, the rule\u2019s source-side will be useless during parameter estimation, and thus we can discard the rule\u2019s source-side for parameterization.",
+                    "sid": 173,
+                    "ssid": 173,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the example above, rule will becomes: C. A Generative Model We first apply Collins\u2019 Model 1 [6] to model the generation of the simplified lexicalized STSG translation rules.",
+                    "sid": 174,
+                    "ssid": 174,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins\u2019 Model 1 breaks down the generation of a lexicalized grammar rule into a sequence of sub-steps.",
+                    "sid": 175,
+                    "ssid": 175,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More formally, the generation process for the rule is described as follows: TABLE II BACKOFF LEVEL FOR EACH SUB-MODEL IN BILINGUALLY LEXICALIZED STSG BACKOFF LEVEL 1) Generate a head constituent label with probability , where is the label of the parent node and is its headword.",
+                    "sid": 176,
+                    "ssid": 176,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2) Generate all of the left and right modifiers, with probabilities and . Here (or ) is the -th left (or right) modifier, and (or ) denotes the headword of (or ).",
+                    "sid": 177,
+                    "ssid": 177,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The POS tag of is denoted by , and is the distance between the modifier and the head.",
+                    "sid": 178,
+                    "ssid": 178,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and . When incorporating Collins\u2019 Model 1 into our bilingually lexicalized STSG parsing model, the headword , and become the target headword and its aligned source word.",
+                    "sid": 179,
+                    "ssid": 179,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of the parameters described above can be estimated using the maximum likelihood method based on the extracted and converted lexicalized STSG rules (in contrast to using Treebank for parameterization in the monolingual parsing).",
+                    "sid": 180,
+                    "ssid": 180,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a trained model, the probability of a rule can be formalized as follows: (5) For example, the generative proba bility of the rule can be calculated as follows: (the POS tag and distance are omitted for simplicity, but in practice, they are included for model training and prediction): Note that the parsing model including only the target-side lexicalized information is just a backoff of our bilingually lexical- ized STSG parsing model.",
+                    "sid": 181,
+                    "ssid": 181,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditionally, researchers (e.g., [1], [20], [24]) have considered the target-side lexicalized parsing model as an augmented target language model in which source- side lexicalized information cannot be used.",
+                    "sid": 182,
+                    "ssid": 182,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, we see that the traditional method is a special case of our generative model.",
+                    "sid": 183,
+                    "ssid": 183,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we compare the performance of the monolingual lexicalized STSG parsing model (incorporating only the target-side lexicalized information) with the bilingually lexical- ized STSG parsing model to figure out whether the lexicalized information from both sides is more helpful.",
+                    "sid": 184,
+                    "ssid": 184,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "D. A Discriminative Model From formula (5), we can see that the generative model utilizes only the headword lexicalized information.",
+                    "sid": 185,
+                    "ssid": 185,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A natural question is whether we can incorporate other lexicalized information in addition to the headword.In addition to the generative model, which models the genera tion process of a STSG translation rule, we can also consider that the usage preference of the STSG translation rules in decoding can be determined by the lexicalized string pair (target English string which is spanned by the rule\u2019s root node, and its aligned source Chinese string ).",
+                    "sid": 186,
+                    "ssid": 186,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can therefore employ a discriminative model for modeling the conditional distribution: This model can utilize far more lexicalized information in addition to the headword in the generative model.",
+                    "sid": 187,
+                    "ssid": 187,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To simplify the calculation of the conditional probability, we assume that the nonterminal nodes are conditionally independent of one another and that each nonterminal node in a rule is determined only by the target string spanned by this node and the aligned source string.",
+                    "sid": 188,
+                    "ssid": 188,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, we ignore the structure of the rule (e.g., the order of the nonterminal nodes).",
+                    "sid": 189,
+                    "ssid": 189,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The calculation of the conditional probability can then be formalized as follows: (7) (6) It is straightforward to show that this generative lexicalized model is highly specific and tends to suffer from data sparseness.",
+                    "sid": 190,
+                    "ssid": 190,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As suggested by Collins [6] for lexicalized PCFG, we therefore design a backoff smoothing mechanism for each sub-model of the proposed bilingually lexicalized STSG in Table II.",
+                    "sid": 191,
+                    "ssid": 191,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we consider all of the conditions, and then we exclude the condition based on the source-side head information.",
+                    "sid": 192,
+                    "ssid": 192,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Levels 3 and 4 are similar to the lexicalized PCFG used in monolingual parsing.",
+                    "sid": 193,
+                    "ssid": 193,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where denotes the target string, dominated only by the nonterminal node , and is the aligned source string corresponding to . Using formula (7), we can decompose the probability of a rule (given a string pair) into products of probability of each nonterminal in the rule (given its spanned substring pair).",
+                    "sid": 194,
+                    "ssid": 194,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accordingly, we must model the conditional distribution of a nonterminal given a string pair (e.g., ).",
+                    "sid": 195,
+                    "ssid": 195,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, when applying the rule in Fig.",
+                    "sid": 196,
+                    "ssid": 196,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2, , and . For , , and with the bilingual strings.",
+                    "sid": 197,
+                    "ssid": 197,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our task is to predict the tag.",
+                    "sid": 198,
+                    "ssid": 198,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem now becomes a traditional classification problem in which the classes include all of the constituent labels in the Treebank.",
+                    "sid": 199,
+                    "ssid": 199,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are many sophisticated models designed for this problem, such as SVM, neural networks and maximum entropy models.",
+                    "sid": 200,
+                    "ssid": 200,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this article, we formulate the probability using a maximum entropy model: (8) where is a binary feature and is its feature weight.",
+                    "sid": 201,
+                    "ssid": 201,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any informative feature deduced from the string pair can be used.",
+                    "sid": 202,
+                    "ssid": 202,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xiong et al. [26] and Zollmann and Vogel [36] indicate that the boundary words (the leftmost and rightmost words of a string) are good substitutes for the entire string in phrase reordering and constituent construction.",
+                    "sid": 203,
+                    "ssid": 203,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, the success of Collins\u2019 parsing models shows that the headword is also an informative feature.",
+                    "sid": 204,
+                    "ssid": 204,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspired by their works, we therefore define The training examples for the maximum entropy model can easily be extracted prior to the STSG rule extraction process.",
+                    "sid": 205,
+                    "ssid": 205,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each frontier node recognized in the target parse tree, we can derive an example of the form (node_tag, target_string, source_string), from which the six representative features mentioned above can be extracted.",
+                    "sid": 206,
+                    "ssid": 206,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider thenode in Fig.",
+                    "sid": 207,
+                    "ssid": 207,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 as an example.",
+                    "sid": 208,
+                    "ssid": 208,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The extracted training in stance is , and the corresponding lexicalized bilingual features are . In our large-scale ex-.",
+                    "sid": 209,
+                    "ssid": 209,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "periment, we totally extract 27,382,983 training examples in which there are 849,952 headwords.",
+                    "sid": 210,
+                    "ssid": 210,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We utilized the toolkit of Zhang [34] to train the maximum entropy model and set the Gaussian prior to to avoid overtraining.",
+                    "sid": 211,
+                    "ssid": 211,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We measured the accuracy of the classifier using a held-out data, and we get an accuracy of 76.8% using the six features mentioned above in the large-scale experiment.",
+                    "sid": 212,
+                    "ssid": 212,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E. Applying Lexicalized STSG in the Decoding Stage Based on the discussion above, we know how to extract the lexicalized rules and estimate their lexicalized probabilities during the training stage.",
+                    "sid": 213,
+                    "ssid": 213,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A remaining question is how to apply the lexicalized STSG during decoding.",
+                    "sid": 214,
+                    "ssid": 214,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is important to note that the lexicalized information (e.g., headword, boundary words) is fully connected to the rules when training the lexicalized STSG models; however, the matching rules used during decoding should not be encoded using such lexicalized information.",
+                    "sid": 215,
+                    "ssid": 215,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the rules used in decoding are fully annotated by both source- and target-side lexicalized information, then the resulting rule search space will be extremely sparse.For example, assumes that we di rectly apply a rule, such as , in the Fig.",
+                    "sid": 216,
+                    "ssid": 216,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 217,
+                    "ssid": 217,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples of rules used during decoding.",
+                    "sid": 218,
+                    "ssid": 218,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "rule matching during decoding.",
+                    "sid": 219,
+                    "ssid": 219,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This example rule can be used respectively.",
+                    "sid": 220,
+                    "ssid": 220,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly, this type of usage is not realistic.",
+                    "sid": 221,
+                    "ssid": 221,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A more appropriate method is to employ the original STSG translation rules of the string-to-tree model in the rule matching while generating the bilingually lexicalized information for the rules dynamically during decoding.",
+                    "sid": 222,
+                    "ssid": 222,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this purpose, we have designed a simple algorithm, which is illustrated through examples in Fig.",
+                    "sid": 223,
+                    "ssid": 223,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 224,
+                    "ssid": 224,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the purely lexicalized rules (axiom rules), such as rules (a) and (b), we retain the target-side headwords and aligned source-side words of the root node of the rule (note that the headwords are not combined with the root as matching units).",
+                    "sid": 225,
+                    "ssid": 225,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For other rules, such as the non-lexical rule (c), we can simply record the position of origin of the headword information means that the headword of originates from , and if is replaced by (a), then (by, ) passes to the node ).",
+                    "sid": 226,
+                    "ssid": 226,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, the headword information of a rule can be generated dynamically in a bottom-up manner during decoding.",
+                    "sid": 227,
+                    "ssid": 227,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the boundary words used in the discriminative model, we can easily obtain them as we know which source-side span is currently being handled and also know the target-side partial translation after applying an STSG rule.",
+                    "sid": 228,
+                    "ssid": 228,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the bilingually lexicalized information generated for a given STSG rule, we can calculate the lexicalized STSG probability for this rule using a generative model or discriminative model.",
+                    "sid": 229,
+                    "ssid": 229,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This lexicalized STSG probability serves as a strong feature, similar to the n-gram language model, that can guide the decoder to choose the appropriate rules regarding the source- and target-side lexicalized information.",
+                    "sid": 230,
+                    "ssid": 230,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "V. EXPERIMENTS In our experiments, we incorporate the lexicalized STSG parsing models into the standard log-linear string-to-tree translation model [8], [16], and test the effectiveness of our proposed models.",
+                    "sid": 231,
+                    "ssid": 231,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first describe the experimental setup and then we present the experimental results on both small- and large-scale Chinese-to-English translation data sets.",
+                    "sid": 232,
+                    "ssid": 232,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each of these data sets, we wish to determine whether the generative or discriminative model can provide greater improvement in the translation quality and whether the bilingually lexicalized STSG parsing model outperforms the monolingual lexicalized STSG parsing model.",
+                    "sid": 233,
+                    "ssid": 233,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the translation results, we study the influence of the lexicalized STSG parsing models on the rule usage distribution in decoding in detail and investigate the types of rules that are most essential to the lexicalized STSG parsing TABLE III EXPERIMENTAL RESULTS FOR THE VARIOUS TRANSLATION SYSTEMS ON TWO TEST SETS.",
+                    "sid": 234,
+                    "ssid": 234,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BOLD FIGURES INDICATE THAT THE PERFORMANCE IS SIGNIFICANTLY BETTER THAN S2T . THE VALUES IN THE LAST COLUMN INDICATE THE AVERAGE IMPROVEMENTS OVER JOSHUA AND S2T models.",
+                    "sid": 235,
+                    "ssid": 235,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also discuss the relationship between the lexical- ized STSG parsing models and the composed rules, which are believed to encode a large portion of the lexicalization.",
+                    "sid": 236,
+                    "ssid": 236,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we analyze the decoding efficiency of the proposed models and present several translation examples.",
+                    "sid": 237,
+                    "ssid": 237,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A. Experimental SetUp Our first dataset is the small FBIS bilingual corpus6 consisting of 236 K sentence pairs.",
+                    "sid": 238,
+                    "ssid": 238,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employed GIZA++ and the grow- diag-final-and balance strategy to generate the final symmetric word alignments.",
+                    "sid": 239,
+                    "ssid": 239,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We parsed the English side using the Berkeley parser [19].",
+                    "sid": 240,
+                    "ssid": 240,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the target-side parsed, word-aligned bilingual corpus, we applied the rule extraction algorithm described in Section III to extract the string-to-tree STSG translation rules.",
+                    "sid": 241,
+                    "ssid": 241,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the GHKM minimal rules [9], we also extracted rules based on SPMT Model 1 [16] with source-side phrases up to length . We also extracted composed rules [8] by combining two or three adjacent minimal rules.",
+                    "sid": 242,
+                    "ssid": 242,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following [30], we binarized the rules to facilitate the language model integration.",
+                    "sid": 243,
+                    "ssid": 243,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained a 5-gram language model using the target part of the bilingual data and the Xinhua portion of the English Gigaword corpus.",
+                    "sid": 244,
+                    "ssid": 244,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the 2003 NIST MT Chinese-to-English test set as the development set and the 2004 and 2005 NIST test sets as our test set.",
+                    "sid": 245,
+                    "ssid": 245,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final translation quality is evaluated in terms of case-insensitive BLEU4 metric with shortest length penalty, and the statistical significance test is performed using the pairwise resampling approach [11].",
+                    "sid": 246,
+                    "ssid": 246,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B. Experimental Results on the Small-Scale Data First, we provide brief descriptions of the translation systems used in our experiment.",
+                    "sid": 247,
+                    "ssid": 247,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Joshua: Joshua is a freely available decoder for hierarchical phrase-based SMT [2], [12].",
+                    "sid": 248,
+                    "ssid": 248,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employ Joshua as a baseline with (in the -best outputs) set to be 500 and other settings left at their default values.",
+                    "sid": 249,
+                    "ssid": 249,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2T: S2T is our in-house string-to-tree translation system, which is re-implemented following [8], [9] and [16].",
+                    "sid": 250,
+                    "ssid": 250,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2T.Gen.Tgt.Lex: This string-to-tree translation system integrates the generative lexicalized STSG parsing model with the target lexicalized information.",
+                    "sid": 251,
+                    "ssid": 251,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6The LDC category is LDC2003E14.",
+                    "sid": 252,
+                    "ssid": 252,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2T.Gen.SrcTgt.Lex: This system serves the same function as S2T.Gen.Tgt.Lex except that it utilizes both the source and target lexicalized information.",
+                    "sid": 253,
+                    "ssid": 253,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2T.Dis.SrcTgt.Lex: This string-to-tree system integrates the discriminative model with additional bilingual lexicalized features (the boundary words of the constituents in addition to the headword).",
+                    "sid": 254,
+                    "ssid": 254,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table III shows the results.",
+                    "sid": 255,
+                    "ssid": 255,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The linguistically syntax-based string-to-tree system substantially outperforms the hierarchical phrase-based system Joshua and achieves average gains of 2.71 BLEU points7, demonstrating that the string-to-tree translation model is quite powerful.",
+                    "sid": 256,
+                    "ssid": 256,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the strong string-to-tree model, both the generative and discriminative parsing models improve the translation quality.",
+                    "sid": 257,
+                    "ssid": 257,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, the generative parsing model including the bilingual lexicalized information can significantly outperforms the string-to-tree baseline model by an average of 0.74 BLEU points.",
+                    "sid": 258,
+                    "ssid": 258,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the improvement obtained by the generative parsing model considering only the target lexicalized information is less promising (0.42 BLEU points).",
+                    "sid": 259,
+                    "ssid": 259,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results show that not only the target-side lexicalized information but also the source-side lexicalized information is useful.For the discriminative model incorporating additional lexi calized features (last line in Table III), the baseline string-to- tree model is improved by an average of 0.70 BLEU points.",
+                    "sid": 260,
+                    "ssid": 260,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, even using additional lexicalized features (e.g., the boundary words of a constituent), it cannot substantially outperform the generative model.",
+                    "sid": 261,
+                    "ssid": 261,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason for this result is most likely twofold.",
+                    "sid": 262,
+                    "ssid": 262,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the one hand, in contrast to the generative model, the discriminative model does not consider the structure of the rule (e.g., the order of the nonterminal nodes on the rule\u2019s right-hand side).",
+                    "sid": 263,
+                    "ssid": 263,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the parameters are determined using a relatively small data set, and the consensus in the machine learning community is that more data are required for the parameter training in discriminative models.",
+                    "sid": 264,
+                    "ssid": 264,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C. Experimental Results on the Large-Scale Data If a proposed model is useful, then it should also be effective on large-scale data sets.",
+                    "sid": 265,
+                    "ssid": 265,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we report our experimental results on the large data set.",
+                    "sid": 266,
+                    "ssid": 266,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The large-scale Chinese-to- English training data set8 includes 2.09 M sentence pairs from the LDC.",
+                    "sid": 267,
+                    "ssid": 267,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation rules are extracted using the same settings as the small-scale experiment, except that we obtain the composed rules by combining at most two minimal rules to avoid too many specific rules.",
+                    "sid": 268,
+                    "ssid": 268,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 5-gram language model is trained on the Xinhua portion of the English Gigaword corpus plus the target portion of the bilingual data.",
+                    "sid": 269,
+                    "ssid": 269,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table IV shows the results.",
+                    "sid": 270,
+                    "ssid": 270,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we observe that, compared with the small data set, the improvements over MT04 and MT05 are quite different on the larger data set.",
+                    "sid": 271,
+                    "ssid": 271,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the system S2T as an example, the improvement over MT04 is 2.67 BLEU points (36.40 vs. 33.73), and the improvement over MT05 is 4.28 BLEU points (34.53 vs. 30.25).",
+                    "sid": 272,
+                    "ssid": 272,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have analyzed the.",
+                    "sid": 273,
+                    "ssid": 273,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7The average gain is computed by averaging the improvements obtained on MT04 and MT05.",
+                    "sid": 274,
+                    "ssid": 274,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, . 8LDC category numbers are: LDC2000T50, LDC2003E14, LDC2003E07, LDC2004T07, LDC2005T06, LDC2002L27, LDC2005T10 and LDC2005T34.",
+                    "sid": 275,
+                    "ssid": 275,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TABLE IV EXPERIMENTAL RESULTS FOR DIFFERENT TRANSLATION SYSTEMS FOR LARGE-SCALE DATA SET.",
+                    "sid": 276,
+                    "ssid": 276,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AND MEAN THAT THE PERFORMANCE IS SIGNIFICANTLY BETTER THAN S2T WITH AND RESPECTIVELY data and find that this result is due primarily to the vocabulary coverage.",
+                    "sid": 277,
+                    "ssid": 277,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the small-scale data set, the vocabulary coverage is 87% and 85% for MT04 and MT05 respectively, whereas on the large-scale data set, the vocabulary coverage is 93% for both MT04 and MT05.",
+                    "sid": 278,
+                    "ssid": 278,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vocabulary coverage improvement is larger for MT05.Similar to the small-scale experiment, the baseline string-to tree model S2T markedly outperforms the hierarchical phrase- based system Joshua, and both the generative and discriminative lexicalized STSG parsing models outperform S2T.",
+                    "sid": 279,
+                    "ssid": 279,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generative parsing model with bilingual lexicalized information, S2T.Gen.SrcTgt.Lex, still produce results superior to those of the generative model with only target-side lexicalized information, S2T.Gen.Tgt.Lex.",
+                    "sid": 280,
+                    "ssid": 280,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the same time it significantly outperforms S2T with an average gain of 0.58 BLEU points on two test sets.",
+                    "sid": 281,
+                    "ssid": 281,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also observe that the performance improvement for the generative model, S2T.Gen.SrcTgt.Lex, is smaller for the large-scale data set than for the small-scale data set (0.58 vs. 0.74).",
+                    "sid": 282,
+                    "ssid": 282,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our analysis hints that this result may owe to the fact that the generative model utilizes only the headword information.",
+                    "sid": 283,
+                    "ssid": 283,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the data set becomes large, each headword becomes associated with more nonterminals, rendering the prediction from headword to nonterminal more ambiguous.",
+                    "sid": 284,
+                    "ssid": 284,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that in the small-scale data set, each headword corresponds to 2.13 non- terminals on average, whereas each headword has 2.44 corresponding nonterminals on average in the large-scale data set.",
+                    "sid": 285,
+                    "ssid": 285,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The discriminative parsing model S2T.Dis.SrcTgt.Lex demonstrates its power in the large-scale experiment, exhibiting the best performance among all of the translation systems.",
+                    "sid": 286,
+                    "ssid": 286,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the large-scale experiment, S2T.Dis.SrcTgt.Lex outperforms the generative model S2T.Gen.SrcTgt.Lex on both test sets by an average of 0.31 BLEU points and achieves a significant improvement (0.89 BLEU points on average) over the baseline S2T.",
+                    "sid": 287,
+                    "ssid": 287,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results demonstrate the strength of the discriminative model: the larger training data set yields superior results.",
+                    "sid": 288,
+                    "ssid": 288,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the large-scale data set, we have also conducted an additional experiment for discriminative model.",
+                    "sid": 289,
+                    "ssid": 289,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We divided the six features into target-side parts and source-side parts and tested only target features (target headword and boundary words) to determine whether a similar improvement is achieved.",
+                    "sid": 290,
+                    "ssid": 290,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that the discriminative model with only target features exhibits superior performance compared with the baseline but cannot outperform the discriminative model TABLE V DISTRIBUTION OF DIFFERENT KINDS OF RULES USED IN DECODING: LEX, N-LEX AND MIX DENOTE RESPECTIVELY PURELY LEXICALIZED RULES, NON-LEXICAL RULES AND TERMINAL/NON-TERMINAL MIXED RULES with all six features.",
+                    "sid": 291,
+                    "ssid": 291,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU scores on MT04 and MT05 are 37.01 and 35.08, respectively.",
+                    "sid": 292,
+                    "ssid": 292,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To see the performance when the test genre differs, we split MT08 into two genres: newswire (first 691 sentences) and we- blog.",
+                    "sid": 293,
+                    "ssid": 293,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2T gets BLEU score 29.47 and 21.78 respectively on newswire and weblog, while our discriminative model S2T.Dis.",
+                    "sid": 294,
+                    "ssid": 294,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SrcTgt.Lex obtains 30.43 and 22.26 on newswire and weblog.",
+                    "sid": 295,
+                    "ssid": 295,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement on newswire is much larger than that on we- blog.",
+                    "sid": 296,
+                    "ssid": 296,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We think this is because that our translation rules are extracted mainly on news data.",
+                    "sid": 297,
+                    "ssid": 297,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "D. Rule Usage Distribution and Which Rules Need Bilingually Lexicalized STSG the Most?",
+                    "sid": 298,
+                    "ssid": 298,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation quality improvement in both the small- and large-scale experiments demonstrates the effectiveness of our proposed bilingually lexicalized STSG.",
+                    "sid": 299,
+                    "ssid": 299,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Readers may wonder how the bilingually lexicalized STSG influences the rule usage distribution in decoding and which rules make the most use of the lexicalized information.",
+                    "sid": 300,
+                    "ssid": 300,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore analyze the rule usage in detail in this section.",
+                    "sid": 301,
+                    "ssid": 301,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the terminals and nonterminals in a rule, we divide the string-to-tree rules into three categories: (1) purely lexicalized rules, such as ; (2) non-lexical rules, such as ; (3) mixed rules in which terminals and nonterminals are mixed, such as . We provide statistics regarding the rule usage of the three types of rules for each system (in the large-scale experiments) in Table V. From the statistics, we can see that for each system, the mixed rules are used most, followed by the purely lexicalized rules.",
+                    "sid": 302,
+                    "ssid": 302,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the non-lexical rules are not used frequently (they account for only 9.5% of the usage at most).",
+                    "sid": 303,
+                    "ssid": 303,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result is reasonable as the non-lexical rules are usually applied in the construction of the high-level tree structure, which requires fewer rules.",
+                    "sid": 304,
+                    "ssid": 304,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lower-level tree structure is typically constructed using lexicalized and mixed rules when the string-to-tree model generates the target parse tree.",
+                    "sid": 305,
+                    "ssid": 305,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we compare the bilingually lexicalized string-to-tree models with the baseline, Table V shows that the non-lexical rules are used even less often (from highest 9.5% of the time in the baseline to 3.2% of the time in bilingually lexicalized models), while the mixed rules are applied more frequently.",
+                    "sid": 306,
+                    "ssid": 306,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results imply that given the augmented lexicalized rule probabilities, the bilingually lexicalized models prefer the rules containing lexicalized words when applying rules in decoding.",
+                    "sid": 307,
+                    "ssid": 307,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TABLE VI TRANSLATION RESULTS WHEN WE DO NOT PERFORM BILINGUALLYLEXICALIZED PARSING MODELS ON THE PURELY LEXICALIZED RULES ( DENOTES THE PERFORMANCE DECLINE COMPARED WITH ORIGINAL RESULTS IN TABLE III) TABLE VII TRANSLATION RESULTS WHEN WE ONLY PERFORM BILINGUALLYLEXICALIZED PARSING MODELS ON THE NON-LEXICAL RULES ( DENOTES THE PERFORMANCE IMPROVEMENT COMPARED WITH THE BASELINE SYSTEM S2T) Another question arises regarding the type of rules that make the most use of the bilingually lexicalized model.",
+                    "sid": 308,
+                    "ssid": 308,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuitively, the non-lexical and mixed rules both contain nonterminals that are generalized and require lexicalization to distinguish good rules from poor ones, while the purely lexicalized rules are fully lexicalized from the outset.",
+                    "sid": 309,
+                    "ssid": 309,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, the purely lexicalized rules therefore do not require any bilingually lexicalized model.",
+                    "sid": 310,
+                    "ssid": 310,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To investigate this question, we repeat the large-scale experiments with the bilingually lexicalized models used only for the non-lexical and mixed rules.",
+                    "sid": 311,
+                    "ssid": 311,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table VI shows the translation results.",
+                    "sid": 312,
+                    "ssid": 312,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is interesting that the results in Table VI are in line with our intuition: the decrease in the performance is small for every system when we do not apply bilingually lexicalized parsing models to the purely lexicalized rules (the largest drop of 0.22 BLEU points is not significant).",
+                    "sid": 313,
+                    "ssid": 313,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can conclude that the non- lexical rules and mixed rules need the bilingually lexicalized models most.",
+                    "sid": 314,
+                    "ssid": 314,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conduct an additional experiment to test the performance when the bilingually lexicalized parsing models are applied only to the non-lexical rules.",
+                    "sid": 315,
+                    "ssid": 315,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table VII shows the results on the large-scale data.",
+                    "sid": 316,
+                    "ssid": 316,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generative lexicalized parsing models (S2T.Gen.Tgt.Lex and S2T.Gen.SrcTgt.Lex) improve the translation quality only slightly compared with the baseline S2T (the largest improvement is 0.32 BLEU points).",
+                    "sid": 317,
+                    "ssid": 317,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The discriminative lexicalized parsing model achieves larger gains compared with the baseline, and the largest improvement is 0.43 BLEU points.",
+                    "sid": 318,
+                    "ssid": 318,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the improvement is somewhat.",
+                    "sid": 319,
+                    "ssid": 319,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "promising because the non-lexical rules comprise only a small fraction of the rules used in decoding (not more than 8.5%, as shown in Table V).",
+                    "sid": 320,
+                    "ssid": 320,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experimental results demonstrate that the bilingually lexicalized parsing models are effective in rendering the non-lexical rules less ambiguous during the rule selection in the decoding process.",
+                    "sid": 321,
+                    "ssid": 321,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TABLE VIII PERCENTAGE OF COMPOSED RULES USED DURING DECODING.",
+                    "sid": 322,
+                    "ssid": 322,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "THE NUMBER IN PARENTHESES DENOTES THE PROPORTION OF NON-LEXICAL AND MIXED RULES AMONG THE APPLIED COMPOSED RULES When we compare the numbers in Table VII with those in Table VI, we find a modest gap; the largest gain is 0.46 BLEU points (36.83 vs. 37.29).",
+                    "sid": 323,
+                    "ssid": 323,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result indicates that the bilingually lexicalized parsing models also contribute substantially to the mixed rules.In conclusion, both the non-lexical and mixed rules make sub stantial use of the bilingually lexicalized parsing models.",
+                    "sid": 324,
+                    "ssid": 324,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E. Relationship With the Composed Rules The STSG rules in the string-to-tree models can also be divided into minimal rules and composed rules.",
+                    "sid": 325,
+                    "ssid": 325,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may be argued that composed rules already encode substantially more lexical- ization compared with minimal rules, and the use of the composed rules therefore weakens the need for bilingually lexical- ized models in string-to-tree translation.",
+                    "sid": 326,
+                    "ssid": 326,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We argue that the composed rules are not a competitor, but rather a complement to the bilingually lexicalized models.",
+                    "sid": 327,
+                    "ssid": 327,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This relationship is reflected in the following two points: On the one hand, they play different roles during decoding.",
+                    "sid": 328,
+                    "ssid": 328,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The composed rules are designed to improve the rule coverage and encode more contexts [8], while our bilingually lexicalized models aim to distinguish effective rules from poor ones by dynamically associating the inside nonterminals with source- and target-side lexicalized information during decoding.",
+                    "sid": 329,
+                    "ssid": 329,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, as long as the composed rules contain nonterminals on their right-hand sides, bilingually lexicalized models can help to distinguish them from other rules in principle.",
+                    "sid": 330,
+                    "ssid": 330,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore examine the decoding process to determine how many composed rules are used and how many of the utilized composed rules contain nonterminals.",
+                    "sid": 331,
+                    "ssid": 331,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the large-scale experiment, the composed rules comprise approximately 20% of all the used rules utilized, and most of the applied composed rules are non-lexical and mixed ones that contain nonterminals.",
+                    "sid": 332,
+                    "ssid": 332,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table VIII shows the statistics.",
+                    "sid": 333,
+                    "ssid": 333,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the analysis in the previous section, this result indicates that the bilingually lexical- ized models can be useful for the composed rules.",
+                    "sid": 334,
+                    "ssid": 334,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, the composed rules need the bilingually lexicalized models.",
+                    "sid": 335,
+                    "ssid": 335,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "F. Decoding Efficiency of Bilingually Lexicalized STSG Models The incorporation of lexicalized STSG is disadvantageous in terms of the decoding speed because headwords and boundary words are dynamically acquired, and multiple probabilities must be calculated.",
+                    "sid": 336,
+                    "ssid": 336,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table IX lists the average decoding time for each system on the two test sets in the large-scale experiments.",
+                    "sid": 337,
+                    "ssid": 337,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of the experiments are conducted using the same hardware: GHz Fig.",
+                    "sid": 338,
+                    "ssid": 338,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.",
+                    "sid": 339,
+                    "ssid": 339,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two real translation examples, in the second example is an unknown word.",
+                    "sid": 340,
+                    "ssid": 340,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TABLE IX AVERAGE DECODING TIME IN WORDS PER SECOND GB memory.",
+                    "sid": 341,
+                    "ssid": 341,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The string-to-tree translation is relatively slow because the decoding search space is large, and the system searches all of the possible target tree structures.",
+                    "sid": 342,
+                    "ssid": 342,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The incorporation of the lexicalized STSG models further reduces the decoding speed.",
+                    "sid": 343,
+                    "ssid": 343,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generative model with bilingually lexicalized information, S2T.Gen.SrcTgt.Lex, is the slowest; this model decreases the decoding speed by 55.9% compared with the baseline.",
+                    "sid": 344,
+                    "ssid": 344,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result most likely owes to the fact that the model must calculate more backoff probabilities when computing the lexicalized rule probability.",
+                    "sid": 345,
+                    "ssid": 345,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the discriminative model, S2T.Dis.SrcTgt.Lex, exhibits slightly superior performance and slows down the baseline by only 29.4%.",
+                    "sid": 346,
+                    "ssid": 346,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the translation results and decoding speed, the discriminative model is more efficient and more effective compared with the generative models.",
+                    "sid": 347,
+                    "ssid": 347,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "G. Translation Examples To facilitate a better intuition to the ability of our proposed bilingually lexicalized parsing models against the baseline, we present two actual translation outputs produced by the baseline string-to-tree system S2T and the discriminative bilingually lexicalized system S2T.Dis.SrcTgt.Lex in the large-scale experiments in Fig.",
+                    "sid": 348,
+                    "ssid": 348,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.",
+                    "sid": 349,
+                    "ssid": 349,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The discriminative model is chosen because it exhibits the best performance in all of the bilingually lexical- ized models.In the first example, injured and were injured are two pos sible translations of the single Chinese word . However, only the translation were injured can produce a well-formed target tree structure because the Chinese word in this sentence indicates a passive meaning.",
+                    "sid": 350,
+                    "ssid": 350,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we investigate the optimal derivation path for these two systems, we find that the baseline model transformed the first three Chinese words, , into an English prepositional phrase (PP).",
+                    "sid": 351,
+                    "ssid": 351,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next two words, , are transformed into a verb phrase (VP).",
+                    "sid": 352,
+                    "ssid": 352,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rule is then used to translate the first five words into a larger verb phrase, injured in the earthquake in bam; the passive word were is neglected.",
+                    "sid": 353,
+                    "ssid": 353,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline model produced this error because it constructed the high-level tree structure without considering the source- and target-side lexicalized information.",
+                    "sid": 354,
+                    "ssid": 354,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, using the bilingually lexicalized information in a discriminative fashion, the system S2T.Dis.SrcTgt.Lex properly transformed the last six words into the English verb phrase about 30,000 people were injured and obtained the correct translation.",
+                    "sid": 355,
+                    "ssid": 355,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second example, the Chinese word h\\acute{e} is in fact a preposition, and the Chinese string is a prepositional phrase.",
+                    "sid": 356,
+                    "ssid": 356,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without the source-side syntactic information, it is reasonable to translate the Chinese word into the English conjunction and.",
+                    "sid": 357,
+                    "ssid": 357,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when the following context is taken into account, we have sufficient information to translate the Chinese word into an English preposition.",
+                    "sid": 358,
+                    "ssid": 358,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the boundary lexicalization (e.g., the words and ) is not considered when the baseline model constructs the high-level tree structures, the baseline system translated the Chinese string as a part of a noun phrase.",
+                    "sid": 359,
+                    "ssid": 359,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fortunately, our proposed system S2T.Dis.SrcTgt.Lex yielded a correct translation as it considers the headword and boundary words on both the source- and target-sides throughout the tree construction process.",
+                    "sid": 360,
+                    "ssid": 360,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "VI.",
+                    "sid": 361,
+                    "ssid": 361,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CONCLUSION AND FUTURE WORK In this paper, we presented a novel bilingually lexicalized STSG parsing model to achieve improved translation rule selection in STSG-based string-to-tree decoding.",
+                    "sid": 362,
+                    "ssid": 362,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first proposed a generative model for incorporating bilingual lexicalized information (e.g., headwords).",
+                    "sid": 363,
+                    "ssid": 363,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then proposed a simple dis- criminative model to incorporate additional bilingual lexical- ized features.",
+                    "sid": 364,
+                    "ssid": 364,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experimental results demonstrate that our approach can significantly improve the translation quality on both small-scale and large-scale data sets.",
+                    "sid": 365,
+                    "ssid": 365,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results also imply that both the target- and source-side lexicalized information is essential in the improvement of the translation quality.",
+                    "sid": 366,
+                    "ssid": 366,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the bilingually lexicalized parsing models positively influence the rule distribution in decoding, favoring rules with lexical words as constraints, and we find that the rules containing nonterminals on their right-hand side need the bilingually lexicalized STSG parsing model the most.",
+                    "sid": 367,
+                    "ssid": 367,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work, we intend to study the discriminative model in greater detail in order to explore its potential.",
+                    "sid": 368,
+                    "ssid": 368,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, we will explore additional informative features and investigate whether non-lexicalized parsing models used in the monolingual parsing community can inform our modeling strategies.",
+                    "sid": 369,
+                    "ssid": 369,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we plan to investigate the use of bilingually lexical- ized STSG in tree-to-tree translation models, which also lack lexicalization information in the construction of the high-level target-side tree structures.",
+                    "sid": 370,
+                    "ssid": 370,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

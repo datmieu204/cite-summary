@@ -1,0 +1,755 @@
+{
+    "ID": "P11-2121",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Getting the Most out of Transition-based Dependency Parsing",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper suggests two ways of improving transition-based, non-projective dependency parsing.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we add a transition to an existing non-projective parsing algorithm, so it can perform either projective or non-projective parsing as needed.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we present a bootstrapping technique that narrows down discrepancies between gold-standard and automatic parses used as features.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new addition to the algorithm shows a clear advantage in parsing speed.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bootstrapping technique gives a significant improvement to parsing accuracy, showing near state-of-theart performance with respect to other parsing approaches evaluated on the same data set.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Dependency parsing has recently gained considerable interest because it is simple and fast, yet provides useful information for many NLP tasks (Shen et al., 2008; Councill et al., 2010).",
+                    "sid": 6,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two main dependency parsing approaches (Nivre and McDonald, 2008).",
+                    "sid": 7,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One is a transition-based approach that greedily searches for local optima (highest scoring transitions) and uses parse history as features to predict the next transition (Nivre, 2003).",
+                    "sid": 8,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other is a graph-based approach that searches for a global optimum (highest scoring tree) from a complete graph in which vertices represent word tokens and edges (directed and weighted) represent dependency relations (McDonald et al., 2005).",
+                    "sid": 9,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lately, the usefulness of the transition-based approach has drawn more attention because it generally performs noticeably faster than the graph-based 687 approach (Cer et al., 2010).",
+                    "sid": 10,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The transition-based approach has a worst-case parsing complexity of O(n) for projective, and O(n2) for non-projective parsing (Nivre, 2008).",
+                    "sid": 11,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complexity is lower for projective parsing because it can deterministically drop certain tokens from the search space whereas that is not advisable for non-projective parsing.",
+                    "sid": 12,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Despite this fact, it is possible to perform non-projective parsing in linear time in practice (Nivre, 2009).",
+                    "sid": 13,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because the amount of non-projective dependencies is much smaller than the amount of projective dependencies, so a parser can perform projective parsing for most cases and perform non-projective parsing only when it is needed.",
+                    "sid": 14,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One other advantage of the transition-based approach is that it can use parse history as features to make the next prediction.",
+                    "sid": 15,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This parse information helps to improve parsing accuracy without hurting parsing complexity (Nivre, 2006).",
+                    "sid": 16,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most current transition-based approaches use gold-standard parses as features during training; however, this is not necessarily what parsers encounter during decoding.",
+                    "sid": 17,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, it is desirable to minimize the gap between gold-standard and automatic parses for the best results.",
+                    "sid": 18,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper improves the engineering of different aspects of transition-based, non-projective dependency parsing.",
+                    "sid": 19,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce the search space, we add a transition to an existing non-projective parsing algorithm.",
+                    "sid": 20,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To narrow down the discrepancies between gold-standard and automatic parses, we present a bootstrapping technique.",
+                    "sid": 21,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new addition to the algorithm shows a clear advantage in parsing speed.",
+                    "sid": 22,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bootstrapping technique gives a significant improvement to parsing accuracy.",
+                    "sid": 23,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 reducing search space",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Our algorithm is based on Choi-Nicolov\u2019s approach to Nivre\u2019s list-based algorithm (Nivre, 2008).",
+                    "sid": 24,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main difference between these two approaches is in their implementation of the SHIFT transition.",
+                    "sid": 25,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ChoiNicolov\u2019s approach divides the SHIFT transition into two, deterministic and non-deterministic SHIFT\u2019s, and trains the non-deterministic SHIFT with a classifier so it can be predicted during decoding.",
+                    "sid": 26,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Choi and Nicolov (2009) showed that this implementation reduces the parsing complexity from O(n2) to linear time in practice (a worst-case complexity is O(n2)).",
+                    "sid": 27,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We suggest another transition-based parsing approach that reduces the search space even more.",
+                    "sid": 28,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea is to merge transitions in Choi-Nicolov\u2019s non-projective algorithm with transitions in Nivre\u2019s projective algorithm (Nivre, 2003).",
+                    "sid": 29,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nivre\u2019s projective algorithm has a worst-case complexity of O(n), which is faster than any non-projective parsing algorithm.",
+                    "sid": 30,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the number of non-projective dependencies is much smaller than the number of projective dependencies (Nivre and Nilsson, 2005), it is not efficient to perform non-projective parsing for all cases.",
+                    "sid": 31,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ideally, it is better to perform projective parsing for most cases and perform non-projective parsing only when it is needed.",
+                    "sid": 32,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this algorithm, we add another transition to Choi-Nicolov\u2019s approach, LEFT-POP, similar to the LEFT-ARC transition in Nivre\u2019s projective algorithm.",
+                    "sid": 33,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By adding this transition, an oracle can now choose either projective or non-projective parsing depending on parsing states.1 Note that Nivre (2009) has a similar idea of performing projective and non-projective parsing selectively.",
+                    "sid": 34,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That algorithm uses a SWAP transition to reorder tokens related to non-projective dependencies, and runs in linear time in practice (a worst-case complexity is still O(n2)).",
+                    "sid": 35,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm is distinguished in that it does not require such reordering.",
+                    "sid": 36,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows transitions used in our algorithm.",
+                    "sid": 37,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All parsing states are represented as tuples (\u03bb1, \u03bb2, \u03b2, E), where \u03bb1, \u03bb2, and \u03b2 are lists of word tokens.",
+                    "sid": 38,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E is a set of labeled edges representing previously identified dependencies.",
+                    "sid": 39,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "L is a dependency label and i, j, k represent indices of their corresponding word tokens.",
+                    "sid": 40,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The initial state is ([0], [ ], [1,...,n], \u2205).",
+                    "sid": 41,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 0 identifier corresponds to an initial token, w0, introduced as the root of the sentence.",
+                    "sid": 42,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final state is (\u03bb1, \u03bb2, [ ], E), i.e., the algorithm terminates when all tokens in \u03b2 are consumed.",
+                    "sid": 43,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm uses five kinds of transitions.",
+                    "sid": 44,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All transitions are performed by comparing the last token in \u03bb1, wi, and the first token in \u03b2, wj.",
+                    "sid": 45,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both LEFT-POPL and LEFT-ARCL are performed when wj is the head of wi with a dependency relation L. The difference is that LEFT-POP removes wi from \u03bb1 after the transition, assuming that the token is no longer needed in later parsing states, whereas LEFTARC keeps the token so it can be the head of some token wj<k<n in \u03b2.",
+                    "sid": 46,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This wi \u2192 wk relation causes a non-projective dependency.",
+                    "sid": 47,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RIGHT-ARCL is performed when wi is the head of wj with a dependency relation L. SHIFT is performed when \u03bb1 is empty (DT) or there is no token in \u03bb1 that is either the head or a dependent of wj (NT).",
+                    "sid": 48,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NO-ARC is there to move tokens around so each token in \u03b2 can be compared to all (or some) tokens prior to it.",
+                    "sid": 49,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training, the algorithm checks for the preconditions of all transitions and generates training instances with corresponding labels.",
+                    "sid": 50,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During decoding, the oracle decides which transition to perform based on the parsing states.",
+                    "sid": 51,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With the addition of LEFT-POP, the oracle can choose either projective or non-projective parsing by selecting LEFT-POP or LEFT-ARC, respectively.",
+                    "sid": 52,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments show that this additional transition improves both parsing accuracy and speed.",
+                    "sid": 53,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The advantage derives from improving the efficiency of the choice mechanism; it is now simply a transition choice and requires no additional processing.",
+                    "sid": 54,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 bootstrapping automatic parses",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Transition-based parsing has the advantage of using parse history as features to make the next prediction.",
+                    "sid": 55,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our algorithm, when wi and wj are compared, subtree and head information of these tokens is partially provided by previous parsing states.",
+                    "sid": 56,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Graphbased parsing can also take advantage of using parse information.",
+                    "sid": 57,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is done by performing \u2018higherorder parsing\u2019, which is shown to improve parsing accuracy but also increase parsing complexity (Carreras, 2007; Koo and Collins, 2010).2 Transitionbased parsing is attractive because it can use parse information without increasing complexity (Nivre, 2006).",
+                    "sid": 58,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The qualification is that parse information provided by gold-standard trees during training is not necessarily the same kind of information provided by automatically parsed trees during decoding.",
+                    "sid": 59,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can confuse a statistical model trained only on the gold-standard trees.",
+                    "sid": 60,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce the gap between gold-standard and automatic parses, we use bootstrapping on automatic parses.",
+                    "sid": 61,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we train a statistical model using goldstandard trees.",
+                    "sid": 62,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we parse the training data using the statistical model.",
+                    "sid": 63,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During parsing, we extract features for each parsing state, consisting of automatic parse information, and generate a training instance by joining the features with the goldstandard label.",
+                    "sid": 64,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gold-standard label is achieved by comparing the dependency relation between wz and wj in the gold-standard tree.",
+                    "sid": 65,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the parsing is done, we train a different model using the training instances induced by the previous model.",
+                    "sid": 66,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We repeat the procedure until a stopping criteria is met.",
+                    "sid": 67,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The stopping criteria is determined by performing cross-validation.",
+                    "sid": 68,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each stage, we perform crossvalidation to check if the average parsing accuracy on the current cross-validation set is higher than the one from the previous stage.",
+                    "sid": 69,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We stop the procedure when the parsing accuracy on cross-validation sets starts decreasing.",
+                    "sid": 70,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments show that this simple bootstrapping technique gives a significant improvement to parsing accuracy.",
+                    "sid": 71,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 related work",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Daum\u00b4e et al. (2009) presented an algorithm, called SEARN, for integrating search and learning to solve complex structured prediction problems.",
+                    "sid": 72,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our bootstrapping technique can be viewed as a simplified version of SEARN.",
+                    "sid": 73,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training, SEARN iteratively creates a set of new cost-sensitive examples using a known policy.",
+                    "sid": 74,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our case, the new examples are instances containing automatic parses induced by the previous model.",
+                    "sid": 75,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our technique is simplified because the new examples are not cost-sensitive.",
+                    "sid": 76,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, SEARN interpolates the current policy with the previous policy whereas we do not perform such interpolation.",
+                    "sid": 77,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During decoding, SEARN generates a sequence of decisions and makes a final prediction.",
+                    "sid": 78,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our case, the decisions are predicted dependency relations and the final prediction is a dependency tree.",
+                    "sid": 79,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SEARN has been successfully adapted to several NLP tasks such as named entity recognition, syntactic chunking, and POS tagging.",
+                    "sid": 80,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To the best of our knowledge, this is the first time that this idea has been applied to transition-based parsing and shown promising results.",
+                    "sid": 81,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhang and Clark (2008) suggested a transitionbased projective parsing algorithm that keeps B different sequences of parsing states and chooses the one with the best score.",
+                    "sid": 82,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use beam search and show a worst-case parsing complexity of O(n) given a fixed beam size.",
+                    "sid": 83,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly to ours, their learning mechanism using the structured perceptron algorithm involves training on automatically derived parsing states that closely resemble potential states encountered during decoding.",
+                    "sid": 84,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 experiments",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "All models are trained and tested on English and Czech data using automatic lemmas, POS tags, and feats, as distributed by the CoNLL\u201909 shared task (Haji\u02c7c et al., 2009).",
+                    "sid": 85,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use Liblinear L2-L1 SVM for learning (L2 regularization, L1 loss; Hsieh et al. (2008)).",
+                    "sid": 86,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our experiments, we use the following learning parameters: c = 0.1 (cost), e = 0.1 (termination criterion), B = 0 (bias).",
+                    "sid": 87,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we evaluate the impact of the LEFT-POP transition we add to Choi-Nicolov\u2019s approach.",
+                    "sid": 88,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To make a fair comparison, we implemented both approaches and built models using the exact same feature set.",
+                    "sid": 89,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \u2018CN\u2019 and \u2018Our\u2019 rows in Table 3 show accuracies achieved by Choi-Nicolov\u2019s and our approaches, respectively.",
+                    "sid": 90,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach shows higher accuracies for all categories.",
+                    "sid": 91,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we evaluate the impact of our bootstrapping technique.",
+                    "sid": 92,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \u2018Our+\u2019 row shows accuracies achieved by our algorithm using the bootstrapping technique.",
+                    "sid": 93,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement from \u2018Our\u2019 to \u2018Our+\u2019 is statistically significant for all categories (McNemar, p < .0001).",
+                    "sid": 94,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvment is even more significant in a language like Czech for which parsers generally perform more poorly.",
+                    "sid": 95,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we compare our work against other state-ofthe-art systems.",
+                    "sid": 96,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the CoNLL\u201909 shared task, Gesmundo et al. (2009) introduced the best transitionbased system using synchronous syntactic-semantic parsing (\u2018Merlo\u2019), and Bohnet (2009) introduced the best graph-based system using a maximum spanning tree algorithm (\u2018Bohnet\u2019).",
+                    "sid": 97,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach shows quite comparable results with these systems.3 Figure 1 shows average parsing speeds for each sentence group in both English and Czech evaluation sets (Table 4).",
+                    "sid": 98,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2018Nivre\u2019 is Nivre\u2019s swap algorithm (Nivre, 2009), of which we use the implementation from MaltParser (maltparser. org).",
+                    "sid": 99,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other approaches are implemented in our open source project, called ClearParser (code. google.com/p/clearparser).",
+                    "sid": 100,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that features used in MaltParser have not been optimized for these evaluation sets.",
+                    "sid": 101,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All experiments are tested on an Intel Xeon 2.57GHz machine.",
+                    "sid": 102,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For generalization, we run five trials for each parser, cut off the top and bottom speeds, and average the middle three.",
+                    "sid": 103,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The loading times for machine learning models are excluded because they are independent from the parsing algorithms.",
+                    "sid": 104,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average parsing speeds are 2.86, 2.69, and 2.29 (in milliseconds) for Nivre, CN, and Our+, respectively.",
+                    "sid": 105,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach shows linear growth all along, even for the sentence groups where some approaches start showing curves.",
+                    "sid": 106,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also measured average parsing speeds for \u2018Our\u2019, which showed a very similar growth to \u2018Our+\u2019.",
+                    "sid": 107,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average parsing speed of \u2018Our\u2019 was 2.20 ms; it performed slightly faster than \u2018Our+\u2019 because it skipped more nodes by performing more non-deterministic SHIFT\u2019s, which may or may not have been correct decisions for the corresponding parsing states.",
+                    "sid": 108,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is worth mentioning that the curve shown by \u2018Nivre\u2019 might be caused by implementation details regarding feature extraction, which we included as part of parsing.",
+                    "sid": 109,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To abstract away from these implementation details and focus purely on the algorithms, we would need to compare the actual number of transitions performed by each parser, which will be explored in future work.",
+                    "sid": 110,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 conclusion and future work",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We present two ways of improving transition-based, non-projective dependency parsing.",
+                    "sid": 111,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The additional transition gives improvements to both parsing speed and accuracy, showing a linear time parsing speed with respect to sentence length.",
+                    "sid": 112,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bootstrapping technique gives a significant improvement to parsing accuracy, showing near state-of-the-art performance with respect to other parsing approaches.",
+                    "sid": 113,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the future, we will test the robustness of these approaches in more languages.",
+                    "sid": 114,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We gratefully acknowledge the support of the National Science Foundation Grants CISE-IIS-RI-0910992, Richer Representations for Machine Translation, a subcontract from the Mayo Clinic and Harvard Children\u2019s Hospital based on a grant from the ONC, 90TR0002/01, Strategic Health Advanced Research Project Area 4: Natural Language Processing, and a grant from the Defense Advanced Research Projects Agency (DARPA/IPTO) under the GALE program, DARPA/CMO Contract No.",
+                    "sid": 115,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "HR0011-06-C-0022, subcontract from BBN, Inc. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the National Science Foundation.",
+                    "sid": 116,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

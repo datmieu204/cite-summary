@@ -1,0 +1,1901 @@
+{
+    "ID": "D12-1016",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Generating coherent discourse is an important aspect in natural language generation.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our aim is to learn factors that constitute coherent discourse from data, with a focus on how to realize predicate-argument structures in a model that exceeds the sentence level.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present an important subtask for this overall goal, in which we align predicates across comparable texts, admitting partial argument structure correspondence.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contribution of this work is twofold: We first construct a large corpus resource of comparable texts, including an evaluation set with manual predicate alignments.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, we present a novel approach for aligning predicates across comparable texts using graph-based clustering with Mincuts.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method significantly outperforms other alignment techniques when applied to this novel alignment task, by a margin of at least 6.5 percentage points in F1 -score.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Discourse coherence is an important aspect in natural language generation (NLG) applications.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A number of theories have investigated coherence inducing factors.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A prominent example is Centering Theory (Grosz et al., 1995), which models local coherence by relating the choice of referring expressions to the importance of an entity at a certain stage of a discourse.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A data-driven model based on this theory is the entity-based approach by Barzilay and Lap- ata (2008), which models coherence phenomena by observing sentence-to-sentence transitions of entity occurrences.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Barzilay and Lapata show that their approach can discriminate between a coherent and a non-coherent set of ordered sentences.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, their model is not able to generate alternative entity realizations by itself.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the entity-based approach only investigates realization patterns for individual entities in discourse in terms of core grammatical functions.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It does not investigate the interplay between entity transitions and realization patterns for full- fledged semantic structures.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This interplay, however, is an important factor for a semantics-based, generative model of discourse coherence.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main hypothesis of our work is that we can automatically learn context-specific realization patterns for predicate argument structures (PAS) from a semantically parsed corpus of comparable text pairs.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our assumption builds on the success of previous research, where comparable and parallel texts have been exploited for a range of related learning tasks, e.g., unsupervised discourse segmentation (Barzilay and Lee, 2004) and bootstrapping semantic analyzers (Titov and Kozhevnikov, 2010).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our purposes, we are interested in finding corresponding PAS across comparable texts that are known to talk about the same events, and hence involve the same set of underlying event participants.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By aligning predicates in such texts, we can investigate the factors that determine discourse coherence in the realization patterns for the involved arguments.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These include the specific forms of argument realization, as a pronoun or a specific type of referential expression, as studied in prior work in NLG (Belz et al., 2009, inter alia).",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The specific setup we examine, however, allows us to further investi 171 Proceedings of the 2012 Joint Conference on Empirical Methods in Natural Language Processing and Computational Natural Language Learning, pages 171\u2013182, Jeju Island, Korea, 12\u201314 July 2012.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2012 Association for Computational Linguistics gate the factors that govern the non-realization of an argument position, as a special form of coherence inducing element in discourse.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Example (1), extracted from our corpus of aligned texts,illustrates this point: Both texts report on the same event of locating victims in an avalanche.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While (1.a) explicitly talks about the location of this event, the role remains implicit in the second sentence of (1.b), given that it can be recovered from the preceding sentence.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, realization of this argument role would impede the fluency of discourse by being overly repetitive.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) a. . . .",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The official said that [no bodies]Arg1 had been recovered [from the avalanches]Arg2 which occurred late Friday in the Central Asian country near the Afghan border some 300 kilometers (185 miles) southeast of the capital Dushanbe.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "b. Three other victims were trapped in an avalanche in the village of Khichikh.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "[None of the victims bodies]Arg1 have been found [ ]Argmloc . This phenomenon clearly relates to the problem of discourse-linking of implicit roles, a very challenging task in discourse processing.1 In our work, we consider this problem from a content-based generation perspective, concentrating on the discourse factors that allow for the omission of a role.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, our aim is to identify comparable predications across aligned texts, and to study the discourse coherence factors that determine the realization patterns of arguments in the respective discourses.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be achieved by considering the full set of arguments that can be recovered from the aligned predications.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper focuses on the first of these tasks, henceforth called predicate alignment.2 In line with data-driven approaches in NLP, we automatically align predicates in a suitable corpus of paired texts.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The induced alignments will (i) serve to identify events described in both comparable texts, and (ii) provide information about the underlying argument structures and how they are realized in each context to establish a coherent discourse.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We investigate a graph-based clustering method for induc 1 See the recent SemEval 2010 task: Linking Events and their Participants in Discourse, (Ruppenhofer et al., 2010).",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "note that we provide details regarding the construction of. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "a suitable data set and further examples involving non-realized arguments in a complementary paper (Roth and Frank, 2012).",
+                    "sid": 35,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ing such alignments as clustering provides a suitable framework to implicitly relate alignment decisions to one another, by exploiting global information encoded in a graph.",
+                    "sid": 36,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remainder of this paper is structured as follows: In Section 2, we discuss previous work in related tasks.",
+                    "sid": 37,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 describes our task and a suitable data set.",
+                    "sid": 38,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 introduces a graph-based clustering model using Mincuts for the alignment of predicates.",
+                    "sid": 39,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5 outlines the experiments and presents evaluation results.",
+                    "sid": 40,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we conclude in Section 6 and discuss future work.",
+                    "sid": 41,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 Related Work.",
+                    "sid": 42,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task of aligning words in general has been studied extensively in previous work, for example as part of research in statistical machine translation (SMT).",
+                    "sid": 43,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typically, alignment models in SMT are trained by observing and (re-)estimating co-occurrence counts of word pairs in parallel sentences (Brown et al., 1993).",
+                    "sid": 44,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same methods have also been applied in monolingual settings, for example to align words in paraphrases (Cohn et al., 2008).",
+                    "sid": 45,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to traditional word alignment tasks, our focus is not on pairs of isolated sentences but on aligning predicates within the discourse contexts in which they are situated.",
+                    "sid": 46,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, text pairs for our task should not be strictly parallel as we are specifically interested in the impact of different discourse contexts.",
+                    "sid": 47,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 5, we will show that this particular setting indeed constitutes a more challenging task compared to traditional word alignment in parallel or paraphrasing sentences.",
+                    "sid": 48,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another set of related tasks is found in the area of textual inference.",
+                    "sid": 49,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since 2006, there have been regular challenges on the task of Recognizing Textual Entailment (RTE).",
+                    "sid": 50,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the original task description, Dagan et al.",
+                    "sid": 51,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) define textual entailment \u201cas a directional relationship between pairs of text expressions, denoted by T - the entailing \u2018Text\u2019 -, and H - the entailed \u2018Hypothesis\u2019.",
+                    "sid": 52,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ") T entails H if the meaning of H can be inferred from the meaning of T, as would typically be interpreted by people.\u201d Although this relation does not necessarily require the presence of corresponding predicates, previous work by MacCartney et al.",
+                    "sid": 53,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) shows that word alignments can serve as a good indicator of entailment.",
+                    "sid": 54,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a matter of fact, the same holds true for the task of detecting paraphrases.",
+                    "sid": 55,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to RTE, this latter task requires bidirectional entailments, i.e., each of the two phrases must entail the other.",
+                    "sid": 56,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wan et al.",
+                    "sid": 57,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) show that a simple approach solely based on word (and lemmatized n-gram) overlap can already achieve an F1-score of up to 83% for detecting paraphrases in the Microsoft Research Paraphrase Corpus (Dolan and Brockett, 2005, MSRPC).",
+                    "sid": 58,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, this is just 0.6% points below the state-of-the-art results recently reported by Socher et al.",
+                    "sid": 59,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011).",
+                    "sid": 60,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The MSRPC and data sets from the first RTE challenges only consisted of isolated pairs of sentences.",
+                    "sid": 61,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Fifth PASCAL Recognizing Textual Entailment Challenge (Bentivogli et al., 2009) introduced a \u201cSearch Task\u201d, where entailing sentences for a hypothesis have to be found in a set of full documents.",
+                    "sid": 62,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This new task first opened the doors for assessing the role of discourse (Mirkin et al., 2010a; Mirkin et al., 2010b) in RTE.",
+                    "sid": 63,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this setting is still limited as discourse contexts are only provided for the entailing part (T ) of each text pair but not for the hypothesis H . A further task related to ours is the detection of event coreference.",
+                    "sid": 64,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal of this task is to identify all mentions of the same event within a document and, in some settings, also across documents.",
+                    "sid": 65,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the task setting is typically more restricted than ours in that its focus lies on identical events/references (cf.",
+                    "sid": 66,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Walker et al.",
+                    "sid": 67,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006), Weischedel et al.",
+                    "sid": 68,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011), inter alia).",
+                    "sid": 69,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, verbalizations of different aspects of an event (e.g., \u2018buy\u2019\u2013\u2018sell\u2019, \u2018kill\u2019\u2013\u2018die\u2019, \u2018recover\u2019\u2013\u2018find\u2019) are generally not linked in this paradigm.",
+                    "sid": 70,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to co- reference methods that identify chains of events, we are interested in pairs of corresponding predicates (and their argument structure), for which we can observe alternative realizations in discourse.",
+                    "sid": 71,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "aligning predicates across texts. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "This section summarizes how we built a large corpus of comparable texts, as a basis for the predicate alignment task.",
+                    "sid": 72,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We motivate the choice of the corpus and present a strategy for extracting comparable text pairs.",
+                    "sid": 73,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subsequently, we report on the preparation of an evaluation data set with manual predicate alignments across the paired texts.",
+                    "sid": 74,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude this section with an example that showcases the potential of using aligned predicates for the study of coherence phenomena.",
+                    "sid": 75,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More detailed information regarding corpus creation, annotation guidelines and additional examples illustrating the potential of this corpus can be found in Roth and Frank (2012).",
+                    "sid": 76,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Corpus Creation.",
+                    "sid": 77,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal of our work is to investigate coherence factors for argument structure realization, using comparable texts that describe the same events, but that include variation in textual presentation.",
+                    "sid": 78,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This requirement fits well with the news domain, for which we can trace varying textual sources that describe the same underlying events.",
+                    "sid": 79,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English Gigaword Fifth Edition (Parker et al., 2011) corpus (henceforth just Gigaword) is one of the largest corpus collections for English.",
+                    "sid": 80,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It comprises a total of 9.8 million newswire articles from seven distinct sources.",
+                    "sid": 81,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In previous work (Roth and Frank, 2012), we introduced GigaPairs, a sub-corpus extracted from Gigaword that includes over 160,000 pairs of newswire articles from distinct sources.",
+                    "sid": 82,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GigaPairs has been derived from Gigaword using the pairwise similarity method on headlines presented by Wubben et al.",
+                    "sid": 83,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009).",
+                    "sid": 84,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to calculating the similarity of news titles, we impose an additional date constraint to further increase the precision of extracted pairs of texts.",
+                    "sid": 85,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Random inspection of about 100 documents revealed only two texts describing different events.",
+                    "sid": 86,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, we extracted 167,728 document pairs containing a total of 50 million word tokens.",
+                    "sid": 87,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each document in this corpus consists of up to 7.564 words with a mean and median of 301 and 213 words, respectively.",
+                    "sid": 88,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All texts have been pre-processed using MATE tools (Bjo\u00a8 rkelund et al., 2010; Bohnet, 2010), a pipeline of NLP modules including a state- of-the-art semantic role labeler that computes Prop- Bank/NomBank annotations (Palmer et al., 2005; Meyers et al., 2008).",
+                    "sid": 89,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Gold Standard Annotation.",
+                    "sid": 90,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We selected 70 text pairs from the GigaPairs corpus for manual predicate alignment.",
+                    "sid": 91,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All document pairs were randomly chosen with the constraint that each text consists of 100 to 300 words.3 Predi 3 This constraint is satisfied by 75.3% of all documents in.",
+                    "sid": 92,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GigaPairs.",
+                    "sid": 93,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "cates identified by the semantic parser are provided as pre-labeled annotations for alignment.",
+                    "sid": 94,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We asked two students4 to tag corresponding predicates across each text pair.",
+                    "sid": 95,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following standard practice in word alignment tasks (cf.",
+                    "sid": 96,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cohn et al.",
+                    "sid": 97,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008)) the annota- tors were instructed to distinguish between sure and possible alignments, depending on how certainly, in their opinion, two predicates describe verbalizations of the same event.",
+                    "sid": 98,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following examples show predicate pairings marked as sure (2) and as possible alignments (3).",
+                    "sid": 99,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) a. The regulator ruled on September 27 that Nasdaq too was qualified to bid for OMX [.",
+                    "sid": 100,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "] b. The authority [.",
+                    "sid": 101,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "] had already approved a similar application by Nasdaq.",
+                    "sid": 102,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) a. Myanmar\u2019s military government said earlier this year it has released some 220 political prisoners [.",
+                    "sid": 103,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "] b. The government has been regularly releasing members of Suu Kyi\u2019s National League for Democracy party [.",
+                    "sid": 104,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "] In total, the annotators (A/B) aligned 487/451 sure and 221/180 possible alignments with a Kappa score (Cohen, 1960) of 0.86.5 For the construction of a gold standard, we merged the alignments from both annotators by taking the union of all possible alignments and the intersection of all sure alignments.",
+                    "sid": 105,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cases which involved a sure alignment on which the annotators disagreed were resolved in a group discussion with the first author.",
+                    "sid": 106,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We split the final corpus into a development set of 10 document pairs and a test set of 60 document pairs.",
+                    "sid": 107,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test set contains a total of 3,453 predicates (1,531 nouns and 1,922 verbs).",
+                    "sid": 108,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its gold standard annotation consists of 446 sure and 361 possible alignments, which corresponds to an average of 7.4 sure (6.0 possible) alignments per document pair.",
+                    "sid": 109,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the gold alignments (82.4%) are between predicates of the same part-of-speech (242 noun and 423 verb pairs).",
+                    "sid": 110,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A total of 383 gold alignments (47.5%) have been annotated between predicates with identical lemma form.",
+                    "sid": 111,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Diverging numbers of realized arguments can be observed in 320 pairs (39.7%).",
+                    "sid": 112,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Both annotators are students in computational linguistics, one undergraduate (A) and one postgraduate (B) student.",
+                    "sid": 113,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Following Brockett (2007), we computed agreement on la-.",
+                    "sid": 114,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "beled annotations, including unaligned predicate pairs as an additional null category.",
+                    "sid": 115,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Potential for Discourse Coherence.",
+                    "sid": 116,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This section presents an example of an aligned predicate pair from our development set that illustrates the potential of aggregating corresponding PAS across comparable texts.",
+                    "sid": 117,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The example represents one of eleven cases involving unrealized arguments that can be found in our development set of only ten document pairs.",
+                    "sid": 118,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) a. The Chadians said theyArg0 had fled in fear of their lives.",
+                    "sid": 119,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "b. The United Nations says some 20,000 refugeesArg0 have fled into CameroonArg1 . In both sentences, the Arg0 role of the predicate flee is filled, but Arg1 (here: the goal) has not been realized in (4.a).",
+                    "sid": 120,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, sentence (4.a) is still part of a coherent discourse, as a role filler for the omitted argument can be inferred from the preceding context.",
+                    "sid": 121,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the goal of our work, we are interested in factors that license such omissions of an argument.",
+                    "sid": 122,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Potential factors on the discourse level include the information status of the entity filling an argument position, and its salience at the corresponding point in discourse.",
+                    "sid": 123,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Roth and Frank (2012) discuss additional examples that demonstrate the importance of factors on further linguistic levels, e.g., lexical choice of predicates and their syntactic realization.",
+                    "sid": 124,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the example above, the aggregation of aligned PAS presents an effective means to identify appropriate fillers for unrealized roles.",
+                    "sid": 125,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, we can utilize each such pair as one positive and one negative training instance for a model of discourse coherence that controls the omissibility of arguments.",
+                    "sid": 126,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In what follows, we introduce an alignment approach that can be used to automatically acquire more training data using the entire GigaPairs corpus.",
+                    "sid": 127,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "model. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "For the automatic induction of predicate alignments across texts, we opt for an unsupervised graph-based clustering method.",
+                    "sid": 128,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we first define a graph representation for pairs of documents.",
+                    "sid": 129,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, predicates are represented as nodes in such a graph and similarities between predicates as edges.",
+                    "sid": 130,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then proceed to describe various similarity measures that can be used to identify similar predicate instances.",
+                    "sid": 131,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we introduce the clustering algorithm that we apply to graphs (representing pairs of documents) in order to induce alignments between corresponding predicates.",
+                    "sid": 132,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Graph representation.",
+                    "sid": 133,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We build a bipartite graph representation for each (Fellbaum, 1998) to find the synset of the least common subsumer (lcs) and uses the pre-computed Information Content (IC) files from Pedersen et al.",
+                    "sid": 134,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) to compute Lin\u2019s measure: I C (lcs(s1, s2))pair of texts, using as vertices the predicate argument structures assigned in pre-processing (cf.",
+                    "sid": 135,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sec simWN(p1, p2) = I C (s1) \u2217 I C (s2) (3) tion 3.1).",
+                    "sid": 136,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We represent each predicate as a node and integrate information about arguments only implicitly.",
+                    "sid": 137,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the sets of predicates P1 and P2 of two comparable texts T1 and T2, respectively, we formally define an undirected graph GP1 ,P2 as follows: V = P1 \u222a P2 In order to compute similarities between verbal and nominal predicates, we further use derivation information from NomBank (Meyers et al., 2008): if a noun represents a nominalization of a verbal predicate, we resort to the corresponding verb synset.",
+                    "sid": 138,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If no relation can be found between two predicates, we set a default value of simWN = 0.",
+                    "sid": 139,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This applies GP1 ,P2 = (V, E) where E = P1 \u00d7 P2 (1) in particular to all cases that involve a predicate not present in WordNet.",
+                    "sid": 140,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Edge weights.",
+                    "sid": 141,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We specify the edge weight between two nodes representing predicates p1 \u2208 P1 and p2 \u2208 P2 as a weighted linear combination of four similarity measures described in the next section: WordNet and VerbNet similarity, Distributional similarity and Argument similarity.",
+                    "sid": 142,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "wp1 p2 = \u03bb1 \u2217 simWN(p1, p2) VerbNet similarity.",
+                    "sid": 143,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To overcome systematic problems with the WordNet verb hierarchy (cf.",
+                    "sid": 144,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Richens (2008)), we further compute similarity between verbal predicates using VerbNet (Kipper et al., 2008).",
+                    "sid": 145,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Verbs in VerbNet are categorized into semantic classes according to their syntactic behavior.",
+                    "sid": 146,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A class C can recursively embed sub-classes (C ) that represent finer semantic and + \u03bb2 \u2217 simVN(p1, p2) + \u03bb3 \u2217 simDist(p1, p2) + \u03bb4 \u2217 simArg(p1, p2) (2) Cs \u2208 sub syntactic distinctions.",
+                    "sid": 147,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a simple similarity function that defines fixed similarity scores between 0 and 1 for pairs of predicates p1, p2 depending on Initially we set all weighting parameters \u03bb1 . . .",
+                    "sid": 148,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03bb4 to have uniform weights by default.",
+                    "sid": 149,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 5, we their relatedness within the VerbNet class hierarchy:define an optimized weighting setting for the indi \uf8f1 1.0 if C : p , p C vidual similarity measures.",
+                    "sid": 150,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2203 1 2 \u2208 \uf8f4 4.2 Similarity Measures.",
+                    "sid": 151,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "simVN (p1 , p2 ) = \uf8f4\uf8f2 0.8 if \u2203C, Cs : Cs \u2208 sub(C ) (4) \uf8f4 \u2227 p1 , p2 \u2208 C \u222a Cs We employ a number of similarity measures that make use of complementary information that is type-based (simWN/VN/Dist) or token-based (simArg ).6 Given two lemmatized predicates p1, p2 and their set of arguments A1 = args(p1), A2 = args(p2), we define the following measures.",
+                    "sid": 152,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WordNet similarity.",
+                    "sid": 153,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given all pairs of synsets s1, s2 that contain the predicates p1, p2, respectively, we compute the maximal similarity using the information theoretic measure described in Lin (1998).",
+                    "sid": 154,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our implementation exploits the WordNet hierarchy 6 All token-based frequency counts (i.e., f req() and idf ()) are computed over all documents from the AFP and APW parts of the English Gigaword Fifth Edition.",
+                    "sid": 155,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\uf8f4\uf8f3 0.0 else Distributional similarity.",
+                    "sid": 156,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As some predicates may not be covered by the WordNet and VerbNet hierarchies, we additionally calculate similarity based on distributional meaning in a semantic space (Landauer and Dumais, 1997).",
+                    "sid": 157,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the traditional bag-of-words approach that has been applied in related tasks (Guo and Diab, 2011; Mitchell and La- pata, 2010), we consider the 2,000 most frequent context words c1, . . .",
+                    "sid": 158,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", c2000 \u2208 C as dimensions of a vector space and define predicates as vectors using their Pointwise Mutual Information (PMI): p__ = (PMI(p, c1), . . .",
+                    "sid": 159,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", PMI(p, c2000) (5) with PMI(x, y) = freq(x, y) freq(x) \u2217 freq(y) Given the vector representations of two predicates, we calculate their similarity as the cosine of the angle between the two vectors: p__1 \u00b7 p__2 function CLUSTER(G) clusters \u2190 \u2205 E \u2190 GETEDGES(G) 1> Step 1 e \u2190 GETEDGEWITHLOWESTWEIGHT(E) s \u2190 GETSOURCENODE(e) t \u2190 GETTARGETNODE(e) G \u2190 MINCUT(G, s, t) 1> Step 2 simDist(p1, p2) = |p__1| \u2217 |p__2| (6) C \u2190 GETCONNECTEDCOMPONEN TS(G )Argument similarity.",
+                    "sid": 160,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the previous similar ity measures are purely type-based, argument similarity integrates token-based, i.e., discourse-specific, similarity information about predications by taking into account the similarity of their arguments.",
+                    "sid": 161,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This measure calculates the association between the arguments A1 of the first and the arguments A2 of the second predicate by determining the ratio of overlapping words in both argument sets.",
+                    "sid": 162,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "for all Gs \u2208 C do 1> Step 3 if SIZE(Gs) <= 2 then clusters \u2190 clusters \u222a Gs else clusters \u2190 clusters \u222a CLUSTER(Gs) end if end for return clusters; end function simArg(p1, p2) = w\u2208A1 \u2229A2 idf(w) Figure 2: Pseudo code of our clustering algorithm w\u2208A1 idf(w) + w\u2208A2 idf(w) (7) As our goal is to induce clusters that correspond to In order to give higher weight to (rare) content words, we weight each word by its Inverse Document Frequency (IDF), which we calculate over all documents d from the AFP and APW sections of the Gigaword corpus: pairs of similar predicates, we set a maximum number of two nodes per cluster as stopping criterion.",
+                    "sid": 163,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given an input graph G, our algorithm recursively applies Mincuts in three steps as described in Figure 2.",
+                    "sid": 164,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Step 1 identifies the edge e with lowest weight in.",
+                    "sid": 165,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the given graph G. Step 2 performs the actual Min idf(w) = log |D| |{d : w \u2208 D|} (8) cut operation on G. Finally, the stopping criterion and recursion are applied in Step 3.",
+                    "sid": 166,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of Normalization.",
+                    "sid": 167,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to make the outputs of all similarity measures comparable, we normalize their value ranges on the development set to have a mean and standard deviation of 1.0.",
+                    "sid": 168,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Mincut-based Clustering.",
+                    "sid": 169,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our graph clustering method uses minimum cuts (or Mincut) in order to partition the bipartite text graph into clusters of aligned predicates.",
+                    "sid": 170,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A Mincut operation divides a given graph into two disjoint sub- graphs.",
+                    "sid": 171,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each minimum cut is performed as a cut between some source node s and some target node t, such that (i) each of the two nodes will be in a different sub-graph and (ii) the sum of weights of all removed edges will be as small as possible.",
+                    "sid": 172,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system determines each Mincut using an implementation of the method by Goldberg and Tarjan (1986).7 7 Basic graph operations are performed using the freely available Java library JGraph, cf.",
+                    "sid": 173,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "http://jgrapht.org/.",
+                    "sid": 174,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a clustered graph is illustrated in Figure 1.",
+                    "sid": 175,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The advantage of our method compared to off- the-shelf clustering techniques is twofold: On the one hand, the clustering algorithm is free of any parameters, such as the number of clusters or a clustering threshold, that require fine-tuning.",
+                    "sid": 176,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the approach makes use of a termination criterion that very well represents the nature of the goal of our task, namely to align pairs of predicates across comparable texts.",
+                    "sid": 177,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next section provides empirical evidence for the advantage of this approach.",
+                    "sid": 178,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "This section evaluates our graph-clustering model on the task of aligning predicates across comparable texts.",
+                    "sid": 179,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison to related tasks and methods, we describe different evaluation settings, vari Figure 1: The predicates of two sentences (white: \u201cThe company has said it plans to restate its earnings for 2000 through 2002.\u201d; grey: \u201cThe company had announced in January that it would have to restate earnings (.",
+                    "sid": 180,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ")\u201d) from the Microsoft Research Paragraph Corpus are aligned by computing clusters with minimum cuts.",
+                    "sid": 181,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ous baselines, as well as results for these baselines and the model presented above.",
+                    "sid": 182,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Settings.",
+                    "sid": 183,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to benchmark our model against traditional methods for word alignment, we first apply our graph-based alignment model (Full) on three sentence-based paraphrase corpora.",
+                    "sid": 184,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This model uses the similarity measures defined in Section 4.2 and the clustering algorithm introduced in Section 4.3.",
+                    "sid": 185,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a second experiment, we evaluate Full on our novel task of inducing predicate alignments across comparable monolingual texts, using the GigaPairs data set described in Section 3.",
+                    "sid": 186,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate against the manually annotated gold alignments in the test data set described in Section 3.2.",
+                    "sid": 187,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To gain more insight into the performance of the various similarity measures included in the Full model, we evaluate simplified versions that omit individual similarity measures (Full\u2013[measure name]).",
+                    "sid": 188,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relative differences in performance against various baselines will help us quantify the differences and difficulties between a traditional sentence- based word alignment setting and our novel alignment task that operates on full texts.",
+                    "sid": 189,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1.1 Sentence-level Alignment Setting For sentence-based predicate alignment we make use of the following three corpora that are word- aligned subsets of the paraphrase collections described in (Cohn et al., 2008): MTC consists of 100 sentence pairs from the Multiple-Translation Chinese Corpus (Huang et al., 2002), Leagues contains 100 sentential paraphrases from two translations of Jules Verne\u2019s \u201cTwenty Thousand Leagues Under the Sea\u201d, and MSR is a subset of the Microsoft Research Paraphrase Corpus (Dolan and Brockett, 2005), consisting of 130 sentence pairs.",
+                    "sid": 190,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All three paraphrase collections are in English.",
+                    "sid": 191,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results for these experiments are reported in Section 5.3.1.",
+                    "sid": 192,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in order to determine alignment candidates, we apply the same pre-processing steps as used for the annotation of our corpus.",
+                    "sid": 193,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The semantic parser identified an average number of 3.8, 5.1 and 4.7 predicates per text (i.e., per paraphrase sentence) in MTC, Leagues and MSR, respectively.",
+                    "sid": 194,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All models are evaluated against the subset of gold standard alignments (cf.",
+                    "sid": 195,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cohn et al.",
+                    "sid": 196,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008)) between pairs of words marked as predicates.",
+                    "sid": 197,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1.2 Text-level Alignment Setting Results for our own data set, GigaPairs, are reported in Section 5.3.2.",
+                    "sid": 198,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this setting, models are evaluated against the annotated gold standard alignments between predicates as described in Section 3.2.",
+                    "sid": 199,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since all text pairs in GigaPairs comprise multiple sentences each, the average number of predicates per text to consider (27.5) is much higher than in the paraphrase settings.",
+                    "sid": 200,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the full graph representation becomes rather inefficient to handle (by default, edges are inserted between all predicate pairs), we use the development set of 10 text pairs to estimate M T C Pr eci sio n Recall F1 L e a g u e s Pr eci sio n Recall F1 M S R Pr eci sio n Recall F1 L e m m a I d G r e e d y W or d Al ig n 2 5 . 1 * * 74.9 37.6** 7 4 . 8 * * 88.3** 81.0 9 9 . 3 8 6 . 6 9 2 . 5 3 1 . 5 * * 67.2 42.9** 7 5 . 0 * * 86.0** 80.1 9 8 . 7 7 8 . 5 8 7 . 4 4 2 . 3 * * 90.8 57.7** 8 0 . 7 * * 97.0** 88.1 9 9 . 5 9 6 . 0 * 9 7 . 7 * F u l l 9 2 . 3 72.2 81.1 9 2 . 7 69.4 79.4 9 4 . 5 88.3 91.3 Table 1: Results for sentence-based predicte alignment in the three benchmark settings MTC, Leagues and MSR (all numbers in %); results that significantly differ from Full are marked with asterisks (* p<0.05; ** p<0.01).",
+                    "sid": 201,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a threshold on predicate similarity for adding edges.",
+                    "sid": 202,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tested all thresholds from 1.5 to 4.0 with a step- size of 0.25 and found 2.5 to perform best.",
+                    "sid": 203,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This threshold is applied in the evaluation of all graph- based models.",
+                    "sid": 204,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Baselines.",
+                    "sid": 205,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A simple baseline for both settings is to align all predicates whose lemmas are identical.",
+                    "sid": 206,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This baseline, henceforth called LemmaId, is computed as a lower bound for all settings.",
+                    "sid": 207,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to assess the benefits of the clustering step, we propose a second baseline that uses the same similarity measures and thresholds as our Full model, but omits the clustering step described in Section 4.3.",
+                    "sid": 208,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, it greedily computes as many 1-to-1 alignments as possible, starting from the highest similarity to the learned threshold (Greedy).",
+                    "sid": 209,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a more sophisticated baseline, we make use of alignment tools commonly used in statistical machine translation (SMT).",
+                    "sid": 210,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the three sentence-based paraphrase settings MTC, Leagues and MSR, Cohn et al.",
+                    "sid": 211,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) readily provide GIZA++ (Och and Ney, 2003) alignments as part of their word-aligned paraphrase corpus.",
+                    "sid": 212,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the experiments in the GigaPairs setting, we train our own word alignment model using the state-of-the- art word alignment tool Berkeley Aligner (Liang et al., 2006).",
+                    "sid": 213,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As word alignment tools require pairs of sentences as input, we first extract paraphrases in the latter setting using a re-implementation of the paraphrase detection system by Wan et al.",
+                    "sid": 214,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006).8 In the following section, we abbreviate both baselines using SMT alignment tools as WordAlign.",
+                    "sid": 215,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Results.",
+                    "sid": 216,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We measure precision as the number of predicted alignments that are annotated in the gold standard divided by the total number of predictions.",
+                    "sid": 217,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall is measured as the number of correctly predicted sure alignments divided by the total number of sure alignments in the gold standard.",
+                    "sid": 218,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This conforms to evaluation measures used for word alignment models in SMT (Och and Ney, 2003).",
+                    "sid": 219,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Cohn et al.",
+                    "sid": 220,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008), we subsequently compute the F1-score as the harmonic mean between precision and recall.",
+                    "sid": 221,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compute statistical significance of result differences with a paired t-test (Cohen, 1995) over the affected test set documents and provide corresponding significance levels where appropriate.",
+                    "sid": 222,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3.1 Sentence-level Predicate Alignment The results for MTC, Leagues and MSR are presented in Table 1.",
+                    "sid": 223,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The numbers indicate that WordAlign consistently outperforms all other models on the three data sets in terms of F1-score.",
+                    "sid": 224,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical significance of result differences between WordAlign and Full can only be observed for recall and F1-score on the MSR data set (p<0.05).",
+                    "sid": 225,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other differences are not significant due to high variance of results compared to data set sizes.",
+                    "sid": 226,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The overall performance of WordAlign does not come much as a surprise, seeing that all three data sets consist of highly parallel sentence pairs.",
+                    "sid": 227,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, the results for LemmaId show that by aligning all predicates with identical lemmas, most of the sure alignments in the three settings are already covered.",
+                    "sid": 228,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason for the low precision lies in the fact that the same lemma can occur multiple times in the same paraphrase, a phenomenon that is bet 8 Note that the performance of this system lies slightly be-.",
+                    "sid": 229,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "low the state-of-the-art results reported by Socher et al.",
+                    "sid": 230,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011)ter handled by WordAlign, Greedy and Full.",
+                    "sid": 231,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In terestingly, the Greedy model achieves the highest recall in all settings but it performs below our Full model in terms of precision and F1-score.",
+                    "sid": 232,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance differences between Greedy and Full are statistically significant (p<0.01) regarding precision and recall.",
+                    "sid": 233,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we were not able to reproduce the results of Socher et al. using the publicly available release of their software.",
+                    "sid": 234,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3.2 Text-level Predicate Alignment We now turn to the experiments on our own data set, GigaPairs, which comprises full documents of unequal lengths instead of pairs of single sentences.",
+                    "sid": 235,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 presents the results for our full model and the three baselines.",
+                    "sid": 236,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From all four approaches, WordAlign yields lowest performance.",
+                    "sid": 237,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe two main reasons for this: On the one hand, sentence paraphrase detection does not perform perfectly.",
+                    "sid": 238,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, the extracted sentence pairs do not always contain gold alignments.",
+                    "sid": 239,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, even sentence pairs that contain gold alignments are generally less parallel than in the previous settings, which make them harder to align.",
+                    "sid": 240,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The increased difficulty can also be seen in the results for the Greedy baseline, which only achieves an F1-score of 20.1% in this setting.",
+                    "sid": 241,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, we observe that the majority of all sure alignments (60.3%) can be retrieved by applying the LemmaId model.",
+                    "sid": 242,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Full model achieves a recall of 46.6%, but it significantly outperforms LemmaId (p<0.01) in terms of precision (58.7%, +18.4 percentage points).",
+                    "sid": 243,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an important factor for us, as we plan to use the alignments in subsequent tasks.",
+                    "sid": 244,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With 52.0%, Full achieves the best overall F1-score.",
+                    "sid": 245,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ablating similarity measures.",
+                    "sid": 246,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All aforementioned results were conducted in experiments with a uniform weighting scheme of similarity measures as introduced in Section 4.3.",
+                    "sid": 247,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows the performance impact of individual similarity measures by removing them completely (i.e., setting their weight to 0.0).",
+                    "sid": 248,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The numbers indicate that not all measures contribute positively to the overall performance when using equal weights.",
+                    "sid": 249,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, a significant difference can only be observed when removing the argument similarity measure, which drastically reduces the results.",
+                    "sid": 250,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This clearly highlights the importance of incorporating the context of individual predications in this task.",
+                    "sid": 251,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tuning weights.",
+                    "sid": 252,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subsequently, we tested various combinations of weights on our development set in order to estimate a good overall weighting scheme.",
+                    "sid": 253,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2: Results for GigaPairs (all numbers in %); results that significantly differ from Full are marked with asterisks (* p<0.05; ** p<0.01).",
+                    "sid": 254,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision Recall F1 F u l l \u2013 W N 5 8 . 9 4 8 . 0 5 2 . 9 F u l l \u2013 V N 5 7 . 3 4 8 . 7 5 2 . 6 F u l l \u2013 D i s t F u ll \u2013 A r g s 5 4 . 3 4 0 . 1 * * 4 2 . 8 2 4.",
+                    "sid": 255,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0* * 4 7 . 9 3 0.",
+                    "sid": 256,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0* * F u l l F ull +t u ne d 5 8 . 7 5 9 . 7 * * 4 6 . 6 5 0.",
+                    "sid": 257,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7* * 5 2 . 0 5 4.",
+                    "sid": 258,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8* * Table 3: Impact of removing individual measures and using a tuned weighting scheme (all numbers in %); results that significantly differ from Full are marked with asterisks (* p<0.05; ** p<0.01).",
+                    "sid": 259,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This tuning procedure is implemented as a brute- force technique, in which we fix the weight of one similarity measure and allow all other measures to receive a weight assignment between 0.25 to 5.0 times the fixed weight.",
+                    "sid": 260,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the resulting weights are normalized to sum to 1.0.",
+                    "sid": 261,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found the best performing weighting scheme to be 0.09, 0.48, 0.24 and 0.19 for \u03bb1, . . .",
+                    "sid": 262,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \u03bb4, respectively (cf.",
+                    "sid": 263,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eq.",
+                    "sid": 264,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2), Section 4).",
+                    "sid": 265,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance gains of the resulting model (Full+tuned) can be seen in Table 3.",
+                    "sid": 266,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computing statistical significance of the result differences between Full+tuned and all baseline models confirmed significant improvements (p<0.01) for both precision and F1-score.",
+                    "sid": 267,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Error Analysis.",
+                    "sid": 268,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We perform an error analysis on the output of Full+tuned on the development set of GigaPairs in order to determine reoccurring problems.",
+                    "sid": 269,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In total, the model missed 13 out of 35 sure alignments (Type I errors) and predicted 23 alignments not annotated in the gold standard (Type II errors).",
+                    "sid": 270,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Six Type I errors (46%) occurred when the lemma of an affected predicate occurred more than once in a text and the model missed a correct link.",
+                    "sid": 271,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Vice versa, identical predicates that refer to different events have been the source of 8 Type II errors (35%).",
+                    "sid": 272,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe that these errors are frequently related to predicates, such as \u201csay\u201d and \u201cappear\u201d, that often occur in news texts.",
+                    "sid": 273,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Altogether, we find 15 Type II errors (65%) that are due to high predicate similarity despite low argument overlap (cf.",
+                    "sid": 274,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Example (5)).",
+                    "sid": 275,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) a. The US alert (.",
+                    "sid": 276,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ") followed intelligence reports that . . .",
+                    "sid": 277,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "b. The Foreign Ministry announcement called on Japanese citizens to be cautious . . .",
+                    "sid": 278,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe that argument overlap itself can be low even for correct alignments.",
+                    "sid": 279,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This clearly indicates that a better integration of context is needed.",
+                    "sid": 280,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Example (6.a) illustrates a case in which the agent of a warning event is not realized.",
+                    "sid": 281,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, contextual information is required to correctly align it to the first warning event in (6.b).",
+                    "sid": 282,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This involves inference beyond the local PAS.",
+                    "sid": 283,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(6) a. The US alert (.",
+                    "sid": 284,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ") is one step down from a full [travel]Arg1 w arning [ ]Arg0 . b. Japan has issued a travel alert . . .",
+                    "sid": 285,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(which) follows similar warnings [from American and British authorities]Arg0 .",
+                    "sid": 286,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ") An official said it was highly unusual for [Tokyo]Arg0 to issue such a warning . . .",
+                    "sid": 287,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We presented a novel task for predicate alignment across comparable monolingual texts, which we address using graph-based clustering with Mincuts.",
+                    "sid": 288,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The motivation for this task is to acquire empirical data for studying discourse coherence factors related to argument structure realization.",
+                    "sid": 289,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a first step, we constructed a data set of comparable texts that provide full discourse contexts for alternative verbalizations of the same underlying events.",
+                    "sid": 290,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data set is derived from all newswire pairs found in the English Gigaword Fifth Edition and contains a total of more than 160,000 paired documents.",
+                    "sid": 291,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A subset of these pairs forms an evaluation set, annotated with gold alignments that relate predications, which exhibit a (possibly partial) corresponding argument structure.",
+                    "sid": 292,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We established that the annotation task, while difficult, can be performed with good inter-annotator agreement (\u03ba at 0.86).",
+                    "sid": 293,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our main contribution is a novel clustering approach using Mincuts for aligning predications across comparable texts.",
+                    "sid": 294,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments established that recursive clustering improves on greedy selection methods by profiting from global information encoded in the graph representation.",
+                    "sid": 295,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the Mincut-based method is in itself unsupervised, a small amount of development data is needed to tune parameters for the construction of particularly suitable input graphs.",
+                    "sid": 296,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tested our full model against two additional baselines: simple heuristic alignment based on identical lemma forms and a combination of techniques from SMT and paraphrase detection.",
+                    "sid": 297,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The evaluation for our novel task was complemented by a traditional word alignment task using established paraphrase data sets.",
+                    "sid": 298,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We determined clear differences in performance for all models for the two types of task settings.",
+                    "sid": 299,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While word alignment methods from SMT outperform the competing models in the sentence- based alignment tasks, they perform poorly in the discourse setting.",
+                    "sid": 300,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work, we will enhance our model by incorporating more refined similarity measures including discourse-based criteria.",
+                    "sid": 301,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will further explore tuning techniques, e.g., a more suitable pre- selection method for edges in graph construction, in order to increase either precision or recall.",
+                    "sid": 302,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decision of optimizing towards one measure or another is clearly task-dependent.",
+                    "sid": 303,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our case, high precision is favorable as we plan to learn accurate discourse model parameters from the computed alignments.",
+                    "sid": 304,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even though such an optimization will result in an overall lower recall, application of the alignment model on the entire GigaPairs corpus can still provide us with a large amount of precise predicate alignments.",
+                    "sid": 305,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using this set of alignments, we will then proceed to exploit contextual information in order to learn a semantic model for discourse coherence in argument structure realization.",
+                    "sid": 306,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgements",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We are grateful to the Landesgraduiertenfo\u00a8 rderung BadenWu\u00a8 rttemberg for funding within the research initiative \u201cCoherence in language processing\u201d at Heidelberg University.",
+                    "sid": 307,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thank Danny Rehl and Lukas Funk for annotation.",
+                    "sid": 308,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

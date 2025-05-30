@@ -1,0 +1,881 @@
+{
+    "ID": "N06-2021",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Identifying a speaker\u2019s role (anchor, reporter, or guest speaker) is important for finding the structural information in broadcast news speech.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present an HMM-based approach and a maximum entropy model for speaker role labeling using Mandarin broadcast news speech.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithms achieve classification accuracy of about 80% (compared to the baseline of around 50%) using the human transcriptions and manually labeled speaker turns.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that the maximum entropy model performs slightly better than the HMM, and that the combination of them outperforms any model alone.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The impact of the contextual role information is also examined in this study.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "More effective information access is beneficial to deal with the increasing amount of broadcast news speech.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many attempts have been made in the past decade to build news browser, spoken document retrieval system, and summarization or question answering system to effectively handle the large volume of news broadcast speech (e.g., the recent DARPA GALE program).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Structural information, such as story segmentation or speaker clustering, is critical for all of these applications.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we investigate automatic identification of the speakers\u2019 roles in broadcast news speech.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A speaker\u2019s role (such as anchor, reporter or journalist, interviewee, or some soundbites) can provide useful structural information of broadcast news.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, anchors appear through the entire program and generally introduce news stories.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Reporters typically report a specific news story, in which there may be other guest speakers.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The transition between anchors and reporters is usually a good indicator of story structure.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Speaker role information was shown to be useful for summarizing broadcast news (Maskey and Hirschberg, 2003).",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Anchor information has also been used for video segmentation, such as the systems in the TRECVID evaluations.1 1See http://wwwnlpir.nist.gov/projects/trecvid/ for more information on video retrieval evaluations.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we develop algorithms for speaker role identification in broadcast news speech.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Human transcription and manual speaker turn labels are used in this initial study.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is then to classify each speaker\u2019s turn as anchor, reporter, or other.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use about 170 hours of speech for training and testing.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two approaches are evaluated, an HMM and a maximum entropy classifier.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our methods achieve about 80% accuracy for the three-way classification task, compared to around 50% when every speaker is labeled with the majority class label, i.e., anchor.2 The rest of the paper is organized as follows.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Related work is introduced in Section 2.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe our approaches in Section 3.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental setup and results are presented in Section 4.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Summary and future work appear in Section 5.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The most related previous work is (Barzilay et al., 2000), in which Barzilay et al. used BoosTexter and the maximum entropy model to classify each speaker\u2019s role in an English broadcast news corpus.",
+                    "sid": 26,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Three classes are used, anchor, journalist, and guest speaker, which are very similar to the role categories in our study.",
+                    "sid": 27,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexical features (key words), context features, duration, and explicit speaker introduction are used as features.",
+                    "sid": 28,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the three-way classification task, they reported accuracy of about 80% compared to the chance of 35%.",
+                    "sid": 29,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They have investigated using both the reference transcripts and speech recognition output.",
+                    "sid": 30,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our study differs from theirs in that we use one generative modeling approach (HMM), as well as the conditional maximum entropy method.",
+                    "sid": 31,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also evaluate the contextual role information for classification.",
+                    "sid": 32,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, our experiments are conducted using a different language, Mandarin broadcast news.",
+                    "sid": 33,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There may be inherent difference across languages and news sources.",
+                    "sid": 34,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another task related to our study is anchor segmentation.",
+                    "sid": 35,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Huang et al.",
+                    "sid": 36,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Huang et al., 1999) used a recognition model for a particular anchor and a background model to identify anchor segments.",
+                    "sid": 37,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They reported very promising results for the task of determining whether 2Even though this is a baseline (or chance performance), it is not very meaningful since there is no information provided in this output.",
+                    "sid": 38,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "81 Proceedings of the Human Language Technology Conference of the North American Chapter of the ACL, pages 81\u201384, New York, June 2006.",
+                    "sid": 39,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2006 Association for Computational Linguistics or not a particular anchor is talking.",
+                    "sid": 40,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this method is not generalizable to multiple anchors, nor is it to reporters or other guest speakers.",
+                    "sid": 41,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Speaker role detection is also related to speaker segmentation and clustering (also called speaker diarization), which was a benchmark test in the NIST Rich Transcription evaluations in the past few years (for example, NIST RT04F http://www.nist.gov/speech/tests/rt/rt2004/fall/).",
+                    "sid": 42,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the speaker diarization systems only use acoustic information; however, in recent studies textual sources have also been utilized to help improve speaker clustering results, such as (Canseco et al., 2005).",
+                    "sid": 43,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal of speaker diarization is to identify speaker change and group the same speakers together.",
+                    "sid": 44,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is different from our task since we determine the role of a speaker rather than speaker identity.",
+                    "sid": 45,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this initial study, instead of using automatic speaker segmentation and clustering results, we use the manual speaker segments but without any speaker identity information.",
+                    "sid": 46,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "speaker role identification approaches. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 Hidden Markov Model (HMM).",
+                    "sid": 47,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentence 1 where O is the observation sequence, in which Oi corresponds to one speaker turn.",
+                    "sid": 48,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we assume what a speaker says is only dependent on his or her role, then: P (O|R) = n P (Oi|Ri).",
+                    "sid": 49,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2 ) i From the labeled training set, we train a language model (LM), which provides the transition probabilities in the HMM, i.e., the P (R) term in Equation (1).",
+                    "sid": 50,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vocabulary in this role LM (or role grammar) consists of different role tags.",
+                    "sid": 51,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the sentences belonging to the same role are put together to train a role specific word-based N- gram LM.",
+                    "sid": 52,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During testing, to obtain the observation probabilities in the HMM, P (Oi|Ri), each role specific LM is used to calculate the perplexity of those sentences corresponding to a test speaker turn.",
+                    "sid": 53,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The graph in Figure 1 is a first-order HMM, in which the role state is only dependent on the previous state.",
+                    "sid": 54,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to capture longer dependency relationship, we used a 6-gram LM for the role LM.",
+                    "sid": 55,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each role specific word-based LM, 4-gram is used with KneserNey smoothing.",
+                    "sid": 56,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is a weighting factor when combining the state transitions and the observation probabilities with the best weights tuned on the development set (6 for Sentence 2 Sentence 3 \uf0bc\uf0bc\uf0bc\uf0bc other Sentence 1 Sentence 2 \uf0bc\uf0bc\uf0bc\uf0bc anchor reporter Sentence 1 Sentence 2 Sentence 3 \uf0bc\uf0bc\uf0bc\uf0bc the transition probabilities in our experiments).",
+                    "sid": 57,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, in stead of using Viterbi decoding, we used forward- backward decoding in order to find the most likely role tag for each segment.",
+                    "sid": 58,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally we may use only a subset of the sentences in a speaker\u2019s turn, which are possibly more discriminative to determine the speaker\u2019s role.",
+                    "sid": 59,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LM training and testing and HMM decoding are implemented using the SRILM toolkit (Stolcke, 2002).",
+                    "sid": 60,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Maximum.",
+                    "sid": 61,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Entropy (Maxent) Classifier A Maxent model estimates the conditional probability: 1Figure 1: A graphical representation of the HMM ap P (Ri|O) = \u03bb (O) exp( k \u03bbkgk(Ri, O)), (3) proach for speaker role labeling.",
+                    "sid": 62,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a simple first order HMM.",
+                    "sid": 63,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The HMM has been widely used in many tagging problems.",
+                    "sid": 64,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stolcke et al.",
+                    "sid": 65,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Stolcke et al., 2000) used it for dialog act classification, where each utterance (or dialog act) is used as the observation.",
+                    "sid": 66,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In speaker role detection, the observation is composed of a much longer word sequence, i.e., the entire speech from one speaker.",
+                    "sid": 67,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows the graphical representation of the HMM for speaker role identification, in which the states are the speaker roles, and the observation associated with a state consists of the utterances from a speaker.",
+                    "sid": 68,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most likely role sequence R\u02c6 is: R\u02c6 = argmax P (R|O) = argmax P (O|R)P (R), (1) where Z\u03bb(O) is the normalization term, functions gk(Ri, O) are indicator functions weighted by \u03bb, and k is used to indicate different \u2018features\u2019.",
+                    "sid": 69,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weights (\u03bb) are obtained to maximize the conditional likelihood of the training data, or in other words, maximize the entropy while satisfying all the constraints.",
+                    "sid": 70,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gaussian smoothing (variance=1) is used to avoid overfitting.",
+                    "sid": 71,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments we used an existing Maxent toolkit (available from http://homepages.inf.ed.ac.uk/s0450736/maxent toolkit.",
+                    "sid": 72,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "html).",
+                    "sid": 73,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following features are used in the Maxent model: \u2022 bigram and trigram of the words in the first and the last sentence of the current speaker turn \u2022 bigram and trigram of the words in the last sentence R R of the previous turn \u2022 bigram and trigram of the words in the first sentence of the following turn Our hypothesis is that the first and the last sentence from a speaker\u2019s turn are more indicative of the speaker\u2019s role (e.g., self introduction and closing).",
+                    "sid": 74,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly the last sentence from the previous speaker segment and the first sentence of the following speaker turn also capture the speaker transition information.",
+                    "sid": 75,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even though sentences from the other speakers are included as features, the Maxent model makes a decision for each test speaker turn individually without considering the other segments.",
+                    "sid": 76,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The impact of the contextual role tags will be evaluated in our experiments.",
+                    "sid": 77,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1 Experimental Setup.",
+                    "sid": 78,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the TDT4 Mandarin broadcast news data in this study.",
+                    "sid": 79,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data set consists of about 170 hours (336 shows) of news speech from different sources.",
+                    "sid": 80,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the original transcripts provided by LDC, stories are segmented; however, speaker information (segmentation or identity) is not provided.",
+                    "sid": 81,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the reference transcripts and the audio files, we manually labeled the data with speaker turns and the role tag for each turn.3 Speaker segmentation is generally very reliable; however, the role annotation is ambiguous in some cases.",
+                    "sid": 82,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The interannotator agreement will be evaluated in our future work.",
+                    "sid": 83,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this initial study, we just treat the data as noisy data.",
+                    "sid": 84,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We preprocessed the transcriptions by removing some bad codes and also did text normalization.",
+                    "sid": 85,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used punctuation (period, question mark, and exclamation) available from the transcriptions (though not very accurate) to generate sentences, and a left-to-right longest word match approach to segment sentences into words.",
+                    "sid": 86,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These words/sentences are then used for feature extraction in the Maxent model, and LM training and perplexity calculation in the HMM as described in Section 3.",
+                    "sid": 87,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the word segmentation approach we used may not be the-state-of-art, which might have some effect on our experiments.",
+                    "sid": 88,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10-fold cross validation is used in our experiments.",
+                    "sid": 89,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The entire data set is split into ten subsets.",
+                    "sid": 90,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each time one subset is used as the test set, another one is used as the development set, and the rest are used for training.",
+                    "sid": 91,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average number of segments (i.e., speaker turns) in the ten subsets is 1591, among which 50.8% are anchors.",
+                    "sid": 92,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parameters (e.g., weighting factor) are tuned based on the average performance over the ten development sets, and the same weights are applied to all the splits during testing.",
+                    "sid": 93,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3The labeling guideline can be found from http://www.hlt.utdallas.edu/\u02dcyangl/spkr-label/.",
+                    "sid": 94,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It was modified based on the annotation manual used for English at Columbia University (available from http://www1.cs.columbia.edu/ \u02dcsmaskey/labeling/Labeling Manual v 2 1.pdf).",
+                    "sid": 95,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Results.",
+                    "sid": 96,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A HMM and Maxent: Table 1 shows the role identification results using the HMM and the Maxent model, including the overall classification accuracy and the precision/recall rate (%) for each role.",
+                    "sid": 97,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results are the average over the 10 test sets.",
+                    "sid": 98,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "HMM Maxent precision recall precision recall anchor 78.03 87.33 80.29 87.23 reporter 78.54 66.42 73.34 77.01 other 83.05 68.19 89.52 41.30 Accuracy (%) 77.18 77.42 Table 1: Automatic role labeling results (%) using the HMM and Maxent classifiers.",
+                    "sid": 99,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From Table 1 we find that the overall classification performance is similar when using the HMM and the Maxent model; however, their error patterns are quite different.",
+                    "sid": 100,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the Maxent model is better than the HMM at identifying \u201creporter\u201d role, but worse at identifying \u201cother\u201d speakers (see the recall rate shown in the table).",
+                    "sid": 101,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the HMM, we only used the first and the last sentence in a speaker\u2019s turn, which are more indicative of the speaker\u2019s role.",
+                    "sid": 102,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observed significant performance degradation, that is, 74.68% when using all the sentences for LM training and perplexity calculation, compared to 77.18% as shown in the table using a subset of a speaker\u2019s speech.",
+                    "sid": 103,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the sentences used in the HMM and Maxent models are the same; however, the Maxent does not use any contextual role tags (which we will examine next), although it does include some words from the previous and the following speaker segments in its feature set.",
+                    "sid": 104,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B Contextual role information: In order to investigate how important the role sequence is, we conducted two experiments for the Maxent model.",
+                    "sid": 105,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first experiment, for each segment, the reference role tag of the previous and the following segments and the combination of them are included as features for model training and testing (a \u201ccheating\u201d experiment).",
+                    "sid": 106,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second experiment, a two-step approach is employed.",
+                    "sid": 107,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the HMM and Maxent experiments (i.e., results as shown in Table 1), Viterbi decoding is performed using the posterior probabilities from the Maxent model and the transition probabilities from the role LM as in the HMM (with weight 0.3).",
+                    "sid": 108,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average performance over the ten test sets is shown in Table 2 for these two experiments.",
+                    "sid": 109,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison, we also present the decoding results of the HMM with and without using sequence information (i.e., the transition probabilities in the HMM).",
+                    "sid": 110,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, the system combination results of the HMM and Maxent are presented in the table, with more discussion on this later.",
+                    "sid": 111,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe from Table 2 that adding contextual role information improves performance.",
+                    "sid": 112,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Including the two reference role tags yields significant gain in the Maxent model, even though some sentences from the previous and the following segments are already included as features.",
+                    "sid": 113,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The HMM suffers more than the Maxent classifier when role sequence information is not used during decoding, since that is the only contextual information used in the HMM, unlike the Maxent model, which uses features extracted from the neighboring speaker turns.",
+                    "sid": 114,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accuracy (%) 0: Maxent (as in Table 1) 77.42 1: Maxent + 2 reference tags 80.90 2: Maxent + sequence decoding 78.59 3: HMM (as in Table 1) 77.18 4: HMM w/o sequence 73.30 Maxent (0) + HMM (3) 79.74 Maxent (2) + HMM (3) 81.97 Table 2: Impact of role sequence information on the HMM and Maxent classifiers.",
+                    "sid": 115,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combination results of the HMM and Maxent are also provided.",
+                    "sid": 116,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C System combination: For system combination, we used two different Maxent results: with and without the Viterbi sequence decoding, corresponding to experiments (0) and (2) as shown in Table 2 respectively.",
+                    "sid": 117,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When combining the HMM and Maxent, i.e., the last two rows in Table 2, the posterior probabilities from them are linearly weighted (weight 0.6 for the Maxent in the upper one, and 0.7 for the Maxent in the bottom one).",
+                    "sid": 118,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combination of the two approaches yields better performance than any single model in the two cases.",
+                    "sid": 119,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also investigated other system combination approaches.",
+                    "sid": 120,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a decision tree or SVM that builds a 3-way super- classifier using the posterior probabilities from the HMM and Maxent.",
+                    "sid": 121,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, so far we have not found any gain from more complicated system combination than a simple linear interpolation.",
+                    "sid": 122,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will study this in our future work.",
+                    "sid": 123,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "summary and future work. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this paper we have reported an initial study of speaker role identification in Mandarin broadcast news speech using the HMM and Maxent tagging approaches.",
+                    "sid": 124,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that the conditional Maxent generally performs slightly better than the HMM, and that their combination outperforms each model alone.",
+                    "sid": 125,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The HMM and the Maxent model show differences in identifying different roles.",
+                    "sid": 126,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The impact of contextual role information is also exam ined for the two approaches, and a significant gain is observed when contextual information is modeled.",
+                    "sid": 127,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that the beginning and the end sentences in a speaker\u2019s turn are good cues for role identification.",
+                    "sid": 128,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The overall classification performance in this study is similar to that reported in (Barzilay et al., 2000); however, the chance performance is quite different (35% in that study).",
+                    "sid": 129,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not clear yet whether it is because of the difference across the two corpora or languages.",
+                    "sid": 130,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Maxent model provides a convenient way to incorporate various knowledge sources.",
+                    "sid": 131,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will investigate other features to improve the classification results, such as name information, acoustic or prosodic features, and speaker clustering results (considering that the same speaker typically has the same role tag).",
+                    "sid": 132,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to examine the effect of using speech recognition output, as well as automatic speaker segmentation and clustering results.",
+                    "sid": 133,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Analysis of difference news sources may also reveal some interesting findings.",
+                    "sid": 134,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our working hypothesis is that speaker role information is important to find structure in broadcast news, we will investigate whether and how speaker role relates to downstream language processing applications, such as summarization or question answering.",
+                    "sid": 135,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgment",
+            "number": "",
+            "sents": [
+                {
+                    "text": "The author thanks Julia Hirschberg and Sameer Maskey at Columbia University and Mari Ostendorf at the University of Washington for the useful discussions, and MeiYuh Hwang for helping with Mandarin word segmentation and text normalization.",
+                    "sid": 136,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This material is based upon work supported by the Defense Advanced Research Projects Agency (DARPA) under Contract No.",
+                    "sid": 137,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "HR001106-C-0023.",
+                    "sid": 138,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of DARPA.",
+                    "sid": 139,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

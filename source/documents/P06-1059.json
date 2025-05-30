@@ -1,0 +1,1139 @@
+{
+    "ID": "P06-1059",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper presents techniques to apply semi-CRFs to Named Entity Recognition tasks with a tractable computational cost.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our framework can handle an NER task that has long named entities and many labels which increase the computational cost.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce the computational cost, we propose two techniques: the first is the use of feature forests, which enables us to pack feature-equivalent states, and the second is the introduction of a filtering process which significantly reduces the number of candidate states.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This framework allows us to use a rich set of features extracted from the chunk-based representation that can capture informative characteristics of entities.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also introduce a simple trick to transfer information about distant entities by embedding label information into nonentity labels.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results show that our model achieves an F-score of 71.48% on the JNLPBA 2004 shared task without using any external resources or post-processing techniques.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The rapid increase of information in the biomedical domain has emphasized the need for automated information extraction techniques.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we focus on the Named Entity Recognition (NER) task, which is the first step in tackling more complex tasks such as relation extraction and knowledge mining.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Biomedical NER (BioNER) tasks are, in general, more difficult than ones in the news domain.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the best F-score in the shared task of BioNER in COLING 2004 JNLPBA (Kim et al., 2004) was 72.55% (Zhou and Su, 2004) 1, whereas the best performance at MUC6, in which systems tried to identify general named entities such as person or organization names, was an accuracy of 95% (Sundheim, 1995).",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of the previous studies of BioNER tasks have been based on machine learning techniques including Hidden Markov Models (HMMs) (Bikel et al., 1997), the dictionary HMM model (Kou et al., 2005) and Maximum Entropy Markov Models (MEMMs) (Finkel et al., 2004).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Among these methods, conditional random fields (CRFs) (Lafferty et al., 2001) have achieved good results (Kim et al., 2005; Settles, 2004), presumably because they are free from the so-called label bias problem by using a global normalization.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sarawagi and Cohen (2004) have recently introduced semi-Markov conditional random fields (semi-CRFs).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are defined on semi Markov chains and attach labels to the subsequences of a sentence, rather than to the tokens2.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The semi- Markov formulation allows one to easily construct entity-level features.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the features can capture all the characteristics of a subsequence, we can use, for example, a dictionary feature which measures the similarity between a candidate segment and the closest element in the dictionary.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kou et al.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) have recently showed that semi- CRFs perform better than CRFs in the task of recognition of protein entities.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main difficulty of applying semi-CRFs to BioNER lies in the computational cost at training 1Krauthammer (2004) reported that the inter annotator agreement rate of human experts was 77.6% for bioNLP, which suggests that the upper bound of the F-score in a BioNER task may be around 80%.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2Assuming that nonentity words are placed in unit length segments.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "465 Proceedings of the 21st International Conference on Computational Linguistics and 44th Annual Meeting of the ACL, pages 465\u2013472, Sydney, July 2006.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2006 Association for Computational Linguistics Table 1: Length distribution of entities in the training set of the shared task in 2004 JNLPBA set of features.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CRFs allow both discriminative training and bidirectional flow of probabilistic information along the sequence.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In NER, we often use linear-chain CRFs, which define the conditional probability of a state sequence y = y1, ..., yn given the observed sequence x = x1,...,xn by: 1 p(y|x, \u03bb) = Z(x) exp(\u03a3n \u03a3j \u03bbj fj (yi\u2212 1, yi, x, i)), because the number of named entity classes tends to be large, and the training data typically contain many long entities, which makes it difficult to enumerate all the entity candidates in training.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows the length distribution of entities in the training set of the shared task in 2004 JNLPBA.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, the computational cost of training semi- CRFs is O(KLN ), where L is the upper bound length of entities, N is the length of sentence and K is the size of label set.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And that of training in (1) where fj (yi\u22121, yi, x, i) is a feature function and Z(x) is the normalization factor over all the state sequences for the sequence x. The model parameters are a set of real-valued weights \u03bb = {\u03bbj}, each of which represents the weight of a feature.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the feature functions are real-valued and can use adjacent label information.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Semi-CRFs are actually a restricted version of order-L CRFs in which all the labels in a chunk are the same.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We follow the definitions in (Sarawagi and Cohen, 2004).",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let s = (s1, ..., sp) denote a segmentation of x, where a segment sj = (tj , uj , yj) consists of a start position tj , an end position uj , and a label yj . We assume that segments have a positive length bounded above by the predefined upper bound L (tj \u2264 uj , uj \u2212 tj + 1 \u2264 L) andcompletely cover the sequence x without overlap first order semi-CRFs is O(K2LN ).",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The increase ping, that is, s satisfies t = 1, u = x , and of the cost is used to transfer non-adjacent entity information.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To improve the scalability of semi-CRFs, we propose two techniques: the first is to intro 1 p | |tj+1 = uj + 1 for j = 1, ..., p \u2212 1.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Semi CRFs define a conditional probability of a state sequence y given an observed sequence x by: 1duce a filtering process that significantly re duces the number of candidate entities by using p(y|x, \u03bb) = Z(x) exp(\u03a3j \u03a3i\u03bbifi(sj )), (2) a \u201clightweight\u201d classifier, and the second is to where fi(sj ) := fi(yj1, y , x, t , u ) is a fea use feature forest (Miyao and Tsujii, 2002), with which we pack the feature equivalent states.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These enable us to construct semi-CRF models for the tasks where entity names may be long and many class-labels exist at the same time.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also present an extended version of semi-CRFs in which we can make use of information about a preceding named entity in defining features within the framework of first order semi-CRFs.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the preced \u2212 j j j ture function and Z(x) is the normalization factor as defined for CRFs.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The inference problem for semi-CRFs can be solved by using a semi-Markov analog of the usual Viterbi algorithm.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The computational cost for semi-CRFs is O(KLN ) where L is the upper bound length of entities, N is the length of sentence and K is the number of label set.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we use previous label information, the cost 2 ing entity is not necessarily adjacent to the current becomes O(K LN ).",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "entity, we achieve this by embedding the information on preceding labels for named entities into the labels for non-named entities.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "crfs and semi-crfs. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "CRFs are undirected graphical models that encode a conditional probability distribution using a given",
+                    "sid": 42,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "using non-local information. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "in Semi-CRFs In conventional CRFs and semi-CRFs, one can only use the information on the adjacent previous label when defining the features on a certain state or entity.",
+                    "sid": 43,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In NER tasks, however, information about a distant entity is often more useful than Figure 1: Modification of \u201cO\u201d (other labels) to transfer information on a preceding named entity.",
+                    "sid": 44,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "information about the previous state (Finkel et al., 2005).",
+                    "sid": 45,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, consider the sentence \u201c... including Sp1 and CP1.\u201d where the correct labels of \u201cSp1\u201d and \u201cCP1\u201d are both \u201cprotein\u201d.",
+                    "sid": 46,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It would be useful if the model could utilize the (non-adjacent) information about \u201cSp1\u201d being \u201cprotein\u201d to classify \u201cCP1\u201d as \u201cprotein\u201d.",
+                    "sid": 47,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, information about adjacent labels does not necessarily provide useful information because, in many cases, the previous label of a named entity is \u201cO\u201d, which indicates a non-named entity.",
+                    "sid": 48,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For 98.0% of the named entities in the training data of the shared task in the 2004 JNLPBA, the label of the preceding entity was \u201cO\u201d.",
+                    "sid": 49,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to incorporate such non-local information into semi-CRFs, we take a simple approach.",
+                    "sid": 50,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We divide the label of \u201cO\u201d into \u201cO-protein\u201d and \u201cO\u201d so that they convey the information on the preceding named entity.",
+                    "sid": 51,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows an example of this conversion, in which the two labels for the third and fourth states are converted from \u201cO\u201d to \u201cO-protein\u201d.",
+                    "sid": 52,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we define the features for the fifth state, we can use the information on the preceding entity \u201cprotein\u201d by looking at the fourth state.",
+                    "sid": 53,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since this modification changes only the label set, we can do this within the framework of semi-CRF models.",
+                    "sid": 54,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This idea is originally proposed in (Peshkin and Pfeffer, 2003).",
+                    "sid": 55,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they used a dynamic Bayesian network (DBNs) rather than a semi-CRF, and semi-CRFs are likely to have significantly better performance than DBNs.",
+                    "sid": 56,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In previous work, such non-local information has usually been employed at a post-processing stage.",
+                    "sid": 57,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because the use of long distance dependency violates the locality of the model and prevents us from using dynamic programming techniques in training and inference.",
+                    "sid": 58,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Skip-CRFs (Sutton and McCallum, 2004) are a direct imple mentation of long distance effects to the model.",
+                    "sid": 59,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they need to determine the structure for propagating non-local information in advance.",
+                    "sid": 60,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a recent study by Finkel et al., (2005), non- local information is encoded using an independence model, and the inference is performed by Gibbs sampling, which enables us to use a state- of-the-art factored model and carry out training efficiently, but inference still incurs a considerable computational cost.",
+                    "sid": 61,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our model handles limited type of non-local information, i.e. the label of the preceding entity, the model can be solved without approximation.",
+                    "sid": 62,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "reduction of training/inference cost. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "The straightforward implementation of this modeling in semi-CRFs often results in a prohibitive computational cost.",
+                    "sid": 63,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In biomedical documents, there are quite a few entity names which consist of many words (names of 8 words in length are not rare).",
+                    "sid": 64,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This makes it difficult for us to use semi-CRFs for biomedical NER, because we have to set L to be eight or larger, where L is the upper bound of the length of possible chunks in semi-CRFs.",
+                    "sid": 65,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, in order to take into account the dependency between named entities of different classes appearing in a sentence, we need to incorporate multiple labels into a single probabilistic model.",
+                    "sid": 66,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the shared task in COLING 2004 JNLPBA (Kim et al., 2004) the number of labels is six (\u201cprotein\u201d, \u201cDNA\u201d, \u201cRNA\u201d, \u201ccell line\u201d, \u201ccell type\u201d and \u201cother\u201d).",
+                    "sid": 67,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This also increases the computational cost of a semi-CRF model.",
+                    "sid": 68,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce the computational cost, we propose two methods (see Figure 2).",
+                    "sid": 69,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first is employing a filtering process using a lightweight classifier to remove unnecessary state candidates beforehand (Figure 2 (2)), and the second is the using the feature forest model (Miyao and Tsujii, 2002) (Figure 2 (3)), which employs dynamic programming at training \u201cas much as possible\u201d.",
+                    "sid": 70,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Filtering with a naive Bayes classifier.",
+                    "sid": 71,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce a filtering process to remove low probability candidate states.",
+                    "sid": 72,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the first step of our NER system.",
+                    "sid": 73,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After this filtering step, we construct semi-CRFs on the remaining candidate states using a feature forest.",
+                    "sid": 74,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore the aim of this filtering is to reduce the number of candidate states, without removing correct entities.",
+                    "sid": 75,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This idea : other : entity : other with preceding entity informatio (1) ECnaunmdiedraattee States(2) FNilat\u00efevrein Bga byyes (3) Construct feature forest nITnrfaeirneinncge/Table 2: Features used in the naive Bayes Classi pos proitein prio+te1in Figure 2: The framework of our system.",
+                    "sid": 76,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first enumerate all possible candidate states, and then filter out low probability states by using a lightweight classifier, and represent them by using feature forest.",
+                    "sid": 77,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "fier for the entity candidate: ws, ws+1, ..., we.",
+                    "sid": 78,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "spi \u2026 DNA DNA \u2026 is the result of shallow parsing at wi.",
+                    "sid": 79,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ":: oOrtnheordoed e(d (icsojunnjucnticvtei nOothdeer)e) is similar to the method proposed by Tsuruoka and Tsujii (2005) for chunk parsing, in which implausible phrase candidates are removed beforehand.",
+                    "sid": 80,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We construct a binary naive Bayes classifier using the same training data as those for semi-CRFs.",
+                    "sid": 81,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In training and inference, we enumerate all possible chunks (the max length of a chunk is L as for semi-CRFs) and then classify those into \u201centity\u201d or \u201cother\u201d.",
+                    "sid": 82,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 lists the features used in the naive Bayes classifier.",
+                    "sid": 83,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This process can be performed independently of semi-CRFs Since the purpose of the filtering is to reduce the computational cost, rather than to achieve a good F-score by itself, we chose the threshold probability of filtering so that the recall of filtering results would be near 100 %.",
+                    "sid": 84,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Feature Forest.",
+                    "sid": 85,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In estimating semi-CRFs, we can use an efficient dynamic programming algorithm, which is similar to the forward-backward algorithm (Sarawagi and Cohen, 2004).",
+                    "sid": 86,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposal here is a more general framework for estimating sequential conditional random fields.",
+                    "sid": 87,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This framework is based on the feature forest Figure 3: Example of feature forest representation of linear chain CRFs.",
+                    "sid": 88,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature functions are ass Figure 4: Example of packed representation of semi-CRFs.",
+                    "sid": 89,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The states that have the same end position and prev-entity label are packed.",
+                    "sid": 90,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "model, which was originally proposed for disambiguation models for parsing (Miyao and Tsujii, 2002).",
+                    "sid": 91,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A feature forest model is a maximum entropy model defined over feature forests, which are abstract representations of an exponential number of sequence/tree structures.",
+                    "sid": 92,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A feature forest is an \u201cand/or\u201d graph: in Figure 3, circles represent \u201cand\u201d nodes (conjunctive nodes), while boxes denote \u201cor\u201d nodes (disjunctive nodes).",
+                    "sid": 93,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature functions are assigned to \u201cand\u201d nodes.",
+                    "sid": 94,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can use the information of the previous \u201cand\u201d node for designing the feature functions through the previous \u201cor\u201d node.",
+                    "sid": 95,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each sequence in a feature forest is obtained by choosing a conjunctive node for each disjunctive node.",
+                    "sid": 96,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Figure 3 represents 3 \u00d7 3 = 9 sequences, since each disjunctive node has three candidates.",
+                    "sid": 97,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It should be noted that feature forests can represent an exponential number of sequences with a polynomial number of conjunctive/disjunctive nodes.",
+                    "sid": 98,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One can estimate a maximum entropy model for the whole sequence with dynamic programming by representing the probabilistic events, i.e. sequence of named entity tags, by feature forests (Miyao and Tsujii, 2002).",
+                    "sid": 99,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the previous work (Lafferty et al., 2001; Sarawagi and Cohen, 2004), \u201cor\u201d nodes are considered implicitly in the dynamic programming framework.",
+                    "sid": 100,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In feature forest models, \u201cor\u201d nodes are packed when they have same conditions.",
+                    "sid": 101,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \u201cor\u201d nodes are packed when they have same end positions and same labels in the first order semi-CRFs, In general, we can pack different \u201cor\u201d nodes that yield equivalent feature functions in the following nodes.",
+                    "sid": 102,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, \u201cor\u201d nodes are packed when the following states use partial information on the preceding states.",
+                    "sid": 103,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the task of tagging entity and O-entity, where the latter tag is actually O tags that distinguish the preceding named entity tags.",
+                    "sid": 104,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we simply apply first-order semi-CRFs, we must distinguish states that have different previous states.",
+                    "sid": 105,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when we want to distinguish only the preceding named entity tags rather than the immediate previous states, feature forests can represent these events more compactly (Figure 4).",
+                    "sid": 106,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can implement this as follows.",
+                    "sid": 107,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each \u201cor\u201d node, we generate the following \u201cand\u201d nodes and their feature functions.",
+                    "sid": 108,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we check whether there exist \u201cor\u201d node which has same conditions by using its information about \u201cend position\u201d and \u201cprevious entity\u201d.",
+                    "sid": 109,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If so, we connect the \u201cand\u201d node to the corresponding \u201cor\u201d node.",
+                    "sid": 110,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If not, we generate a new \u201cor\u201d node and continue the process.",
+                    "sid": 111,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the states with label O-entity and entity are packed, the computational cost of training in our model (First order semi-CRFs) becomes the half of the original one.",
+                    "sid": 112,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "5.1 Experimental Setting.",
+                    "sid": 113,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments were performed on the training and evaluation set provided by the shared task in COLING 2004 JNLPBA (Kim et al., 2004).",
+                    "sid": 114,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training data used in this shared task came from the GENIA version 3.02 corpus.",
+                    "sid": 115,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the task there are five semantic labels: protein, DNA, RNA, cell line and cell type.",
+                    "sid": 116,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training set consists of 2000 abstracts from MEDLINE, and the evaluation set consists of 404 abstracts.",
+                    "sid": 117,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We divided the original training set into 1800 abstracts and 200 abstracts, and the former was used as the training data and the latter as the development data.",
+                    "sid": 118,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For semi-CRFs, we used amis3 for training the semi- CRF with feature forest.",
+                    "sid": 119,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used GENIA taggar4 for POS-tagging and shallow parsing.",
+                    "sid": 120,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set L = 10 for training and evaluation when we do not state L explicitly , where L is the upper bound of the length of possible chunks in semi- CRFs.",
+                    "sid": 121,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Features.",
+                    "sid": 122,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 lists the features used in our semi CRFs.",
+                    "sid": 123,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe the chunk-dependent features in detail, which cannot be encoded in token-level features.",
+                    "sid": 124,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cWhole chunk\u201d is the normalized names attached to a chunk, which performs like the closed dictionary.",
+                    "sid": 125,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cLength\u201d and \u201cLength and End- Word\u201d capture the tendency of the length of a named entity.",
+                    "sid": 126,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cCount feature\u201d captures the tendency for named entities to appear repeatedly in the same sentence.",
+                    "sid": 127,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cPreceding Entity and Prev Word\u201d are features that capture specifically words for conjunctions such as \u201cand\u201d or \u201c, (comma)\u201d, e.g., for the phrase \u201cOCIM1 and K562\u201d, both \u201cOCIM1\u201d and \u201cK562\u201d are assigned cell line labels.",
+                    "sid": 128,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even if the model can determine only that \u201cOCIM1\u201d is a cell line , this feature helps \u201cK562\u201d to be assigned the label cell line.",
+                    "sid": 129,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Results.",
+                    "sid": 130,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first evaluated the filtering performance.",
+                    "sid": 131,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows the result of the filtering on the training 3http://wwwtsujii.is.s.u-tokyo.ac.jp/amis/ 4http://wwwtsujii.is.s.u-tokyo.ac.jp/GENIA/tagger/ Note that the evaluation data are not used for training the GENIA tagger.",
+                    "sid": 132,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3: Feature templates used for the chunk s := ws ws+1 ... we where ws and we represent the words at the beginning and ending of the target chunk respectively.",
+                    "sid": 133,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "pi is the part of speech tag of wi and sci is the shallow parse result of wi.",
+                    "sid": 134,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature Name description of features Non-Chunk Features Word/POS/SC with Position BEGIN + ws, END + we, IN + ws+1, ..., IN + we\u22121, BEGIN + ps,...",
+                    "sid": 135,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Context Uni-gram/Bi-gram ws\u22121, we+1, ws\u22122 + ws\u22121, we+1 + we+2, ws\u22121 + we+1 Prefix/Suffix of Chunk 2/3-gram character prefix of ws, 2/3/4-gram character suffix of we Orthography capitalization and word formation of ws...we Chunk Features Whole chunk Word/POS/SC End Bi-grams Length, Length and End Word Count Feature ws + ws+1 + ...",
+                    "sid": 136,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+ we we\u22121 + we, pe\u22121 + pe, sce\u22121 + sce |s|, |s|+we the frequency of wsws+1..we in a sentence is greater than one Preceding Entity Features Preceding Entity /and Prev Word PrevState, PrevState + ws\u22121 Table 4: Filtering results using the naive Bayes classifier.",
+                    "sid": 137,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of entity candidates for the training set was 4179662, and that of the development set was 418628.",
+                    "sid": 138,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training set Threshold probability reduction ratio recall 1.0 \u00d7 10\u221212 1.0 \u00d7 10\u221215 0.14 0.20 0.984 0.993 Development set Threshold probability reduction ratio recall 1.0 \u00d7 10\u221212 1.0 \u00d7 10\u221215 0.14 0.20 0.985 0.994 and evaluation data.",
+                    "sid": 139,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The naive Bayes classifiers effectively reduced the number of candidate states with very few falsely removed correct entities.",
+                    "sid": 140,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then examined the effect of filtering on the final performance.",
+                    "sid": 141,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this experiment, we could not examine the performance without filtering using all the training data, because training on all the training data without filtering required much larger memory resources (estimated to be about 80G Byte) than was possible for our experimental setup.",
+                    "sid": 142,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus compared the result of the recognizers with and without filtering using only 2000 sentences as the training data.",
+                    "sid": 143,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 shows the result of the total system with different filtering thresholds.",
+                    "sid": 144,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The result indicates that the filtering method achieved very well without decreasing the overall performance.",
+                    "sid": 145,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We next evaluate the effect of filtering, chunk information and non-local information on final performance.",
+                    "sid": 146,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 shows the performance result for the recognition task.",
+                    "sid": 147,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "L means the upper bound of the length of possible chunks in semi- CRFs.",
+                    "sid": 148,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that we cannot examine the result of L = 10 without filtering because of the intractable computational cost.",
+                    "sid": 149,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The row \u201cw/o Chunk Feature\u201d shows the result of the system which does not employ Chunk-Features in Table 3 at training and inference.",
+                    "sid": 150,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The row \u201cPreceding Entity\u201d shows the result of a system which uses Preceding Entity and Preceding Entity and Prev Word features.",
+                    "sid": 151,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results indicate that the chunk features contributed to the performance, and the filtering process enables us to use full chunk representation (L = 10).",
+                    "sid": 152,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results of McNemar\u2019s test suggest that the system with chunk features is significantly better than the system without it (the p-value is less than 1.0 < 10\u22124).",
+                    "sid": 153,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The result of the preceding entity information improves the performance.",
+                    "sid": 154,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the system with preceding information is not significantly better than the system without it5.",
+                    "sid": 155,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other non-local information may improve performance with our framework and this is a topic for future work.",
+                    "sid": 156,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 7 shows the result of the overall performance in our best setting, which uses the information about the preceding entity and 1.0 \u00d7 10\u221215 threshold probability for filtering.",
+                    "sid": 157,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that the result of our system is similar to those of other sys 5The result of the classifier on development data is 74.64 (without preceding information) and 75.14 (with preceding information).",
+                    "sid": 158,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5: Performance with filtering on the development data.",
+                    "sid": 159,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(< 1.0 \u00d7 10\u221212) means the threshold probability of the filtering is 1.0 \u00d7 10\u221212.",
+                    "sid": 160,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall Precision F-score Memory Usage (MB) Training Time (s) Small Training Data = 2000 sentences Without filtering 65.77 72.80 69.10 4238 7463 Filtering (< 1.0 \u00d7 10.0\u221212) 64.22 70.62 67.27 600 1080 Filtering (< 1.0 \u00d7 10.0\u221215) 65.34 72.52 68.74 870 2154 All Training Data = 16713 sentences Without filtering Not available Not available Filtering (< 1.0 \u00d7 10.0\u221212) 70.05 76.06 72.93 10444 14661 Filtering (< 1.0 \u00d7 10.0\u221215) 72.09 78.47 75.14 15257 31636 Table 6: Overall performance on the evaluation set.",
+                    "sid": 161,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "L is the upper bound of the length of possible chunks in semi-CRFs.",
+                    "sid": 162,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall Precision F-score L < 5 64.33 65.51 64.92 L = 10 + Filtering (< 1.0 \u00d7 10.0\u221212) 70.87 68.33 69.58 L = 10 + Filtering (< 1.0 \u00d7 10.0\u221215) 72.59 70.16 71.36 w/o Chunk Feature 70.53 69.92 70.22 + Preceding Entity 72.65 70.35 71.48 tems in several respects, that is, the performance of cell line is not good, and the performance of the right boundary identification (78.91% in F-score) is better than that of the left boundary identification (75.19% in F-score).",
+                    "sid": 163,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 8 shows a comparison between our system and other state-of-the-art systems.",
+                    "sid": 164,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system has achieved a comparable performance to these systems and would be still improved by using external resources or conducting pre/post processing.",
+                    "sid": 165,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Zhou et.",
+                    "sid": 166,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "al (2004) used post processing, abbreviation resolution and external dictionary, and reported that they improved F- score by 3.1%, 2.1% and 1.2% respectively.",
+                    "sid": 167,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kim et.",
+                    "sid": 168,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "al (2005) used the original GENIA corpus to employ the information about other semantic classes for identifying term boundaries.",
+                    "sid": 169,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finkel et.",
+                    "sid": 170,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "al (2004) used gazetteers, web-querying, surrounding abstracts, and frequency counts from the BNC corpus.",
+                    "sid": 171,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Settles (2004) used semantic domain knowledge of 17 types of lexicon.",
+                    "sid": 172,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our approach and the use of external resources/knowledge do not conflict but are complementary, examining the combination of those techniques should be an interesting research topic.",
+                    "sid": 173,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 7: Performance of our system on the evaluation set Class Recall Precision F-score protein 77.74 68.92 73.07 DNA 69.03 70.16 69.59 RNA 69.49 67.21 68.33 cell type 65.33 82.19 72.80 cell line 57.60 53.14 55.28 overall 72.65 70.35 71.48 Table 8: Comparison with other systems",
+                    "sid": 174,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "In this paper, we have proposed a single probabilistic model that can capture important characteristics of biomedical named entities.",
+                    "sid": 175,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To overcome the prohibitive computational cost, we have presented an efficient training framework and a filtering method which enabled us to apply first order semi-CRF models to sentences having many labels and entities with long names.",
+                    "sid": 176,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results showed that our filtering method works very well without decreasing the overall performance.",
+                    "sid": 177,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system achieved an F-score of 71.48% without the use of gazetteers, post-processing or external resources.",
+                    "sid": 178,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of our system came close to that of the current best performing system which makes extensive use of external resources and rule based post-processing.",
+                    "sid": 179,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contribution of the non-local information introduced by our method was not significant in the experiments.",
+                    "sid": 180,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, other types of non- local information have also been shown to be effective (Finkel et al., 2005) and we will examine the effectiveness of other non-local information which can be embedded into label information.",
+                    "sid": 181,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the next stage of our research, we hope to apply our method to shallow parsing, in which segments tend to be long and non-local information is important.",
+                    "sid": 182,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1433 @@
+{
+    "ID": "W02-1005",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper investigates several augmented mixture models that are competitive alternatives to standard Bayesian models and prove to be very suitable to word sense disambiguation and related classification tasks.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a new classification correction technique that successfully addresses the problem of under-estimation of infrequent classes in the training data.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that the mixture models are boosting-friendly and that both Adaboost and our original correction technique can improve the results of the raw model significantly, achieving state- of-the-art performance on several standard test sets in four languages.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With substantially different output to Na\u00efve Bayes and other statistical methods, the investigated models are also shown to be effective participants in classifier combination.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The focus tasks of this paper are two related problems in lexical ambiguity resolution: Word Sense Disambiguation (WSD) and Context- Sensitive Spelling Correction (CSSC).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word Sense Disambiguation has a long history as a computational task (Kelly and Stone, 1975), and the field has recently supported large-scale international system evaluation exercises in multiple languages (SEN SEVA L-1, Kilgarriff and Palmer (2000), and SEN SEVA L-2, Edmonds and Cotton (2001)).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "General purpose Spelling Correction is also a long-standing task (e.g. McIlroy, 1982), traditionally focusing on resolving typographical errors such as transposition and deletion to find the closest \u201cvalid\u201d word (in a dictionary or a morphological variant), typically ignoring context.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yet Kukich (1992) observed that about 2550% of the spelling errors found in modern documents are either context-inappropriate misuses or substitutions of valid words (such as principal and principle) which are not detected by traditional spelling cor rectors.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous work has addressed the problem of CSSC from a machine learning perspective, including Bayesian and Decision List models (Golding, 1995), Winnow (Golding and Roth, 1996) and Transformation-Based Learning (Mangu and Brill, 1997).",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generally, both tasks involve the selection between a relatively small set of alternatives per keyword (e.g. sense id\u2019s such as church/BU ILD IN G and church/IN STITU T IO N or commonly confused spellings such as quiet and quite), and are dependent on local and long-distance collocational and syntactic patterns to resolve between the set of alternatives.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus both tasks can share a common feature space, data representation and algorithm infrastructure.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a framework of doing so, while investigating the use of mixture models in conjunction with a new error-correction technique as competitive alternatives to Bayesian models.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While several authors have observed the fundamental similarities between CSSC and WSD (e.g. Berleant, 1995 and Roth, 1998), to our knowledge no previous comparative empirical study has tackled these two problems in a single unified framework.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "problem formulation. feature space. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The problem of lexical disambiguation can be modeled as a classification task, in which each instance of the word to be disambiguated (target word, henceforth), identified by its context, has to be labeled with one of the established sense labels .1 The approaches we investigate are statistical methods , outputting conditional probability distributions over thesense set given a context . The classifica tion of a context is generally made by choosing, but we also present an alterna 1 In the case of spelling correction, the classification labels are represented by the confusion set rather than sense labels (for example ).",
+                    "sid": 14,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "... presents another {piece,peace} of the problem ...",
+                    "sid": 15,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature type Word POS Lemma Context features Context features Bigram POS environment POS2-1 POS+1+2 VBZ+DT IN+DT Figure 1: Example context for WSD SE N S E VA L-2 target word bar (inventory of 21 senses) and extracted features tive approach in Section 4.1.",
+                    "sid": 16,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contexts are represented as a collection of features.",
+                    "sid": 17,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous work in WSD and CSSC (Golding, 1995; Bruce et al., 1996; Yarowsky, 1996; Golding and Roth, 1996; Pedersen, 1998) has found diverse feature types to be useful, including inflected words, lemmas and part-of-speech (POS) in a variety of collocational and syntactic relationships, including local bigrams and trigrams, Figure 2: Example context for the spelling confusion set {piece,peace} and extracted features",
+                    "sid": 18,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "mixture models (mm). ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We investigate in this Section a direct statistical model that uses the same starting point as the algorithm presented in Walker (1987).",
+                    "sid": 19,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then compare the functionality and the performance of this model to those of the widely used Na\u00efve Bayes model for the WSD task (Gale et al., 1992; Mooney, 1996; Pedersen, 1998), enhanced with the full richer feature space beyond the traditional unordered bag-of- words.",
+                    "sid": 20,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "predicate-argument relationships, and wide-context bag-of-words associations.",
+                    "sid": 21,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples of the feature types we employ are illustrated in Figures 1 and 2.",
+                    "sid": 22,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The syntactic features are intended to capture the predicate-argument relationships in the syntactic window in which the target word occurs.",
+                    "sid": 23,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different relations are considered depending on Algorithm 1 Na\u00efve Bayes Model (1) (2) the target word\u2019s POS.",
+                    "sid": 24,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For nouns, these relations are: verb-object, subject-verb, modifier-noun, and noun-modified_noun; for verbs: verb-object, verb- particle/preposition, verb-prepositional_object; for adjectives: modifying_adjective-noun.",
+                    "sid": 25,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, words with the same POS as the target word that are linked to the target word by coordinating conjunctions are extracted as sibling features.",
+                    "sid": 26,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The extraction process is performed using simple heuristic patterns and regular expressions over the POS environment.",
+                    "sid": 27,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As Figure 2 shows, we considered for the CSSC task the POS bigrams of the immediate left and right word pairs as additional features in order to solve POS ambiguity and capture more of the syntactic environment in which the target word occurs (the elements of a confusion set often have disjoint or very different syntactic functions).",
+                    "sid": 28,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is known that Bayes decision rule is optimal if the distribution of the data of each class is known (Duda and Hart, 1973, ch.",
+                    "sid": 29,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2).",
+                    "sid": 30,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the class- conditional distributions of the data are not known and have to be estimated.",
+                    "sid": 31,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both Na\u00efve Bayes and the mixture model we investigated estimate starting from mathematically correct formulations, and thus would be equivalent if the assumptions they make were correct.",
+                    "sid": 32,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Na\u00efve Bayes makes the assumption (used to transform Equation (1) into (2)) that the features are conditionally independent given a sense label.",
+                    "sid": 33,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The mixture model makes a similar assumption, by regarding a document as being completely described by a union of independent features (Equation (3)).",
+                    "sid": 34,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, these are not true.",
+                    "sid": 35,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the strong correlation and common redun dancy of the features in the case of WSD-related tasks, in conjunction with the limited training data on which the probabilities are estimated and the high dimensionality of the feature space, these assumptions lead to substantial modeling problems.",
+                    "sid": 36,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another important observation is that very many of the frequencies involved in the probability estimation are zero because of the very sparse feature space.",
+                    "sid": 37,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Na\u00efve Bayes depends heavily on probabilities not being zero and therefore it has to rely on smoothing.",
+                    "sid": 38,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the mixture model is more robust to unseen events, without the need for explicit smoothing.",
+                    "sid": 39,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under the proposed mixture model, the conditional probability of a sense given a target wordin a context is estimated as a mixture of the condi tional sense probability distributions for individual context features: Algorithm 2 Mixture Model (3) (4) to regardless of the distance then MLE estimates are obtained.",
+                    "sid": 40,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are various other ways of choosing the weighting measure . One natural way is to transform the distance into a closeness measure by considering (Manning and Sch\u00fctze, 1999, ch.",
+                    "sid": 41,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14.1).",
+                    "sid": 42,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This measure proves to be effective for the spelling correction task, where the words in the immediate vicinity are far more important than the rest of the context words2 , but imposes counterproductive differences between the much wider context positions (such as +30 vs. +31) used in WSD, especially when considering large context windows.",
+                    "sid": 43,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results indicate that it is more effective to level outthe local positional differences given by a continu ous weighting, by instead using weight-equivalent regions which can be described with a simple step- function , ( is a constant3 ).",
+                    "sid": 44,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A filtering process based on the overall importance of a word for the disambiguation of is also employed, using alterations of the form , with proportional to the number of senses of target word which it co occurs with in the training set.4 In this way, the words that occur only once in the training set, as as opposed to the Na\u00efve Bayes model in which the probability of a sense given a context is derived from the prior probability of weighted by the conditional probabilities of the contextual features given the sense.",
+                    "sid": 45,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabilities in (4) and in (2) can be computed as maximum likelihood estimates (MLE), by counting the co-occurrences of and versus the occurrences of , respectively in the training data.",
+                    "sid": 46,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An extension to this classical estimation method is to use distance-weighted counts instead of raw counts for the relative frequencies: (5) (6) denotes the training contexts of word and the subset of corresponding to sense . When is a syntactic headword, is computed by raw count.",
+                    "sid": 47,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When is a context word, is computed as a function of the position of the target word in and the positions where occurs in : . If are set well as those that occur with most of the senses of a word, providing no relevant information about the sense itself, are penalized.",
+                    "sid": 48,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Improvements obtained using weighted frequencies and filtering over MLE are shown in Table 1.",
+                    "sid": 49,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ba yes Mi xtu re M L E b a g o f w o r d s o n l y 55.",
+                    "sid": 50,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "55 5 6.",
+                    "sid": 51,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 1 M LE wit h syn tac tic fea tur es 61.",
+                    "sid": 52,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "62 6 2.",
+                    "sid": 53,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 7 + W e i g h t i n g + F i l t e r i n g 63.",
+                    "sid": 54,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "28 6 3.",
+                    "sid": 55,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 6 + C o l l o c a t i o n a l S e n s e s 5 65.",
+                    "sid": 56,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "70 6 5.",
+                    "sid": 57,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 1 Table 1: The increase in performance for successive variants of Bayes and Mixture Model as evaluated by 5-fold cross validation on SE N S E VA L-2 English data can be seen as weighting factors in the mixture model formula (4).",
+                    "sid": 58,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When is a word, 2 Golding and Schabes (1996) show that the most important words for CSSC are contained within a window of . 3 The results shown were obtained for with term weights doubled within a context window.",
+                    "sid": 59,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Various other functions and parameters values were tried on held-out parameter-optimization data for SE N S E VA L-2.",
+                    "sid": 60,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 A normalization step is required to output probability distributions.",
+                    "sid": 61,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 The collocational sense information is specific to the.",
+                    "sid": 62,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SE N S E VA L-2 English task and relies on the given inventory of collocation sense labels (e.g. art_gallery%1:06:00::).",
+                    "sid": 63,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "expresses the positional relationship between the occurrences of and the target word in , and is computed using step-functions as described previously.",
+                    "sid": 64,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When is a syntactic head word, is chosen as the average value of two ratios expressing the usefulness of the headword type for the given target word and respectively for the POS-class of the target word (adjective, noun,verb).",
+                    "sid": 65,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These ratios are estimated by using a jack knife (hold-one-out) procedure on the training set and counting the number times the headword type is a good predictor versus the number of times it is a bad predictor.",
+                    "sid": 66,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feat ure Typ e ( p o s i t i o n ) V a l u e D M M Na\u00ef ve Bay es Le m ma/ PO S S y n t a c t i c F e a t u r e s Su bj ec tT o M o di fi er m o v e / V o t h e r / J 0 0 0 0 3 8 B i g r a m s -1 Bi gr a m +1 Bi gr am o t h e r / J w i t h / I 0 0 . 4 4 4 4 0 0 . 0 0 0 7 2 1 C o n t e x t u a l F e a t u r e s Con text( 17) p u b / N 0.",
+                    "sid": 67,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "36 77 0 . 0 0 0 7 .3 Con text( 13) s i t / V 0.",
+                    "sid": 68,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "57 08 0 . 0 0 2 8 .5 Co ntext( 9) t a b l e / N 0.",
+                    "sid": 69,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "71 73 0 . 0 0 0 8 .5 Co nte xt( -4) Co nte xt( -3) Co nte xt( -2) Co nte xt( -1) Tar get Co nte xt( +1 ) Co nte xt( +2 ) Co nte xt( +3 ) m o v e / V i n t o / I t h e / D o t h e r / J b a r / N w i t h / I m y / P p i n t / N 0 . 2 9 9 0 0 . 4 2 9 6 0 . 3 3 3 3 0 . 0 0 0 7 [ 0 . 0 5 3 0 ] 0 . 0 0 0 1 1 2 2 . . .",
+                    "sid": 70,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Posterior probabili ty : = . 4 6 = . 2 9 Figure 3: A WSD example that shows the influence of syntactic, collocational and long-distance context features, the probability estimates used by Na\u00efve Bayes and MM and their associated weights ( ), and the posterior probabilities of the true sense as computed by the two models.",
+                    "sid": 71,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in Table 1, Bayes and mixture models yield comparable results for the given task.",
+                    "sid": 72,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they capture the properties of the feature space in distinct ways (example applications of the two models on the sentence in Figure 1 are illustrated in Figure 3) and therefore, are very appropriate to be used together in combination (see Section 5.4).",
+                    "sid": 73,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "classification correction and boosting. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We first present an original classification correction method based on the variation of posterior probability estimates across data and then the adaptation of the Adaboost method (Freund and Schapire, 1997) to the task of lexical classification.",
+                    "sid": 74,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 The Maximum Variance Correction.",
+                    "sid": 75,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Method (MVC) One problem arising from the sparseness of training data is that mixture models tend to excessively favor the best represented senses in the training set.",
+                    "sid": 76,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A probable cause is that spurious words, which can not be considered general stopwords but do not carry sense-disambiguation information for a particular target word, may occur only by chance both in training and test data.6 Another cause is the fact that mixture models search for decision surfaces linear in the feature space7 ; therefore, they can not make only correct classifications (unless the feature space can be divided by linear conditions) and the samples for the under-represented senses are likely to be interpreted as outliers.",
+                    "sid": 77,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this estimation problem, a second classification step is employed, based on the observation that the deviation of a component of the posterior distribution from its expected value (as computed over the training set) can be as relevant as the maximum of the distribution . Instead of classifying each test context independently after estimating its sense probability distribution, we classify it by comparing it with the whole spaceof training contexts, for which the posterior distri butions are computed using a jackknife procedure.",
+                    "sid": 78,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4(a) illustrates such an example: each line in the table represents the posterior distribution over senses given a context, each column contains the values corresponding to a particular sense in the posterior distributions of all contexts.",
+                    "sid": 79,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuitively, sense may be preferred to the most likely sense for the test context despite the fact that the is smaller than because of the analogy with and the \u201cexpected values\u201d of the components corresponding to and . Unfortunately, we face again the problem of under-representation in the training data: the expected values in the posterior distributions for the under-represented senses when they express the correct classification can not be accurately estimated.",
+                    "sid": 80,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we have to look at the problem from another angle.",
+                    "sid": 81,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 For example, assuming that every context contains approximately the same number of such words, then given two senses, one represented in the training set by 20 examples, and the other one by 4, it is five times more likely that a spurious word in a test context co-occurs with the larger sampled sense.",
+                    "sid": 82,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 Roth (1998) shows that Bayes, TBL and Decision Lists also search for a decision surface which is a linear function in the feature space P(s|c) Variational Coefficients cs,c m Senses: s1 . . .",
+                    "sid": 83,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "s m . . .",
+                    "sid": 84,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "s k\u22121 s k s 1 . . .",
+                    "sid": 85,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "s . . .",
+                    "sid": 86,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "s k\u22121 s k Training contexts c1(art) 0.04 . . .",
+                    "sid": 87,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.44 . . .",
+                    "sid": 88,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c2(art) 0.05 . . .",
+                    "sid": 89,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.41 . . .",
+                    "sid": 90,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ts c3(art) 0.13 . . .",
+                    "sid": 91,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.26 . . .",
+                    "sid": 92,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.33 . . .",
+                    "sid": 93,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c4(art) 0.21 . . .",
+                    "sid": 94,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.29 . . .",
+                    "sid": 95,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c5(art) 0.04 . . .",
+                    "sid": 96,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.36 . . .",
+                    "sid": 97,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T c (art) c1 ( a rt ) \u2212 0.",
+                    "sid": 98,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 . . .",
+                    "sid": 99,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+ 1.",
+                    "sid": 100,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 . . .",
+                    "sid": 101,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c2 ( a rt ) \u2212 0.",
+                    "sid": 102,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 . . .",
+                    "sid": 103,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+ 1.",
+                    "sid": 104,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 . . .",
+                    "sid": 105,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c3 ( a rt ) + 1.",
+                    "sid": 106,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 . . .",
+                    "sid": 107,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2212 0.",
+                    "sid": 108,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 . . .",
+                    "sid": 109,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+ 2 . 3 . . .",
+                    "sid": 110,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c4 ( a rt ) + 2.",
+                    "sid": 111,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 . . .",
+                    "sid": 112,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2212 0.",
+                    "sid": 113,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 . . .",
+                    "sid": 114,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c5 ( a rt ) \u2212 0.",
+                    "sid": 115,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 . . .",
+                    "sid": 116,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+ 0.",
+                    "sid": 117,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 . . .",
+                    "sid": 118,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c (a rt) \u22120 .2 . . .",
+                    "sid": 119,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u22120 .4 . . .",
+                    "sid": 120,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+ 1.",
+                    "sid": 121,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 Test context 6 0.06 . . .",
+                    "sid": 122,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.29 . . .",
+                    "sid": 123,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.26 . . .",
+                    "sid": 124,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c157(art) 0.24 . . .",
+                    "sid": 125,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.31 . . .",
+                    "sid": 126,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 . . .",
+                    "sid": 127,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c157(art) +3.5 . . .",
+                    "sid": 128,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u22120.2 . . .",
+                    "sid": 129,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) Probability distributions computed by MM using jackknife on the training set and a test context (b) The variational coefficients for the example on the left Figure 4: WSD example showing the utility of the MVC method.",
+                    "sid": 130,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A sense with a high variational coefficient is preferred to the mode of the MM distribution (the fields corresponding to the true sense are highlighted) The mathematical support is provided by Chebyshev\u2019s inequality , which allows us to place an upper bound on the probability that the value of a random variable is larger than a set value, given the mean and variance of . Considering a finite selection from a distribution for which and exist and can be estimated8 as the empirical mean and empirical variance , and given another set , the elements of that are least probable as being generated from are those for which the variational coefficients are large.",
+                    "sid": 131,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To apply this assumption to the disambiguation task, a set containing the values for all contexts in the training set that are not labeled is built for every sense (see Figure 4(a)).",
+                    "sid": 132,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, the problem of poor representation of some senses is overcome and the selections are large for all senses.",
+                    "sid": 133,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An instance in the test set is considered more likely to correspond to a sense if the estimated value is an outlier with respect to (see Figure 4(b)) and thus it is viewed as a candidate for having its classification changed to . Assuming that the selections are representative and there exist first and second order moments for the underlying distributions (conditions which we call \u201cgood statistical properties\u201d), an improvement in the accuracy of the classifier can be expected when choosing a sense with a variational coefficient instead of the clas sifier distribution\u2019s mode (if such a sense exists).",
+                    "sid": 134,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, knowing that the performance of the mixture model for SEN SEVA L-2 is 8 It is hard to judge how well estimated these statistics are without making any distributional assumptions.",
+                    "sid": 135,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "approximatively , the threshold for variational coefficients is set to . Because spurious words not only favor the better represented senses in the training set, but also can affect the variational coefficients of unlikely senses, some restrictions had to be imposed in our implementation to avoid the other extreme of favoring unlikely senses.",
+                    "sid": 136,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The mixture model does not guarantee the requirements imposed by the MVC method are met, but it has the advantage over the Bayesian model that each of the components of the posterior distribution it computes can be seen as a weighted mixture of random variables corresponding to the individual features.",
+                    "sid": 137,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the simplest case, when considering binary features, these variables are Bernoulli trials.",
+                    "sid": 138,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, if the trials have the same probability-mass function then a component of the posterior distribution will follow a binomial distribution, and therefore would have good statistical properties.",
+                    "sid": 139,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, the underlying distributions can not be computed, but our experiments show that they usually have good statistical properties as required by MVC.",
+                    "sid": 140,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 AdaBoost.",
+                    "sid": 141,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AdaBoost is an iterative boosting algorithm introduced by Freund and Schapire (1997) shown to be successful for several natural language classification tasks.",
+                    "sid": 142,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AdaBoost successively builds classifiers based on a weak learner (base learning algorithm) by weighting differently the examples in the training space, and outputs the final classification by mixing the predictions of the iteratively built classifiers.",
+                    "sid": 143,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because sense disambiguation is a multi-class problem, we chose to use version AdaBoost.M2.",
+                    "sid": 144,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We could not apply AdaBoost straightforwardly to the problem of sense disambiguation because of the high dimensionality and sparseness of the fea ture space.",
+                    "sid": 145,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Superficial modeling of the training set can easily be achieved because of the singularity/rarity of many feature values in the context space, but this largely represents overfitting of the training data.",
+                    "sid": 146,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to solve this problem, we use AdaBoost in conjunction with jackknife and a partial updating technique.",
+                    "sid": 147,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At each round, classifiers are built using as training all the examples in the training set except the one to be classified, and the weights are updated at feature level rather than context level.",
+                    "sid": 148,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This modified Adaboost algorithm could only be implemented for the mixture model, which \u201cperceives\u201d the contexts as additive mixture of features.",
+                    "sid": 149,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Adaboost-enhanced mixture model is called AdaMixt henceforth.",
+                    "sid": 150,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "evaluation. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We present a comparative study for four languages (English, Swedish, Spanish, and Basque) by performing 5-fold cross-validation on the SEN SEVA L-2 lexical-sample training data, using the fine-grained sense inventory.",
+                    "sid": 151,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For English and Swedish, for which POS-tagged training data was available to us, the fnTBL algorithm (Ngai and Florian, 2001) to outperform by a small margin the raw mixture model, but because the latter proved to be boosting- friendly, its augmented versions achieved the highest final accuracies.",
+                    "sid": 152,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between MMVC and enhanced Na\u00efve Bayes is significant (McNemar rejection risk of ).",
+                    "sid": 153,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adj ecti ves No uns Ver bs Ove rall M o s t L i k e l y 5 2.",
+                    "sid": 154,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 1 52.",
+                    "sid": 155,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "01 27.",
+                    "sid": 156,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "28 41.",
+                    "sid": 157,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "79 Na\u00ef ve Bay es (FE ) 7 3.",
+                    "sid": 158,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 8 72.",
+                    "sid": 159,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "74 55.",
+                    "sid": 160,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "54 65.",
+                    "sid": 161,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "70 M i x t u r e 7 3.",
+                    "sid": 162,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 0 71.",
+                    "sid": 163,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "09 56.",
+                    "sid": 164,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "16 65.",
+                    "sid": 165,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "41 A d a M i x t 7 4.",
+                    "sid": 166,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 8 72.",
+                    "sid": 167,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "17 56.",
+                    "sid": 168,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "41 66.",
+                    "sid": 169,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "09 M M V C 7 4.",
+                    "sid": 170,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 8 73.",
+                    "sid": 171,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "06 57.",
+                    "sid": 172,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "06 66.",
+                    "sid": 173,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "72Table 2: Results using 5-fold cross validation on SE N S E VA L 2 English lexical-sample training data.",
+                    "sid": 174,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows both the performance of the mixture model alone and in conjunction with MVC, and highlights the improvement in performance achieved by the latter for each of the 4 languages.",
+                    "sid": 175,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All MMVC versus MM differences are statistically significant (for SEN SEVA L-2 English data, the rejection probability of a paired McNemar test is ).",
+                    "sid": 176,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most Likely MM based on Brill (1995) was used to annotate the data, while for Spanish a mildly-supervised POS-tagging system similar to the one presented in Cucerzan and Yarowsky (2000) was employed.",
+                    "sid": 177,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also present the results obtained by the different algorithms on 75 MMVC.",
+                    "sid": 178,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "70 65.41 66.72 65 60 55 65.58 66.71 61.84 59.66 68.61 62.75 69.68 another WSD standard set, SEN SEVA L-1, also by performing 5-fold cross validation on the original 50 45 41.79 45.94 46.25 training data.",
+                    "sid": 179,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For CSSC, we tested our system on the identical data from the Brown corpus used by Golding (1995), Golding and Roth (1996) and Mangu and Brill (1997).",
+                    "sid": 180,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we present the results obtained by the investigated methods on a single run on the Senseval1 and Senseval2 test data.",
+                    "sid": 181,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The described models were initially trained and tested by performing 5-fold cross-validation on the SEN SEVA L-2 English lexical-sample-task training data.",
+                    "sid": 182,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When parameters needed to be estimated, jackknife or a 31-1 split (training and/or parameter estimation - testing) were used.",
+                    "sid": 183,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 SEN SEVA L-2.",
+                    "sid": 184,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English training set for SEN SEVA L-2 is composed of 8861 instances representing 73 target words with an average number of 12.5 senses per word.",
+                    "sid": 185,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 illustrates the performance of each of the studied models broken down by part-of- speech.",
+                    "sid": 186,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As observed in most experiments, the feature-enhanced Na\u00efve Bayes has the tendency 40 English Spanish Swedish Basque Figure 5: MM and MMVC performance by performing 5- fold cross validation on SE N S E VA L-2 data for 4 languages Figure 6 shows what is generally a log-linear increase in performance of MM alone and in combination with the MVC method over increasing training sizes.",
+                    "sid": 187,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of the way the smallest training sets were created to include at least one example for each sense, they were more balanced as a side effect, and the compensations introduced by MVC were less productive as a result.",
+                    "sid": 188,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given more training data, MMVC starts to improve relative to the raw model both because the training sets become more unbalanced in their sense distributions and because the empirical moments and the variational coefficients on which the method relies are better estimated.",
+                    "sid": 189,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 SEN SEVA L-1.",
+                    "sid": 190,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The systems used for SEN SEVA L-2 English data were also evaluated on the SEN SEVA L-1 training MMVC 66 MM 64 62 60 58 with little to no adaptation (we only enriched the feature space by adding the POS bigrams to the left and right of the target word and changed the weighting model as presented in Section 3 because spelling correction relies more on the immediate than long- distance context).",
+                    "sid": 191,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another important aspect that can 56 20 40 60 80 Percent of Available Training Data Figure 6: Learning Curve for MM and MMVC on SE N S E VA L-2 English (cross-validated on heldout data) data (30 words, 12479 instances, with an average of 10.8 senses per word) by using 5-fold cross validation.",
+                    "sid": 192,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There was no further tuning of the feature space or model parameters to adapt them to the particularities of this new test set.",
+                    "sid": 193,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparative performance is shown in Table 3.",
+                    "sid": 194,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between MMVC and enhanced Na\u00efve Bayes is statistically significant (McNemar rejection risk 0.036).",
+                    "sid": 195,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adj ecti ves No uns Ver bs Ove rall M o s t L i k e l y 6 3.",
+                    "sid": 196,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 3 66.",
+                    "sid": 197,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "52 57 .6 63.",
+                    "sid": 198,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "09 Na\u00ef ve Bay es (FE ) 7 5.",
+                    "sid": 199,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 7 84.",
+                    "sid": 200,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "15 76.",
+                    "sid": 201,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "65 80.",
+                    "sid": 202,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "16 M i x t u r e 7 6.",
+                    "sid": 203,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 5 81.",
+                    "sid": 204,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "57 75 .9 78.",
+                    "sid": 205,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "79 A d a M i x t 7 6.",
+                    "sid": 206,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 3 83.",
+                    "sid": 207,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "39 77.",
+                    "sid": 208,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 80.",
+                    "sid": 209,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "16 M M V C 7 8.",
+                    "sid": 210,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 9 84.",
+                    "sid": 211,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "79 76.",
+                    "sid": 212,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "81 81.",
+                    "sid": 213,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "06Table 3: Results using 5-fold cross validation on SE N S E VA L 1 training data (English) 5.3 Spelling Correction.",
+                    "sid": 214,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both MM and the enhanced Bayes model obtain virtually the same overall performance9 as the TriB- ayes system reported in (Golding and Schabes, 1996), which uses a similar feature space.",
+                    "sid": 215,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The correction and boosting methods we investigated marginally improve the performance of the mixture model, as can be seen in Table 4 but they do not achieve the performance of RuleS 93.1% (Mangu and Brill, 1997) and Winnow 93.5% (Golding and Roth, 1996; Golding and Roth, 1999), methods that include features more directly specialized for spelling correction.",
+                    "sid": 216,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of the small size of the test set, the differences in performance are due to only 14 and 20 more incorrectly classified examples respectively.",
+                    "sid": 217,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More important than this differ- ence10 may be the fact that the systems built for WSD were able to achieve competitive performance 9 All figures reported are for the standard 14 confusion sets;.",
+                    "sid": 218,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the accuracies for the 18 sets are generally higher.",
+                    "sid": 219,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 We did not have the actual classifications from the other systems to check the significance of the difference.",
+                    "sid": 220,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4: Results on the standard 14 CSSC data sets be seen in Table 4 is that there was no model that constantly performed best in all situations, suggesting the advantage of developing a diverse space of models for classifier combination.",
+                    "sid": 221,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Using MMVC in Classifier Combination.",
+                    "sid": 222,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The investigated MMVC model proves to be a very effective participant in classifier combination, with substantially different output to Na\u00efve Bayes (9.6% averaged complementary rate, as defined in Brill and Wu (1998)).",
+                    "sid": 223,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 shows the improvement obtained by adding the MMVC model to empirically the best voting system we had using Bayes, BayesRatio, TBL and Decision Lists (all classifier combination methods tried and their results are presented exhaustively in Florian and Yarowsky (2002)).",
+                    "sid": 224,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement is significant in both cases, as measured by a paired McNemar test: for SEN SEVA L-1 data, for SEN SEVA L-2 data.",
+                    "sid": 225,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "w i t h o u t M M V C w i t h M M V C e r r o r r e d u c t i o n Se nse val 1 8 2 . 2 6 8 3 . 0 6 4 . 5 % Se nse val 2 6 7 . 5 3 6 8 . 6 6 3 . 5 % Table 5: The contribution of MMVC in a rank-based classifier combination on SE N S E VA L-1 and SE N S E VA L-2 English as computed by 5-fold cross validation over training data MMVC is also the top performer of the 5 systems mentioned above on SEN SEVA L-2 English test data, with an accuracy of 62.5%.",
+                    "sid": 226,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 contrasts the performance obtained by the MMVC method to the average and best system performance in the two SEN SEVA L exercises.",
+                    "sid": 227,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SE N S E VA L-1 (30 target words, 7446 instances) SE N S E VA L-2 (73 target words, 4328 instances) Ave rage / Bes t SE N S E VA L-2 Co mpe titor 55.7 5.3 / 64.2 M M V C a l o n e 6 2 . 5 C la ss if ie r c o m bi n at io n w it h M M V C 6 6 . 5 Table 6: Accuracy on SE N S E VA L-1 and SE N S E VA L-2 English test data (only the supervised systems with a coverage of at least 97% were used to compute the mean and variance)",
+                    "sid": 228,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We investigated the properties and performance of mixture models and two augmenting methods in an unified framework for Word Sense Disambiguation and Context-Sensitive Spelling Correction, showing experimentally that such joint models can successfully match and exceed the performance of feature- enhanced Bayesian models.",
+                    "sid": 229,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new classification correction method (MVC) we propose successfully addresses the problem of under-estimation of less likely classes, consistently and significantly improving the performance of the main mixture model across all tasks and languages.",
+                    "sid": 230,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, since the mixture model and its improvements performed well on two major tasks and several multilingual data sets, we believe that they can be productively applied to other related high-dimensionality lexical classification problems, including named-entity classification, topic classification, and lexical choice in machine translation.",
+                    "sid": 231,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

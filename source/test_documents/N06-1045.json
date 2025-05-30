@@ -1,0 +1,1007 @@
+{
+    "ID": "N06-1045",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "A Better N-Best List: Practical Determinization Of Weighted Finite Tree Automata",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ranked lists of output trees from syntactic statistical NLP applications frequently contain multiple repeated entries.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This redundancy leads to misrepresentation of tree weight and reduced information for debugging and tuning purposes. is due to nondeterminism in the weighted automata that produce the results.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce an algorithm that determinizes such automata while preserving proper weights, returning the sum of the weight of all multiply derived trees.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also demonstrate our algorithm\u2019s effectiveness on two large-scale tasks.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "A useful tool in natural language processing tasks such as translation, speech recognition, parsing, etc., is the ranked list of results.",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Modern systems typically produce competing partial results internally and return only the top-scoring complete result to the user.",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are, however, also capable of producing lists of runners-up, and such lists have many practical uses: The lists may be inspected to determine the quality of runners-up and motivate model changes.",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lists may be re-ranked with extra knowledge sources that are difficult to apply during the main search.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lists may be used with annotation and a tuning process, such as in (Collins and Roark, 2004), to iteratively alter feature weights and improve results.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows the best 10 English translation parse trees obtained from a syntax-based translation system based on (Galley, et. al., 2004).",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that the same tree occurs multiple times in this list.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This repetition is quite characteristic of the output of ranked lists.",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It occurs because many systems, such as the ones proposed by (Bod, 1992), (Galley, et. al., 2004), and (Langkilde and Knight, 1998) represent their result space in terms of weighted partial results of various sizes that may be assembled in multiple ways.",
+                    "sid": 13,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is in general more than one way to assemble the partial results to derive the same complete result.",
+                    "sid": 14,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, the -best list of results is really an -best list of derivations.",
+                    "sid": 15,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When list-based tasks, such as the ones mentioned above, take as input the top results for some constant , the effect of repetition on these tasks is deleterious.",
+                    "sid": 16,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A list with many repetitions suffers from a lack of useful information, hampering diagnostics.",
+                    "sid": 17,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Repeated results prevent alternatives that would be highly ranked in a secondary reranking system from even being considered.",
+                    "sid": 18,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And a list of fewer unique trees than expected can cause overfitting when this list is used to tune.",
+                    "sid": 19,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the actual weight of obtaining any particular tree is split among its repetitions, distorting the actual relative weights between trees.",
+                    "sid": 20,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Mohri, 1997) encountered this problem in speech recognition, and presented a solution to the problem of repetition in -best lists of strings that are derived from finite-state automata.",
+                    "sid": 21,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That work described a way to use a powerset construction along with an innovative bookkeeping system to determinize the automaton, resulting in an automaton that preserves the language but provides a single, properly weighted derivation for each string in it.",
+                    "sid": 22,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Put another way, if the input automaton has the ability to generate the same string with different weights, the output automaton generates that string with weight equal to the sum of all of the generations of that string in the input automaton.",
+                    "sid": 23,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (Mohri and Riley, 2002) this technique was combined with a procedure for efficiently obtaining -best ranked lists, yielding a list of string results with no repetition.",
+                    "sid": 24,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we extend that work to deal with grammars that produce trees.",
+                    "sid": 25,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Regular tree grammars (Brainerd, 1969), which subsume the tree substitution grammars developed in the NLP community (Schabes, 1990), are of particular interest to those wishing to work with additional levels of structure that string grammars cannot provide.",
+                    "sid": 26,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The application to parsing is natural, and in machine translation tree grammars can be used to model syntactic transfer, control of function words, reordering, and target-language well-formedness.",
+                    "sid": 27,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the world of automata these grammars have as a natural dual the \u00denite tree recognizer (Doner, 1970).",
+                    "sid": 28,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like tree grammars and packed forests, they are compact ways of representing very large sets of trees.",
+                    "sid": 29,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will present an algorithm for determinizing weighted finite tree recognizers, and use a variant of the procedure found in (Huang and Chiang, 2005) to obtain -best lists of trees that are weighted correctly and contain no repetition.",
+                    "sid": 30,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 2 describes related work.",
+                    "sid": 31,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 3, we introduce the formalisms of tree automata, specifically the tree-to-weight transducer.",
+                    "sid": 32,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 4, we present the algorithm.",
+                    "sid": 33,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, in Section 5 we show the results of applying weighted determinization to recognizers obtained from the packed forest output of two natural language tasks.",
+                    "sid": 34,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 previous work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The formalisms of tree automata are summarized well in (Gecseg and Steinby, 1984).",
+                    "sid": 35,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bottom-up tree recognizers are due to (Thatcher and Wright, 1968), (Doner, 1970), and (Magidor and Moran, 1969).",
+                    "sid": 36,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Top-down tree recognizers are due to (Rabin, 1969) and (Magidor and Moran, 1969).",
+                    "sid": 37,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Comon, et. al., 1997) show the determinization of unweighted finite-state tree automata, and prove its correctness.",
+                    "sid": 38,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Borchardt and Vogler, 2003) present determinization of weighted finite-state tree automata with a different method than the one we present here.",
+                    "sid": 39,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While our method is applicable to finite tree sets, the previous method claims the ability to determinize some classes of infinite tree sets.",
+                    "sid": 40,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, for the finite case the previous method produces an automaton with size on the order of the number of derivations, so the technique is limited when applied to real world data.",
+                    "sid": 41,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 grammars, recognizers, and transducers",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "As described in (Gecseg and Steinby, 1984), tree automata may be broken into two classes, recognizers and transducers.",
+                    "sid": 42,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recognizers read tree input and decide whether the input is in the language represented by the recognizer.",
+                    "sid": 43,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, a bottom-up tree recognizer is defined by :1 is a finite set of states, is a ranked alphabet, is the initial state, is a set of final states, and is a finite set of transitions from a vector of states to one state that reads a -ary symbol.",
+                    "sid": 44,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the following tree recognizer: As with string automata, it is helpful to have a visualization to understand what the recognizer is recognizing.",
+                    "sid": 45,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 provides a visualization of the recognizer above.",
+                    "sid": 46,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that some members of are drawn as arcs with multiple (and ordered) tails.",
+                    "sid": 47,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the key difference in visualization between string and tree automata \u2013 to capture the arity of the symbol being read we must visualize the automata as an ordered hypergraph.",
+                    "sid": 48,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The function of the members of in the hypergraph visualization leads us to refer to the vector of states as an input vector of states, and the single state as an output state.",
+                    "sid": 49,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will refer to as the transition set of the recognizer.",
+                    "sid": 50,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In string automata, a path through a recognizer consists of a sequence of edges that can be followed from a start to an end state.",
+                    "sid": 51,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The concatenation of labels of the edges of a path, typically in a left-to-right order, forms a string in the recognizer\u2019s language.",
+                    "sid": 52,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In tree automata, however, a hyperpath through a recognizer consists of a sequence of hyperedges that can be followed, sometimes in parallel, from a start to an end state.",
+                    "sid": 53,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We arrange the labels of the hyperedges to form a tree in the recognizer\u2019s language but must now consider proper order in two dimensions.",
+                    "sid": 54,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proper vertical order is specified by the order of application of transitions, i.e., the labels of transitions followed earlier are placed lower in the tree than the labels of transitions followed later.",
+                    "sid": 55,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proper horizontal order within one level of the tree is specified by the order of states in a transition\u2019s input vector.",
+                    "sid": 56,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the example recognizer, the trees and are valid.",
+                    "sid": 57,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that may be recognized in two different hyperpaths.",
+                    "sid": 58,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like tree recognizers, tree transducers read tree input and decide whether the input is in the language, but they simultaneously produce some output as well.",
+                    "sid": 59,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we wish to associate a weight with every acceptable tree in a language, we will consider transducers that produce weights as their output.",
+                    "sid": 60,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in transitioning from recognizers to transducers we are following the convention established in (Mohri, 1997) where a transducer with weight outputs is used to represent a weighted recognizer.",
+                    "sid": 61,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One may consider the determinization of tree-to-weight transducers as equivalent to the determinization of weighted tree recognizers.",
+                    "sid": 62,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, a bottom-up tree-to-weight transducer is defined by where , , ,and are defined as for recognizers, and: is a finite set of transitions from a vector of states to one state, reading a -ary symbol and outputting some weight is the initial weight function mapping to 2 2The number denotes the arity of the symbol. is the final weight function mapping to .",
+                    "sid": 63,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We must also specify a convention for propagating the weight calculated in every transition.",
+                    "sid": 64,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be explicitly defined for each transition but we will simplify matters by defining the propagation of the weight to a destination state as the multiplication of the weight at each source state with the weight of the production.",
+                    "sid": 65,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We modify the previous example by adding weights as follows: As an example, consider the following tree-to-weight transducer ( , ,, and are as before): Figure 3 shows the addition of weights onto the automata, forming the above transducer.",
+                    "sid": 66,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice the tree yields the weight 0.036 ( ), and yields the weight 0.012 ( ) or 0.054 ( ), depending on the hyperpath followed.",
+                    "sid": 67,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This transducer is an example of a nonsubsequential transducer.",
+                    "sid": 68,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A tree transducer is subsequential if for each vector v of states and each there is at most one transition in with input vector v and label .",
+                    "sid": 69,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These restrictions ensure a subsequential transducer yields a single output for each possible input, that is, it is deterministic in its output.",
+                    "sid": 70,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because we will reason about the destination state of a transducer transition and the weight of a transducer transition separately, we make the following definition.",
+                    "sid": 71,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given v where v is a vector of states,",
+                    "sid": 72,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 determinization",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "The determinization algorithm is presented as Algorithm 1.",
+                    "sid": 73,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It takes as input a bottom-up tree-to-weight transducer and returns as output a subsequential bottom-up tree-to-weight transducer such that the tree language recognized by is equivalent to that of and the output weight given input tree on is equal to the sum of all possible output weights given on .",
+                    "sid": 74,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like the algorithm of (Mohri, 1997), this algorithm will terminate for automata that recognize finite tree languages.",
+                    "sid": 75,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may terminate on some automata that recognize infinite tree languages, but we do not consider any of these cases in this work.",
+                    "sid": 76,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Determinizing a tree-to-weight transducer can be thought of as a two-stage process.",
+                    "sid": 77,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the structure of the automata must be determined such that a single hyperpath exists for each recognized input tree.",
+                    "sid": 78,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is achieved by a classic powerset construction, i.e., a state must be constructed in the output transducer that represents all the possible reachable destination states given an input and a label.",
+                    "sid": 79,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because we are working with tree automata, our input is a vector of states, not a single state.",
+                    "sid": 80,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A comparable powerset construction on unweighted tree automata and a proof of correctness can be found in (Comon, et. al., 1997).",
+                    "sid": 81,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second consideration to weighted determinization is proper propagation of weights.",
+                    "sid": 82,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this we will use (Mohri, 1997)\u2019s concept of the residual weight.",
+                    "sid": 83,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We represent in the construction of states in the output transducer not only a subset of states of the input transducer, but also a number associated with each of these states, called the residual.",
+                    "sid": 84,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we want \u2019s hyperpath of a particular input tree to have as its associated weight the sum of the weights of the all of \u2019s hyperpaths of the input tree, we replace a set of hyperedges in that have the same input state vector and label with a single hyperedge in bearing the label and the sum of \u2019s hyperedge weights.",
+                    "sid": 85,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The destination state of the hyperedge represents the states reachable by \u2019s applicable hyperedges and for each state, the proportion of the weight from the relevant transition.",
+                    "sid": 86,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 shows the determinization of a portion of the example transducer.",
+                    "sid": 87,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the hyperedge , , and , let v and v .",
+                    "sid": 88,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equivalent shorthand forms are and . leading to state in the input transducer contributes of the weight on the output transducer hyperedge and the hyperedge leading to state in the input transducer contributes the remaining .",
+                    "sid": 89,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is reflected in the state construction in the output transducer.",
+                    "sid": 90,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complete determinization of the example transducer is shown in Figure 5.",
+                    "sid": 91,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To encapsulate the representation of states from the input transducer and associated residual weights, we define a state in the output transducer as a set of tuples, where and .",
+                    "sid": 92,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the algorithm builds new states progressively, we will need to represent a vector of states from the output transducer, typically depicted as v. We may construct the vector pair q w from v, where q is a vector of states of the input transducer and w is a vector of residual weights, by choosing a (state, weight) pair from each output state in v. For example, let .",
+                    "sid": 93,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then two possible output transducer states could be and .",
+                    "sid": 94,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we choose v then a valid vector pair q w is q , w .",
+                    "sid": 95,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sets v , v , and v are defined as follows: . v is the set of vector pairs q w constructed from v where each q is an input vector in a transition with label . v is the set of unique transitions paired with the appropriate pair for each q w in v . v is the set of states reachable from the transitions in v .",
+                    "sid": 96,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The consideration of vectors of states on the incident edge of transitions effects two noticeable changes on the algorithm as it is presented in (Mohri, 1997).",
+                    "sid": 97,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first, relatively trivial, change is the inclusion of the residual of multiple states in the calculation of weights and residuals on lines 16 and 17.",
+                    "sid": 98,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second change is the production of vectors for consideration.",
+                    "sid": 99,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whereas the string-based algorithm considered newly-created states in turn, we must consider newly-available vectors.",
+                    "sid": 100,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each newly created state, newly available vectors can be formed by using that state with the other states of the output transducer.",
+                    "sid": 101,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This operation is performed on lines 7 and 22 of the algorithm.",
+                    "sid": 102,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 empirical studies",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We now turn to some empirical studies.",
+                    "sid": 103,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We examine the practical impact of the presented work by showing: That the multiple derivation problem is pervasive in practice and determinization is effective at removing duplicate trees.",
+                    "sid": 104,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That duplication causes misleading weighting of individual trees and the summing achieved from weighted determinization corrects this error, leading to re-ordering of the -best list.",
+                    "sid": 105,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That weighted determinization positively affects end-to-end system performance.",
+                    "sid": 106,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also compare our results to a commonly used technique for estimation of -best lists, i.e., summing over the top derivations to get weight estimates of the top unique elements.",
+                    "sid": 107,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We obtain packed-forest English outputs from 116 short Chinese sentences computed by a string-totree machine translation system based on (Galley, et. al., 2004).",
+                    "sid": 108,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system is trained on all ChineseEnglish parallel data available from the Linguistic Data Consortium.",
+                    "sid": 109,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder for this system is a CKY algorithm that negotiates the space described in (DeNeefe, et. al., 2005).",
+                    "sid": 110,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No language model was used in this experiment.",
+                    "sid": 111,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The forests contain a median of English parse trees each.",
+                    "sid": 112,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We remove cycles from each forest,3 apply our determinization algorithm, and extract the -best trees using a variant of (Huang and Chiang, 2005).",
+                    "sid": 113,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The effects of weighted determinization on an -best list are obvious to casual inspection.",
+                    "sid": 114,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 7 shows the improvement in quality of the top 10 trees from our example translation after the application of the determinization algorithm.",
+                    "sid": 115,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement observed circumstantially holds up to quantitative analysis as well.",
+                    "sid": 116,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The forests obtained by the determinized grammars have between 1.39% and 50% of the number of trees of their undeterminized counterparts.",
+                    "sid": 117,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On average, the determinized forests contain 13.7% of the original 3As in (Mohri, 1997), determinization may be applicable to some automata that recognize in\u00denite languages.",
+                    "sid": 118,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, cycles in tree automata of MT results are almost never desired, since these represent recursive insertion of words. number of trees.",
+                    "sid": 119,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since a determinized forest contains no repeated trees but contains exactly the same unique trees as its undeterminized counterpart, this indicates that an average of 86.3% of the trees in an undeterminized MT output forest are duplicates.",
+                    "sid": 120,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weighted determinization also causes a surprisingly large amount of -best reordering.",
+                    "sid": 121,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In 77.6% of the translations, the tree regarded as \u201cbest\u201d is different after determinization.",
+                    "sid": 122,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that in a large majority of cases, the tree with the highest weight is not recognized as such in the undeterminized list because its weight is divided among its multiple derivations.",
+                    "sid": 123,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Determinization allows these instances and their associated weights to combine and puts the highest weighted tree, not the highest weighted derivation, at the top of the list.",
+                    "sid": 124,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can compare our method with the more commonly used methods of \u201ccrunching\u201d -best lists, where .",
+                    "sid": 125,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The duplicate sentences in the trees are combined, hopefully resulting in at least unique members with an estimation of the true tree weight for each unique tree.",
+                    "sid": 126,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results indicate this is a rather crude estimation.",
+                    "sid": 127,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the top 500 derivations of the translations of our test corpus are summed, only 50.6% of them yield an estimated highest-weighted tree that is the same as the true highest-weighted tree.",
+                    "sid": 128,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a measure of the effect weighted determinization and its consequential re-ordering has on an actual end-to-end evaluation, we obtain Bleu scores for our 1-best translations from determinization, and compare them with the 1-best translations from the undeterminized forest and the 1-best translations from the top-500 \u201ccrunching\u201d method.",
+                    "sid": 129,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are tabulated in Figure 6.",
+                    "sid": 130,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in 26.7% of cases determinization did not terminate in a reasonable amount of time.",
+                    "sid": 131,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For these sentences we used the best parse from top-500 estimation instead.",
+                    "sid": 132,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not surprising that determinization may occasionally take a long time; even for a language of monadic trees (i.e. strings) the determinization algorithm is NP-complete, as implied by (Casacuberta and de la Higuera, 2000) and, e.g.",
+                    "sid": 133,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Dijkstra, 1959).",
+                    "sid": 134,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weighted determinization of tree automata is also useful for parsing.",
+                    "sid": 135,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data-Oriented Parsing (DOP)\u2019s methodology is to calculate weighted derivations, but as noted in (Bod, 2003), it is the highest ranking parse, not derivation, that is desired.",
+                    "sid": 136,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since (Sima\u2019an, 1996) showed that \u00dending the highest ranking parse is an NP-complete problem, it has been common to estimate the highest ranking parse by the previously on DOP-style parsing of section 23 of the Penn Treebank.",
+                    "sid": 137,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of best derivation (undeterminized), estimate of best tree (top-500), and true best tree (determinized) for selection of parse output is shown. described \u201ccrunching\u201d method.",
+                    "sid": 138,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We create a DOP-like parsing model4 by extracting and weighting a subset of subtrees from sections 2-21 of the Penn Treebank and use a DOPstyle parser to generate packed forest representations of parses of the 2416 sentences of section 23.",
+                    "sid": 139,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The forests contain a median of parse trees.",
+                    "sid": 140,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then remove cycles and apply weighted determinization to the forests.",
+                    "sid": 141,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of trees in each determinized parse forest is reduced by a factor of between 2.1 and .",
+                    "sid": 142,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On average, the number of trees is reduced by a factor of 900,000, demonstrating a much larger number of duplicate parses prior to determinization than in the machine translation experiment.",
+                    "sid": 143,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The top-scoring parse after determinization is different from the topscoring parse before determinization for 49.1% of the forests, and when the determinization method is \u201capproximated\u201d by crunching the top-500 parses from the undeterminized list only 55.9% of the topscoring parses are the same, indicating the crunching method is not a very good approximation of determinization.",
+                    "sid": 144,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the standard F-measure combination of recall and precision to score the top-scoring parse in each method against reference parses.",
+                    "sid": 145,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are tabulated in Figure 8.",
+                    "sid": 146,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in 16.9% of cases determinization did not terminate.",
+                    "sid": 147,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For those sentences we used the best parse from top-500 estimation instead.",
+                    "sid": 148,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 conclusion",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We have shown that weighted determinization is useful for recovering -best unique trees from a weighted forest.",
+                    "sid": 149,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As summarized in Figure 9, the number of repeated trees prior to determinization was typically very large, and thus determinization is critical to recovering true tree weight.",
+                    "sid": 150,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have improved evaluation scores by incorporating the presented algorithm into our MT work and we believe that other NLP researchers working with trees can similarly benefit from this algorithm.",
+                    "sid": 151,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further advances in determinization will provide additional benefit to the community.",
+                    "sid": 152,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation system detailed here is a string-to-tree system, and the determinization algorithm returns the -best unique trees from a packed forest.",
+                    "sid": 153,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Users of MT systems are generally interested in the string yield of those trees, and not the trees per se.",
+                    "sid": 154,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, an algorithm that can return the -best unique strings from a packed forest would be a useful extension.",
+                    "sid": 155,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan for our weighted determinization algorithm to be one component in a generally available tree automata package for intersection, composition, training, recognition, and generation of weighted and unweighted tree automata for research tasks such as the ones described above.",
+                    "sid": 156,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We thank Liang Huang for fruitful discussions which aided in this work and David Chiang, Daniel Marcu, and Steve DeNeefe for reading an early draft and providing useful comments.",
+                    "sid": 157,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was supported by NSF grant IIS-0428020.",
+                    "sid": 158,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

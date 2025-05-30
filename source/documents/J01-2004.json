@@ -1,0 +1,2855 @@
+{
+    "ID": "J01-2004",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This pa per describes thefunctioning of a broad-coverage probabilistic top-down parser, and its application to the problem of language modelingfor speech recognition.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pa per first introduces key notions in language modeling and probabilistic parsing, and briefly reviews some previous approaches to using syntactic structure for language modeling.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A lexicalized probabilistic top\u00ad down parser is then presented, which performs very well, in terms of both the accuracy of returned parses and the efficiency with which they arefound, relative to the best broad-coverage statistical parsers.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A new language model that utilizes probabilistic top-down parsing is then outlined, and empirical results show that it improves upon previous work in test corpus per plexit y. Interpolation with a trigram model yields an exceptional improvement relative to the improvement observed by other models, demonstrating the degree to which the information captured by our parsing model is orthogonal to that captured by a trigram model.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A small recognition experiment also demonstrates the utility of the model.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "With certain exceptions, computational linguists have in the past generally formed a separate research community from speech recognition researchers, despite some obvious overlap of interest.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps one reason for this is that, until relatively re\u00ad cently, few methods have come out of the natural language processing community that were shown to improve upon the very simple language models still standardly in use in speech recognition systems.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the past few years, however, some improve\u00ad ments have been made over these language models through the use of statistical meth\u00ad ods of natural language processing, and the development of innovative, linguistically well-motivated techniques for improving language models for speech recognition is generating more interest among computational linguists.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While language models built around shallow local dependencies are still the standard in state-of-the-art speech recognition systems, there is reason to hope that better language models can and will be developed by computational linguists for this task.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper will examine language modeling for speech recognition from a nat\u00ad ural language processing point of view.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of the recent literature investigating approaches that use syntactic structure in an attempt to capture long-distance depen\u00ad dencies for language modeling will be reviewed.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A new language model, based on probabilistic top-down parsing, will be outlined and compared with the previous liter\u00ad ature, and extensive empirical results will be presented which demonstrate its utility.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two features of our top-down parsing approach will emerge as key to its success.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the top-down parsing algorithm builds a set of rooted candidate parse trees from left to right over the string, which allows it to calculate a generative probability for * Department of Cognitive and Linguistic Sciences, Box 1978, Brown University, Providence, RI 02912 \u00a9 2001 Association for Computational Linguistics each prefix string from the probabilistic grammar, and hence a conditional probability for each word given the previous words and the probabilistic grammar.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A left-to\u00ad right parser whose derivations are not rooted, i.e., with derivations that can consist of disconnected tree fragments, such as an LR or shift-reduce parser, cannot incrementally calculate the probability of each prefix string being generated by the probabilistic grammar, because their derivations include probability mass from unrooted structures.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only at the point when their derivations become rooted (at the end of the string) can generative string probabilities be calculated from the grammar.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These parsers can calculate word probabilities based upon the parser state-as in Chelba and Jelinek (1998a)-but such a distribution is not generative from the probabilistic grammar.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A parser that is not left to right, but which has rooted derivations, e.g., a head\u00ad first parser, will be able to calculate generative joint probabilities for entire strings; however, it will not be able to calculate probabilities for each word conditioned on previously generated words, unless each derivation generates the words in the string in exactly the same order.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, suppose that there are two possible verbs that could be the head of a sentence.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a headfirst parser, some derivations will have the first verb as the head of the sentence, and the second verb will be generated after the first; hence the second verb's probability will be conditioned on the first verb.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other derivations will have the second verb as the head of the sentence, and the first verb's probability will be conditioned on the second verb.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such a scenario, there is no way to decompose the joint probability calculated from the set of derivations into the product of conditional probabilities using the chain rule.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, the joint probability can be used as a language model, but it cannot be interpolated on a word-by-word basis with, say, a trigram model, which we will demonstrate is a useful thing to do.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, our top-down parser allows for the incremental calculation of generative conditional word probabilities, a property it shares with other left-to-right parsers with rooted derivations such as Earley parsers (Earley 1970) or left-corner parsers (Rosenkrantz and Lewis II 1970).",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A second key feature of our approach is that top-down guidance improves the efficiency of the search as more and more conditioning events are extracted from the derivation for use in the probabilistic model.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the rooted partial derivation is fully connected, all of the conditioning information that might be extracted from the top-down left context has already been specified, and a conditional probability model built on this information will not impose any additional burden on the search.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, an Earley or left-corner parser will underspecify certain connections between constituents in the left context, and if some of the underspecified information is used in the conditional probability model,- it will have to become specified.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, this can be done, but at the expense of search efficiency; the more that this is done, the less benefit there is from the underspecification.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A top-down parser will, in contrast, derive an efficiency benefit from precisely the information that is underspecified in these other approaches.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, our top-down parser makes it very easy to condition the probabilistic gram\u00ad mar on an arbitrary number of values extracted from the rooted, fully specified deriva\u00ad tion.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has lead us to a formulation of the conditional probability model in terms of values returned from tree-walking functions that themselves are contextually sen\u00ad sitive.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The top-down guidance that is provided makes this approach quite efficient in practice.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following section will provide some background in probabilistic context-free grammars and language modeling for speech recognition.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There will also be a brief review of previous work using syntactic information for language modeling, before we introduce our model in Section 4.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) st I s (b) st S ST,OP ( c ) s t S STOP NP VP I NP V P I (/s) NP VP I Spot VBD NP I chased DT NN I I the ball Spot VBD :\"JP I chased DT NN I I the ball Spot Figure 1 Three parse trees: (a) a complete parse tree; (b) a complete parse tree with an explicit stop symbol; and (c) a partial parse tree.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "background. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "2.1 Grammars and Trees.",
+                    "sid": 36,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This section will introduce probabilistic (or stochastic) context-free grammars (PCFGs), as well as such notions as complete and partial parse trees, which will be important in defining our language model later in the paper.1 In addition, we will explain some simple grammar transformations that will be used.",
+                    "sid": 37,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we will explain the notion of c-command, which will be used extensively later as well.",
+                    "sid": 38,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PCFGs model the syntactic combinatorics of a language by extending conventional context-free grammars (CFGs).",
+                    "sid": 39,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A CFG G = (V,T,P, st), consists of a set of nonterminal symbols V, a set of terminal symbols T, a start symbol st E V, and a set of rule productions P of the form: A , a, where a E ( V U T)* . These context-free rules can be interpreted as saying that a nonterminal symbol A expands into one or more either nonterminal or terminal symbols, a = Xo . . .",
+                    "sid": 40,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xk .2 A sequence of context free rule expansions can be represented in a tree, with parents expanding into one or more children below them in the tree.",
+                    "sid": 41,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each of the individual local expansions in the tree is a rule in the CFG.",
+                    "sid": 42,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nodes in the tree with no children are called leaves.",
+                    "sid": 43,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A tree whose leaves consist entirely of terminal symbols is complete.",
+                    "sid": 44,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider, for example, the parse tree shown in (a) in Figure 1: the start symbol is st, which expands into an S. The S node expands into an NP followed by a VP.",
+                    "sid": 45,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These nonterminal nodes each in turn expand, and this process of expansion continues until the tree generates the terminal string, \"Spot chased the ball\", as leaves.",
+                    "sid": 46,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A CFG G defines a language Le, which is a subset of the set of strings of terminal symbols, including only those that are leaves of complete trees rooted at st, built with rules from the grammar G. We will denote strings either as w or as w0w1 . . .",
+                    "sid": 47,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wn, where Wn is understood to be the last terminal symbol in the string.",
+                    "sid": 48,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity in displaying equations, from this point forward let w/ be the substring w; . . .",
+                    "sid": 49,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wj.",
+                    "sid": 50,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let Tw3 1 For a detailed introduction to PCFGs, see Manning and Schutze (1999), for example..",
+                    "sid": 51,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 For ease of exposition, we will ignore epsilon productions for now.",
+                    "sid": 52,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An epsilon production has the.",
+                    "sid": 53,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "empty string (c) on the right-hand side, and can be written A -+ E. Everything that is said here can be straightforwardly extended to include such productions.",
+                    "sid": 54,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "be the set of all complete trees rooted at the start symbol, with the string of terminals Wo as leaves.",
+                    "sid": 55,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call TWO the set of complete parses of w3.",
+                    "sid": 56,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A PCFG is a CFG with a probability assigned to each rule; specifically, each right\u00ad hand side has a probability given the left-hand side of the rule.",
+                    "sid": 57,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability of a parse tree is the product of the probabilities of each rule in the tree.",
+                    "sid": 58,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Provided a PCFG is consistent (or tight), which it always will be in the approach we will be advocating, this defines a proper probability distribution over completed trees.3 A PCFG also defines a probability distribution over strings of words (terminals) in the following way: P(w0 ) = L P(t) t ETwn 0 (1) The intuition behind Equation 1is that, if a string is generated by the PCFG, then it will be produced if and only if one of the trees in the set Tw0 generated it.",
+                    "sid": 59,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the probability of the string is the probability of the set Tw0 , i.e., the sum of its members' probabilities.",
+                    "sid": 60,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Up to this point, we have been discussing strings of words without specifying whether they are \"complete\" strings or not.",
+                    "sid": 61,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will adopt the convention that an explicit beginning of string symbol, (s), and an explicit end symbol, (/ s), are part of the vocabulary, and a string w0 is a complete string if and only if w 0 is (s) and Wn is (Is).",
+                    "sid": 62,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the beginning of string symbol is not predicted by language models, but rather is axiomatic in the same way that st is for a parser, we can safely omit it from the current discussion, and simply assume that it is there.",
+                    "sid": 63,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "See Figure l(b) for the explicit representation.",
+                    "sid": 64,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While a complete string of words must contain the end symbol as its final word, a string prefix does not have this restriction.",
+                    "sid": 65,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \"Spot chased the ball (Is)\" is a complete string, and the following is the set of prefix strings of this com\u00ad plete string: \"Spot\"; \"Spot chased\"; \"Spot chased the\"; \"Spot chased the ball\"; and \"Spot chased the ball (Is;\".",
+                    "sid": 66,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A PCFG also defines a probability distribution over string prefixes, and we will present this in terms of partial derivations.",
+                    "sid": 67,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A partial derivation (or parse) d is defined with respect to a prefix string W6 as follows: it is the leftmost derivation of the string, with Wj on the right-hand side of the last expansion in the derivation.4 Let D i be the set of all partial derivations for a prefix string Wb\u00b7 WO Then P(w6 ) = L P(d) d E D i WO (2) We left-factor the PCFG, so that all productions are binary, except those with a single terminal on the right-hand side and epsilon productions.5 We do this because it delays predictions about what nonterminals we expect later in the string until we have seen more of the string.",
+                    "sid": 68,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In effect, this is an underspecification of some of the predictions that our top-down parser is making about the rest of the string.",
+                    "sid": 69,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The left\u00ad factorization transform that we use is identical to what is called right binarization in Roark and Johnson (1999).",
+                    "sid": 70,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "See that paper for more discussion of the benefits of 3 A PCFG is consistent or tight if there is no probability mass reserved for infinite trees.",
+                    "sid": 71,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chi and Geman (1998) proved that any PCFG estimated from a treebank with the relative frequency estimator is tight.",
+                    "sid": 72,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of the PCFGs that are used in this paper are estimated using the relative frequency estimator.",
+                    "sid": 73,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 A leftmost derivation is a derivation in which the leftmost nonterminal is always expanded.",
+                    "sid": 74,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 The only E-productions that we will use in this paper are those introduced by left-factorization..",
+                    "sid": 75,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) st s------------5t_5 N-P ----------S--NP (/sI ) SpIot VP ----------S-N-P,VP VB-D---------V-P---VBD EI chaIsed N-P----------V-P---V-BD, P I DT NPDT E (b) st s 5t _5 NP S-NP I Spot the NN NPDT,NN I I ball E Figure 2 Two parse trees: (a) a complete left-factored parse tree with epsilon productions and an explicit stop symbol; and (b) a partial left-factored parse tree.",
+                    "sid": 76,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "factorization for top-down and left-corner parsing.",
+                    "sid": 77,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a grammar G, we define a factored grammar Gf as follows: i.",
+                    "sid": 78,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(A -+ B A-B) E GJ iff (A -+ Bf}) E G, s.t. B E V and (3 E V* ii.",
+                    "sid": 79,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(A-a -+ B A-aB) E Gf iff (A -+ aB/3) E G, s.t. B E V, a E v+, and (3 E V* iii.",
+                    "sid": 80,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(A-aB -+ c) E GJ iff (A -+ aB) E G, s.t. B E V and a E V* iv.",
+                    "sid": 81,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(A -+ a) E Gf iff (A -+ a) E G, s.t. a E T We can see the effect of this transform on our example parse trees in Figure 2.",
+                    "sid": 82,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This underspecification of the nonterminal predictions (e.g., VPVBD in the example in Figure 2, as opposed to NP), allows lexical items to become part of the left context, and so be used to condition production probabilities, even the production probabil\u00ad ities of constituents that dominate them in the unfactored tree.",
+                    "sid": 83,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It also brings words further downstream into the look-ahead at the point of specification.",
+                    "sid": 84,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that partial trees are defined in exactly the same way (Figure 2b), but that the nonterminal yields are made up exclusively of the composite nonterminals introduced by the grammar transform.",
+                    "sid": 85,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This transform has a couple of very nice properties.",
+                    "sid": 86,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, it is easily reversible, i.e., every parse tree built with GJ corresponds to a unique parse tree built with G. Second, if we use the relative frequency estimator for our production probabilities, the probability of a tree built with Gf is identical to the probability of the corresponding tree built with G. Finally, let us introduce the term c-command.",
+                    "sid": 87,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use this notion in our condi\u00ad tional probability model, and it is also useful for understanding some of the previous work in this area.",
+                    "sid": 88,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simple definition of c-command that we will be using in this paper is the following: a node A c-commands a node B if and only if (i) A does not dominate B; and (ii) the lowest branching node (i.e., non-unary node) that dominates A also dominates B.6 Thus in Figure l(a), the subject NP and the VP each c-command the other, because neither dominates the other and the lowest branching node above both (the S) dominates the other.",
+                    "sid": 89,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that the subject NP c-commands the object NP, but not vice versa, since the lowest branching node that dominates the object NP is the VP, which does not dominate the subject NP.",
+                    "sid": 90,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Language Modeling for Speech Recognition.",
+                    "sid": 91,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This section will briefly introduce language modeling for statistical speech recognition.7 In language modeling, we assign probabilities to strings of words.",
+                    "sid": 92,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To assign a probability, the chain rule is generally invoked.",
+                    "sid": 93,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The chain rule states, for a string of k+l words: k P( w) = P( wo) II P(w; J w-1) (3) i=l A Markov language model of order n truncates the conditioning information in the chain rule to include only the previous n words.P( w) = P(wo)P(w1 I wo) . . .",
+                    "sid": 94,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P( wn1 J w3 k ) II P( w; J w\\= ) (4) i=n These models are commonly called n-gram models.8 The standard language model used in many speech recognition systems is the trigram model, i.e., a Markov model of order 2, which can be characterized by the following equation: n-1 P(w-1) = P(wo)P(w1 I wo) II P( w; I w\\= ) i=2 (5) To smooth the trigram models that are used in this paper, we interpolate the probability estimates of higher-order Markov models with lower-order Markov models (Jelinek and Mercer 1980).",
+                    "sid": 95,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea behind interpolation is simple, and it has been shown to be very effective.",
+                    "sid": 96,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For an interpolated (n + 1)-gram: Here P is the empirically observed relative frequency, and An is a function from vn to [O, l].",
+                    "sid": 97,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This interpolation is recursively applied to the smaller-order n-grams until the bigram is finally interpolated with the unigram, i.e., Ao = l.",
+                    "sid": 98,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "previous work. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "There have been attempts to jump over adjacent words to words farther back in the left context, without the use of dependency links or syntactic structure, for example Saul and Pereira (1997) and Rosenfeld (1996, 1997).",
+                    "sid": 99,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will focus our very brief review, however, on those that use grammars or parsing for their language models.",
+                    "sid": 100,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These can be divided into two rough groups: those that use the grammar as a language model, 6 A node A dominates a node B in a tree if and only if either (i) A is the parent of B; or (ii) A is the parent of a node C that dominates B. 7 For a detailed introduction to statistical speech recognition, see Jelinek (1997)..",
+                    "sid": 101,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 The n in n-gram is one more than the order of the Markov model, since the n-gram includes the word.",
+                    "sid": 102,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "being conditioned.",
+                    "sid": 103,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and those that use a parser to uncover phrasal heads standing in an important relation (c-command) to the current word.",
+                    "sid": 104,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach that we will subsequently present uses the probabilistic grammar as its language model, but only includes probability mass from those parses that are found, that is, it uses the parser to find a subset of the total set of parses (hopefully most of the high-probability parses) and uses the sum of their probabilities as an estimate of the true probability given the grammar.",
+                    "sid": 105,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Grammar Models.",
+                    "sid": 106,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As mentioned in Section 2.1, a PCFG defines a probability distribution over strings of words.",
+                    "sid": 107,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One approach to syntactic language modeling is to use this distribution directly as a language model.",
+                    "sid": 108,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are efficient algorithms in the literature (Jelinek and Lafferty 1991; Stokke 1995) for calculating exact string prefix probabilities given a PCFG.",
+                    "sid": 109,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithms both utilize a left-corner matrix, which can be calculated in closed form through matrix inversion.",
+                    "sid": 110,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are limited, therefore, to grammars where the nonterminal set is small enough to permit inversion.",
+                    "sid": 111,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "String prefix probabilities can be straightforwardly used to compute conditional word probabilities by definition: (7) Stokke and Segal (1994) and Jurafsky et al.",
+                    "sid": 112,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1995) used these basic ideas to es\u00ad timate bigram probabilities from handwritten PCFGs, which were then used in lan\u00ad guage models.",
+                    "sid": 113,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interpolating the observed bigram probabilities with these calculated bigrams led, in both cases, to improvements in word error rate over using the observed bigrams alone, demonstrating that there is some benefit to using these syntactic lan\u00ad guage models to generalize beyond observed n-grams.",
+                    "sid": 114,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Finding Phrasal Heads.",
+                    "sid": 115,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another approach that uses syntactic structure for language modeling has been to use a shift-reduce parser to \"surface\" c-commanding phrasal headwords or part-of-speech (POS) tags from arbitrarily far back in the prefix string, for use in a trigram-like model.",
+                    "sid": 116,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A shift-reduce parser operates from left to right using a stack and a pointer to the next word in the input string.9 Each stack entry consists minimally of a nonterminal label.",
+                    "sid": 117,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser performs two basic operations: (i) shifting, which involves pushing the POS label of the next word onto the stack and moving the pointer to the following word in the input string; and (ii) reducing, which takes the top k stack entries and replaces them with a single new entry, the nonterminal label of which is the left-hand side of a rule in the grammar that has the k top stack entry labels on the right-hand side.",
+                    "sid": 118,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if there is a rule NP -+ DT NN, and the top two stack entries are NN and DT, then those two entries can be popped off of the stack and an entry with the label NP pushed onto the stack.",
+                    "sid": 119,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goddeau (1992) used a robust deterministic shift-reduce parser to condition word probabilities by extracting a specified number of stack entries from the top of the cur\u00ad rent state, and conditioning on those entries in a way similar to an n-gram.",
+                    "sid": 120,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In empirical trials, Goddeau used the top two stack entries to condition the word probability.",
+                    "sid": 121,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "He was able to reduce both sentence and word error rates on the ATIS corpus using this method.",
+                    "sid": 122,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 For details, see Hopcroft and Ullman (1979), for example..",
+                    "sid": 123,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N P [d oyJ VBD[chased] NP[cat] DT NN DT NN I I I I the dog chased the cat with spots Figure 3 Tree representation of a derivation state.",
+                    "sid": 124,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The structured language model (SLM) used in Chelba and Jelinek (1998a, 1998b, 1999), Jelinek and Chelba (1999), and Chelba (2000) is similar to that of Goddeau, except that (i) their shift-reduce parser follows a nondeterministic beam search, and (ii) each stack entry contains, in addition to the nonterminal node label, the headword of the constituent.",
+                    "sid": 125,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SLM is like a trigram, except that the conditioning words are taken from the tops of the stacks of candidate parses in the beam, rather than from the linear order of the string.",
+                    "sid": 126,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their parser functions in three stages.",
+                    "sid": 127,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first stage assigns a probability to the word given the left context (represented by the stack state).",
+                    "sid": 128,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second stage predicts the POS given the word and the left context.",
+                    "sid": 129,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last stage performs all possible parser operations (reducing stack entries and shifting the new word).",
+                    "sid": 130,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When there is no more parser work to be done (or, in their case, when the beam is full), the following word is predicted.",
+                    "sid": 131,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And so on until the end of the string.",
+                    "sid": 132,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each different POS assignment or parser operation is a step in a derivation.",
+                    "sid": 133,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each distinct derivation path within the beam has a probability and a stack state associated with it.",
+                    "sid": 134,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Every stack entry has a nonterminal node label and a designated headword of the constituent.",
+                    "sid": 135,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When all of the parser operations have finished at a particular point in the string, the next word is predicted as follows: For each derivation in the beam, the headwords of the two topmost stack entries form a trigram with the conditioned word.",
+                    "sid": 136,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This interpolated trigram probability is then multiplied by the normalized probability of the derivation, to provide that derivation's contribution to the probability of the word.",
+                    "sid": 137,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More precisely, for a beam of derivations D; ; Ld E D; P( w;+1 I hoa,h1a )P( d ) P( w;+1 I Wo) = L P(d) dED; (8) where hoa and h1a are the lexical heads of the top two entries on the stack of d . Figure 3 gives a partial tree representation of a potential derivation state for the string \"the dog chased the cat with spots\", at the point when the word \"with\" is to be predicted.",
+                    "sid": 138,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The shift-reduce parser will have, perhaps, built the structure shown, and the stack state will have an NP entry with the head \"cat\" at the top of the stack, and a VBD entry with the head \"chased\" second on the stack.",
+                    "sid": 139,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the Chelba and Jelinek model, the probability of \"with\" is conditioned on these two headwords, for this derivation.",
+                    "sid": 140,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the specific results of the SLM will be compared in detail with our model when the empirical results are presented, at this point we will simply state that they have achieved a reduction in both perplexity and word error rate over a standard trigram using this model.",
+                    "sid": 141,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rest of this paper will present our parsing model, its application to language modeling for speech recognition, and empirical results.",
+                    "sid": 142,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "top-down parsing and language modeling. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Statistically based heuristic best-first or beam-search strategies (Caraballo and Char\u00ad niak 1998; Charniak, Goldwater, and Johnson 1998; Goodman 1997) have yielded an enormous improvement in the quality and speed of parsers, even without any guaran\u00ad tee that the parse returned is, in fact, that with the maximum likelihood for the proba\u00ad bility model.",
+                    "sid": 143,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parsers with the highest published broad-coverage parsing accuracy, which include Charniak (1997, 2000), Collins (1997, 1999), and Ratnaparkhi (1997), all utilize simple and straightforward statistically based search heuristics, pruning the search-space quite dramatically.10 Such methods are nearly always used in conjunction with some form of dynamic programming (henceforth DP).",
+                    "sid": 144,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, search efficiency for these parsers is improved by both statistical search heuristics and DP.",
+                    "sid": 145,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we will present a parser that uses simple search heuristics of this sort without DP.",
+                    "sid": 146,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is found to yield very accurate parses efficiently, and, in addition, to lend itself straightforwardly to estimating word probabilities online, that is, in a single pass from left to right.",
+                    "sid": 147,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This online characteristic allows our language model to be in\u00ad terpolated on a word-by-word basis with other models, such as the trigram, yielding further improvements.",
+                    "sid": 148,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next we will outline our conditional probability model over rules in the PCFG, followed by a presentation of the top-down parsing algorithm.",
+                    "sid": 149,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will then present empirical results in two domains: one to compare with previous work in the parsing literature, and the other to compare with previous work using parsing for language modeling for speech recognition, in particular with the Chelba and Jelinek results mentioned above.",
+                    "sid": 150,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Conditional Probability Model.",
+                    "sid": 151,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A simple PCFG conditions rule probabilities on the left-hand side of the rule.",
+                    "sid": 152,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has been shown repeatedly-e.g., Briscoe and Carroll (1993), Charniak (1997), Collins (1997), Inui et al.",
+                    "sid": 153,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1997), Johnson (1998)-that conditioning the probabilities of struc\u00ad tures on the context within which they appear, for example on the lexical head of a constituent (Charniak 1997; Collins 1997), on the label of its parent nonterminal (John\u00ad son 1998), or, ideally, on both and many other things besides, leads to a much better parsing model and results in higher parsing accuracies.",
+                    "sid": 154,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way of thinking about conditioning the probabilities of productions on con\u00ad textual information (e.g., the label of the parent of a constituent or the lexical heads of constituents), is as annotating the extra conditioning information onto the labels in the context-free rules.",
+                    "sid": 155,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples of this are bilexical grammars-such as Eisner and Satta (1999), Charniak (1997), Collins (1997)-where the lexical heads of each constituent are annotated on both the right- and left-hand sides of the context-free rules, under the constraint that every constituent inherits the lexical head from exactly one of its children, and the lexical head of a POS is its terminal item.",
+                    "sid": 156,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the rule S -+ NP VP becomes, for instance, S[barks ] -+ NP[dog] VP[barks].",
+                    "sid": 157,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way to estimate the probabil\u00ad ities of these rules is to annotate the heads onto the constituent labels in the training corpus and simply count the number of times particular productions occur (relative frequency estimation).",
+                    "sid": 158,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This procedure yields conditional probability distributions of 10 Johnson et al.",
+                    "sid": 159,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1999), Henderson and Brill (1999), and Collins (2000) demonstrate methods for choosing.",
+                    "sid": 160,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the best complete parse tree from among a set of complete parse trees, and the latter two show accuracy improvements over some of the parsers cited above, from which they generated their candidate sets.",
+                    "sid": 161,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we will be comparing our work with parsing algorithms, i.e., algorithms that build parses for strings of words.",
+                    "sid": 162,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "constituents on the right-hand side with their lexical heads, given the left-hand side constituent and its lexical head.",
+                    "sid": 163,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same procedure works if we annotate parent infor\u00ad mation onto constituents.",
+                    "sid": 164,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is how Johnson (1998) conditioned the probabilities of productions: the left-hand side is no longer, for example, S, but rather ST SBAR, i.e., an S with SBAR as parent.",
+                    "sid": 165,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice, however, that inthis case the annotations on the right\u00ad hand side are predictable from the annotation on the left-hand side (unlike, for ex\u00ad ample, bilexical grammars), so that the relative frequency estimator yields conditional probability distributions of the original rules, given the parent of the left-hand side.",
+                    "sid": 166,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of the conditioning information that we will be considering will be of this latter sort: the only novel predictions being made by rule expansions are the node labels of the constituents on the right-hand side.",
+                    "sid": 167,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Everything else is already specified by the left context.",
+                    "sid": 168,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the relative frequency estimator, and smooth our production probabilities by interpolating the relative frequency estimates with those obtained by \"annotating\" less contextual information.",
+                    "sid": 169,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This perspective on conditioning production probabilities makes it easy to see that, in essence, by conditioning these probabilities, we are growing the state space.",
+                    "sid": 170,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, the number of distinct nonterminals grows to include the composite labels; so does the number of distinct productions in the grammar.",
+                    "sid": 171,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a top-down parser, each rule expansion is made for a particular candidate parse, which carries with it the entire rooted derivation to that point; in a sense, the left-hand side of the rule is annotated with the entire left context, and the rule probabilities can be conditioned on any aspect of this derivation.",
+                    "sid": 172,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not use the entire left context to condition the rule probabilities, but rather \"pick-and-choose\" which events in the left context we would like to condition on.",
+                    "sid": 173,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One can think of the conditioning events as functions, which take the partial tree structure as an argument and return a value, upon which the rule probability can be conditioned.",
+                    "sid": 174,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each of these functions is an algorithm for walking the provided tree and returning a value.",
+                    "sid": 175,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, suppose that we want to condition the probability of the rule A -----+ a. We might write a function that takes the partial tree, finds the parent of the left-hand side of the rule and returns its node label.",
+                    "sid": 176,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the left-hand side has no parent (i.e., it is at the root of the tree), the function returns the null value (NULL).",
+                    "sid": 177,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We might write another function that returns the nonterminal label of the closest sibling to the left of A, and NULL if no such node exists.",
+                    "sid": 178,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can then condition the probability of the production on the values that were returned by the set of functions.",
+                    "sid": 179,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that we are working with a factored grammar, so some of the nodes in the factored tree have nonterminal labels that were created by the factorization, and may not be precisely what we want for conditioning purposes.",
+                    "sid": 180,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to avoid any con\u00ad fusions in identifying the nonterminal label of a particular rule production in either its factored or nonfactored version, we introduce the function const ituent ( A) for every nonterminal in the factored grammar Gf , which is simply the label of the constituent whose factorization results in A. For example, in Figure 2, const ituent (NPDT-NN) is simply NP.",
+                    "sid": 181,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that a function can return different values depending upon the location in the tree of the nonterminal that is being expanded.",
+                    "sid": 182,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, suppose that we have a function that returns the label of the closest sibling to the left of const ituent ( A) or NULL if no such node exists.",
+                    "sid": 183,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then a subsequent function could be defined as follows: return the parent of the parent (the grandparent) of const ituent CA) only if const ituent (A) has no sibling to the left-in other words, if the previous function returns NULL; otherwise return the second closest sibling to the left of const ituent ( A) , or, as always, NULL if no such node exists.",
+                    "sid": 184,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the function returns, for example, NP, this could either mean that the grandparent is NP or the second closest sibling is For all rules A --+ a @ A I CD the parent, Y\u00b5, of const ituent (.,\\) i n the derivation I @ the closest sibling, Ys , to the left of const ituent C A ) i n t he derivation t he closest sibling, the POS of t he closest @ Ys , to the left of }' c-commanding lexical head to A the closest c-com mandi ng lexical head to A I t he next closest c-com mandi ng lexical head to A If Y8 is CC, l the leftmost child @ of the conjoini ng category; else NULL t he closest c-com manding lexical head to A the lexical Jead of const ituent C A) if already seen; @ otherwise t he lexical head of the closest constituent to the left of A within const ituent (A) the next closest c-commanding lexical head to A Figure 4 Conditional probability model represented as a decision tree, identifying the location in the partial parse tree of the conditioning information.",
+                    "sid": 185,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NP; yet there is no ambiguity in the meaning of the function, since the result of the previous function disambiguates between the two possibilities.",
+                    "sid": 186,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The functions that were used for the present study to condition the probability of the rule, A -+ a, are presented in Figure 4, in a tree structure.",
+                    "sid": 187,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a sort of decision tree for a tree-walking algorithm to decide what value to return, for a given partial tree and a given depth.",
+                    "sid": 188,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if the algorithm is asked for the value at level 0, it will return A, the left-hand side of the rule being expanded.11 Suppose the algorithm is asked for the value at level 4.",
+                    "sid": 189,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After level 2 there is a branch in the decision tree.",
+                    "sid": 190,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the left-hand side of the rule is a POS, and there is no sibling to the left of const ituent ( A) in the derivation, then the algorithm takes the right branch of the decision tree to decide what value to return; otherwise the left branch.",
+                    "sid": 191,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose it takes the left branch.",
+                    "sid": 192,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then after level 3, there is another branch in the decision tree.",
+                    "sid": 193,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the left-hand side of the production is a POS, then the algorithm takes the right branch of the decision tree, and returns (at level 4) the POS of the closest c-commanding lexical head to A, which it finds by walking the parse tree; if the left-hand side of the rule is not a POS, then the algorithm returns (at level 4) the closest sibling to the left of the parent of const ituent ( A) . The functions that we have chosen for this paper follow from the intuition (and experience) that what helps parsing is different depending on the constituent that is being expanded.",
+                    "sid": 194,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "POS nodes have lexical items on the right-hand side, and hence can bring into the model some of the head-head dependencies that have been shown to be so effective.",
+                    "sid": 195,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the POS is leftmost within its constituent, then very often the lexical 11 Recall that A can be a composite nonterminal introduced by grammar factorization.",
+                    "sid": 196,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the function.",
+                    "sid": 197,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is defined in terms of constituent CA), the values returned are obtained by moving through the nonfactored tree.",
+                    "sid": 198,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 Levels of conditioning information, mnemonic labels, and a brief description of the information level for empirical results.",
+                    "sid": 199,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conditioning Mnemonic Label Information Level 0,0,0 2,2,2 5,2,2 6,2,2 6,3,2 6,5,2 6,6,4 non e par+ sib NT stru ct NT head POS stru ct attac h all S i m p l e P C F G S m a l l a m o u n t o f s t r u c t u r a l c o n t e x t A l l s t r u c t u r a l ( n o n l e x i c a l ) c o n t e x t f o r n o n P O S E v e r y t h i n g f o r n o n P O S e x p a n s i o n s M o r e s t r u c t u r a l i n f o f o r l e f t m o s t P O S e x p a n s i o n s A l l a t t a c h m e n t i n f o f o r l e f t m o s t P O S e x p a n s i o n s E v e r y t h i n g item is sensitive to the governing category to which it is attaching.",
+                    "sid": 200,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if the POS is a preposition, then its probability of expanding to a particular word is very different if it is attaching to a noun phrase than if it is attaching to a verb phrase, and perhaps quite different depending on the head of the constituent to which it is attaching.",
+                    "sid": 201,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subsequent POSs within a constituent are likely to be open-class words, and less dependent on these sorts of attachment preferences.",
+                    "sid": 202,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conditioning on parents and siblings of the left-hand side has proven to be very useful.",
+                    "sid": 203,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand why this is the case, one need merely to think of VP expansions.",
+                    "sid": 204,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the parent of a VP is another VP (i.e., if an auxiliary or modal verb is used), then the distribution over productions is different than if the parent is an S. Conditioning on head information, both POS of the head and the lexical item itself, has proven useful as well, although given our parser 's left-to-right orientation, in many cases the head has not been encountered within the particular constituent.",
+                    "sid": 205,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such a case, the head of the last child within the constituent is used as a proxy for the constituent head.",
+                    "sid": 206,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of our conditioning functions, with one exception, return either parent or sibling node labels at some specific distance from the left-hand side, or head information from c\u00ad commanding constituents.",
+                    "sid": 207,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The exception is the function at level 5 along the left branch of the tree in Figure 4.",
+                    "sid": 208,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose that the node being expanded is being conjoined with another node, which we can tell by the presence or absence of a CC node.",
+                    "sid": 209,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In that case, we want to condition the expansion on how the conjoining constituent expanded.",
+                    "sid": 210,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, this attempts to capture a certain amount of parallelism between the expansions of conjoined categories.",
+                    "sid": 211,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In presenting the parsing results, we will systematically vary the amount of con\u00ad ditioning information, so as to get an idea of the behavior of the parser.",
+                    "sid": 212,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will refer to the amount of conditioning by specifying the deepest level from which a value is returned for each branching path in the decision tree, from left to right in Fig\u00ad ure 4: the first number is for left contexts where the left branch of the decision tree is always followed (non-POS nonterminals on the left-hand side); the second number is for a left branch followed by a right branch (POS nodes that are leftmost within their constituent); and the third number is for the contexts where the right branch is always followed (POS nodes that are not leftmost within their constituent).",
+                    "sid": 213,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For exam\u00ad ple, (4,3,2) would represent a conditional probability model that (i) returns NULL for all functions below level 4 in all contexts; (ii) returns NULL for all functions below level 3 if the left-hand side is a POS; and (iii) returns NULL for all functions below level 2 for nonleftmost POS expansions.",
+                    "sid": 214,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1gives a breakdown of the different levels of conditioning information used in the empirical trials, with a mnemonic label that will be used when presenting results.",
+                    "sid": 215,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These different levels were chosen as somewhat natural points at which to observe how much of an effect increasing the conditioning information has.",
+                    "sid": 216,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first include structural information from the context, namely, node labels from constituents in the left context.",
+                    "sid": 217,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we add lexical information, first for non-POS expansions, then for leftmost POS expansions, then for all expansions.",
+                    "sid": 218,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of the conditional probabilities are linearly interpolated.",
+                    "sid": 219,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the prob\u00ad ability of a rule conditioned on six events is the linear interpolation of two probabilities: (i) the empirically observed relative frequency of the rule when the six events co-occur; and (ii) the probability of the rule conditioned on the first five events (which is in turn interpolated).",
+                    "sid": 220,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The interpolation coefficients are a function of the frequency of the set of conditioning events, and are estimated by iteratively adjusting the coefficients so as to maximize the likelihood of a held-out corpus.",
+                    "sid": 221,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was an outline of the conditional probability model that we used for the PCFG.",
+                    "sid": 222,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model allows us to assign probabilities to derivations, which can be used by the parsing algorithm to decide heuristically which candidates are promising and should be expanded, and which are less promising and should be pruned.",
+                    "sid": 223,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now outline the top-down parsing algorithm.",
+                    "sid": 224,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Top-Down Probabilistic Parsing.",
+                    "sid": 225,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This parser is essentially a stochastic version of the top-down parser described in Aho, Sethi, and Ullman (1986).",
+                    "sid": 226,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It uses a PCFG with a conditional probability model of the sort defined in the previous section.",
+                    "sid": 227,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will first define candidate analysis (i.e., a partial parse), and then a derives relation between candidate analyses.",
+                    "sid": 228,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will then present the algorithm in terms of this relation.",
+                    "sid": 229,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser takes an input string w0, a PCFG G, and a priority queue of candi\u00ad date analyses.",
+                    "sid": 230,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A candidate analysis C = ( D,S,Po,F,wn consists of a derivation D, a stack S, a derivation probability P0, a figure of merit F, and a string w7 remaining to be parsed.",
+                    "sid": 231,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first word in the string remaining to be parsed, Wi, we will call the look-ahead word.",
+                    "sid": 232,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The derivation D consists of a sequence of rules used from G. The stack S contains a sequence of nonterminal symbols, and an end-of-stack marker $ at the bottom.",
+                    "sid": 233,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability P0 is the product of the probabilities of all rules in the derivation D. F is the product of Po and a look-ahead probability, LAP(S,wi), which is a measure of the likelihood of the stack S rewriting with Wi at its left corner.",
+                    "sid": 234,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can define a derives relation, denoted ::::}, between two candidate analyses as follows.",
+                    "sid": 235,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "( D,S,P0,F, w'!)",
+                    "sid": 236,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "::::} ( D' ,S' ,P0,,F' ,wJ) if and only if12 i. D' = D + A --+ Xo . . .",
+                    "sid": 237,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xk ii.",
+                    "sid": 238,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S = Aa$; iii.",
+                    "sid": 239,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "either S' = Xo . . .",
+                    "sid": 240,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xka$ and j = i or k = 0, Xo = Wi, j = i + 1, and S' = a$; iv.",
+                    "sid": 241,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Po, = PoP( A --+ Xo . . .",
+                    "sid": 242,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xk ); and v. F' = P0,LAP(S',wj ) The parse begins with a single candidate analysis on the priority queue: (( ), st$, 1, 1, w0).",
+                    "sid": 243,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, the top ranked candidate analysis, C = (D, S,Po, F, w?), is popped from the priority queue.",
+                    "sid": 244,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If S = $ and Wi = (Is), then the analysis is complete.",
+                    "sid": 245,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, all C' such that C ::::} C' are pushed onto the priority queue.",
+                    "sid": 246,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12 Again, for ease of exposition, we will ignore E-productions.",
+                    "sid": 247,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Everything presented here can be.",
+                    "sid": 248,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "straightforwardly extended to include them.",
+                    "sid": 249,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The + in (i) denotes concatenation.",
+                    "sid": 250,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To avoid confusion between sets and sequences, 0 will not be used for empty strings or sequences, rather the symbol ( ) will be used.",
+                    "sid": 251,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the script S is used to denote stacks, while st is the start symbol.",
+                    "sid": 252,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We implement this as a beam search.",
+                    "sid": 253,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each word position i, we have a separate priority queue Hi of analyses with look-ahead wi.",
+                    "sid": 254,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When there are \"enough\" analyses by some criteria (which we will discuss below) on priority queue Hi+l, all candidate analyses remaining on Hi are discarded.",
+                    "sid": 255,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since Wn = (Is), all parses that are pushed onto Hn+l are complete.",
+                    "sid": 256,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parse on Hn+l with the highest probability is returned for evaluation.",
+                    "sid": 257,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case that no complete parse is found, a partial parse is returned and evaluated.",
+                    "sid": 258,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LAP is the probability of a particular terminal being the next left-corner of a particular analysis.",
+                    "sid": 259,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The terminal may be the left corner of the topmost nonterminal on the stack of the analysis or it might be the left corner of the nth nonterminal, after the top n - 1 nonterminals have rewritten to E. Of course, we cannot expect to have adequate statistics for each nonterminal/word pair that we encounter, so we smooth to the POS.",
+                    "sid": 260,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we do not know the POS for the word, we must sum the LAP for all POS labels.13 For a PCFG G, a stack S = Ao . . .An$ (which we will write A0$) and a look-ahead terminal item w;, we define the look-ahead probability as follows: LAP(S, w;) = L Pc( Ao ...:.",
+                    "sid": 261,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wia) aE(VUT)* (9) We recursively estimate this with two empirically observed conditional probabilities for every nonterminal Ai: P( Ai ...:.",
+                    "sid": 262,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wia) and P( Ai ...:, E).",
+                    "sid": 263,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same empirical probability, P( Ai ...:.",
+                    "sid": 264,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xa), is collected for every preterminal X as well.",
+                    "sid": 265,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LAP approximation for a given stack state and look-ahead terminal is: Pc( AJ ...:.",
+                    "sid": 266,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "w;a) Pc( Aj ...:, w;a) + P( Aj ...:, E)Pc(AJ+1 ...:, w;a) (10) where Pc( Aj ...:, wia) >-Ai( Aj ...:, wia) + (1 - >.A) LP( Aj ...:, Xa)P(X -+ wi) (11) X E V The lambdas are a function of the frequency of the nonterminal Aj, in the standard way (Jelinek and Mercer 1980).",
+                    "sid": 267,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The beam threshold at word Wi is a function of the probability of the top-ranked candidate analysis on priority queue Hi+l and the number of candidates on Hi+l\u00b7 The basic idea is that we want the beam to be very wide if there are few analyses that have been advanced, but relatively narrow if many analyses have been advanced.",
+                    "sid": 268,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If p is the probability of the highest-ranked analysis on Hi+1, then another analysis is discarded if its probability falls below pf ('-y, IHi+il), where is an initial parameter, which we call the base beam factor.",
+                    "sid": 269,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the current study, 1was 1011 unless otherwise noted, and f (,, IH;+11) = IHi+il3.",
+                    "sid": 270,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, if 100 analyses have already been pushed onto H;+1, then a candidate analysis must have a probability above 105 p to avoid being pruned.",
+                    "sid": 271,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After 1,000 candidates, the beam has narrowed to 102p.",
+                    "sid": 272,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is also a maximum number of allowed analyses on Hi , in case the parse fails to advance an analysis to Hi+l\u00b7 This was typically 10,000.",
+                    "sid": 273,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As mentioned in Section 2.1, we left-factor the grammar, so that all productions are binary, except those with a single terminal on the right-hand side and epsilon produc\u00ad tions.",
+                    "sid": 274,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only E-productions are those introduced by left-factorization.",
+                    "sid": 275,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our factored 13 Equivalently, we can split the analyses at this point, so that there is one POS per analysis..",
+                    "sid": 276,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "grammar was produced by factoring the trees in the training corpus before grammar induction, which proceeded in the standard way, by counting rule frequencies.",
+                    "sid": 277,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "empirical results. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The empirical results will be presented in three stages: (i) trials to examine the accuracy and efficiency of the parser; (ii) trials to examine its effect on test corpus perplexity and recognition performance; and (iii) trials to examine the effect of beam variation on these performance measures.",
+                    "sid": 278,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before presenting the results, we will introduce the methods of evaluation.",
+                    "sid": 279,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Evaluation.",
+                    "sid": 280,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perplexity is a standard measure within the speech recognition community for com\u00ad paring language models.",
+                    "sid": 281,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, if two models are tested on the same test corpus, the model that assigns the lower perplexity to the test corpus is the model closest to the true distribution of the language, and thus better as a prior model for speech recognition.",
+                    "sid": 282,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perplexity is the exponential of the cross entropy, which we will define next.",
+                    "sid": 283,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a random variable X with distribution p and a probability model q, the cross entropy, H (p, q) is defined as follows: H( p,q ) = - .Z:p( x ) log q( x ) xEX (12) Let p be the true distribution of the language.",
+                    "sid": 284,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, under certain assumptions, given a large enough sample, the sample mean of the negative log probability of a model will converge to its cross entropy with the true model.14 That isH( p,q ) = . 1hm n-+oo n (13) where Wo is a string of the language L. In practice, one takes a large sample of the language, and calculates the negative log probability of the sample, normalized by its size.15 The lower the cross entropy (i.e., the higher the probability the model assigns to the sample), the better the model.",
+                    "sid": 285,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Usually this is reported in terms of perplexity, which we will do as well.16 Some of the trials discussed below will report results in terms of word and/ or sentence error rate, which are obtained when the language model is embedded in a speech recognition system.",
+                    "sid": 286,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word error rate is the number of deletion, insertion, or substitution errors per 100 words.",
+                    "sid": 287,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentence error rate is the number of sentences with one or more errors per 100 sentences.",
+                    "sid": 288,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical parsers are typically evaluated for accuracy at the constituent level, rather than simply whether or not the parse that the parser found is completely correct or not.",
+                    "sid": 289,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A constituent for evaluation purposes consists of a label (e.g., NP) and a span (beginning and ending word positions).",
+                    "sid": 290,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in Figure l(a), there is a VP that spans the words \"chased the ball\".",
+                    "sid": 291,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation is carried out on a hand-parsed test corpus, and the manual parses are treated as correct.",
+                    "sid": 292,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will call the manual parse 14 See Cover and Thomas (1991) for a discussion of the ShannonMcMillan-Breiman theorem, under the.",
+                    "sid": 293,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "assumptions of which this convergence holds.",
+                    "sid": 294,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "15 It is important to remember to include the end marker in the strings of the sample..",
+                    "sid": 295,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "16 When assessing the magnitude of a perplexity improvement, it is often better to look at the reduction.",
+                    "sid": 296,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in cross entropy, by taking the log of the perplexity.",
+                    "sid": 297,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It will be left to the reader to do so.",
+                    "sid": 298,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GOLD and the parse that the parser returns TEST.",
+                    "sid": 299,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision is the number of common constituents in GOLD and TEST divided by the number of constituents in TEST.",
+                    "sid": 300,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall is the number of common constituents in GOLD and TEST divided by the number of constituents in GOLD.",
+                    "sid": 301,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following standard practice, we will be reporting scores only for non-part-of-speech constituents, which are called labeled recall (LR) and labeled precision (LP).",
+                    "sid": 302,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sometimes in figures we will plot their average, and also what can be termed the parse error, which is one minus their average.",
+                    "sid": 303,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LR and LP are part of the standard set of PARSEVAL measures of parser qual\u00ad ity (Black et al. 1991).",
+                    "sid": 304,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From this set of measures, we will also include the crossing bracket scores: average crossing brackets (CB), percentage of sentences with no cross\u00ad ing brackets (0 CB), and the percentage of sentences with two crossing brackets or fewer (:S 2 CB).",
+                    "sid": 305,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we show the average number of rule expansions con\u00ad sidered per word, that is, the number of rule expansions for which a probability was calculated (see Roark and Charniak [2000]), and the average number of analyses ad\u00ad vanced to the next priority queue per word.",
+                    "sid": 306,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an incremental parser with a pruning strategy and no backtracking.",
+                    "sid": 307,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Insuch a model, it is possible to commit to a set of partial analyses at a particular point that cannot be completed given the rest of the input string (i.e., the parser can \"garden path\").",
+                    "sid": 308,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such a case, the parser fails to return a complete parse.",
+                    "sid": 309,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the event that no complete parse is found, the highest initially ranked parse on the last nonempty priority queue is returned.",
+                    "sid": 310,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All unattached words are then attached at the highest level in the tree.",
+                    "sid": 311,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such a way we predict no new constituents and all incomplete constituents are closed.",
+                    "sid": 312,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This structure is evaluated for precision and recall, which is entirely appropriate for these incomplete as well as complete parses.",
+                    "sid": 313,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we fail to identify nodes later in the parse, recall will suffer, and if our early predictions were bad, both precision and recall will suffer.",
+                    "sid": 314,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, the percentage of these failures are reported as well.",
+                    "sid": 315,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Parser Accuracy and Efficiency.",
+                    "sid": 316,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first set of results looks at the performance of the parser on the standard corpora for statistical parsing trials: Sections 221 (989,860 words, 39,832 sentences) of the Penn Treebank (Marcus, Santorini, and Marcinkiewicz 1993) served as the training data, Section 24 (34,199 words, 1,346 sentences) as the held-out data for parameter estimation, and Section 23 (59,100 words, 2,416 sentences) as the test data.",
+                    "sid": 317,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 22 (41,817 words, 1,700 sentences) served as the development corpus, on which the parser was tested until stable versions were ready to run on the test data, to avoid developing the parser to fit the specific test data.",
+                    "sid": 318,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows trials with increasing amounts of conditioning information from the left context.",
+                    "sid": 319,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are a couple of things to notice from these results.",
+                    "sid": 320,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, and least surprising, is that the accuracy of the parses improved as we conditioned on more and more information.",
+                    "sid": 321,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like the nonlexicalized parser in Roark and Johnson (1999), we found that the search efficiency, in terms of number of rule expansions consid\u00ad ered or number of analyses advanced, also improved as we increased the amount of conditioning.",
+                    "sid": 322,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike the Roark and Johnson parser, however, our coverage did not substantially drop as the amount of conditioning information increased, and in some cases, coverage improved slightly.",
+                    "sid": 323,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They did not smooth their conditional probability estimates, and blamed sparse data for their decrease in coverage as they increased the conditioning information.",
+                    "sid": 324,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results appear to support this, since our smoothed model showed no such tendency.",
+                    "sid": 325,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows the reduction in parser error, 1LR!LP, and the reduction in rule expansions considered as the conditioning information increased.",
+                    "sid": 326,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bulk of Table 2 Results conditioning on various contextual events, standard training and testing corpora.",
+                    "sid": 327,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conditioning LR LP CB O CB :s; 2 CB Percent Average Rule Average Failed Expansions Analyses Consideredt Advancedt Section 23: 2245 sentences of length :s; 40 u -50 -60 (0,0,0) (2,2,2) (5,2,2) (6,2,2) (6,3,2) Conditioning information (6,5,2) (6,6,4) Figure 5 Reduction in average precision/recall error and in number of rule expansions per word as conditioning increases, for sentences of length :s; 40.",
+                    "sid": 328,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the improvement comes from simply conditioning on the labels of the parent and the closest sibling to the node being expanded.",
+                    "sid": 329,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, conditioning all POS expansions on two c-cornmanding heads made no difference in accuracy compared to conditioning only leftmost POS expansions on a single c-commanding head; but it did improve the efficiency.",
+                    "sid": 330,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results, achieved using very straightforward conditioning events and con\u00ad sidering only the left context, are within one to four points of the best published Figure 6 10 20 30 40 S e n t e n c e L e n g t h 50 60 70 Observed running time on Section 23 of the Penn Treebank, with the full conditional probability model and beam of 1011, using one 300 MHz UltraSPARC processor and 256MB of RAM of a Sun Enterprise 450.",
+                    "sid": 331,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "accuracies cited above.17 Of the 2,416 sentences in the section, 728 had the totally cor\u00ad rect parse, 30.1 percent tree accuracy.",
+                    "sid": 332,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, the parser returns a set of candidate parses, from which we have been choosing the top ranked; if we use an oracle to choose the parse with the highest accuracy from among the candidates (which averaged 70.0 in number per sentence), we find an average labeled precision /recall of 94.1, for sentences of length ::S: 100.",
+                    "sid": 333,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser, thus, could be used as a front end to some other model, with the hopes of selecting a more accurate parse from among the final candidates.",
+                    "sid": 334,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While we have shown that the conditioning information improves the efficiency in terms of rule expansions considered and analyses advanced, what does the efficiency of such a parser look like in practice?",
+                    "sid": 335,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 shows the observed time at our standard base beam of 1011 with the full conditioning regimen, alongside an approximation of the reported observed (linear) time in Ratnaparkhi (1997).",
+                    "sid": 336,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our observed times look polynomial, which is to be expected given our pruning strategy: the denser the com\u00ad petitors within a narrow probability range of the best analysis, the more time will be spent working on these competitors; and the farther along in the sentence, the more chance for ambiguities that can lead to such a situation.",
+                    "sid": 337,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While our observed times are not linear, and are clearly slower than his times (even with a faster machine), they are quite respectably fast.",
+                    "sid": 338,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The differences between a k-best and a beam-search parser (not to mention the use of dynamic programming) make a running time difference unsur 17 Our score of 85.8 average labeled precision and recall for sentences less than or equal to 100 on.",
+                    "sid": 339,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 23 compares to: 86.7 in Charniak (1997), 86.9 in Ratnaparkhi (1997), 88.2 in Collins (1999), 89.6 in Charniak (2000), and 89.75 in Collins (2000).",
+                    "sid": 340,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "prising.",
+                    "sid": 341,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What is perhaps surprising is that the difference is not greater.",
+                    "sid": 342,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, this is quite a large beam (see discussion below), so that very large improvements in efficiency can be had at the expense of the number of analyses that are retained.",
+                    "sid": 343,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Perplexity Results.",
+                    "sid": 344,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next set of results will highlight what recommends this approach most: the ease with which one can estimate string probabilities in a single pass from left to right across the string.",
+                    "sid": 345,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By definition, a PCFG's estimate of a string's probability is the sum of the probabilities of all trees that produce the string as terminal leaves (see Equation 1).",
+                    "sid": 346,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the beam search approach outlined above, we can estimate the string's probability in the same manner, by summing the probabilities of the parses that the algorithm finds.",
+                    "sid": 347,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since this is not an exhaustive search, the parses that are returned will be a subset of the total set of trees that would be used in the exact PCFG estimate; hence the estimate thus arrived at will be bounded above by the probability that would be generated from an exhaustive search.",
+                    "sid": 348,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hope is that a large amount of the probability mass will be accounted for by the parses in the beam.",
+                    "sid": 349,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method cannot overestimate the probability of the string.",
+                    "sid": 350,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall the discussion of the grammar models above, and our definition of the set of partial derivations D i with respect to a prefix string W6 (see Equations 2 and 7).",
+                    "sid": 351,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WO By definition, (14) Note that the numerator at word Wj is the denominator at word Wj+l , so that the product of all of the word probabilities is the numerator at the final word, namely, the string prefix probability.",
+                    "sid": 352,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can make a consistent estimate of the string probability by similarly summing over all of the trees within our beam.",
+                    "sid": 353,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let Htnit be the priority queue Hi before any processing has begun with word Wi in the look-ahead.",
+                    "sid": 354,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a subset of the possi\u00ad ble leftmost partial derivations with respect to the prefix string w-1\u2022 Since HJ+lt is produced by expanding only analyses on priority queue Htnit , the set of complete trees consistent with the partial derivations on priority queue H f +it is a subset of the set of complete trees consistent with the partial derivations on priority queue HJnit , that is, the total probability mass represented by the priority queues is monotoni\u00ad cally decreasing.",
+                    "sid": 355,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus conditional word probabilities defined in a way consistent with Equation 14 will always be between zero and one.",
+                    "sid": 356,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our conditional word probabilities are calculated as follows: (15) As mentioned above, the model cannot overestimate the probability of a string, because the string probability is simply the sum over the beam, which is a subset of the possible derivations.",
+                    "sid": 357,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By utilizing a figure of merit to identify promising analyses, we are simply focusing our attention on those parses that are likely to have a high probability, and thus we are increasing the amount of probability mass that we do capture, of the total possible.",
+                    "sid": 358,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not part of the probability model itself.",
+                    "sid": 359,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since each word is (almost certainly, because of our pruning strategy) losing some probability mass, the probability model is not \"proper\"-the sum of the probabilities over the vocabulary is less than one.",
+                    "sid": 360,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to have a proper probability distribution, we would need to renormalize by dividing by some factor.",
+                    "sid": 361,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note, however, that this renormalization factor is necessarily less than one, and thus would uniformly increase each word's probability under the model, that is, any perplexity results reported below will be higher than the \"true\" perplexity that would be assigned with a properly normalized distribution.",
+                    "sid": 362,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, renormalizing would make our perplexity measure lower still.",
+                    "sid": 363,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hope, however, is that the improved parsing model provided by our conditional probability model will cause the distribution over structures to be more peaked, thus enabling us to capture more of the total probability mass, and making this a fairly snug upper bound on the perplexity.",
+                    "sid": 364,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One final note on assigning probabilities to strings: because this parser does gar\u00ad den path on a small percentage of sentences, this must be interpolated with another estimate, to ensure that every word receives a probability estimate.",
+                    "sid": 365,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our trials, we used the unigram, with a very small mixing coefficient: La Hinit P(d) P( w; I w-1) = .X.( w-1) L E ;+1 P(d) + (1- .X.(w-1))P(w;) (16) dEHfnzt If Larninit P(d) = 0 in our model, then our model provides no distribution over followin'g words since the denominator is zero.",
+                    "sid": 366,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, .X.( wi1) = {o if Ld E H fnit P(d) = 0 .999 otherwise Chelba and Jelinek (1998a, 1998b) also used a parser to help assign word probabili\u00ad ties, via the structured language model outlined in Section 3.2.",
+                    "sid": 367,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They trained and tested the SLM on a modified, more \"speech-like\" version of the Penn Treebank.",
+                    "sid": 368,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their mod\u00ad ifications included: (i) removing orthographic cues to structure (e.g., punctuation); (ii) replacing all numbers with the single token N ; and (iii) closing the vocabulary at 10,000, replacing all other words with the UNK token.",
+                    "sid": 369,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They used Sections 0020 (929,564 words) as the development set, Sections 2122 (73,760 words) as the check set (for interpolation coefficient estimation), and tested on Sections 2324 (82,430 words).",
+                    "sid": 370,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We obtained the training and testing corpora from them (which we will denote C&J corpus), and also created intermediate corpora, upon which only the first two modifi\u00ad cations were carried out (which we will denote no punct).",
+                    "sid": 371,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Differences in performance will give an indication of the impact on parser performance of the different modifica\u00ad tions to the corpora.",
+                    "sid": 372,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All trials in this section used Sections 0020 for counts, held out 2122, and tested on 2324.",
+                    "sid": 373,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows several things.",
+                    "sid": 374,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, it shows relative performance for unmodified, no punct, and C&J corpora with the full set of conditioning information.",
+                    "sid": 375,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can see that removing the punctuation causes (unsurprisingly) a dramatic drop in the accuracy and efficiency of the parser.",
+                    "sid": 376,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly,it also causes coverage to become nearly total, with failure on just two sentences per thousand on average.",
+                    "sid": 377,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see the familiar pattern, in the C&J corpus results, of improving performance as the amount of conditioning information grows.",
+                    "sid": 378,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case we have perplexity results as well, and Figure 7 shows the reduction in parser error, rule expansions, and perplexity as the amount of conditioning information grows.",
+                    "sid": 379,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While all three seem to be similarly improved by the addition of structural context (e.g., parents and siblings), the addition of c-commanding heads has only a moderate effect on the parser accuracy, but a very large effect on the perplexity.",
+                    "sid": 380,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fact that the efficiency was improved more than the accuracy in this case (as was also seen in Figure 5), seems to indicate that this additional information is causing the distribution to become more peaked, so that fewer analyses are making it into the beam.",
+                    "sid": 381,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 Results conditioning on various contextual events, Sections 2324, modifications following Chelba and Jelinek.",
+                    "sid": 382,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corpora Conditioning LR LP Percent Perplexity Average Rule Failed Expansions Average Analyses Consideredt Advancedt Sections 2324: 3761 sentences ::; 120 unmodified all 85.2 85.1 1.7 7,206 213.5 no punct all 82.4 82.9 0.2 9,717 251.8 C&J corpus par+sib 75.2 77.4 0.1 310.04 17,418 457.2 C&J corpus NT struct 77.3 79.2 0.1 290.29 15,948 408.8 C&J corpus NT head 79.2 80.4 0.1 255.85 14,239 363.2 C&J corpus POS struct 80.5 81.6 0.1 240.37 13,591 341.3 C&J corpus all 81.7 82.1 0.2 152.26 11,667 279.7 tper word -lO -2050-60' (2,2,2) (5,2,2) (6,2,2) Conditioning information (6,3,2) (6,6,4) Figure 7 Reduction in average precision/recall error, number of rule expansions, and perplexity as conditioning increases.",
+                    "sid": 383,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 compares the perplexity of our model with Chelba and Jelinek (1998a, 1998b) on the same training and testing corpora.",
+                    "sid": 384,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We built an interpolated trigram model to serve as a baseline (as they did), and also interpolated our model's perplexity with the trigram, using the same mixing coefficient as they did in their trials (taking 36 percent of the estimate from the trigram).",
+                    "sid": 385,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "18 The trigram model was also trained on Sections 0020 of the C&J corpus.",
+                    "sid": 386,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Trigrams and bigrams were binned by the total 18 Our optimal mixture level was closer to 40 percent, but the difference was negligible..",
+                    "sid": 387,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 Comparison with previous perplexity results.",
+                    "sid": 388,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Paper Trigram Baseline PMeo rexity el Interpolation, ,.\\ = .36 Chelba and Jelinek (1998a) 167.14 158.28 148.90 Chelba and Jelinek (1998b) 167.14 153.76 147.70 Current results 167.02 152.26 137.26 count of the conditioning words in the training corpus, and maximum likelihood mixing coefficients were calculated for each bin, to mix the trigram with bigram and unigram estimates.",
+                    "sid": 389,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our trigram model performs at almost exactly the same level as theirs does, which is what we would expect.",
+                    "sid": 390,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our parsing model's perplexity improves upon their first result fairly substantially, but is only slightly better than their second result.19 However, when we interpolate with the trigram, we see that the additional improvement is greater than the one they experienced.",
+                    "sid": 391,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is not surprising, since our conditioning information is in many ways orthogonal to that of the trigram, insofar as it includes the probability mass of the derivations; in contrast, their model in some instances is very close to the trigram, by conditioning on two words in the prefix string, which may happen to be the two adjacent words.",
+                    "sid": 392,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results are particularly remarkable, given that we did not build our model as a language model per se, but rather as a parsing model.",
+                    "sid": 393,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The perplexity improvement was achieved by simply taking the existing parsing model and applying it, with no extra training beyond that done for parsing.",
+                    "sid": 394,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hope was expressed above that our reported perplexity would be fairly close to the \"true\" perplexity that we would achieve if the model were properly normal\u00ad ized, i.e., that the amount of probability mass that we lose by pruning is small.",
+                    "sid": 395,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way to test this is the following: at each point in the sentence, calculate the condi\u00ad tional probability of each word in the vocabulary given the previous words, and sum them.20 If there is little loss of probability mass, the sum should be close to one.",
+                    "sid": 396,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did this for the first 10 sentences in the test corpus, a total of 213 words (including the end-of-sentence markers).",
+                    "sid": 397,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of the sentences was a failure, so that 12 of the word probabilities (all of the words after the point of the failure) were not estimated by our model.",
+                    "sid": 398,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the remaining 201 words, the average sum of the probabilities over the 10,000-word vocabulary was 0.9821, with a minimum of 0.7960 and a maximum of 0.9997.",
+                    "sid": 399,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, at the word where the failure occurred, the sum of the proba\u00ad bilities was 0.9301.",
+                    "sid": 400,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Word Error Rate.",
+                    "sid": 401,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to get a sense of whether these perplexity reduction results can translate to improvement in a speech recognition task, we performed a very small preliminary experiment on n-best lists.",
+                    "sid": 402,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The DARPA '93 HUBl test setup consists of 213 utter\u00ad ances read from the Wall S treet Journal, a total of 3,446 words.",
+                    "sid": 403,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corpus comes with a baseline trigram model, using a 20,000-word open vocabulary, and trained on ap\u00ad proximately 40 million words.",
+                    "sid": 404,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used Ciprian Chelba's A* decoder to find the 50 best hypotheses from each lattice, along with the acoustic and trigram scores.21 Given 19 Recall that our perplexity measure should, ideally, be even lower still..",
+                    "sid": 405,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "20 Thanks to Ciprian Chelba for this suggestion..",
+                    "sid": 406,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "21 See Chelba (2000) for details on the decoder..",
+                    "sid": 407,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 Word and sentence error rate results for various models, with differing training and vocabulary sizes, for the best language model factor for that particular model.",
+                    "sid": 408,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Model Training Size Vocabulary Size LM Weight Percentage Word Error Rate Percentage Sentence Error Rate Lattice trigram 40M 20K 16 13.7 69.0 Chelba (2000) ( >.",
+                    "sid": 409,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= .4) 20M 20K 16 13.0 Current model lM lOK 15 15.1 73.2 Treebank trigram lM lOK 5 16.5 79.8 No language model 0 16.8 84.0 the idealized circumstances of the production (text read in a lab), the lattices are rel\u00ad atively sparse, and in many cases 50 distinct string hypotheses were not found in a lattice.",
+                    "sid": 410,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We reranked an average of 22.9 hypotheses with our language model per utterance.",
+                    "sid": 411,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One complicating issue has to do with the tokenization in the Penn Treebank versus that in the HUBl lattices.",
+                    "sid": 412,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inparticular, contractions (e.g., he 's) are split in the Penn Treebank (he 's) but not in the HUB1 lattices.",
+                    "sid": 413,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Splitting of the contractions is critical for parsing, since the two parts oftentimes (as in the previous example) fall in different constituents.",
+                    "sid": 414,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We follow Chelba (2000) in dealing with this problem: for parsing purposes, we use the Penn Treebank tokenization; for interpolation with the provided trigram model, and for evaluation, the lattice tokenization is used.",
+                    "sid": 415,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ifwe are to interpolate our model with the lattice trigram, we must wait until we have our model's estimate for the probability of both parts of the contraction; their product can then be interpolated with the trigram estimate.",
+                    "sid": 416,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, interpolation in these trials made no improvement over the better of the uninterpolated models, but simply resulted in performance somewhere between the better and the worse of the two models, so we will not present interpolated trials here.",
+                    "sid": 417,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 reports the word and sentence error rates for five different models: (i) the trigram model that comes with the lattices, trained on approximately 40M words, with a vocabulary of 20,000; (ii) the best-performing model from Chelba (2000), which was interpolated with the lattice trigram at ,\\ = 0.4; (iii) our parsing model, with the same training and vocabulary as the perplexity trials above; (iv) a trigram model with the same training and vocabulary as the parsing model; and (v) no language model at all.",
+                    "sid": 418,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This last model shows the performance from the acoustic model alone, without the influence of the language model.",
+                    "sid": 419,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The log of the language model score is multiplied by the language model (LM) weight when summing the logs of the language and acoustic scores, as a way of increasing the relative contribution of the language model to the composite score.",
+                    "sid": 420,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We followed Chelba (2000) in using an LM weight of 16 for the lattice trigram.",
+                    "sid": 421,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our model and the Treebank trigram model, the LM weight that resulted in the lowest error rates is given.",
+                    "sid": 422,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The small size of our training data, as well as the fact that we are rescoring n-best lists, rather than working directly on lattices, makes comparison with the other models not particularly informative.",
+                    "sid": 423,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What is more informative is the difference between our model and the trigram trained on the same amount of data.",
+                    "sid": 424,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieved an 8.5 percent relative improvement in word error rate, and an 8.3 percent relative improvement in sentence error rate over the Treebank trigram.",
+                    "sid": 425,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, as mentioned above, interpolating two models together gave no improvement over the better of the two, whether our model was interpolated with the lattice or the Treebank trigram.",
+                    "sid": 426,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This Table 6 Results with full conditioning on the C&J corpus at various base beam factors.",
+                    "sid": 427,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Base LR LP Percentage Perplexity Perplexity Average Rule Words Per Beam Failed >- = O >, = .36 Expansions Second Factor Consideredt 1011 81.7 82.1 Section 0.2 s 2324: 3761 152.26 sentences < 12 137.26 0 11,667 3.1 1010 81.5 81.9 0.3 154.25 137.88 6,982 5.2 109 80.9 81.3 0.4 156.83 138.69 4,154 8.9 108 80.2 80.6 0.6 160.63 139.80 2,372 15.3 107 78.8 79.2 1.2 166.91 141.30 1,468 25.5 106 77.4 77.9 1.5 174.44 143.05 871 43.8 10-S 75.8 76.3 2.6 187.11 145.76 517 71.6 104 72.9 73.9 4.5 210.28 148.41 306 115.5 103 68.4 70.6 8.0 253.77 152.33 182 179.6 tper word contrasts with our perplexity results reported above, as well as with the recognition experiments in Chelba (2000), where the best results resulted from interpolated models.",
+                    "sid": 428,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The point of this small experiment was to see if our parsing model could provide useful information even in the case that recognition errors occur, as opposed to the (generally) fully grammatical strings upon which the perplexity results were obtained.",
+                    "sid": 429,
+                    "ssid": 152,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As one reviewer pointed out, given that our model relies so heavily on context, it may have difficulty recovering from even one recognition error, perhaps more difficulty than a more locally oriented trigram.",
+                    "sid": 430,
+                    "ssid": 153,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the improvements over the trigram model in these trials are modest, they do indicate that our model is robust enough to provide good information even in the face of noisy input.",
+                    "sid": 431,
+                    "ssid": 154,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Future work will include more substantial word recognition experiments.",
+                    "sid": 432,
+                    "ssid": 155,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.5 Beam Variation.",
+                    "sid": 433,
+                    "ssid": 156,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last set of results that we will present addresses the question of how wide the beam must be for adequate results.",
+                    "sid": 434,
+                    "ssid": 157,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The base beam factor that we have used to this point is 1011 which is quite wide.",
+                    "sid": 435,
+                    "ssid": 158,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It was selected with the goal of high parser accuracy; but in this new domain, parser accuracy is a secondary measure of performance.",
+                    "sid": 436,
+                    "ssid": 159,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To determine the effect on perplexity, we varied the base beam factor in trials on the Chelba and Jelinek corpora, keeping the level of conditioning information constant, and Table 6 shows the results across a variety of factors.",
+                    "sid": 437,
+                    "ssid": 160,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser error, parser coverage, and the uninterpolated model perplexity (,\\ = 1) all suffered substantially from a narrower search, but the interpolated perplexity re\u00ad mained quite good even at the extremes.",
+                    "sid": 438,
+                    "ssid": 161,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 8 plots the percentage increase in parser error, model perplexity, interpolated perplexity, and efficiency (i.e., decrease in rule expansions per word) as the base beam factor decreased.",
+                    "sid": 439,
+                    "ssid": 162,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the model per\u00ad plexity and parser accuracy are quite similarly affected, but that the interpolated per\u00ad plexity remained far below the trigram baseline, even with extremely narrow beams.",
+                    "sid": 440,
+                    "ssid": 163,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion and future directions. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The empirical results presented above are quite encouraging, and the potential of this kind of approach both for parsing and language modeling seems very promising.",
+                    "sid": 441,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "JOO 90 80 70 \" 60 .s 1;'o 50 8\" d: 30 20 IO11 -IO9 -87 -65 -43 Figure 8 Jog 10 of base beam factor Increase in average precision/recall error, model perplexity, interpolated perplexity, and efficiency (i.e., decrease in rule expansions per word) as base beam factor decreases.",
+                    "sid": 442,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With a simple conditional probability model, and simple statistical search heuristics, we were able to find very accurate parses efficiently, and, as a side effect, were able to assign word probabilities that yield a perplexity improvement over previous results.",
+                    "sid": 443,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These perplexity improvements are particularly promising, because the parser is pro\u00ad viding information that is, in some sense, orthogonal to the information provided by a trigram model, as evidenced by the robust improvements to the baseline trigram when the two models are interpolated.",
+                    "sid": 444,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are several important future directions that will be taken in this area.",
+                    "sid": 445,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, there is reason to believe that some of the conditioning information is not uniformly useful, and we would benefit from finer distinctions.",
+                    "sid": 446,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the probability of a preposition is presumably more dependent on a c-commanding head than the probability of a determiner is. Yet in the current model they are both conditioned on that head, as leftmost constituents of their respective phrases.",
+                    "sid": 447,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, there are advantages to top-down parsing that have not been examined to date, e.g., empty categories.",
+                    "sid": 448,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A top-down parser, in contrast to a standard bottom-up chart parser, has enough information to predict empty categories only where they are likely to occur.",
+                    "sid": 449,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By including these nodes (which are in the original annotation of the Penn Treebank), we may be able to bring certain long-distance dependencies into a local focus.",
+                    "sid": 450,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, as mentioned above, we would like to further test our language model in speech recognition tasks, to see if the perplexity improvement that we have seen can lead to significant reductions in word error rate.",
+                    "sid": 451,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other parsing approaches might also be used in the way that we have used a top\u00ad down parser.",
+                    "sid": 452,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Earley and left-corner parsers, as mentioned in the introduction, also have rooted derivations that can be used to calculated generative string prefix proba bilities incrementally.",
+                    "sid": 453,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, left-corner parsing can be simulated by a top-down parser by transforming the grammar, as was done in Roark and Johnson (1999), and so an approach very similar to the one outlined here could be used in that case.",
+                    "sid": 454,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps some compromise between the fully connected structures and extreme underspecifica\u00ad tion will yield an efficiency improvement.",
+                    "sid": 455,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, the advantages of head-driven parsers may outweigh their inability to interpolate with a trigram, and lead to better off-line language models than those that we have presented here.",
+                    "sid": 456,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Does a parsing model capture exactly what we need for informed language mod\u00ad eling?",
+                    "sid": 457,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The answer to that is no.",
+                    "sid": 458,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some information is simply not structural in nature (e.g., topic), and we might expect other kinds of models to be able to better handle nonstructural dependencies.",
+                    "sid": 459,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement that we derived from interpolating the different models above indicates that using multiple models may be the most fruitful path in the future.",
+                    "sid": 460,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In any case, a parsing model of the sort that we have presented here should be viewed as an important potential source of key information for speech recognition.",
+                    "sid": 461,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Future research will show if this early promise can be fully realized.",
+                    "sid": 462,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "The author wishes to thank Mark Johnson for invaluable discussion, guidance, and moral support over the course of this project.",
+                    "sid": 463,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many thanks also to Eugene Charniak for the use of certain grammar training routines, and for an enthusiastic interest in the project.",
+                    "sid": 464,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thanks also to four anonymous reviewers for valuable and insightful comments, and to Ciprian Chelba, Sanjeev Khudanpur, and Frederick Jelinek for comments and suggestions.",
+                    "sid": 465,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the author would like to express his appreciation to the participants of discussions during meetings of the Brown Laboratory for Linguistic Information Processing (BLLIP); in addition to Mark and Eugene: Yasemin Altun, Don Blaheta, Sharon Caraballo, Massimiliano Ciaramita, Heidi Fox, Niyu Ge, and Keith Hall.",
+                    "sid": 466,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This research was supported in part by NSF IGERT Grant # DGE9870676.",
+                    "sid": 467,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

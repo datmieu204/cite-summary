@@ -1,0 +1,1229 @@
+{
+    "ID": "W10-3909",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Semantic information is a very important factor in coreference resolution.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combination of large corpora and \u2018deep\u2019 analysis procedures has made it possible to acquire a range of semantic information and apply it to this task.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we generate two statistically-based semantic features from a large corpus and measure their influence on pronoun coreference.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One is contextual compatibility, which decides if the antecedent can be used in the anaphor\u2019s context; the other is role pair, which decides if the actions asserted of the antecedent and the anaphor are likely to apply to the same entity.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply a semantic labeling system and a baseline coreference system to a large corpus to generate semantic patterns and convert them into features in a MaxEnt model.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features produce an absolute gain of 1.5% to 1.7% in resolution accuracy (a 6% reduction in errors).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand the limitations of these features, we also extract patterns from the test corpus, use these patterns to train a coreference model, and examine some of the cases where coreference still fails.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also compare the performance of patterns extracted from semantic role labeling and syntax.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Coreference resolution is the task of determining whether two phrases refer to the same entity.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Coreference is critical to most NLP tasks, yet even the sub-problem of pronoun coreference remains very challenging.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, we need several types of information to identify the right antecedent.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, number and gender agreement constraints can narrow the candidate set.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If multiple candidates remain, we would next use some sequence or syntactic features, like position, word, word salience and discourse focus.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, whether an antecedent is in subject position might be helpful because the subject is more likely to be referred to; or an entity that has been referred to repeatedly is more likely to be referred to again.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these features do not suffice to pick the correct antecedent, and sometimes similar syntactic structures might have quite different coreference solutions.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, for the following two sentences: (1) The terrorist shot a 13-year-old boy; he was arrested after the attack.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) The terrorist shot a 13-year-old boy; he was fatally wounded in the attack.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it is likely that \u201che\u201d refers to \u201cterrorist\u201d in (1) and \u201cboy\u201d in (2).",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we cannot get the right antecedent using the features we mentioned above because the examples share the same antecedent words and syntactic structure.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "People can still resolve these correctly because \u201cterrorist\u201d is more likely to be arrested than \u201cboy\u201d, and because the one shooting is more likely to be arrested than the one being shot.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such cases, semantic constraints and preferences are required for correct coreference resolution.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Methods for acquiring and using such knowledge are receiving increasing attention in 60 Proceedings of the Second Workshop on NLP Challenges in the Information Explosion Era (NLPIX 2010), pages 60\u201368, Beijing, August 2010 recent work on anaphora resolution.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dagan and Itai (1990), Bean and Riloff (2004), Yang and Su (2007), and Ponzetto and Strube (2006) all explored this task.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this task is difficult because it requires the acquisition of a large amount of semantic information.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, there is not universal agreement on the value of these semantic preferences for pronoun coreference.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kehler et al.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) reported that such information did not produce apparent improvement in overall pronoun resolution.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we will extract semantic features from a semantic role labeling system instead of a parse tree, and explore whether pronoun coreference resolution can benefit from such knowledge, which is automatically extracted from a large corpus.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We studied two features: the contextual compatibility feature which has been demonstrated to work at the syntactic level by previous work; and the role pair feature, which has not previously been applied to general domain pronoun co-reference.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, to obtain a rough upper bound on the benefits of our approach and understand its limitations, we conducted a second experiment in which the semantic knowledge is extracted from the evaluation corpus.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use the term mention to describe an individual referring phrase.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For most studies of coreference, mentions are noun phrases and may be headed by a name, a common noun, or a pronoun.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use the term entity to refer to a set of coreferential mentions.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Contextual compatibility features have long been studied for pronoun coreference: Dagan and Itai (1990) proposed a heuristics-based approach to pronoun resolution.",
+                    "sid": 34,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It determined the preference of candidates based on predicate-argument frequencies.",
+                    "sid": 35,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bean and Riloff (2004) present a system, which uses contextual role knowledge to aid coreference resolution.",
+                    "sid": 36,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They used lexical and syntactic heuristics to identify high-confidence coreference relations and used them as training data for learning contextual role knowledge.",
+                    "sid": 37,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They got substantial gains on articles in two specific domains, terrorism and natural disasters.",
+                    "sid": 38,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yang et al.",
+                    "sid": 39,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) use statistically-based semantic compatibility information to improve pronoun resolution.",
+                    "sid": 40,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use corpus-based and web-based extraction strategies, and their work shows that statistically-based semantic compatibility information can improve coreference resolution.",
+                    "sid": 41,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, Kehler et al.",
+                    "sid": 42,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) claimed that the contextual compatibility feature does not help much for pronoun coreference: existing learning- based approaches already performed well; such statistics are simply not good predictors for pronoun interpretation; data is sparse in the collected predicate-argument statistics.",
+                    "sid": 43,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The role pair feature has not been studied for general, broad-domain pronoun co-reference, but it has been used for other tasks: Pekar (2006) built pairs of 'templates' which share an 'anchor' argument; these correspond closely to our role pairs.",
+                    "sid": 44,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Association statistics of the template pairs were used to acquire verb entailments.",
+                    "sid": 45,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Abe et al.",
+                    "sid": 46,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) looked for pairs appearing in specific syntactic patterns in order to acquire finer-grained event relations.",
+                    "sid": 47,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chambers and Jurafsky (2008) built narrative event chains, which are partially ordered sets of events related by a common protagonist.",
+                    "sid": 48,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use high-precision hand-coded rules to get coreference information, extract predicate arguments that link the mentions to verbs, and link the arguments of the coreferred mentions to build a verb entailment model.",
+                    "sid": 49,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bean and Riloff (2004) used high-precision hand-coded rules to identify coreferent mention pairs, which are then used to acquire role pairs that they refer to as Caseframe Network features.",
+                    "sid": 50,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use these features to improve coreference resolution for two domain-specific corpora involving terrorism and natural disasters.",
+                    "sid": 51,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their result raises the natural question as to whether the approach (which may capture domain- specific pairs such as \u201ckidnap\u2014release\u201d in the terrorism domain) can be successfully extended to a general news corpus.",
+                    "sid": 52,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We address this question in the experiments reported here.",
+                    "sid": 53,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "corpus analysis. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "In order to extract semantic features from our large training corpus, we apply a sequence of analyzers.",
+                    "sid": 54,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These include name tagging, parsing, a baseline coreference analyzer, and, most important, a semantic labeling system that can generate the logical grammatical and predicate- argument representation automatically from a parse tree (Meyers et al. 2009).",
+                    "sid": 55,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use semantic labeling because it provides more general and meaningful patterns, with a \u201cdeeper\u201d analysis than parsed text.",
+                    "sid": 56,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The output of the semantic labeling is the dependency representation of the text, where each sentence is a graph consisting of nodes (corresponding to words) and arcs.",
+                    "sid": 57,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each arc captures up to three relations between two words: (1) a SURFACE relation, the relation between a predicate and an argument in the parse of a sentence; (2) a LOGIC1 (grammatical logical) relation which regularizes for lexical and syntactic phenomena like passive, relative clauses, and deleted subjects; and (3) a LOGIC2 (predicate- argument) relation corresponding to relations in PropBank and NomBank.",
+                    "sid": 58,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is designed to be compatible with the Penn TreeBank (Marcus et al., 1994) framework and therefore, Penn Tree- Bank-based parsers, while incorporating Named Entities, PropBank, and NomBank.",
+                    "sid": 59,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because nouns and verbs provide the most relevant contexts and capture the events in which the entities participate, we generate semantic patterns (triples) only for those arcs with verb or noun heads.",
+                    "sid": 60,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the following relations: \u2022 Logic2 relations: We use in particular the Arg0 relation (which corresponds roughly to agent) and Arg1 relation (which corresponds roughly to patient).",
+                    "sid": 61,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Logic1 relations: We use in particular the Sbj and Obj relations, representing the logical subject and object of a verb (regularizing passive, relative clauses, deleted subjects) \u2022 Surface relations: T-pos relation is particularly used, which captures the head noun \u2013 determiner relation for possessive constructs such as \u201cbomber\u2019s attack\u201d and \u201chis responsibility\u201d.",
+                    "sid": 62,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, for the sentence: John is hit by Tom\u2019s brother.",
+                    "sid": 63,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "we generate the semantic patterns <Arg1 hit John> <Arg0 hit brother> <T-pos brother Tom> We apply this labeling system to all the data we use, and to generate the semantic pattern, we take first its predicate-argument role; if that is null, we take its logical grammatical role; if both are null, we take its surface role.",
+                    "sid": 64,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce data sparseness, all inflected words are changed to their base form (e.g. \u201cattackers\u201d\u2192\u201cattacker\u201d).",
+                    "sid": 65,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All names are replaced by their ACE types (person, organization, location, etc.).",
+                    "sid": 66,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only patterns with noun arguments are extracted because we only consider noun phrases as possible antecedents.",
+                    "sid": 67,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "semantic features. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1 Contextual Compatibility Patterns.",
+                    "sid": 68,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pronouns, especially neutral pronouns (\u201cit\u201d, \u201cthey\u201d), carry little semantics of their own, so examining the compatibility of the context of a pronoun and its candidate antecedents is a good way to improve antecedent selection.",
+                    "sid": 69,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we want to determine whether the predicate, which is applied to the anaphor, can be applied to the antecedents.",
+                    "sid": 70,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take the semantic pattern with the anaphor in third position.",
+                    "sid": 71,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, each candidate antecedent is substituted for the anaphor to see if it is suitable for the context.",
+                    "sid": 72,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, consider the sentence The company issued a statement that it bought G.M. which would generate the semantic patterns <Arg0 issue company> <Arg1 issue statement> <Arg0 buy it> <Arg1 buy Organization> (here \u201cG.M\u201d is a name of type organization and so is replaced by the token Organization).",
+                    "sid": 73,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relevant context of the anaphor is the semantic pattern <Arg0 buy it>.",
+                    "sid": 74,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose there are two candidate antecedents for \u201cit\u201d: \u201ccompany\u201d and \u201cstatement\u201d.",
+                    "sid": 75,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We would generate the two semantic patterns <Arg0 buy company> and <Arg0 buy statement>.",
+                    "sid": 76,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assuming <Arg0 buy company> is more highly ranked than <Arg0 buy statement>, we can infer that the anaphor is more likely to refer to \u201ccompany\u201d.",
+                    "sid": 77,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(We describe the specific metric we use for ranking below, in section 4.3.) As further examples consider: (3) The suspect's lawyer, Chifumu Banda, told the court he had advised Chiluba not to appear in court Friday.",
+                    "sid": 78,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) Foreign military analysts said it would be highly unusual for an accident to kill a whole submarine crew and they suggested possible causes to a disaster\u2026 For (3), if we know that a lawyer is more likely to give advice than a suspect, we could link \u201che\u201d to \u201clawyer\u201d instead of \u201csuspect\u201d in the first sentence.",
+                    "sid": 79,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For (4), if we know that analysts are more likely to \u201csuggest\u201d than crew, we can link \u201cthey\u201d to \u201canalysts\u201d in the second sentence.",
+                    "sid": 80,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Role Pair Patterns.",
+                    "sid": 81,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The role pair pattern is a new feature in general pronoun co-reference.",
+                    "sid": 82,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The original intuition for introducing it into coreference is that there are pairs of actions involving the same entity that are much more likely to occur together than would be true if one assumed statistical independence.",
+                    "sid": 83,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second action may be a rephrasing or elaboration of the first, or the two might be actions that are part of a common \u2018script\u2019.",
+                    "sid": 84,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example: (5) Prime Minister Mahathir Mohamad sacked the former deputy premier in 1998, who was sentenced to a total of 15 years in jail after being convicted of corruption and sodomy.",
+                    "sid": 85,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "He was released after four years because\u2026.",
+                    "sid": 86,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(6) The robber attacked the boy with a knife; he was bleeding heavily and died in the hospital the next day.",
+                    "sid": 87,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For (5), if we know that the person who was lecting statistics from a large corpus and filtering out the low frequency patterns; this process can eliminate much of the noise due to coreference errors.",
+                    "sid": 88,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here is an example of the extracted role pairs involving \u201cattack\u201d: Arg0 attack x \u2194 Obj volley x Arg0 bombard x Obj barrage x Arg0 snatch x Sbj attack x Arg0 pound x Obj reoccupy x Arg1 halt x Arg0 assault x Arg1 bombard x Table1.",
+                    "sid": 89,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Top 10 role pairs associated with \u201cArg0 attack x\u201d 4.3 Contextual Compatibility Scores.",
+                    "sid": 90,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To properly compare the patterns involving alternative candidate antecedents, we need to normalize the raw frequencies first.",
+                    "sid": 91,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We followed Yang et al.",
+                    "sid": 92,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005)\u2019s idea, which normalizes the pattern frequency by the frequency of the candidates, and use a relative score that is normalized by the maximum score of all its candidates: CompScore(Pcontext ,Cand ) CompFreq(Pcontext , Cand ) = MaxCi\u2208Set ( cands)CompFreq(Pcontext , Ci) sentenced is more likely to be released than the person who sacked others, we would know \u201che\u201drefers to \u201cdeputy premier\u201d instead of \u201cprime min and context,Cand freq(Pcontext ,Cand ) ) = freq(Cand) ister\u201d.",
+                    "sid": 93,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And in (6), because someone being attacked is more likely to die than the attacker, we can infer that \u201che\u201d refers to \u201cboy\u201d.",
+                    "sid": 94,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To acquire such information, we need to identify those pairs of predicates which are likely to apply to the same entity.",
+                    "sid": 95,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We collect this data from a large corpus.",
+                    "sid": 96,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The basic process is: apply a baseline coreference system to produce mentions and entities for a large corpus.",
+                    "sid": 97,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every entity, record the predicates for every mention, and then the pairs of predicates for successive mentions within each entity.",
+                    "sid": 98,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the performance of the baseline coreference is not very high, and individual documents may yield many idiosyncratic pairs, we can gather many significant role pairs by col where Pcontext ,Cand is the contextual compatibility pattern built from the context of the pronoun and the base form of the candidate.In contrast to Yang\u2019s work, which used con textual compatibility on the mention level, we consider the contextual compatibility of an entity to an anaphor: we calculate the contextual information of all the mentions and choose the one with highest score as the contextual compatibility score for this entity1: 1 Note that all the mentions in the entity are generated by.",
+                    "sid": 99,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the overall coreference system.",
+                    "sid": 100,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, the ACE entity type of names is determined by the system.",
+                    "sid": 101,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No key annotations are considered in the entire coreference phase.",
+                    "sid": 102,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "freq(context,entity) = Maxmention \u2208entity freq(Pcontext,mention ) names or proper nouns, and generates entities when it is finished.",
+                    "sid": 103,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The whole is a one-pass process, resolving coreference in the order in i 4.4 Role Pair Scores.",
+                    "sid": 104,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i which mentions appear in the document.",
+                    "sid": 105,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the pronoun coreference process, every pronoun Unlike the contextual compatibility feature, we only take the role pair of the successive mentions in the candidate entity and the anaphor, because they are more reliably coreferential than arbitrary pairs of mentions within an entity: where and are the contextual patterns of the anaphor and the last mention in the candidate entity.",
+                    "sid": 106,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a set of possible candidates, we compute a relative score: PairScore( pana , pcand ) mention is assigned to one of the candidate entities.",
+                    "sid": 107,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= PairFreq( pana , pcand ) Max pi\u2208Set ( cands)PairFreq( pana , pi) Both scores are quantized (binned) in intervals of 0.1 for use as MaxEnt features.",
+                    "sid": 108,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiment. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Our coreference solution system uses ACE annotated data and follows the ACE 2005 English entity guidelines.2 The baseline coreference system to compare with is the same one used for extracting semantic features from the large corpus.",
+                    "sid": 109,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It employs an entity-mention (rather than a mention-pair) model.",
+                    "sid": 110,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides entity and mention information, which (as mentioned above) is system output, the semantic information is also automatically extracted by a semantic labeling system.",
+                    "sid": 111,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, we report results in section 5.4 which involve no information from the reference (key) annotation.",
+                    "sid": 112,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Baseline System Description.",
+                    "sid": 113,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline system first applies processes like parsing, semantic labeling, name tagging, and entity mention tagging, producing a set of mentions to which coreference analysis is then applied.",
+                    "sid": 114,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The coreference phase deals with coreference among mentions that might be pronouns, 2 Automatic Content Extraction evaluation,.",
+                    "sid": 115,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "http://projects.ldc.upenn.edu/ace/ Table 2.",
+                    "sid": 116,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features used in baseline system The baseline co-reference system has separate, quite elaborate, primarily rule-based systems to handle names, nominals, headless NP's, and adverbs (\"here\", \"there\") which may be anaphoric, as well as first- and second-person pronouns.",
+                    "sid": 117,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The MaxEnt model under study in this paper is only responsible for third-person pronouns.",
+                    "sid": 118,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, gender, number, and human/nonhuman are handled separately outside of the MaxEnt model, and the model only resolves mentions that satisfy these constraints.3 In the MaxEnt model, 5 basic features (described in table 2) are used.",
+                    "sid": 119,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, while the set of features used in the model is relatively small in comparison to many current statistically based reference resolvers, these are the primary features relevant to the limited task 3 Gender information is obtained from a dictionary of gen-.",
+                    "sid": 120,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "der-specific nouns and from first-name lists from the US Census.",
+                    "sid": 121,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Number information comes from large syntactic dictionaries, corpus annotation of collective nouns (syntactically singular nouns which may take plural anaphors), and name tagger information (some organizations and political entities may take plural anaphors).",
+                    "sid": 122,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of the MaxEnt model, and its performance is still competitive4.",
+                    "sid": 123,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Corpus Description.",
+                    "sid": 124,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two kinds of corpora used in our experiment, a small coreference-annotated corpus used for training and evaluating (in cross- validation) the pronoun coreference model, and a large raw-text corpus for extracting semantic information.",
+                    "sid": 125,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For model training and evaluation, we assembled two small corpora from the available ACE data.",
+                    "sid": 126,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One consists of news articles (460 documents) from ACE 2005 (330 documents) and ACE 2003 (130 documents), which together contain 3934 pronouns.",
+                    "sid": 127,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other is the full ACE 2005 training set (592 documents), which includes newswire, broadcast news, broadcast conversations (interviews and discussions), web logs, web forums, and Fisher telephone transcripts, and contains 5659 pronouns.",
+                    "sid": 128,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In evaluation, we consider a pronoun to be correctly resolved if its antecedent in the system output (the most recent prior mention in the entity to which the pronoun is assigned) matches the antecedent in the key.",
+                    "sid": 129,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report accuracy (percentage of pronouns which are correctly resolved).We used a large corpus to extract semantic in formation, consisting of five years of AFP newswire from the LDC English Gigaword corpus (1996, 2002, 2004, 2005 and 2006), a total of 907,368 documents.",
+                    "sid": 130,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We omit news articles written in 1998, 2000 and 2003 to insure there is no overlap between the ACE data and Gigaword data.",
+                    "sid": 131,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We pre-processed each document (parsing, name identification, and semantic labeling) and ran the baseline coreference system, which automatically identified all the mentions (including name mentions and nominal mentions) and built a set of entities for each document.",
+                    "sid": 132,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 For example, among papers reporting a pronoun accuracy metric, Kehler et al.",
+                    "sid": 133,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004), testing on a 2002 ACE news corpus, get a pronoun accuracy (without semantic features) of 75.7%; (Yang et al. 2005), testing on the MUC coreference corpora (also news) get for their single-candidate baseline (without semantic features) 75.1% pronoun accuracy.",
+                    "sid": 134,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the testing conditions in each case are different, these are comparable to our baseline performance.",
+                    "sid": 135,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Semantic Information Extraction from.",
+                    "sid": 136,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Large Corpus In order to remove noise, we only keep contextual compatibility patterns that appear more than 5 times; and only keep role pair patterns which appear more than 15 times, and appear in more than three different years to avoid random pairs extracted from repeated stories.",
+                    "sid": 137,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We automatically extracted 626,008 contextual compatibility patterns and 4,736,359 role pairs.",
+                    "sid": 138,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that we extract fewer patterns than Yang (2005), who extracted in total 2,203,203 contextual compatibility patterns, from a much smaller corpus (173,252 Wall Street Journal articles).",
+                    "sid": 139,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This might be for two reasons: first, we pruned low frequency patterns; second, we used a semantic labeling system instead of shallow parsing.",
+                    "sid": 140,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5.6 gives a comparison of pattern extraction based on different levels of analysis.",
+                    "sid": 141,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Results Table 3.",
+                    "sid": 142,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accuracy of 5-fold cross-validation with statistics-based semantic features We did a 5-fold cross validation to test the contribution from statistically-based semantic features, and report an average accuracy.",
+                    "sid": 143,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the mentions and their features are obtained from system output; as a result, if the correct antecedent is not correctly discovered and analyzed from the previous phases, we will not be able to co-refer the pronoun correctly.",
+                    "sid": 144,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on the news articles show that each feature provides approximately 1% gain by itself, and contributes to a substantial overall gain of 1.45%.",
+                    "sid": 145,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the 2005 corpus, the baseline is lower because the documents come from different genres, and we get more gain from each semantic feature.",
+                    "sid": 146,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also computed the significance over the baseline using the sign test5.",
+                    "sid": 147,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 In applying the sign test, we treated each pronoun as an.",
+                    "sid": 148,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "independent sample, which is either correctly resolved or incorrectly resolved.",
+                    "sid": 149,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Where the individual observations are 5.5 Self-Extracted Bound.",
+                    "sid": 150,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To better understand the potential maximum contribution of our semantic features, we constructed an approximation to the most favorable possible semantic features for each test set.",
+                    "sid": 151,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did this by using perfect coreference knowledge and by collecting patterns for each test set from the test set itself.",
+                    "sid": 152,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each corpus used for cross-validation, we first collect all the contextual compatibility and role pair patterns corresponding to the correct antecedents (we ignore the patterns corresponding to the wrong antecedents, because we can not get this negative information when we extract them from a large corpus), and score these patterns to produce semantic features for the MaxEnt Model, both training and testing.",
+                    "sid": 153,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then use these features in the model and do a cross-validation as before.",
+                    "sid": 154,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, as before, we rely on system output to identify and analyze potential antecedents; if the prior phases do not do so correctly, coreference analysis may well fail.",
+                    "sid": 155,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This experiment shows that we can get about 3 to 4% gain from each feature type separately; 4.5 to 5.5% gain is achieved from the two features together.",
+                    "sid": 156,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4.",
+                    "sid": 157,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accuracy of 5-fold cross-validation with self- extracted semantic features 5.6 Comparison between Semantic and.",
+                    "sid": 158,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Syntax Patterns To better understand the difference between semantic role labeling and syntactic relations, we did a comparison between patterns extracted from the syntax level and those extracted from semantic role labeling: Experiments show that using semantic roles (such as Arg0 and Arg1) works better.",
+                    "sid": 159,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may (changes in) binary outcomes, the sign test provides a suitably sensitive significance test.",
+                    "sid": 160,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(In particular, it is comparable to performing a paired t-test over counts of correct resolutions, aggregated over documents.)",
+                    "sid": 161,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "be because the \"deeper\" representation provides more generalization of relations.",
+                    "sid": 162,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the phrases \u201cweapon\u2019s use\u201d and \u201cuse weapon\u201d share the same semantic relation <Arg1 use weapon>, while they yield different grammatical relations: <T-pos use weapon> and <Obj use weapon>.",
+                    "sid": 163,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "News Corpus 2005 Corpus.",
+                    "sid": 164,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "semantic syntax semantic syntax baseline 75.54 72.04 context 79.23 77.73 76.04 75.83 role pair 78.85 76.87 75.95 74.17 combine 79.97 78.42 77.50 76.76 Table 5.",
+                    "sid": 165,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accuracy of 5-fold cross-validation with self- extracted semantic features based on different levels of syntactic/semantic relations 5.7 Error Analysis.",
+                    "sid": 166,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We analyzed the errors in the self-extracted results, to see why such corpus-specific semantic features do not produce an even greater reduction in errors.",
+                    "sid": 167,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the contextual compatibility feature, we find cases where an incorrect candidate is equally compatible with the context of the anaphor; for example, if all the candidates are person names, they will share the same context feature because they generate the same ACE type.",
+                    "sid": 168,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other cases, the context does not provide enough information.",
+                    "sid": 169,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in a context tuple <Arg0 get x>, x can be almost any noun, because \u201cget\u201d is too vague to predicate the compatible subjects.",
+                    "sid": 170,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are similar limitations with the role pair feature; for example, <Arg0 get they> can be associated with a lot of other actions.",
+                    "sid": 171,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To quantify this problem, we counted the patterns that appear in both positive examples (correct antecedents) and negative examples (incorrect antecedents).",
+                    "sid": 172,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For contextual compatibility patterns, 39.5% of the patterns which appear with positive examples also appear in the negative sample, while for role pair patterns, 19% of the patterns which appear with positive examples also appear in the negative sample.",
+                    "sid": 173,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So we see that, even with a pattern set highly tuned to the test set, many patterns do not by themselves serve to distinguish correct from incorrect coreference.",
+                    "sid": 174,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We analyzed some of the cases where the semantic information does not help, or even harms the analysis.",
+                    "sid": 175,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In some cases all the antecedent scores are very low, either because the patterns are very rare or the antecedent is a common word that appears in a lot of patterns.",
+                    "sid": 176,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other cases, several antecedents have a high compatibility score but the correct one does not have the top score.",
+                    "sid": 177,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In these cases, the contextual compatibility is not reliable, as was pointed out by Kehler et al.",
+                    "sid": 178,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004): (7) The model for a republic, adopted over bitter objections from those advocating direct election of a president, is for presidential nominations to be made with public input and the winning candidate decided by a two-thirds majority of Parliament.",
+                    "sid": 179,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Former prime minister Paul Keating, who put the republic issue in the spotlight in his unsuccessful 1996 campaign for reelection, welcomed the result.",
+                    "sid": 180,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here adding semantic features leads \u201chis\u201d to be incorrectly resolved to \u201cpresident\u201d rather than the entity with mentions \u201cprime minister\u201d and \u201cPaul Keating\u201d; all the relevant patterns are common, but the score for <Arg0 campaign president> is higher (around 0.0012) than for <Arg0 campaign minister> (0.0004) or <Arg0 campaign Person> (0.0006).",
+                    "sid": 181,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another problem is that the patterns do not capture enough context information, for example: (8) The U.S. administration has been pressing the Security Council to adopt a statement condemning Pyongyang for failing to meet its obligations.",
+                    "sid": 182,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we can get the semantic context of \u201cfail to meet its obligations\u201d instead of \u201cits obligations\u201d, we might get better solutions for (8).",
+                    "sid": 183,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The role pair information raises similar problems.",
+                    "sid": 184,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some verbs are very vague, like \u201cget\u201d, \u201ctake\u201d, \u201chave\u201d, and role pairs with these verbs might not be very useful.",
+                    "sid": 185,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here is an example: (9) The retired Greek officer tried to get Ocalan to the Netherlands, home to a large Kurdish community.",
+                    "sid": 186,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "He claimed he had been manipulated by the government.",
+                    "sid": 187,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this sentence, the role pair information is very vague and it is hard to select a proper antecedent by connecting the subject of \u201ctry\u201d or \u201cget\u201d or the object of \u201cget\u201d to the subject of \u201cclaim\u201d.",
+                    "sid": 188,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.8 Limitations of Semantic Features.",
+                    "sid": 189,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The availability of very large corpora coupled with improved pre-processing (e.g., faster pars- ers, accurate semantic labelers) is making it easier to extract large sets of semantic patterns.",
+                    "sid": 190,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, results on \u201cperfect\u201d semantic information show that even if we can get very good semantic features, there are at least two concerns to address: \u2022 How to best capture the context information: larger context patterns may suffer from data sparseness; simple patterns may be insufficiently selective, appearing in both positive and negative samples.",
+                    "sid": 191,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 In some cases, the baseline features are sufficient to select the antecedent and the semantic features only do harm.",
+                    "sid": 192,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we are able to better gauge our confidence in the decisions based on the baseline features and on the semantic features, we may be able to combine these two sources more effectively.",
+                    "sid": 193,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions and future work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We have presented two ways to incorporate semantic features into a MaxEnt model-based pronoun coreference system, where these features have been extracted from a large corpus using a baseline IE (Information Extraction) system and a semantic labeling system, with no specific domain information.",
+                    "sid": 194,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also estimated the maximal benefit of these features and did some error analysis to identify cases where this semantic knowledge did not suffice.",
+                    "sid": 195,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments show the value of these semantic features for pronoun coreference, but also the limitations of our current context representation and reference resolution models.",
+                    "sid": 196,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Last, we compared the features extracted from different levels of analysis, and showed that 'deeper' representations worked better.",
+                    "sid": 197,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

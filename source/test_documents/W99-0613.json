@@ -1,0 +1,1595 @@
+{
+    "ID": "W99-0613",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Unsupervised Models for Named Entity Classification Collins",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper discusses the use of unlabeled examples for the problem of named entity classification.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A large number of rules is needed for coverage of the domain, suggesting that a fairly large number of labeled examples should be required to train a classi- However, we show that the use of data can reduce the requirements for supervision to just 7 simple &quot;seed&quot; rules.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach gains leverage from natural redundancy in the data: for many named-entity instances both the spelling of the name and the context in which it appears are sufficient to determine its type.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present two algorithms.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first method uses a similar algorithm to that of (Yarowsky 95), with modifications motivated by (Blum and Mitchell 98).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second algorithm extends ideas from boosting algorithms, designed for supervised learning tasks, to the framework suggested by (Blum and Mitchell 98).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Many statistical or machine-learning approaches for natural language problems require a relatively large amount of supervision, in the form of labeled training examples.",
+                    "sid": 7,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent results (e.g., (Yarowsky 95; Brill 95; Blum and Mitchell 98)) have suggested that unlabeled data can be used quite profitably in reducing the need for supervision.",
+                    "sid": 8,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper discusses the use of unlabeled examples for the problem of named entity classification.",
+                    "sid": 9,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is to learn a function from an input string (proper name) to its type, which we will assume to be one of the categories Person, Organization, or Location.",
+                    "sid": 10,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a good classifier would identify Mrs. Frank as a person, Steptoe & Johnson as a company, and Honduras as a location.",
+                    "sid": 11,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach uses both spelling and contextual rules.",
+                    "sid": 12,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A spelling rule might be a simple look-up for the string (e.g., a rule that Honduras is a location) or a rule that looks at words within a string (e.g., a rule that any string containing Mr. is a person).",
+                    "sid": 13,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A contextual rule considers words surrounding the string in the sentence in which it appears (e.g., a rule that any proper name modified by an appositive whose head is president is a person).",
+                    "sid": 14,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task can be considered to be one component of the MUC (MUC-6, 1995) named entity task (the other task is that of segmentation, i.e., pulling possible people, places and locations from text before sending them to the classifier).",
+                    "sid": 15,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Supervised methods have been applied quite successfully to the full MUC named-entity task (Bikel et al. 97).",
+                    "sid": 16,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At first glance, the problem seems quite complex: a large number of rules is needed to cover the domain, suggesting that a large number of labeled examples is required to train an accurate classifier.",
+                    "sid": 17,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But we will show that the use of unlabeled data can drastically reduce the need for supervision.",
+                    "sid": 18,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given around 90,000 unlabeled examples, the methods described in this paper classify names with over 91% accuracy.",
+                    "sid": 19,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only supervision is in the form of 7 seed rules (namely, that New York, California and U.S. are locations; that any name containing Mr is a person; that any name containing Incorporated is an organization; and that I.B.M. and Microsoft are organizations).",
+                    "sid": 20,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key to the methods we describe is redundancy in the unlabeled data.",
+                    "sid": 21,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In many cases, inspection of either the spelling or context alone is sufficient to classify an example.",
+                    "sid": 22,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in .., says Mr. Cooper, a vice president of.. both a spelling feature (that the string contains Mr.) and a contextual feature (that president modifies the string) are strong indications that Mr. Cooper is of type Person.",
+                    "sid": 23,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even if an example like this is not labeled, it can be interpreted as a &quot;hint&quot; that Mr and president imply the same category.",
+                    "sid": 24,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The unlabeled data gives many such &quot;hints&quot; that two features should predict the same label, and these hints turn out to be surprisingly useful when building a classifier.",
+                    "sid": 25,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present two algorithms.",
+                    "sid": 26,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first method builds on results from (Yarowsky 95) and (Blum and Mitchell 98).",
+                    "sid": 27,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Yarowsky 95) describes an algorithm for word-sense disambiguation that exploits redundancy in contextual features, and gives impressive performance.",
+                    "sid": 28,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, Yarowsky's method is not well understood from a theoretical viewpoint: we would like to formalize the notion of redundancy in unlabeled data, and set up the learning task as optimization of some appropriate objective function.",
+                    "sid": 29,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Blum and Mitchell 98) offer a promising formulation of redundancy, also prove some results about how the use of unlabeled examples can help classification, and suggest an objective function when training with unlabeled examples.",
+                    "sid": 30,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our first algorithm is similar to Yarowsky's, but with some important modifications motivated by (Blum and Mitchell 98).",
+                    "sid": 31,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm can be viewed as heuristically optimizing an objective function suggested by (Blum and Mitchell 98); empirically it is shown to be quite successful in optimizing this criterion.",
+                    "sid": 32,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second algorithm builds on a boosting algorithm called AdaBoost (Freund and Schapire 97; Schapire and Singer 98).",
+                    "sid": 33,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The AdaBoost algorithm was developed for supervised learning.",
+                    "sid": 34,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AdaBoost finds a weighted combination of simple (weak) classifiers, where the weights are chosen to minimize a function that bounds the classification error on a set of training examples.",
+                    "sid": 35,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Roughly speaking, the new algorithm presented in this paper performs a similar search, but instead minimizes a bound on the number of (unlabeled) examples on which two classifiers disagree.",
+                    "sid": 36,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm builds two classifiers iteratively: each iteration involves minimization of a continuously differential function which bounds the number of examples on which the two classifiers disagree.",
+                    "sid": 37,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been additional recent work on inducing lexicons or other knowledge sources from large corpora.",
+                    "sid": 38,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Brin 98) ,describes a system for extracting (author, book-title) pairs from the World Wide Web using an approach that bootstraps from an initial seed set of examples.",
+                    "sid": 39,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Berland and Charniak 99) describe a method for extracting parts of objects from wholes (e.g., &quot;speedometer&quot; from &quot;car&quot;) from a large corpus using hand-crafted patterns.",
+                    "sid": 40,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Hearst 92) describes a method for extracting hyponyms from a corpus (pairs of words in &quot;isa&quot; relations).",
+                    "sid": 41,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Riloff and Shepherd 97) describe a bootstrapping approach for acquiring nouns in particular categories (such as &quot;vehicle&quot; or &quot;weapon&quot; categories).",
+                    "sid": 42,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach builds from an initial seed set for a category, and is quite similar to the decision list approach described in (Yarowsky 95).",
+                    "sid": 43,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More recently, (Riloff and Jones 99) describe a method they term &quot;mutual bootstrapping&quot; for simultaneously constructing a lexicon and contextual extraction patterns.",
+                    "sid": 44,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method shares some characteristics of the decision list algorithm presented in this paper.",
+                    "sid": 45,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Riloff and Jones 99) was brought to our attention as we were preparing the final version of this paper.",
+                    "sid": 46,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 the problem",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "971,746 sentences of New York Times text were parsed using the parser of (Collins 96).1 Word sequences that met the following criteria were then extracted as named entity examples: whose head is a singular noun (tagged NN).",
+                    "sid": 47,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, take ..., says Maury Cooper, a vice president at S.&P.",
+                    "sid": 48,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, Maury Cooper is extracted.",
+                    "sid": 49,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is a sequence of proper nouns within an NP; its last word Cooper is the head of the NP; and the NP has an appositive modifier (a vice president at S.&P.) whose head is a singular noun (president).",
+                    "sid": 50,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 51,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The NP is a complement to a preposition, which is the head of a PP.",
+                    "sid": 52,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This PP modifies another NP, whose head is a singular noun.",
+                    "sid": 53,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, ... fraud related to work on a federally funded sewage plant in Georgia In this case, Georgia is extracted: the NP containing it is a complement to the preposition in; the PP headed by in modifies the NP a federally funded sewage plant, whose head is the singular noun plant.",
+                    "sid": 54,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the named-entity string (Maury Cooper or Georgia), a contextual predictor was also extracted.",
+                    "sid": 55,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the appositive case, the contextual predictor was the head of the modifying appositive (president in the Maury Cooper example); in the second case, the contextual predictor was the preposition together with the noun it modifies (plant_in in the Georgia example).",
+                    "sid": 56,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From here on we will refer to the named-entity string itself as the spelling of the entity, and the contextual predicate as the context.",
+                    "sid": 57,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Having found (spelling, context) pairs in the parsed data, a number of features are extracted.",
+                    "sid": 58,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features are used to represent each example for the learning algorithm.",
+                    "sid": 59,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle a feature could be an arbitrary predicate of the (spelling, context) pair; for reasons that will become clear, features are limited to querying either the spelling or context alone.",
+                    "sid": 60,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following features were used: full-string=x The full string (e.g., for Maury Cooper, full- s tring=Maury_Cooper). contains(x) If the spelling contains more than one word, this feature applies for any words that the string contains (e.g., Maury Cooper contributes two such features, contains (Maury) and contains (Cooper) . allcapl This feature appears if the spelling is a single word which is all capitals (e.g., IBM would contribute this feature). allcap2 This feature appears if the spelling is a single word which is all capitals or full periods, and contains at least one period.",
+                    "sid": 61,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(e.g., N.Y. would contribute this feature, IBM would not). nonalpha=x Appears if the spelling contains any characters other than upper or lower case letters.",
+                    "sid": 62,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case nonalpha is the string formed by removing all upper/lower case letters from the spelling (e.g., for Thomas E. Petry nonalpha= .",
+                    "sid": 63,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", for A. T.&T. nonalpha.. .",
+                    "sid": 64,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".",
+                    "sid": 65,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "). context=x The context for the entity.",
+                    "sid": 66,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The",
+                    "sid": 67,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 unsupervised algorithms based on decision lists",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The first unsupervised algorithm we describe is based on the decision list method from (Yarowsky 95).",
+                    "sid": 68,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before describing the unsupervised case we first describe the supervised version of the algorithm: Input to the learning algorithm: n labeled examples of the form (xi, y\u201e). y, is the label of the ith example (given that there are k possible labels, y, is a member of y = {1 ... 0). xi is a set of mi features {x,1, Xi2 .",
+                    "sid": 69,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".",
+                    "sid": 70,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".",
+                    "sid": 71,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xim, } associated with the ith example.",
+                    "sid": 72,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each xii is a member of X, where X is a set of possible features.",
+                    "sid": 73,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Output of the learning algorithm: a function h:Xxy [0, 1] where h(x, y) is an estimate of the conditional probability p(y1x) of seeing label y given that feature x is present.",
+                    "sid": 74,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alternatively, h can be thought of as defining a decision list of rules x y ranked by their &quot;strength&quot; h(x, y).",
+                    "sid": 75,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The label for a test example with features x is then defined as In this paper we define h(x, y) as the following function of counts seen in training data: Count(x,y) is the number of times feature x is seen with label y in training data, Count(x) = EyEy Count(x, y). a is a smoothing parameter, and k is the number of possible labels.",
+                    "sid": 76,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper k = 3 (the three labels are person, organization, location), and we set a = 0.1.",
+                    "sid": 77,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equation 2 is an estimate of the conditional probability of the label given the feature, P(yjx).",
+                    "sid": 78,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 We now introduce a new algorithm for learning from unlabeled examples, which we will call DLCoTrain (DL stands for decision list, the term Cotrain is taken from (Blum and Mitchell 98)).",
+                    "sid": 79,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 2(Yarowsky 95) describes the use of more sophisticated smoothing methods.",
+                    "sid": 80,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It's not clear how to apply these methods in the unsupervised case, as they required cross-validation techniques: for this reason we use the simpler smoothing method shown here. input to the unsupervised algorithm is an initial, &quot;seed&quot; set of rules.",
+                    "sid": 81,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the named entity domain these rules were Each of these rules was given a strength of 0.9999.",
+                    "sid": 82,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following algorithm was then used to induce new rules: Let Count' (x) be the number of times feature x is seen with some known label in the training data.",
+                    "sid": 83,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each label (Per s on, organization and Location), take the n contextual rules with the highest value of Count' (x) whose unsmoothed3 strength is above some threshold pmin.",
+                    "sid": 84,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(If fewer than n rules have Precision greater than pin, we 3Note that taking tlie top n most frequent rules already makes the method robut to low count events, hence we do not use smoothing, allowing low-count high-precision features to be chosen on later iterations. keep only those rules which exceed the precision threshold.) pm,n was fixed at 0.95 in all experiments in this paper.",
+                    "sid": 85,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus at each iteration the method induces at most n x k rules, where k is the number of possible labels (k = 3 in the experiments in this paper). step 3.",
+                    "sid": 86,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, label the training data with the combined spelling/contextual decision list, then induce a final decision list from the labeled examples where all rules (regardless of strength) are added to the decision list.",
+                    "sid": 87,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can now compare this algorithm to that of (Yarowsky 95).",
+                    "sid": 88,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The core of Yarowsky's algorithm is as follows: where h is defined by the formula in equation 2, with counts restricted to training data examples that have been labeled in step 2.",
+                    "sid": 89,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Set the decision list to include all rules whose (smoothed) strength is above some threshold Pmin.",
+                    "sid": 90,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two differences between this method and the DL-CoTrain algorithm: spelling and contextual features, alternating between labeling and learning with the two types of features.",
+                    "sid": 91,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus an explicit assumption about the redundancy of the features \u2014 that either the spelling or context alone should be sufficient to build a classifier \u2014 has been built into the algorithm.",
+                    "sid": 92,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To measure the contribution of each modification, a third, intermediate algorithm, Yarowsky-cautious was also tested.",
+                    "sid": 93,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yarowsky-cautious does not separate the spelling and contextual features, but does have a limit on the number of rules added at each stage.",
+                    "sid": 94,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Specifically, the limit n starts at 5 and increases by 5 at each iteration.)",
+                    "sid": 95,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first modification \u2014 cautiousness \u2014 is a relatively minor change.",
+                    "sid": 96,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It was motivated by the observation that the (Yarowsky 95) algorithm added a very large number of rules in the first few iterations.",
+                    "sid": 97,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Taking only the highest frequency rules is much &quot;safer&quot;, as they tend to be very accurate.",
+                    "sid": 98,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This intuition is born out by the experimental results.",
+                    "sid": 99,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second modification is more important, and is discussed in the next section.",
+                    "sid": 100,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An important reason for separating the two types of features is that this opens up the possibility of theoretical analysis of the use of unlabeled examples.",
+                    "sid": 101,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Blum and Mitchell 98) describe learning in the following situation: X = X1 X X2 where X1 and X2 correspond to two different &quot;views&quot; of an example.",
+                    "sid": 102,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the named entity task, X1 might be the instance space for the spelling features, X2 might be the instance space for the contextual features.",
+                    "sid": 103,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By this assumption, each element x E X can also be represented as (xi, x2) E X1 x X2.",
+                    "sid": 104,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the method makes the fairly strong assumption that the features can be partitioned into two types such that each type alone is sufficient for classification.",
+                    "sid": 105,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now assume we have n pairs (xi,, x2,i) drawn from X1 X X2, where the first m pairs have labels whereas for i = m+ 1...n the pairs are unlabeled.",
+                    "sid": 106,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a fully supervised setting, the task is to learn a function f such that for all i = 1...m, f (xi,i, 12,i) = yz.",
+                    "sid": 107,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the cotraining case, (Blum and Mitchell 98) argue that the task should be to induce functions Ii and f2 such that So Ii and 12 must (1) correctly classify the labeled examples, and (2) must agree with each other on the unlabeled examples.",
+                    "sid": 108,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key point is that the second constraint can be remarkably powerful in reducing the complexity of the learning problem.",
+                    "sid": 109,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Blum and Mitchell 98) give an example that illustrates just how powerful the second constraint can be.",
+                    "sid": 110,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the case where IX].",
+                    "sid": 111,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I = 1X21 N and N is a &quot;medium&quot; sized number so that it is feasible to collect 0(N) unlabeled examples.",
+                    "sid": 112,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assume that the two classifiers are &quot;rote learners&quot;: that is, 1.1 and 12 are defined through look-up tables that list a label for each member of X1 or X2.",
+                    "sid": 113,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem is a binary classification problem.",
+                    "sid": 114,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem can be represented as a graph with 2N vertices corresponding to the members of X1 and X2.",
+                    "sid": 115,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each unlabeled pair (x1,i, x2,i) is represented as an edge between nodes corresponding to x1,i and X2,i in the graph.",
+                    "sid": 116,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An edge indicates that the two features must have the same label.",
+                    "sid": 117,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a sufficient number of randomly drawn unlabeled examples (i.e., edges), we will induce two completely connected components that together span the entire graph.",
+                    "sid": 118,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each vertex within a connected component must have the same label \u2014 in the binary classification case, we need a single labeled example to identify which component should get which label.",
+                    "sid": 119,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Blum and Mitchell 98) go on to give PAC results for learning in the cotraining case.",
+                    "sid": 120,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also describe an application of cotraining to classifying web pages (the to feature sets are the words on the page, and other pages pointing to the page).",
+                    "sid": 121,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method halves the error rate in comparison to a method using the labeled examples alone.",
+                    "sid": 122,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Limitations of (Blum and Mitchell 98): While the assumptions of (Blum and Mitchell 98) are useful in developing both theoretical results and an intuition for the problem, the assumptions are quite limited.",
+                    "sid": 123,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, it may not be possible to learn functions fi (x f2(x2,t) for i = m + 1...n: either because there is some noise in the data, or because it is just not realistic to expect to learn perfect classifiers given the features used for representation.",
+                    "sid": 124,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may be more realistic to replace the second criteria with a softer one, for example (Blum and Mitchell 98) suggest the alternative Alternatively, if Ii and 12 are probabilistic learners, it might make sense to encode the second constraint as one of minimizing some measure of the distance between the distributions given by the two learners.",
+                    "sid": 125,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The question of what soft function to pick, and how to design' algorithms which optimize it, is an open question, but appears to be a promising way of looking at the problem.",
+                    "sid": 126,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The DL-CoTrain algorithm can be motivated as being a greedy method of satisfying the above 2 constraints.",
+                    "sid": 127,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At each iteration the algorithm increases the number of rules, while maintaining a high level of agreement between the spelling and contextual decision lists.",
+                    "sid": 128,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspection of the data shows that at n = 2500, the two classifiers both give labels on 44,281 (49.2%) of the unlabeled examples, and give the same label on 99.25% of these cases.",
+                    "sid": 129,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So the success of the algorithm may well be due to its success in maximizing the number of unlabeled examples on which the two decision lists agree.",
+                    "sid": 130,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the next section we present an alternative approach that builds two classifiers while attempting to satisfy the above constraints as much as possible.",
+                    "sid": 131,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm, called CoBoost, has the advantage of being more general than the decision-list learning alInput: (xi , yi), , (xim, ) ; x, E 2x, yi = +1 Initialize Di (i) = 1/m.",
+                    "sid": 132,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fort= 1,...,T:",
+                    "sid": 133,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 a boosting-based algorithm",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "This section describes an algorithm based on boosting algorithms, which were previously developed for supervised machine learning problems.",
+                    "sid": 134,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first give a brief overview of boosting algorithms.",
+                    "sid": 135,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then discuss how we adapt and generalize a boosting algorithm, AdaBoost, to the problem of named entity classification.",
+                    "sid": 136,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new algorithm, which we call CoBoost, uses labeled and unlabeled data and builds two classifiers in parallel.",
+                    "sid": 137,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(We would like to note though that unlike previous boosting algorithms, the CoBoost algorithm presented here is not a boosting algorithm under Valiant's (Valiant 84) Probably Approximately Correct (PAC) model.)",
+                    "sid": 138,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This section describes AdaBoost, which is the basis for the CoBoost algorithm.",
+                    "sid": 139,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AdaBoost was first introduced in (Freund and Schapire 97); (Schapire and Singer 98) gave a generalization of AdaBoost which we will use in this paper.",
+                    "sid": 140,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a description of the application of AdaBoost to various NLP problems see the paper by Abney, Schapire, and Singer in this volume.",
+                    "sid": 141,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The input to AdaBoost is a set of training examples ((xi , yi), , (x\u201e.\u201e yrn)).",
+                    "sid": 142,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each xt E 2x is the set of features constituting the ith example.",
+                    "sid": 143,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the moment we will assume that there are only two possible labels: each y, is in { \u20141, +1}.",
+                    "sid": 144,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AdaBoost is given access to a weak learning algorithm, which accepts as input the training examples, along with a distribution over the instances.",
+                    "sid": 145,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The distribution specifies the relative weight, or importance, of each example \u2014 typically, the weak learner will attempt to minimize the weighted error on the training set, where the distribution specifies the weights.",
+                    "sid": 146,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weak learner for two-class problems computes a weak hypothesis h from the input space into the reals (h : 2x -4 R), where the sign4 of h(x) is interpreted as the predicted label and the magnitude I h(x)I is the confidence in the prediction: large numbers for I h(x)I indicate high confidence in the prediction, and numbers close to zero indicate low confidence.",
+                    "sid": 147,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weak hypothesis can abstain from predicting the label of an instance x by setting h(x) = 0.",
+                    "sid": 148,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final strong hypothesis, denoted 1(x), is then the sign of a weighted sum of the weak hypotheses, 1(x) = sign (Vii atht(x)), where the weights at are determined during the run of the algorithm, as we describe below.",
+                    "sid": 149,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pseudo-code describing the generalized boosting algorithm of Schapire and Singer is given in Figure 1.",
+                    "sid": 150,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that Zt is a normalization constant that ensures the distribution Dt+i sums to 1; it is a function of the weak hypothesis ht and the weight for that hypothesis at chosen at the tth round.",
+                    "sid": 151,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The normalization factor plays an important role in the AdaBoost algorithm.",
+                    "sid": 152,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Schapire and Singer show that the training error is bounded above by Thus, in order to greedily minimize an upper bound on training error, on each iteration we should search for the weak hypothesis ht and the weight at that minimize Z.",
+                    "sid": 153,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our implementation, we make perhaps the simplest choice of weak hypothesis.",
+                    "sid": 154,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each ht is a function that predicts a label (+1 or \u20141) on examples containing a particular feature xt, while abstaining on other examples: The prediction of the strong hypothesis can then be written as We now briefly describe how to choose ht and at at each iteration.",
+                    "sid": 155,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our derivation is slightly different from the one presented in (Schapire and Singer 98) as we restrict at to be positive.",
+                    "sid": 156,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zt can be written as follows Following the derivation of Schapire and Singer, providing that W+ > W_, Equ.",
+                    "sid": 157,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) is minimized by setting Since a feature may be present in only a few examples, W_ can be in practice very small or even 0, leading to extreme confidence values.",
+                    "sid": 158,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To prevent this we &quot;smooth&quot; the confidence by adding a small value, e, to both W+ and W_, giving at = Plugging the value of at from Equ.",
+                    "sid": 159,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) and ht into Equ.",
+                    "sid": 160,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) gives In order to minimize Zt, at each iteration the final algorithm should choose the weak hypothesis (i.e., a feature xt) which has values for W+ and W_ that minimize Equ.",
+                    "sid": 161,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(6), with W+ > W_.",
+                    "sid": 162,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now describe the CoBoost algorithm for the named entity problem.",
+                    "sid": 163,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the convention presented in earlier sections, we assume that each example is an instance pair of the from (xi ,i, x2,) where xj,, E 2x3 , j E 2}.",
+                    "sid": 164,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the namedentity problem each example is a (spelling,context) pair.",
+                    "sid": 165,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first m pairs have labels yi, whereas for i = m + 1, , n the pairs are unlabeled.",
+                    "sid": 166,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make the assumption that for each example, both xi,. and x2,2 alone are sufficient to determine the label yi.",
+                    "sid": 167,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The learning task is to find two classifiers : 2x1 { \u20141, +1} 12 : 2x2 { \u20141, +1} such that (x1,) = f2(x2,t) = yt for examples i = 1, , m, and f1 (x1,) = f2 (x2,t) as often as possible on examples i = m + 1, ,n. To achieve this goal we extend the auxiliary function that bounds the training error (see Equ.",
+                    "sid": 168,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3)) to be defined over unlabeled as well as labeled instances.",
+                    "sid": 169,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Denote by g3(x) = Et crithl(x) , j E {1,2} the unthresholded strong-hypothesis (i.e., f3 (x) = sign(gi (x))).",
+                    "sid": 170,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define the following function: If Zco is small, then it follows that the two classifiers must have a low error rate on the labeled examples, and that they also must give the same label on a large number of unlabeled instances.",
+                    "sid": 171,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To see this, note thai the first two terms in the above equation correspond to the function that AdaBoost attempts to minimize in the standard supervised setting (Equ.",
+                    "sid": 172,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3)), with one term for each classifier.",
+                    "sid": 173,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The two new terms force the two classifiers to agree, as much as possible, on the unlabeled examples.",
+                    "sid": 174,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Put another way, the minimum of Equ.",
+                    "sid": 175,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(7) is at 0 when: 1) Vi : sign(gi (xi)) = sign(g2 (xi)); 2) Ig3(xi)l oo; and 3) sign(gi (xi)) = yi for i = 1, , m. In fact, Zco provides a bound on the sum of the classification error of the labeled examples and the number of disagreements between the two classifiers on the unlabeled examples.",
+                    "sid": 176,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, let el (62) be the number of classification errors of the first (second) learner on the training data, and let Eco be the number of unlabeled examples on which the two classifiers disagree.",
+                    "sid": 177,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, it can be verified that We can now derive the CoBoost algorithm as a means of minimizing Zco.",
+                    "sid": 178,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm builds two classifiers in parallel from labeled and unlabeled data.",
+                    "sid": 179,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in boosting, the algorithm works in rounds.",
+                    "sid": 180,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each round is composed of two stages; each stage updates one of the classifiers while keeping the other classifier fixed.",
+                    "sid": 181,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Denote the unthresholded classifiers after t \u2014 1 rounds by git\u20141 and assume that it is the turn for the first classifier to be updated while the second one is kept fixed.",
+                    "sid": 182,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first define &quot;pseudo-labels&quot;,-yt, as follows: = Yi t sign(g 0\\ 2\u2014 kx2,m < i < n Thus the first m labels are simply copied from the labeled examples, while the remaining (n \u2014 m) examples are taken as the current output of the second classifier.",
+                    "sid": 183,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can now add a new weak hypothesis 14 based on a feature in X1 with a confidence value al hl and atl are chosen to minimize the function We now define, for 1 <i <n, the following virtual distribution, As before, Ztl is a normalization constant.",
+                    "sid": 184,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equ.",
+                    "sid": 185,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(8) can now be rewritten5 as which is of the same form as the function Zt used in AdaBoost.",
+                    "sid": 186,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the virtual distribution Di (i) and pseudo-labels&quot;y.,\u201e values for Wo, W\u00b1 and W_ can be calculated for each possible weak hypothesis (i.e., for each feature x E Xi); the weak hypothesis with minimal value for Wo + 2/WW _ can be chosen as before; and the weight for this weak hypothesis at = ln ww+411:) can be calculated.",
+                    "sid": 187,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This procedure is repeated for T rounds while alternating between the two classifiers.",
+                    "sid": 188,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pseudo-code describing the algorithm is given in Fig.",
+                    "sid": 189,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 190,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The CoBoost algorithm described above divides the function Zco into two parts: Zco = 40 + 40.",
+                    "sid": 191,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On each step CoBoost searches for a feature and a weight so as to minimize either 40 or 40.",
+                    "sid": 192,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Input: {(x1,i, Initialize: Vi, j : e(xi) = 0.",
+                    "sid": 193,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For t = 1, T and for j = 1, 2: where 4 = exp(-jg'(xj,i)). practice, this greedy approach almost always results in an overall decrease in the value of Zco.",
+                    "sid": 194,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note, however, that there might be situations in which Zco in fact increases.",
+                    "sid": 195,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One implementation issue deserves some elaboration.",
+                    "sid": 196,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in our formalism a weakhypothesis can abstain.",
+                    "sid": 197,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, during the first rounds many of the predictions of Th., g2 are zero.",
+                    "sid": 198,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus corresponding pseudo-labels for instances on which gj abstain are set to zero and these instances do not contribute to the objective function.",
+                    "sid": 199,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each learner is free to pick the labels for these instances.",
+                    "sid": 200,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This allow the learners to &quot;bootstrap&quot; each other by filling the labels of the instances on which the other side has abstained so far.",
+                    "sid": 201,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The CoBoost algorithm just described is for the case where there are two labels: for the named entity task there are three labels, and in general it will be useful to generalize the CoBoost algorithm to the multiclass case.",
+                    "sid": 202,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several extensions of AdaBoost for multiclass problems have been suggested (Freund and Schapire 97; Schapire and Singer 98).",
+                    "sid": 203,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work we extended the AdaBoost.MH (Schapire and Singer 98) algorithm to the cotraining case.",
+                    "sid": 204,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AdaBoost.MH maintains a distribution over instances and labels; in addition, each weak-hypothesis outputs a confidence vector with one confidence value for each possible label.",
+                    "sid": 205,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We again adopt an approach where we alternate between two classifiers: one classifier is modified while the other remains fixed.",
+                    "sid": 206,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pseudo-labels are formed by taking seed labels on the labeled examples, and the output of the fixed classifier on the unlabeled examples.",
+                    "sid": 207,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AdaBoost.MH can be applied to the problem using these pseudolabels in place of supervised examples.",
+                    "sid": 208,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the experiments in this paper we made a couple of additional modifications to the CoBoost algorithm.",
+                    "sid": 209,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm in Fig.",
+                    "sid": 210,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) was extended to have an additional, innermost loop over the (3) possible labels.",
+                    "sid": 211,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weak hypothesis chosen was then restricted to be a predictor in favor of this label.",
+                    "sid": 212,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus at each iteration the algorithm is forced to pick features for the location, person and organization in turn for the classifier being trained.",
+                    "sid": 213,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This modification brings the method closer to the DL-CoTrain algorithm described earlier, and is motivated by the intuition that all three labels should be kept healthily populated in the unlabeled examples, preventing one label from dominating \u2014 this deserves more theoretical investigation.",
+                    "sid": 214,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also removed the context-type feature type when using the CoBoost approach.",
+                    "sid": 215,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This &quot;default&quot; feature type has 100% coverage (it is seen on every example) but a low, baseline precision.",
+                    "sid": 216,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When this feature type was included, CoBoost chose this default feature at an early iteration, thereby giving non-abstaining pseudo-labels for all examples, with eventual convergence to the two classifiers agreeing by assigning the same label to almost all examples.",
+                    "sid": 217,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, this deserves further investigation.",
+                    "sid": 218,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we would like to note that it is possible to devise similar algorithms based with other objective functions than the one given in Equ.",
+                    "sid": 219,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(7), such as the likelihood function used in maximum-entropy problems and other generalized additive models (Lafferty 99).",
+                    "sid": 220,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are currently exploring such algorithms.",
+                    "sid": 221,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 an em-based approach",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The Expectation Maximization (EM) algorithm (Dempster, Laird and Rubin 77) is a common approach for unsupervised training; in this section we describe its application to the named entity problem.",
+                    "sid": 222,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A generative model was applied (similar to naive Bayes) with the three labels as hidden vanables on unlabeled examples, and observed variables on (seed) labeled examples.",
+                    "sid": 223,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model was parameterized such that the joint probability of a (label, feature-set) pair P(yi, xi) is written as The model assumes that (y, x) pairs are generated by an underlying process where the label is first chosen with some prior probability P(yi); the number of features mi is then chosen with some probability P(mi); finally the features are independently generated with probabilities P(xulyi).",
+                    "sid": 224,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We again assume a training set of n examples {x1 . xri} where the first m examples have labels {y1 ... yin}, and the last (n \u2014 m) examples are unlabeled.",
+                    "sid": 225,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the purposes of EM, the &quot;observed&quot; data is {(xi, Ya\u2022 \u2022 \u2022 (xrn, Yrn), xfil, and the hidden data is {ym+i y}.",
+                    "sid": 226,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The likelihood of the observed data under the model is where P(yi, xi) is defined as in (9).",
+                    "sid": 227,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training under this model involves estimation of parameter values for P(y), P(m) and P(x I y).",
+                    "sid": 228,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The maximum likelihood estimates (i.e., parameter values which maximize 10) can not be found analytically, but the EM algorithm can be used to hill-climb to a local maximum of the likelihood function from some initial parameter settings.",
+                    "sid": 229,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments we set the parameter values randomly, and then ran EM to convergence.",
+                    "sid": 230,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given parameter estimates, the label for a test example x is defined as We should note that the model in equation 9 is deficient, in that it assigns greater than zero probability to some feature combinations that are impossible.",
+                    "sid": 231,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the independence assumptions mean that the model fails to capture the dependence between specific and more general features (for example the fact that the feature full.-string=New_York is always seen with the features contains (New) and The baseline method tags all entities as the most frequent class type (organization). contains (York) and is never seen with a feature such as contains (Group) ).",
+                    "sid": 232,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, modifying the model to account for these kind of dependencies is not at all straightforward.",
+                    "sid": 233,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 evaluation",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "88,962 (spelling,context) pairs were extracted as training data.",
+                    "sid": 234,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1,000 of these were picked at random, and labeled by hand to produce a test set.",
+                    "sid": 235,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We chose one of four labels for each example: location, person, organization, or noise where the noise category was used for items that were outside the three categories.",
+                    "sid": 236,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The numbers falling into the location, person, organization categories were 186, 289 and 402 respectively.",
+                    "sid": 237,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "123 examples fell into the noise category.",
+                    "sid": 238,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of these cases, 38 were temporal expressions (either a day of the week or month of the year).",
+                    "sid": 239,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We excluded these from the evaluation as they can be easily identified with a list of days/months.",
+                    "sid": 240,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This left 962 examples, of which 85 were noise.",
+                    "sid": 241,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Taking /V, to be the number of examples an algorithm classified correctly (where all gold standard items labeled noise were counted as being incorrect), we calculated two measures of accuracy: See Tab.",
+                    "sid": 242,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 for the accuracy of the different methods.",
+                    "sid": 243,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that on some examples (around 2% of the test set) CoBoost abstained altogether; in these cases we labeled the test example with the baseline, organization, label.",
+                    "sid": 244,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fig.",
+                    "sid": 245,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) shows learning curves for CoBoost.",
+                    "sid": 246,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N, portion of examples on which both classifiers give a label rather than abstaining), and the proportion of these examples on which the two classifiers agree.",
+                    "sid": 247,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With each iteration more examples are assigned labels by both classifiers, while a high level of agreement (> 94%) is maintained between them.",
+                    "sid": 248,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test accuracy more or less asymptotes.",
+                    "sid": 249,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusions",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "Unlabeled examples in the named-entity classification problem can reduce the need for supervision to a handful of seed rules.",
+                    "sid": 250,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to a heuristic based on decision list learning, we also presented a boosting-like framework that builds on ideas from (Blum and Mitchell 98).",
+                    "sid": 251,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method uses a &quot;soft&quot; measure of the agreement between two classifiers as an objective function; we described an algorithm which directly optimizes this function.",
+                    "sid": 252,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are currently exploring other methods that employ similar ideas and their formal properties.",
+                    "sid": 253,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Future work should also extend the approach to build a complete named entity extractor - a method that pulls proper names from text and then classifies them.",
+                    "sid": 254,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contextual rules are restricted and may not be applicable to every example, but the spelling rules are generally applicable and should have good coverage.",
+                    "sid": 255,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem of &quot;noise&quot; items that do not fall into any of the three categories also needs to be addressed.",
+                    "sid": 256,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

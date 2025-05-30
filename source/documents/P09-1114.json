@@ -1,0 +1,1829 @@
+{
+    "ID": "P09-1114",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Creating labeled training data for relation extraction is expensive.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we study relation extraction in a special weakly-supervised setting when we have only a few seed instances of the target relation type we want to extract but we also have a large amount of labeled instances of other relation types.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Observing that different relation types can share certain common structures, we propose to use a multi-task learning method coupled with human guidance to address this weakly-supervised relation extraction problem.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposed framework models the commonality among different relation types through a shared weight vector, enables knowledge learned from the auxiliary relation types to be transferred to the target relation type, and allows easy control of the tradeoff between precision and recall.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Empirical evaluation on the ACE 2004 data set shows that the proposed method substantially improves over two baseline methods.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Relation extraction is the task of detecting and characterizing semantic relations between entities from free text.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent work on relation extraction has shown that supervised machine learning coupled with intelligent feature engineering or kernel design provides state-of-the-art solutions to the problem (Culotta and Sorensen, 2004; Zhou et al., 2005; Bunescu and Mooney, 2005; Qian et al., 2008).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, supervised learning heavily relies on a sufficient amount of labeled data for training, which is not always available in practice due to the labor-intensive nature of human annotation.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This problem is especially serious for relation ex traction because the types of relations to be extracted are highly dependent on the application domain.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, when working in the financial domain we may be interested in the employment relation, but when moving to the terrorism domain we now may be interested in the ethnic and ideology affiliation relation, and thus have to create training data for the new relation type.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, is the old training data really useless?",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspired by recent work on transfer learning and domain adaptation, in this paper, we study how we can leverage labeled data of some old relation types to help the extraction of a new relation type in a weakly-supervised setting, where only a few seed instances of the new relation type are available.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While transfer learning was proposed more than a decade ago (Thrun, 1996; Caruana, 1997), its application in natural language processing is still a relatively new territory (Blitzer et al., 2006; Daume III, 2007; Jiang and Zhai, 2007a; Arnold et al., 2008; Dredze and Crammer, 2008), and its application in relation extraction is still unexplored.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our idea of performing transfer learning is motivated by the observation that different relation types share certain common syntactic structures, which can possibly be transferred from the old types to the new type.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore propose to use a general multi-task learning framework in which classification models for a number of related tasks are forced to share a common model component and trained together.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By treating classification of different relation types as related tasks, the learning framework can naturally model the common syntactic structures among different relation types in a principled manner.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It also allows us to introduce human guidance in separating the common model component from the type-specific components.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The framework naturally transfers the knowledge learned from the old relation types to the new relation type and helps improve the recall of the relation extractor.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also exploit ad 1012 Proceedings of the 47th Annual Meeting of the ACL and the 4th IJCNLP of the AFNLP, pages 1012\u20131020, Suntec, Singapore, 27 August 2009.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2009 ACL and AFNLP ditional human knowledge about the entity type constraints on the relation arguments, which can usually be derived from the definition of a relation type.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Imposing these constraints further improves the precision of the final relation extractor.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Empirical evaluation on the ACE 2004 data set shows that our proposed method largely outperforms two baseline methods, improving the average F1 measure from 0.1532 to 0.4132 when only 10 seed instances of the new relation type are used.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Recent work on relation extraction has been dominated by feature-based and kernel-based supervised learning methods.",
+                    "sid": 23,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhou et al.",
+                    "sid": 24,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) and Zhao and Grishman (2005) studied various features and feature combinations for relation extraction.",
+                    "sid": 25,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We systematically explored the feature space for relation extraction (Jiang and Zhai, 2007b) . Kernel methods allow a large set of features to be used without being explicitly extracted.",
+                    "sid": 26,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A number of relation extraction kernels have been proposed, including dependency tree kernels (Culotta and Sorensen, 2004), shortest dependency path kernels (Bunescu and Mooney, 2005) and more recently convolution tree kernels (Zhang et al., 2006; Qian et al., 2008).",
+                    "sid": 27,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in both feature-based and kernel-based studies, availability of sufficient labeled training data is always assumed.",
+                    "sid": 28,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chen et al.",
+                    "sid": 29,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) explored semi-supervised learning for relation extraction using label propagation, which makes use of unlabeled data.",
+                    "sid": 30,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhou et al.",
+                    "sid": 31,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) proposed a hierarchical learning strategy to address the data sparseness problem in relation extraction.",
+                    "sid": 32,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also considered the commonality among different relation types, but compared with our work, they had a different problem setting and a different way of modeling the commonality.",
+                    "sid": 33,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Banko and Etzioni (2008) studied open domain relation extraction, for which they manually identified several common relation patterns.",
+                    "sid": 34,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, our method obtains common patterns through statistical learning.",
+                    "sid": 35,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Xu et al.",
+                    "sid": 36,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) studied the problem of adapting a rule-based relation extraction system to new domains, but the types of relations to be extracted remain the same.",
+                    "sid": 37,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transfer learning aims at transferring knowledge learned from one or a number of old tasks to a new task.",
+                    "sid": 38,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Domain adaptation is a spe of data changes.",
+                    "sid": 39,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been an increasing amount of work on transfer learning and domain adaptation in natural language processing recently.",
+                    "sid": 40,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Blitzer et al.",
+                    "sid": 41,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) proposed a structural correspondence learning method for domain adaptation and applied it to part-of-speech tagging.",
+                    "sid": 42,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Daume III (2007) proposed a simple feature augmentation method to achieve domain adaptation.",
+                    "sid": 43,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Arnold et al.",
+                    "sid": 44,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) used a hierarchical prior structure to help transfer learning and domain adaptation for named entity recognition.",
+                    "sid": 45,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dredze and Crammer (2008) proposed an online method for multi-domain learning and adaptation.",
+                    "sid": 46,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Multi-task learning is another learning paradigm in which multiple related tasks are learned simultaneously in order to achieve better performance for each individual task (Caruana, 1997; Evgeniou and Pontil, 2004).",
+                    "sid": 47,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although it was not originally proposed to transfer knowledge to a particular new task, it can be naturally used to achieve this goal because it models the common- ality among tasks, which is the knowledge that should be transferred to a new task.",
+                    "sid": 48,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our work, transfer learning is done through a multi-task learning framework similar to Evgeniou and Pontil (2004).",
+                    "sid": 49,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "task definition. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Our study is conducted using data from the Automatic Content Extraction (ACE) program1.",
+                    "sid": 50,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focus on extracting binary relation instances between two relation arguments occurring in the same sentence.",
+                    "sid": 51,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some example relation instances and their corresponding relation types as defined by ACE can be found in Table 1.",
+                    "sid": 52,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider the following weakly-supervised problem setting.",
+                    "sid": 53,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are interested in extractinginstances of a target relation type T , but this re lation type is only specified by a small set of seed instances.",
+                    "sid": 54,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We may possibly have some additional knowledge about the target type not in the form of labeled instances.",
+                    "sid": 55,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we may be given the entity type restrictions on the two relation arguments.",
+                    "sid": 56,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to such limited information about the target relation type, we also have a large amount of labeled instances for K auxiliary relation types A1, . . .",
+                    "sid": 57,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", AK . Our goal is to learn a re lation extractor for T , leveraging all the data and information we have.",
+                    "sid": 58,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "cial case of transfer learning where the learning task remains the same but the distribution 1 http://projects.ldc.upenn.edu/ace/ leNNaPdNBer 1 NPIoNf3 PPgoveN2NrPnNBment2 Table 1: Examples of similar syntactic structures across different relation types.",
+                    "sid": 59,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The head words of the first and the second arguments are shown in italic and bold, respectively.",
+                    "sid": 60,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before introducing our transfer learning solution, let us first briefly explain our basic classification approach and the features we use, as well as two baseline solutions.",
+                    "sid": 61,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PER 1 0 ORG 2 3.1 Feature configuration.",
+                    "sid": 62,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We treat relation extraction as a classification problem.",
+                    "sid": 63,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each pair of entities within a single sentence is considered a candidate relation instance, and the task becomes predicting whether or not each candidate is a true instance of T . We usefeature-based logistic regression classifiers.",
+                    "sid": 64,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fol lowing our previous work (Jiang and Zhai, 2007b), we extract features from a sequence representation and a parse tree representation of each relation instance.",
+                    "sid": 65,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each node in the sequence or the parse tree is augmented by an argument tag that indicates whether the node subsumes arg1, arg 2, both or neither.",
+                    "sid": 66,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nodes that represent the arguments are also labeled with the entity type, subtype and mention type as defined by ACE.",
+                    "sid": 67,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the findings of Qian et al.",
+                    "sid": 68,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008), we trim the parse tree of a relation instance so that it contains only the most essential components.",
+                    "sid": 69,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extract uni- gram features (consisting of a single node) and bi- gram features (consisting of two connected nodes) from the graphic representations.",
+                    "sid": 70,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of the graphic representation of a relation instance is shown in Figure 1 and some features extracted from this instance are shown in Table 2.",
+                    "sid": 71,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This feature configuration gives state-of-the-art performance (F1 = 0.7223) on the ACE 2004 data set in a standard setting with sufficient data for training.",
+                    "sid": 72,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Baseline solutions.",
+                    "sid": 73,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider two baseline solutions to the weakly- supervised relation extraction problem.",
+                    "sid": 74,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first Figure 1: The combined sequence and parse tree representation of the relation instance \u201cleader of a minority government.\u201d The non essential nodes for \u201ca\u201d and for \u201cminority\u201d are removed based on the algorithm from Qian et al.",
+                    "sid": 75,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008).",
+                    "sid": 76,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "F e a t u r e E x p l a n a t i o n O R G 2 of 0 g o v er n m e nt 2 N P 3 \u2192 P P 2 arg 2 is an O R G en tit y. a r g 2 is \u201cg o v er n m e nt \u201d a n d fo ll o w s th e w or d \u201c o f. \u201d T h e r e is a n o u n p hr a s e c o nt ai ni n g b ot h ar g u m e nt s, w it h a r g 2 c o nt ai n e d in a pr e p o si ti o n al p hr a s e in si d e th e n o u n p h r a s e . Table 2: Examples of unigram and bigram features extracted from Figure 1.",
+                    "sid": 77,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "baseline, we use only the few seed instances of the target relation type together with labeled negative relation instances (i.e. pairs of entities within the same sentence but having no relation) to train a binary classifier.",
+                    "sid": 78,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second baseline, we take the union of the positive instances of both the target relation type and the auxiliary relation types as our positive training set, and together with the negative instances we train a binary classifier.",
+                    "sid": 79,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the second baseline method essentially learns a classifier for any relation type.",
+                    "sid": 80,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another existing solution to weakly-supervised learning problems is semi-supervised learning, e.g. bootstrapping.",
+                    "sid": 81,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, because our proposed transfer learning method can be combined with semi-supervised learning, here we do not include semi-supervised learning as a baseline.",
+                    "sid": 82,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "a multi-task transfer learning solution",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We now present a multi-task transfer learning solution to the weakly-supervised relation extraction problem, which makes use of the labeled data from the auxiliary relation types.",
+                    "sid": 83,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Syntactic similarity between relation.",
+                    "sid": 84,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "types To see why the auxiliary relation types may help the identification of the target relation type, let us first look at how different relation types may be related and even similar to each other.",
+                    "sid": 85,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on our inspection of a sample of the ACE data, we find that instances of different relation types can share certain common syntactic structures.",
+                    "sid": 86,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the syntactic pattern \u201carg1 of arg2\u201d strongly indicates that there exists some relation between the two arguments, although the nature of the relation may be well dependent on the semantic meanings of the two arguments.",
+                    "sid": 87,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More examples are shown in Table 1.",
+                    "sid": 88,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This observation suggests that some of the syntactic patterns learned from the auxiliary relation types may be transferable to the target relation type, making it easier to learn the target relation type and thus alleviating the insufficient train to the target relation type.",
+                    "sid": 89,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Statistical learning model.",
+                    "sid": 90,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we have discussed, we want to force the linear classifiers for different relation types to share their model weights for those features that are related to the common syntactic patterns.",
+                    "sid": 91,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, we consider the following statistical learning model.",
+                    "sid": 92,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let \u03c9k denote the weight vector of the linear classifier that separates positive instances of aux iliary type Ak from negative instances, and let \u03c9T denote a similar weight vector for the target type T . If different relation types are totally unrelated, these weight vectors should also be independent of each other.",
+                    "sid": 93,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But because we observe similar syntactic structures across different relation types, we now assume that these weight vectors are related through a common component \u03bd: \u03c9T = \u00b5T + \u03bd, \u03c9k = \u00b5k + \u03bd for k = 1, . . .",
+                    "sid": 94,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", K. If we assume that only weights of certain general features can be shared between different relation types, we can force certain dimensions of \u03bd to be 0.",
+                    "sid": 95,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We express this constraint by introducing a matrix F and setting F \u03bd = 0.",
+                    "sid": 96,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here F is a square matrix with all entries set to 0 except that Fi,i = 1 if we want to force \u03bdi = 0.",
+                    "sid": 97,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now we can learn these weight vectors in a multi-task learning framework.",
+                    "sid": 98,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let x represent the feature vector of a candidate relation instance, and y \u2208 {+1, \u22121} represent a class label.",
+                    "sid": 99,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let NT ing data problem with the target type.",
+                    "sid": 100,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DT = {(xT , yT )} denote the set of labeled i i i=1 How can we incorporate this desired knowledge transfer process into our learning method?",
+                    "sid": 101,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While instances for the target type T .",
+                    "sid": 102,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Note that the number of positive instances in DT is very small.)",
+                    "sid": 103,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nkone can make explicit use of these general syntac And let Dk = {(xk , yk )} denote the labeled i i i=1tic patterns in a rule-based relation extraction sys tem, here we restrict our attention to feature-based instances for the auxiliary type Ak . We learn the optimal weight vectors {\u00b5\u02c6k }K ,linear classifiers.",
+                    "sid": 104,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that in feature-based lin \u00b5\u02c6T and \u03bd\u02c6 by optimizing the following objective ear classifiers, a useful syntactic pattern is translated into large weights for features related to the syntactic pattern.",
+                    "sid": 105,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if \u201carg1 of arg2\u201d function: k K T \\ is a useful pattern, in the learned linear classifier we should have relatively large weights for features such as \u201cthe word of occurs before arg2\u201d or {\u00b5\u02c6 }k=1 , \u00b5\u02c6 = arg min , \u03bd\u02c6 r L(DT , \u00b5T + \u03bd) k T \u201ca preposition occurs before arg2,\u201d or even more {\u00b5 },\u00b5 K ,\u03bd,F \u03bd=0 complex features such as \u201cthere is a prepositional phrase containing arg2 attached to arg1.\u201d It is the weights of these generally useful features that + ) L(Dk , \u00b5k + \u03bd) k=1 K l are transferable from the auxiliary relation types +\u03bb\u00b5 \u00b5T 2 ) \u00b5 k=1 .",
+                    "sid": 106,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) The objective function follows standard empirical risk minimization with regularization.",
+                    "sid": 107,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here L(D, \u03c9) is the aggregated loss of labeling x with y for all (x, y) in D, using weight vector \u03c9.",
+                    "sid": 108,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In logistic regression models, the loss function is the negative log likelihood, that is, Human guidance Another way to select the general features is to follow some guidance from human knowledge.",
+                    "sid": 109,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that in Section 4.1 we find that the common- ality among different relation types usually lies in the syntactic structures between the two arguments.",
+                    "sid": 110,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This observation gives some intuition L(D, \u03c9) = \u2212 ) (x,y)\u2208D log p(y|x, \u03c9), about how to separate general features from type- specific features.",
+                    "sid": 111,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, here we consider p(y|x, \u03c9) = \u03bbT k exp(\u03c9y \u00b7 x) . y! \u2208{+1,\u22121} exp(\u03c9y! \u00b7 x) two hypotheses regarding the generality of different kinds of features.",
+                    "sid": 112,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00b5 , \u03bb\u00b5 and \u03bb\u03bd are regularization parameters.By adjusting their values, we can control the de gree of weight sharing among the relation types.",
+                    "sid": 113,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The larger the ratio \u03bbT /\u03bb\u03bd (or \u03bbk /\u03bb\u03bd ) is, the more Argument word features: We hypothesize that the head words of the relation arguments are more likely to be strong indicators of specific relation \u00b5 \u00b5 types rather than any relation type.",
+                    "sid": 114,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if we believe that the model for T (or Ak ) should conform to the common model, and the smaller the type-specific weight vector \u00b5T (or \u00b5k ) will be.",
+                    "sid": 115,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model presented above is based on our previous work (Jiang and Zhai, 2007c), which bears the same spirit of some other recent work on multi- task learning (Ando and Zhang, 2005; Evgeniou and Pontil, 2004; Daume III, 2007).",
+                    "sid": 116,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is general for any transfer learning problem with auxiliary labeled data from similar tasks.",
+                    "sid": 117,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we are mostly interested in the model\u2019s applicability and effectiveness on the relation extraction problem.",
+                    "sid": 118,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Feature separation.",
+                    "sid": 119,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that we impose a constraint F \u03bd = 0 when optimizing the objective function.",
+                    "sid": 120,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This constraint gives us the freedom to force only the weights of a subset of the features to be shared among different relation types.",
+                    "sid": 121,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A remaining question is how to set this matrix F , that is, how to determine the set of general features to use.",
+                    "sid": 122,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose two ways of setting this matrix F . Automatically setting F One way is to fix the number of nonzero entries in \u03bd to be a predefined number H of general features, and allow F to change during the optimization process.",
+                    "sid": 123,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be done by repeating the following two steps until F converges: 1.",
+                    "sid": 124,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fix F , and optimize the objective function as.",
+                    "sid": 125,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in Equation (1).",
+                    "sid": 126,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 127,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fix \u00b5T + \u03bd and \u00b5k + \u03bd , and search for.",
+                    "sid": 128,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00b5T , {\u00b5k } and \u03bd that minimizes \u03bbT \u00b5T + an argument has the head word \u201csister,\u201d it strongly indicates a family relation.",
+                    "sid": 129,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer to the set of features that contain any head word of an argument as \u201carg-word\u201d features.",
+                    "sid": 130,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Entity type features: We hypothesize that the entity types and subtypes of the relation arguments are also more likely to be associated with specific relation types.",
+                    "sid": 131,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, arguments that are location entities may be strongly correlated with physical proximity relations.",
+                    "sid": 132,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer to the set of features that contain the entity type or subtype of an argument as \u201cargNE\u201d features.",
+                    "sid": 133,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hypothesize that the arg-word and argNE features are type-specific and therefore should be excluded from the set of general features.",
+                    "sid": 134,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can force the weights of these hypothesized type- specific features to be 0 in the shared weight vector \u03bd, i.e. we can set the matrix F to achieve this feature separation.",
+                    "sid": 135,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combined method We can also combine the automatic way of setting F with human guidance.",
+                    "sid": 136,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we still follow the first automatic procedure to choose general features, but we then filter out any hypothesized type-specific feature from the set of general features chosen by the automatic procedure.",
+                    "sid": 137,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.4 Imposing entity type constraints.",
+                    "sid": 138,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we consider how we can exploit additional human knowledge about the target relation type T to further improve the classifier.",
+                    "sid": 139,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that usually when a relation type is defined, we often have k=1 \u03bbk k 2 + \u03bb\u03bd \u03bd 2 , subject to the strong preferences or even hard constraints on the constraint that at most H zero.",
+                    "sid": 140,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "entries of \u03bdare non types of entities that can possibly be the two rela tion arguments.",
+                    "sid": 141,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These type constraints can help us Targ et Type T B L BL A TL a ut o TL g ui de TL co m b TL N E P h y s i c a l P R F 0.",
+                    "sid": 142,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 0 0 0.",
+                    "sid": 143,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 0 0 0.",
+                    "sid": 144,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 0 0 0.",
+                    "sid": 145,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "16 92 0.",
+                    "sid": 146,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "08 48 0.",
+                    "sid": 147,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 30 0 . 2 9 2 0 0 . 1 6 9 6 0 . 2 1 4 6 0 . 2 9 3 4 0 . 1 7 2 2 0 . 2 1 7 0 0 . 3 3 2 5 0 . 2 3 8 3 0 . 2 7 7 7 0.",
+                    "sid": 148,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 0 5 6 0.",
+                    "sid": 149,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 3 1 6 0.",
+                    "sid": 150,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 1 7 6 P e r s o n a l / S o c i a l P R F 1.",
+                    "sid": 151,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 0 0 0.",
+                    "sid": 152,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 3 8 6 0.",
+                    "sid": 153,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 7 4 3 0.",
+                    "sid": 154,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "08 04 0.",
+                    "sid": 155,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "17 08 0.",
+                    "sid": 156,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 93 0 . 1 0 0 5 0 . 1 5 9 8 0 . 1 2 3 4 0 . 3 0 6 9 0 . 7 2 4 5 0 . 4 3 1 1 0 . 3 2 1 4 0 . 7 6 8 6 0 . 4 5 3 3 0.",
+                    "sid": 157,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 4 1 2 0.",
+                    "sid": 158,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 6 3 1 0.",
+                    "sid": 159,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 9 6 9 E m pl o y m e nt /M e m be rs hi p / S u b si di a r y P R F 0.",
+                    "sid": 160,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 2 3 1 0.",
+                    "sid": 161,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 7 5 0.",
+                    "sid": 162,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1 4 8 0.",
+                    "sid": 163,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "35 61 0.",
+                    "sid": 164,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "18 50 0.",
+                    "sid": 165,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "24 35 0 . 5 2 3 0 0 . 2 6 1 7 0 . 3 4 8 8 0 . 5 4 2 8 0 . 2 6 4 8 0 . 3 5 5 9 0 . 5 9 7 3 0 . 3 6 3 2 0 . 4 5 1 8 0.",
+                    "sid": 166,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 1 4 5 0.",
+                    "sid": 167,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 6 0 1 0.",
+                    "sid": 168,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 7 8 9 A g e n t A r t i f a c t P R F 0.",
+                    "sid": 169,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 7 5 0 0.",
+                    "sid": 170,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 3 4 3 0.",
+                    "sid": 171,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 6 6 0 0.",
+                    "sid": 172,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "06 03 0.",
+                    "sid": 173,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "23 53 0.",
+                    "sid": 174,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "09 60 0 . 1 8 1 3 0 . 6 4 7 1 0 . 2 8 3 3 0 . 1 8 2 5 0 . 6 2 2 5 0 . 2 8 2 2 0 . 1 8 3 5 0 . 6 4 2 2 0 . 2 8 5 4 0.",
+                    "sid": 175,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 9 6 7 0.",
+                    "sid": 176,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 3 7 3 0.",
+                    "sid": 177,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 0 0 6 P E R / O R G A f fi li a ti o n P R F 0.",
+                    "sid": 178,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 8 8 9 0.",
+                    "sid": 179,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 5 6 7 0.",
+                    "sid": 180,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 0 6 7 0.",
+                    "sid": 181,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "08 38 0.",
+                    "sid": 182,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "49 65 0.",
+                    "sid": 183,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14 34 0 . 1 5 1 0 0 . 6 9 5 0 0 . 2 4 8 1 0 . 1 5 9 2 0 . 8 3 6 9 0 . 2 6 7 6 0 . 1 6 6 7 0 . 8 7 9 4 0 . 2 8 0 2 0.",
+                    "sid": 184,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 8 4 4 0.",
+                    "sid": 185,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 7 2 3 0.",
+                    "sid": 186,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 0 4 5 G P E A f f i l i a t i o n P R F 1.",
+                    "sid": 187,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 0 0 0.",
+                    "sid": 188,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 7 7 0.",
+                    "sid": 189,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1 5 3 0.",
+                    "sid": 190,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "25 30 0.",
+                    "sid": 191,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "45 09 0.",
+                    "sid": 192,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "32 41 0 . 3 9 0 4 0 . 6 4 1 6 0 . 4 8 5 4 0 . 3 6 0 4 0 . 5 9 9 2 0 . 4 5 0 1 0 . 3 5 6 0 0 . 6 1 6 6 0 . 4 5 1 3 0.",
+                    "sid": 193,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 8 2 4 0.",
+                    "sid": 194,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 1 2 7 0.",
+                    "sid": 195,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 9 7 2 D i s c o u r s e P R F 1.",
+                    "sid": 196,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 0 0 0.",
+                    "sid": 197,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 3 6 0.",
+                    "sid": 198,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 0 7 1 0.",
+                    "sid": 199,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "02 98 0.",
+                    "sid": 200,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "07 89 0.",
+                    "sid": 201,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "04 33 0 . 0 5 0 3 0 . 1 0 7 5 0 . 0 6 8 5 0 . 0 4 7 1 0 . 1 1 4 7 0 . 0 6 6 8 0 . 1 3 7 0 0 . 3 4 7 7 0 . 1 9 6 6 0.",
+                    "sid": 202,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 3 7 0 0.",
+                    "sid": 203,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 4 7 7 0.",
+                    "sid": 204,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 9 6 6 A v e r a g e P R F 0.",
+                    "sid": 205,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 1 2 4 0.",
+                    "sid": 206,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 2 1 2 0.",
+                    "sid": 207,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 4 0 6 0.",
+                    "sid": 208,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14 75 0.",
+                    "sid": 209,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "24 32 0.",
+                    "sid": 210,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "15 32 0 . 2 4 1 2 0 . 3 8 3 2 0 . 2 5 3 2 0 . 2 7 0 3 0 . 4 7 6 4 0 . 2 9 5 8 0 . 2 9 9 2 0 . 5 5 0 9 0 . 3 4 2 3 0.",
+                    "sid": 211,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 2 3 1 0.",
+                    "sid": 212,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 4 6 4 0.",
+                    "sid": 213,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 1 3 2 Table 3: Comparison of different methods on ACE 2004 data set.",
+                    "sid": 214,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P, R and F stand for precision, recall and F1, respectively.",
+                    "sid": 215,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "remove some false positive instances.",
+                    "sid": 216,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore manually identify the entity type constraints for each target relation type based on the definition of the relation type given in the ACE annotation guidelines, and impose these type constraints as a final refinement step on top of the predicted positive instances.",
+                    "sid": 217,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "5.1 Data set and experiment setup.",
+                    "sid": 218,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the ACE 2004 data set to evaluate our proposed methods.",
+                    "sid": 219,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are seven relation types defined in ACE 2004.",
+                    "sid": 220,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After data cleaning, we obtained 4290 positive instances among 48614 candidate relation instances.",
+                    "sid": 221,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We took each relation type as the target type and used the remaining types as auxiliary types.",
+                    "sid": 222,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This gave us seven sets of experiments.",
+                    "sid": 223,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each set of experiments for a single target relation type, we randomly divided all the data into five subsets, and used each subset for testing while using the other four subsets for training, i.e. each experiment was repeated five times with different training and test sets.",
+                    "sid": 224,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each time, we removed most of the positive instances of the target type from the training set except only a small number S of seed instances.",
+                    "sid": 225,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This gave us the weakly-supervised setting.",
+                    "sid": 226,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We kept all the positive instances of the target type in the test set.",
+                    "sid": 227,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to concentrate on the classification accuracy for the target relation type, we removed the positive instances of the auxiliary relation types from the test set, although in practice we need to extract these auxiliary relation instances using learned classifiers for these relation types.",
+                    "sid": 228,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Comparison of different methods.",
+                    "sid": 229,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first show the comparison of our proposed multi-task transfer learning methods with the two baseline methods described in Section 3.2.",
+                    "sid": 230,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance on each target relation type and the average performance across seven types are shown in Table 3.",
+                    "sid": 231,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BL refers to the first baseline and BLA refers to the second baseline which uses auxil TL-comb TL-auto BL-A Table 4: The average performance of TL-comb with different \u03bbT .",
+                    "sid": 232,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(\u03bbk = 104 and \u03bb\u03bd = 1.)",
+                    "sid": 233,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.25 0.2 \u00b5 \u00b5 0.15 0.1 100 1000 10000 iary relation instances.",
+                    "sid": 234,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The four TL methods are all based on the multi-task transfer learning framework.",
+                    "sid": 235,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TL-auto sets F automatically within the optimization problem itself.",
+                    "sid": 236,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TL-guide chooses all features except arg-word and argNE features as general features and sets F accordingly.",
+                    "sid": 237,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TL-comb combines TL-auto and TL-guide, as described in Section 4.3.",
+                    "sid": 238,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, TLNE builds on top of TL- comb and uses the entity type constraints to refine the predictions.",
+                    "sid": 239,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this set of experiments, the number of seed instances for each target relation type was set to 10.",
+                    "sid": 240,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parameters were H Figure 2: Performance of TL-comb and TL-auto as H changes.",
+                    "sid": 241,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "higher recall.",
+                    "sid": 242,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results make sense because the larger \u03bbT is, the more we penalize large weights of \u00b5T . As a result, the model for the target type is forced to conform to the shared model \u03bd and prevented from overfitting the few seed target instances.",
+                    "sid": 243,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03bbT is therefore a useful parameter set to their optimal values (\u03bbT \u03bb\u03bd = 1, and H = 500).",
+                    "sid": 244,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= 104, \u03bbk = 104, to help us control the tradeoff between precision and recall for the target type.",
+                    "sid": 245,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While varying \u03bbk As we can see from the table, first of all, BL generally has high precision but very low recall.",
+                    "sid": 246,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BL-A performs better than BL in terms of F1 because it gives better recall.",
+                    "sid": 247,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, BL-A still cannot achieve as high recall as the TL methods.",
+                    "sid": 248,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is probably because the model learned by BL A still focuses more on type-specific features for each relation type rather than on the commonly useful general features, and therefore does not help much in classifying the target relation type.",
+                    "sid": 249,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The four TL methods all outperform the two baseline methods.",
+                    "sid": 250,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TL-comb performs better than both TL-auto and TL-guide, which shows that while we can either choose general features automatically by the learning algorithm or manually with human knowledge, it is more effective to combine human knowledge with the multi-task learning framework.",
+                    "sid": 251,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not surprisingly, TLNE improves the precision over TL-comb without hurting the recall much.",
+                    "sid": 252,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ideally, TLNE should not decrease recall if the type constraints are strictly observed in the data.",
+                    "sid": 253,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that it is not always the case with the ACE data, leading to the small decrease of recall from TL-comb to TLNE.",
+                    "sid": 254,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 The effect of \u03bbT. Let us now take a look at the effect of using different \u03bbT . As we can see from Table 4, smaller \u00b5 gives higher precision while larger \u03bb\u00b5 gives \u00b5 also gives similar effect for type Ak , we found that setting \u03bbk to smaller values would not help T because in this case the auxiliary relation instances would be used more for training the type-specific component \u00b5k rather than the common component \u03bd.",
+                    "sid": 255,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Sensitivity of H. Another parameter in the multi-task transfer learning framework is the number of general features H , i.e. the number of nonzero entries in the shared weight vector \u03bd.",
+                    "sid": 256,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To see how the performance may vary as H changes, we plot the performance of TL-comb and TL-auto in terms of the average F1 across the seven target relation types, with H ranging from 100 to 50000.",
+                    "sid": 257,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we can see in Figure 2, the performance is relatively stable, and always above BL-A.",
+                    "sid": 258,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that the performance of TL-comb and TL-auto is not very sensitive to the value of H . 5.5 Hypothesized type-specific features.",
+                    "sid": 259,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 4.3, we showed two sets of hypothesized type-specific features, namely, arg-word features and argNE features.",
+                    "sid": 260,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also experimented with each set separately to see whether both sets are useful.",
+                    "sid": 261,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The comparison is shown in Table 5.",
+                    "sid": 262,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we can see, using either set of type- specific features in either TL-guide or TL-comb can improve the performance over BL-A, but the \u03bbT T arg w or d arg N E u ni o n TL gu id e TL co m b 0 . 2 0 9 5 0 . 2 2 1 5 0.",
+                    "sid": 263,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 9 8 3 0.",
+                    "sid": 264,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 3 3 1 0.",
+                    "sid": 265,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "29 58 0.",
+                    "sid": 266,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "34 23 B L A 0 . 1 5 3 2 Table 5: Average F1 using different hypothesized type-specific features.",
+                    "sid": 267,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.6 0.5 0.4 0.3 0.2",
+                    "sid": 268,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions and future work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "In this paper, we applied multi-task transfer learning to solve a weakly-supervised relation extraction problem, leveraging both labeled instances of auxiliary relation types and human knowledge including hypotheses on feature generality and entity type constraints.",
+                    "sid": 269,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the multi-task learning framework that we introduced, different relation types are treated as different but related tasks that are learned together, with the common structures among the relation types modeled by a shared weight vector.",
+                    "sid": 270,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The shared weight vector corre 0.1 0 T L N E ( 1 0 4 ) TL N E (1 02 ) B L B L A 10 100 1000 S sponds to the general features across different re lation types.",
+                    "sid": 271,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We proposed to choose the general features either automatically inside the learning algorithm or guided by human knowledge.",
+                    "sid": 272,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also leveraged additional human knowledge about the Figure 3: Performance of TLNE, BL and BL-A as the number of seed instances S of the target type target relation type in the form of entity type constraints.",
+                    "sid": 273,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiment results on the ACE 2004 data increases.",
+                    "sid": 274,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(H = 500.",
+                    "sid": 275,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03bbT was set to 104 and 102).",
+                    "sid": 276,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "show that the multi-task transfer learning method achieves the best performance when we combine human guidance with automatic general feature argNE features are probably more type-specific than arg-word features because they give better performance.",
+                    "sid": 277,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the union of the two sets is still the best for TL-comb.",
+                    "sid": 278,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.6 Changing the number of seed instances.",
+                    "sid": 279,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we compare TLNE with BL and BL-A when the number of seed instances increases.",
+                    "sid": 280,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set S from 5 up to 1000.",
+                    "sid": 281,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When S is large, the problem becomes more like traditional supervised selection, followed by imposing the entity type constraints.",
+                    "sid": 282,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final method substantially outperforms two baseline methods, improving the average F1 measure from 0.1532 to 0.4132 when only 10 seed target instances are used.",
+                    "sid": 283,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our work is the first to explore transfer learning for relation extraction, and we have achieved very promising results.",
+                    "sid": 284,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of the practical importance of transfer learning and adaptation for relation extraction due to lack of training data in new domains, we hope our study and findings will lead learning, and our setting of \u03bbT = 104 is no longer to further investigation into this problem.",
+                    "sid": 285,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There optimal because we are now not afraid of overfit- ting the large set of seed target instances.",
+                    "sid": 286,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore we also included another TLNE experiment are still many issues that remain unsolved.",
+                    "sid": 287,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we have not looked at the degrees of re- latedness between different pairs of relation types.",
+                    "sid": 288,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "with \u03bbT set to 102.",
+                    "sid": 289,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The.",
+                    "sid": 290,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "comparis on of the perfor Presuma bly, when adapting to a specific target re mance is shown in Figure 3.",
+                    "sid": 291,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see that as S increases, both BL and BL-A catch up, and BL overtakes BL-A when S is sufficiently large because BL uses positive training examples only from the target type.",
+                    "sid": 292,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, TLNE still outperforms the two baselines in most of the cases over the wide range of values of S, but the optimal value for \u03bbT decreases as S increases, as we have suspected.",
+                    "sid": 293,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "lation type, we want to choose the most similar auxiliary relation types to use.",
+                    "sid": 294,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our current study is based on ACE relation types.",
+                    "sid": 295,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It would also be interesting to study similar problems in other domains, for example, the protein-protein interaction extraction problem in biomedical text mining.",
+                    "sid": 296,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results show that if \u03bbT is set appropriately,",
+                    "sid": 297,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

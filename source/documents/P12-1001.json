@@ -1,0 +1,1577 @@
+{
+    "ID": "P12-1001",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We introduce an approach to optimize a machine translation (MT) system on multiple metrics simultaneously.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different metrics (e.g. BLEU, TER) focus on different aspects of translation quality; our multi-objective approach leverages these diverse aspects to improve overall quality.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is based on the theory of Pareto Optimality.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is simple to implement on top of existing single-objective optimization methods (e.g. MERT, PRO) and outperforms ad hoc alternatives based on linear-combination of metrics.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also discuss the issue of metric tunability and show that our Pareto approach is more effective in incorporating new metrics from MT evaluation for MT optimization.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Weight optimization is an important step in building machine translation (MT) systems.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discrimi- native optimization methods such as MERT (Och, 2003), MIRA (Crammer et al., 2006), PRO (Hopkins and May, 2011), and Downhill-Simplex (Nelder and Mead, 1965) have been influential in improving MT systems in recent years.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These methods are effective because they tune the system to maximize an automatic evaluation metric such as BLEU, which serve as surrogate objective for translation quality.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we know that a single metric such as BLEU is not enough.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ideally, we want to tune towards an automatic metric that has perfect correlation with human judgments of translation quality.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2217*Now at Nara Institute of Science & Technology (NAIST) While many alternatives have been proposed, such a perfect evaluation metric remains elusive.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, many MT evaluation campaigns now report multiple evaluation metrics (CallisonBurch et al., 2011; Paul, 2010).",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different evaluation metrics focus on different aspects of translation quality.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, while BLEU (Papineni et al., 2002) focuses on word-based n-gram precision, METEOR (Lavie and Agarwal, 2007) allows for stem/synonym matching and incorporates recall.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TER (Snover et al., 2006) allows arbitrary chunk movements, while permutation metrics like RIBES (Isozaki et al., 2010; Birch et al., 2010) measure deviation in word order.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Syntax (Owczarzak et al., 2007) and semantics (Pado et al., 2009) also help.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Arguably, all these metrics correspond to our intuitions on what is a good translation.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The current approach of optimizing MT towards a single metric runs the risk of sacrificing other metrics.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Can we really claim that a system is good if it has high BLEU, but very low METEOR?",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, is a high-METEOR low-BLEU system desirable?",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal is to propose a multi-objective optimization method that avoids \u201coverfitting to a single metric\u201d.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We want to build a MT system that does well with respect to many aspects of translation quality.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, we cannot expect to improve multiple metrics jointly if there are some inherent trade- offs.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore need to define the notion of Pareto Optimality (Pareto, 1906), which characterizes this tradeoff in a rigorous way and distinguishes the set of equally good solutions.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will describe Pareto Optimality in detail later, but roughly speaking, a 1 Proceedings of the 50th Annual Meeting of the Association for Computational Linguistics, pages 1\u201310, Jeju, Republic of Korea, 814 July 2012.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2012 Association for Computational Linguistics hypothesis is pareto-optimal if there exist no other hypothesis better in all metrics.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contribution of this paper is twofold: \u2022 We introduce PMO (Pareto-based Multi- objective Optimization), a general approach for learning with multiple metrics.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Existing single- objective methods can be easily extended to multi-objective using PMO.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 We show that PMO outperforms the alternative (single-objective optimization of linearly- combined metrics) in multi-objective space, 1 0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 0 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 metric1 and especially obtains stronger results for metrics that may be difficult to tune individually.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the following, we first explain the theory of Pareto Optimality (Section 2), and then use it to build up our proposed PMO approach (Section 3).",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on NIST ChineseEnglish and PubMed EnglishJapanese translation using BLEU, TER, and RIBES are presented in Section 4.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude by discussing related work (Section 5) and opportunities/limitations (Section 6).",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "theory of pareto optimality. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "2.1 Definitions and Concepts.",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea of Pareto optimality comes originally from economics (Pareto, 1906), where the goal is to characterize situations when a change in allocation of goods does not make anybody worse off.",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, we will explain it in terms of MT: Let h \u2208 L be a hypothesis from an N-best list L. We have a total of K different metrics Mk (h) for evaluating the quality of h. Without loss of gen erality, we assume metric scores are bounded between 0 and 1, with 1 being perfect.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each hypothesis h can be mapped to a K -dimensional vector M (h) = [M1(h); M2(h); ...; MK (h)].",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, suppose K = 2, M1(h) computes the BLEU score, and M2(h) gives the METEOR score of h. Figure 1 illustrates the set of vectors {M (h)} in a 10-best list.",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For two hypotheses h1, h2, we write M (h1) > M (h2) if h1 is better than h2 in all metrics, and M (h1) \u2265 M (h2) if h1 is better than or equal to h2 in all metrics.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When M (h1) \u2265 M (h2) and Mk (h1) > Mk (h2) for at least one metric k, we say that h1 dominates h2 and write M (h1) \ufffd M (h2).",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1: Illustration of Pareto Frontier.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ten hypotheses are plotted by their scores in two metrics.",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hypotheses indicated by a circle (o) are pareto-optimal, while those indicated by a plus (+) are not.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The line shows the convex hull, which attains only a subset of pareto-optimal points.",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The triangle (\ufffd) is a point that is weakly pareto-optimal but not pareto-optimal.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Definition 1.",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pareto Optimal: A hypothesis h\u2217 \u2208 L is pareto-optimal iff there does not exist another hypothesis h \u2208 L such that M (h) \ufffd M (h\u2217).",
+                    "sid": 46,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 1, the hypotheses indicated by circle (o) are pareto-optimal, while those with plus (+) are not.",
+                    "sid": 47,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To visualize this, take for instance the pareto- optimal point (0.4,0.7).",
+                    "sid": 48,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is no other point witheither (metric1 > 0.4 and metric2 \u2265 0.7), or (met ric1 \u2265 0.4 and metric2 > 0.7).",
+                    "sid": 49,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the non-pareto point (0.6,0.4) is \u201cdominated\u201d by another point (0.7,0.6), because for metric1: 0.7 > 0.6 and for metric2: 0.6 > 0.4.",
+                    "sid": 50,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is another definition of optimality, which disregards ties and may be easier to visualize: Definition 2.",
+                    "sid": 51,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weakly Pareto Optimal: A hypothesis h\u2217 \u2208 L is weakly pareto-optimal iff there is no other hypothesis h \u2208 L such that M (h) > M (h\u2217).",
+                    "sid": 52,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weakly pareto-optimal points are a superset of pareto-optimal points.",
+                    "sid": 53,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A hypothesis is weakly pareto-optimal if there is no other hypothesis that improves all the metrics; a hypothesis is pareto- optimal if there is no other hypothesis that improves at least one metric without detriment to other metrics.",
+                    "sid": 54,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 1, point (0.1,0.8) is weakly pareto- optimal but not pareto-optimal, because of the competing point (0.3,0.8).",
+                    "sid": 55,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we focus on paretooptimality, but note our algorithms can be easily modified for weakly paretooptimality.",
+                    "sid": 56,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we can introduce the key concept used in our proposed PMO approach: Definition 3.",
+                    "sid": 57,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pareto Frontier: Given an N-best list L, the set of all pareto-optimal hypotheses h \u2208 L is called the Pareto Frontier.",
+                    "sid": 58,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Pareto Frontier has two desirable properties from the multi-objective optimization perspective: 1.",
+                    "sid": 59,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hypotheses on the Frontier are equivalently.",
+                    "sid": 60,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "good in the Pareto sense.",
+                    "sid": 61,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 62,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each hypothesis not on the Frontier, there.",
+                    "sid": 63,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is always a better (pareto-optimal) hypothesis.",
+                    "sid": 64,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This provides a principled approach to optimization: i.e. optimizing towards points on the Frontier and away from those that are not, and giving no preference to different pareto-optimal hypotheses.",
+                    "sid": 65,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Reduction to Linear Combination.",
+                    "sid": 66,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Multi-objective problems can be formulated as: arg max [M1(h); M2(h); . . .",
+                    "sid": 67,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "; Mk (h)] (1) w where h = Decode(w, f ) Here, the MT system\u2019s Decode function, parameterized by weight vector w, takes in a foreign sentence f and returns a translated hypothesis h. The argmax operates in vector space and our goal is to find w leading to hypotheses on the Pareto Frontier.",
+                    "sid": 68,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the study of Pareto Optimality, one central question is: To what extent can multi-objective problems be solved by single-objective methods?",
+                    "sid": 69,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equation 1 can be reduced to a single-objective problem by scalarizing the vector [M1(h); . . .",
+                    "sid": 70,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "; Mk (h)] with a linear combination: K Theorem 1.",
+                    "sid": 71,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sufficient Condition: If w\u2217 is solution to Eq. 2, then it is weakly pareto-optimal.",
+                    "sid": 72,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further, if w\u2217 is unique, then it is pareto-optimal.",
+                    "sid": 73,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Theorem 2.",
+                    "sid": 74,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No Necessary Condition: There may exist solutions to Eq. 1 that cannot be achieved by Eq. 2, irregardless of any setting of {pk }.",
+                    "sid": 75,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Theorem 1 is a positive result asserting that linear combination can give pareto-optimal solutions.",
+                    "sid": 76,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, Theorem 2 states the limits: in particular, Eq. 2 attains only pareto-optimal points that are on the convex hull.",
+                    "sid": 77,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is illustrated in Figure 1: imagine sweeping all values of p1 = [0, 1] and p2 = 1 \u2212 p1 and recording the set of hypotheses that maximizes Lk pk Mk (h).",
+                    "sid": 78,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For 0.6 < p1 \u2264 1 we get h = (0.9, 0.1), for p1 = 0.6 we get (0.7, 0.6), and for 0 < p1 < 0.6 we get (0.4, 0.8).",
+                    "sid": 79,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At no setting of p1 do we attain h = (0.4, 0.7) which is also pareto-optimal but not on the convex hull.1 This may have ramifications for issues like metric tunability and local optima.",
+                    "sid": 80,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To summarize, linear- combination is reasonable but has limitations.",
+                    "sid": 81,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our proposed approach will instead directly solve Eq. 1.",
+                    "sid": 82,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pareto Optimality and multi-objective optimization is a deep field with active inquiry in engineering, operations research, economics, etc. For the interested reader, we recommend the survey by Mar- ler and Arora (2004) and books by (Sawaragi et al., 1985; Miettinen, 1998).",
+                    "sid": 83,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "multi-objective algorithms. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 Computing the Pareto Frontier.",
+                    "sid": 84,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our PMO approach will need to compute the Pareto Frontier for potentially large sets of points, so we first describe how this can be done efficiently.",
+                    "sid": 85,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a set of N vectors {M (h)} from an N-best list L, our goal is extract the subset that are pareto-optimal.",
+                    "sid": 86,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we present an algorithm based on iterative arg max w pk Mk (h) (2) k=1 filtering, in our opinion the simplest algorithm to understand and implement.",
+                    "sid": 87,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The strategy is to loop where h = Decode(w, f ) Here, pk are positive real numbers indicating the relative importance of each metric (without loss of gen erality, assume Lk pk = 1).",
+                    "sid": 88,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Are the solutions to through the list L, keeping track of any dominant points.",
+                    "sid": 89,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a dominant point, it is easy to filter out many points that are dominated by it.",
+                    "sid": 90,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After successive rounds, any remaining points that are not fil 1 We note that scalarization by exponentiated-combination.",
+                    "sid": 91,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "L p M (h)q , for a suitable q > 0, does satisfy necessary Eq. 2 also solutions to Eq. 1 (i.e. pareto-optimal) and vice-versa?",
+                    "sid": 92,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The theory says: k k k conditions for pareto optimality.",
+                    "sid": 93,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However the proper tuning of q is not known a priori.",
+                    "sid": 94,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "See (Miettinen, 1998) for theorem proofs.",
+                    "sid": 95,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 1 FindParetoFrontier Input: {M (h)}, h \u2208 L Output: All pareto-optimal points of {M (h)} 1: F = \u2205 2: while L is not empty do 3: h\u2217 = shift(L) 4: for each h in L do 5: if (M (h\u2217) \ufffd M (h)): remove h from L 6: else if (M (h) \ufffd M (h\u2217)): remove h from L; set h\u2217 = h 7: end for 8: Add h\u2217 to Frontier Set F 9: for each h in L do 10: if (M (h\u2217) \ufffd M (h)): remove h from L 11: end for 12: end while 13: Return F tered are necessarily pareto-optimal.",
+                    "sid": 96,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 1 shows the pseudocode.",
+                    "sid": 97,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In line 3, we take a point h\u2217 and check if it is dominating or dominated in the for- loop (lines 48).",
+                    "sid": 98,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At least one pareto-optimal point will be found by line 8.",
+                    "sid": 99,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second loop (lines 911) further filters the list for points that are dominated by h\u2217 but iterated before h\u2217 in the first for-loop.",
+                    "sid": 100,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The outer while-loop stops exactly after P iterations, where P is the actual number of pareto- optimal points in L. Each inner loop costs O(K N ) so the total complexity is O(P K N ).",
+                    "sid": 101,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since P \u2264 N with the actual value depending on the probability distribution of {M (h)}, the worst-case run-time is O(K N 2).",
+                    "sid": 102,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a survey of various Pareto algorithms, refer to (Godfrey et al., 2007).",
+                    "sid": 103,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm we described here is borrowed from the database literature ilar to many MT optimization methods.",
+                    "sid": 104,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main difference is that rather than trying to maximize a single metric, we maximize the number of pareto points, in order to expand the Pareto Frontier We will explain PMO-PRO in terms of the pseudo-code shown in Algorithm 2.",
+                    "sid": 105,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each sentence pair (f, e) in the devset, we first generate an N-best list L \u2261 {h} using the current weight vector w (line 5).",
+                    "sid": 106,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In line 6, we evaluate each hypothesis h with respect to the K metrics, giving a set of K - dimensional vectors {M (h)}.",
+                    "sid": 107,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lines 78 is the critical part: it gives a \u201clabel\u201d to each hypothesis, based on whether it is in the Pareto Frontier.",
+                    "sid": 108,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, first we call FindParetoFrontier (Algorithm 1), which returns a set of pareto hypotheses; pareto-optimal hypotheses will get label 1 while non-optimal hypotheses will get label 0.",
+                    "sid": 109,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This information is added to the training set T (line 8), which is then optimized by any conventional subroutine in line 10.",
+                    "sid": 110,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will follow PRO in using a pairwise classifier in line 10, which finds w\u2217 that separates hypotheses with labels 1 vs. 0.",
+                    "sid": 111,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In essence, this is the trick we employ to directly optimize on the Pareto Frontier.",
+                    "sid": 112,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we had used BLEU scores rather than the {0, 1} labels in line 8, the entire PMO-PRO algorithm would revert to single-objective PRO.",
+                    "sid": 113,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By definition, there is no single \u201cbest\u201d result for multi-objective optimization, so we collect all weights and return the Pareto-optimal set.",
+                    "sid": 114,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In line 13 we evaluate each weight w on K metrics across the entire corpus and call FindParetoFrontier in line 14.3 This choice highlights an interesting in what is known as skyline operators.2 change of philosophy: While setting {pk} in linear 3.2 PMO-PRO Algorithm.",
+                    "sid": 115,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are now ready to present an algorithm for multi- objective optimization.",
+                    "sid": 116,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we will see, it can be seen as a generalization of the pairwise ranking optimization (PRO) of (Hopkins and May, 2011), so we call it PMO-PRO.",
+                    "sid": 117,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PMO-PRO approach works by iteratively decoding-and-optimizing on the devset, sim 2 The inquisitive reader may wonder how is Pareto related to databases.",
+                    "sid": 118,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The motivation is to incorporate preferences into relational queries(Bo\u00a8 rzso\u00a8 nyi et al., 2001).",
+                    "sid": 119,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For K = 2 metrics, combination forces the designer to make an a priori preference among metrics prior to optimization, the PMO strategy is to optimize first agnostically and a posteriori let the designer choose among a set of weights.",
+                    "sid": 120,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Arguably it is easier to choose among solutions based on their evaluation scores rather than devising exact values for {pk }.",
+                    "sid": 121,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Discussion.",
+                    "sid": 122,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Variants: In practice we find that a slight modification of line 8 in Algorithm 2 leads to more sta they also present an alternative faster O(N logN) algorithm by first topologically sorting along the 2 dimensions.",
+                    "sid": 123,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All dominated points can be filtered by one-pass by comparing with the most-recent dominating point.",
+                    "sid": 124,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Note this is the same FindParetoFrontier algorithm as used.",
+                    "sid": 125,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in line 7.",
+                    "sid": 126,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both operate on sets of points in K -dimensional space, induced from either weights {w} or hypotheses {h}.",
+                    "sid": 127,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 2 Proposed PMO-PRO algorithm Input: Devset, max number of iterations I Output: A set of (pareto-optimal) weight vectors 1: Initialize w. Let W = \u2205.",
+                    "sid": 128,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2: for i = 1 to I do 3: Let T = \u2205.",
+                    "sid": 129,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4: for each (f, e) in devset do 5: {h} =DecodeNbest(w,f ) 6: {M (h)}=EvalMetricsOnSentence({h}, e) 7: {f } =FindParetoFrontier({M (h)}) 8: foreach h \u2208 {h}: abstracts.",
+                    "sid": 130,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As metrics we use BLEU and RIBES (which demonstrated good human correlation in this language pair (Goto et al., 2011)).",
+                    "sid": 131,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) The NIST task is Chinese-to English translation with OpenMT08 training data and MT06 as devset.",
+                    "sid": 132,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As metrics we use BLEU and NTER.",
+                    "sid": 133,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 BLEU = BP \u00d7 (\u03a0precn)1/4.",
+                    "sid": 134,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BP is brevity penality.",
+                    "sid": 135,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "precn is precision of n gram matches.",
+                    "sid": 136,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RIBES = (\u03c4 + 1)/2 \u00d7 prec1/4, with Kendall\u2019s if h \u2208 {f }, set l=1, else l=0; Add (l, h) to T 9: end for 10: w\u2217=OptimizationSubroutine(T , w) 11: Add w\u2217 to W ; Set w = w\u2217.",
+                    "sid": 137,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12: end for \u2022 1 \u03c4 computed by measuring permutation between matching words in reference and hypothesis5.",
+                    "sid": 138,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 NTER=max(1\u2212TER, 0), which normalizes 6 13: M (w) =EvalMetricsOnCorpus(w,devset) \u2200w \u2208 W Translation Edit Rate so that NTER=1 is best.",
+                    "sid": 139,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14: Return FindParetoFrontier({M (w)})ble results for PMO-PRO: for non-pareto hypothe We compare two multi-objective approaches: 1.",
+                    "sid": 140,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear-Combination of metrics (Eq. 2),.",
+                    "sid": 141,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "optimized with PRO.",
+                    "sid": 142,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We search a range ses h \u2208/ {f }, we set label l = Lk Mk (h)/K in of com bination settings: (p1, p2) =stead of l = 0, so the method not only learns to dis criminate pareto vs. non-pareto but also also learns to discriminate among competing non-pareto points.",
+                    "sid": 143,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, like other MT works, in line 5 the N-best list is concatenated to N-best lists from previous iterations, so {h} is a set with i \u00b7 N elements.",
+                    "sid": 144,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "General PMO Approach: The strategy we outlined in Section 3.2 can be easily applied to other MT optimization techniques.",
+                    "sid": 145,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, by replacing the optimization subroutine (line 10, Algorithm 2) with a Powell search (Och, 2003), one can get PMOMERT4.",
+                    "sid": 146,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alternatively, by using the large- margin optimizer in (Chiang et al., 2009) and moving it into the for-each loop (lines 49), one can get an online algorithm such PMOMIRA.",
+                    "sid": 147,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Virtually all MT optimization algorithms have a place where metric scores feedback into the optimization procedure; the idea of PMO is to replace these raw scores with labels derived from Pareto optimality.",
+                    "sid": 148,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1 Evaluation Methodology.",
+                    "sid": 149,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experiment with two datasets: (1) The PubMed task is English-to-Japanese translation of scientific 4 A difference with traditional MERT is the necessity of sentence-BLEU (Liang et al., 2006) in line 6.",
+                    "sid": 150,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use sentence- BLEU for optimization but corpus-BLEU for evaluation here.",
+                    "sid": 151,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "{(0, 1), (0.3, 0.7), (0.5, 0.5), (0.7, 0.3), (1, 0)}.",
+                    "sid": 152,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note (1, 0) reduces to standard single-metric optimization of e.g. BLEU.",
+                    "sid": 153,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 154,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proposed Pareto approach (PMO-PRO)..",
+                    "sid": 155,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation of multi-objective problems can be tricky because there is no single figure-of-merit.",
+                    "sid": 156,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus adopted the following methodology: We run both methods 5 times (i.e. using the 5 different (p1, p2) setting each time) and I = 20 iterations each.",
+                    "sid": 157,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each method, this generates 5x20=100 results, and we plot the Pareto Frontier of these points in a 2-dimensional metric space (e.g. see Figure 2).",
+                    "sid": 158,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A method is deemed better if its final Pareto Frontier curve is strictly dominating the other.",
+                    "sid": 159,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report devset results here; testset trends are similar but not included due to space constraints.7 5 from www.kecl.ntt.co.jp/icl/lirg/ribes 6 from www.umd.edu/\u02dcsnover/tercom 7 An aside: For comparing optimization methods, we believe.",
+                    "sid": 160,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "devset comparison is preferable to testset since data mismatch may confound results.",
+                    "sid": 161,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If one worries about generalization, we advocate to re-decode the devset with final weights and evaluate its 1-best output (which is done here).",
+                    "sid": 162,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is preferable to simply reporting the achieved scores on devset N-best (as done in some open-source scripts) since the learned weight may pick out good hypotheses in the N-best but perform poorly when re-decoding the same devset.",
+                    "sid": 163,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The re-decode devset approach avoids being overly optimistic while accurately measuring optimization performance.",
+                    "sid": 164,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.695 Linear Combination Pareto (PMO\u2212PRO) Table 1: Task characteristics: #sentences in Train/Dev, # of features, and metrics used.",
+                    "sid": 165,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our MT models are trained with standard phrase-based Moses software (Koehn and others, 2007), with IBM M4 alignments, 4gram SRILM, lexical ordering for PubMed and distance ordering for the NIST system.",
+                    "sid": 166,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder generates 50-best lists each iteration.",
+                    "sid": 167,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use SVMRank (Joachims, 2006) as optimization subroutine for PRO, which efficiently handle all pairwise samples without the need for sampling.",
+                    "sid": 168,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Results.",
+                    "sid": 169,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figures 2 and 3 show the results for PubMed and NIST, respectively.",
+                    "sid": 170,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A method is better if its Pareto Frontier lies more towards the upper-right hand cor 0.69 0.685 0.68 0.675 0.67 0.665 0.2 0.21 0.22 0.23 0.24 0.25 0.26 0.27 bleu Figure 2: PubMed Results.",
+                    "sid": 171,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The curve represents the Pareto Frontier of all results collected after multiple runs.",
+                    "sid": 172,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.704 Linear Combination ner of the graph.",
+                    "sid": 173,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our observations are: 1.",
+                    "sid": 174,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PMO-PRO generally outperforms Linear-.",
+                    "sid": 175,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combination with any setting of (p1, p2).",
+                    "sid": 176,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Pareto Frontier of PMO-PRO dominates that of Linear-Combination.",
+                    "sid": 177,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This implies PMO is effective in optimizing towards Pareto hypotheses.",
+                    "sid": 178,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 179,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For both methods, trading-off between met-.",
+                    "sid": 180,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.703 0.702 0.701 0.7 0.699 0.698 0.697 0.696 0.695 0.694 Pareto (PMO\u2212PRO) rics is necessary.",
+                    "sid": 181,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example in PubMed, the designer would need to make a choice between picking the best weight according to BLEU (BLEU=.265,RIBES=.665) vs. another weight with higher RIBES but poorer BLEU, e.g.",
+                    "sid": 182,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(.255,.675).",
+                    "sid": 183,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nevertheless, both the PMO and Linear-Combination with various (p1, p2) samples this joint-objective space broadly.",
+                    "sid": 184,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 185,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, a multi-objective approach can.",
+                    "sid": 186,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "sometimes outperform a single-objective optimizer in its own metric.",
+                    "sid": 187,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 2, single- objective PRO focusing on optimizing RIBES only achieves 0.68, but PMO-PRO using both BLEU and RIBES outperforms with 0.685.",
+                    "sid": 188,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The third observation relates to the issue of metric tunability (Liu et al., 2011).",
+                    "sid": 189,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that RIBES can be difficult to tune directly.",
+                    "sid": 190,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is an extremely non-smooth objective with many local optima\u2013slight changes in word ordering causes large changes in RIBES.",
+                    "sid": 191,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So the best way to improve RIBES is to 0.146 0.148 0.15 0.152 0.154 0.156 0.158 0.16 0.162 0.164 bleu Figure 3: NIST Results not to optimize it directly, but jointly with a more tunable metric BLEU.",
+                    "sid": 192,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The learning curve in Figure 4 show that single-objective optimization of RIBES quickly falls into local optimum (at iteration 3) whereas PMO can zigzag and sacrifice RIBES in intermediate iterations (e.g. iteration 2, 15) leading to a stronger result ultimately.",
+                    "sid": 193,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason is the diversity of solutions provided by the Pareto Frontier.",
+                    "sid": 194,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This finding suggests that multi-objective approaches may be preferred, especially when dealing with new metrics that may be difficult to tune.",
+                    "sid": 195,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Additional Analysis and Discussions.",
+                    "sid": 196,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What is the training time?",
+                    "sid": 197,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Pareto approach does not add much overhead to PMO-PRO.",
+                    "sid": 198,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While FindParetoFrontier scales quadratically by size of N-best list, Figure 5 shows that the runtime is triv 0.69 0.68 35 N I S T P u b M e d 30 0.67 25 0.66 20 0.65 15 0.64 Single\u2212 Objective RIBES 10 Pareto (PMO\u2212 PRO) 0.63 0 2 4 6 8 10 12 14 16 18 20 i t e r a t i o n 5 0 2 4 6 8 10 12 14 16 18 I t e r a t i o n s Figure 4: Learning Curve on RIBES: comparing single- objective optimization and PMO.",
+                    "sid": 199,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6: Average number of Pareto points 0.35 0.3 0.25 0.2 0.15 0.1 0.05 0 A l g o r i t h m 1 T o p o l o g i c a l S o r t ( f o o t n o t e 2 ) 0 100 200 300 400 500 600 700 800 900 1000 S e t s i z e | L | hypoth eses gives a rough indicati on of the diversi ty of hypoth eses that can be exploit ed by PMO.",
+                    "sid": 200,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 shows that this numbe r increas es gradua lly per iteratio n. This perhap s gives PMO PRO more directions for optimi zing aroun d potenti al local optim al. Nevert heless, we note that tens of Pareto points is far few compa red to the large size of N-best lists used at later iteratio ns of PMO PRO.",
+                    "sid": 201,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may explai n why the differe nces betwe en metho ds in Figure 3 are not more subst antial.",
+                    "sid": 202,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Theor eticall y, the number will eventu ally level off as it gets increa singly harder to genera te new Pareto points in a crowd ed Figure 5: Avg.",
+                    "sid": 203,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "runtime per sentence of FindPareto ial (0.3 seconds for 1000-best).",
+                    "sid": 204,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows the time usage breakdown in different iterations for PubMed.",
+                    "sid": 205,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see it is mostly dominated by decoding time (constant per iteration at 40 minutes on single 3.33GHz processor).",
+                    "sid": 206,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At later iterations, Opt takes more time due to larger file I/O in SVMRank.",
+                    "sid": 207,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note Decode and Pareto can be \u201cembarrasingly par- allelized.\u201d Iter Ti me De co de (lin e 5) Par eto (lin e 7) Op t (lin e 10) Mis c.",
+                    "sid": 208,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(lin e 6,8 ) 1 10 20 47 m 62 m 91 m 85 % 67 % 47 % 1% 6% 15 % 1% 8% 22 % 13 % 19 % 16 % Table 2: Training time usage in PMO-PRO (Algo 2).",
+                    "sid": 209,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "How many Pareto points?",
+                    "sid": 210,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of pareto space (Bentley et al., 1978).",
+                    "sid": 211,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Practical recommendation: We present the Pareto approach as a way to agnostically optimize multiple metrics jointly.",
+                    "sid": 212,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in practice, one may have intuitions about metric tradeoffs even if one cannot specify {pk }.",
+                    "sid": 213,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we mightbelieve that approximately 1-point BLEU degra dation is acceptable only if RIBES improves by at least 3-points.",
+                    "sid": 214,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, we recommend the following trick: Set up a multi-objective problem where one metric is BLEU and the other is3/4BLEU+1/4RIBES.",
+                    "sid": 215,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This encourages PMO to ex plore the joint metric space but avoid solutions that sacrifice too much BLEU, and should also outperform Linear Combination that searches only on the (3/4,1/4) direction.",
+                    "sid": 216,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Multi-objective optimization for MT is a relatively new area.",
+                    "sid": 217,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear-combination of BLEU/TER is the most common technique (Zaidan, 2009), sometimes achieving good results in evaluation campaigns (Dyer et al., 2009).",
+                    "sid": 218,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As far as we known, the only work that directly proposes a multi-objective technique is (He and Way, 2009), which modifies MERT to optimize a single metric subject to the constraint that it does not degrade others.",
+                    "sid": 219,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These approaches all require some setting of constraint strength or combination weights {pk }.",
+                    "sid": 220,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent work in MT evaluation has examined combining metrics using machine learning for better correlation with human judgments (Liu and Gildea, 2007; Albrecht and Hwa, 2007; Gimnez and Ma`rquez, 2008) and may give insights for setting {pk }.",
+                    "sid": 221,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We view our Pareto-based approach as orthogonal to these efforts.",
+                    "sid": 222,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tunability of metrics is a problem that is gaining recognition (Liu et al., 2011).",
+                    "sid": 223,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a good evaluation metric could not be used for tuning, it would be a pity.",
+                    "sid": 224,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Tunable Metrics task at WMT2011 concluded that BLEU is still the easiest to tune (CallisonBurch et al., 2011).",
+                    "sid": 225,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Mauser et al., 2008; Cer et al., 2010) report similar observations, in addition citing WER being difficult and BLEUTER being amenable.",
+                    "sid": 226,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One unsolved question is whether metric tunability is a problem inherent to the metric only, or depends also on the underlying optimization algorithm.",
+                    "sid": 227,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our positive results with PMO suggest that the choice of optimization algorithm can help.",
+                    "sid": 228,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Multi-objective ideas are being explored in other NLP areas.",
+                    "sid": 229,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Spitkovsky et al., 2011) describe a technique that alternates between hard and soft EM objectives in order to achieve better local optimum in grammar induction.",
+                    "sid": 230,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Hall et al., 2011) investigates joint optimization of a supervised parsing objective and some extrinsic objectives based on downstream applications.",
+                    "sid": 231,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Agarwal et al., 2011) considers using multiple signals (of varying quality) from online users to train recommendation models.",
+                    "sid": 232,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Eisner and Daume\u00b4 III, 2011) trades off speed and accuracy of a parser with reinforcement learning.",
+                    "sid": 233,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "None of the techniques in NLP use Pareto concepts, however.",
+                    "sid": 234,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "opportunities and limitations. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We introduce a new approach (PMO) for training MT systems on multiple metrics.",
+                    "sid": 235,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Leveraging the diverse perspectives of different evaluation metrics has the potential to improve overall quality.",
+                    "sid": 236,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on Pareto Optimality, PMO is easy to implement and achieves better solutions compared to linear- combination baselines, for any setting of combination weights.",
+                    "sid": 237,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further we observe that multi- objective approaches can be helpful for optimizing difficult-to-tune metrics; this is beneficial for quickly introducing new metrics developed in MT evaluation into MT optimization, especially whengood {pk } are not yet known.",
+                    "sid": 238,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude by draw ing attention to some limitations and opportunities raised by this work: Limitations: (1) The performance of PMO is limited by the size of the Pareto set.",
+                    "sid": 239,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Small N-best lists lead to sparsely-sampled Pareto Frontiers, and a much better approach would be to enlarge the hypothesis space using lattices (Macherey et al., 2008).",
+                    "sid": 240,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "How to compute Pareto points directly from lattices is an interesting open research question.",
+                    "sid": 241,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) The binary distinction between pareto vs. non-pareto points ignores the fact that 2nd-place non-pareto points may also lead to good practical solutions.",
+                    "sid": 242,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A better approach may be to adopt a graded definition of Pareto optimality as done in some multi-objective works (Deb et al., 2002).",
+                    "sid": 243,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) A robust evaluation methodology that enables significance testing for multi-objective problems is sorely needed.",
+                    "sid": 244,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This will make it possible to compare multi-objective methods on more than 2 metrics.",
+                    "sid": 245,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also need to follow up with human evaluation.",
+                    "sid": 246,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Opportunities: (1) There is still much we do not understand about metric tunability; we can learn much by looking at joint metric-spaces and examining how new metrics correlate with established ones.",
+                    "sid": 247,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) Pareto is just one approach among many in multi-objective optimization.",
+                    "sid": 248,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A wealth of methods are available (Marler and Arora, 2004) and more experimentation in this space will definitely lead to new insights.",
+                    "sid": 249,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) Finally, it would be interesting to explore other creative uses of multiple-objectives in MT beyond multiple metrics.",
+                    "sid": 250,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example: Can we learn to translate faster while sacrificing little on accuracy?",
+                    "sid": 251,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Can we learn to jointly optimize cascaded systems, such as as speech translation or pivot translation?",
+                    "sid": 252,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Life is full of multiple competing objectives.",
+                    "sid": 253,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We thank the reviewers for insightful feedback.",
+                    "sid": 254,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

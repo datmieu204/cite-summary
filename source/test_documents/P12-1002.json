@@ -1,0 +1,965 @@
+{
+    "ID": "P12-1002",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Joint Feature Selection in Distributed Stochastic Learning for Large-Scale Discriminative Training in SMT",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With a few exceptions, discriminative training in statistical machine translation (SMT) has been content with tuning weights for large feature sets on small development data.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evidence from machine learning indicates that increasing the training sample size results in better prediction.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal of this paper is to show that this common wisdom can also be brought to bear upon SMT.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We deploy local features for SCFG-based SMT that can be read off from rules at runtime, and present a learnalgorithm that applies regularization for joint feature selection over distributed stochastic learning processes.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present experiments on learning on 1.5 million training sentences, and show significant improvements over tuning discriminative models on small development sets.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The standard SMT training pipeline combines scores from large count-based translation models and language models with a few other features and tunes these using the well-understood line-search technique for error minimization of Och (2003).",
+                    "sid": 6,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If only a handful of dense features need to be tuned, minimum error rate training can be done on small tuning sets and is hard to beat in terms of accuracy and efficiency.",
+                    "sid": 7,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the promise of largescale discriminative training for SMT is to scale to arbitrary types and numbers of features and to provide sufficient statistical support by parameter estimation on large sample sizes.",
+                    "sid": 8,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features may be lexicalized and sparse, non-local and overlapping, or be designed to generalize beyond surface statistics by incorporating part-of-speech or syntactic labels.",
+                    "sid": 9,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The modeler\u2019s goals might be to identify complex properties of translations, or to counter errors of pretrained translation models and language models by explicitly down-weighting translations that exhibit certain undesired properties.",
+                    "sid": 10,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Various approaches to feature engineering for discriminative models have been presented (see Section 2), however, with a few exceptions, discriminative learning in SMT has been confined to training on small tuning sets of a few thousand examples.",
+                    "sid": 11,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This contradicts theoretical and practical evidence from machine learning that suggests that larger training samples should be beneficial to improve prediction also in SMT.",
+                    "sid": 12,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Why is this?",
+                    "sid": 13,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible reason why discriminative SMT has mostly been content with small tuning sets lies in the particular design of the features themselves.",
+                    "sid": 14,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the features introduced by Chiang et al. (2008) and Chiang et al.",
+                    "sid": 15,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) for an SCFG model for Chinese/English translation are of two types: The first type explicitly counters overestimates of rule counts, or rules with bad overlap points, bad rewrites, or with undesired insertions of target-side terminals.",
+                    "sid": 16,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features are specified in handcrafted lists based on a thorough analysis of a tuning set.",
+                    "sid": 17,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such finely hand-crafted features will find sufficient statistical support on a few thousand examples and thus do not benefit from larger training sets.",
+                    "sid": 18,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second type of features deploys external information such as syntactic parses or word alignments to penalize bad reorderings or undesired translations of phrases that cross syntactic constraints.",
+                    "sid": 19,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At large scale, extraction of such features quickly becomes infeasible because of costly generation and storage of linguistic annotations.",
+                    "sid": 20,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another possible reason why large training data did not yet show the expected improvements in discriminative SMT is a special overfitting problem of current popular online learning techniques.",
+                    "sid": 21,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is due to stochastic learning on a per-example basis where a weight update on a misclassified example may apply only to a small fraction of data that have been seen before.",
+                    "sid": 22,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus many features will not generalize well beyond the training examples on which they were introduced.",
+                    "sid": 23,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal of this paper is to investigate if and how it is possible to benefit from scaling discriminative training for SMT to large training sets.",
+                    "sid": 24,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We deploy generic features for SCFG-based SMT that can efficiently be read off from rules at runtime.",
+                    "sid": 25,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such features include rule ids, rule-local n-grams, or types of rule shapes.",
+                    "sid": 26,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another crucial ingredient of our approach is a combination of parallelized stochastic learning with feature selection inspired by multi-task learning.",
+                    "sid": 27,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simple but effective idea is to randomly divide training data into evenly sized shards, use stochastic learning on each shard in parallel, while performing f1/f2 regularization for joint feature selection on the shards after each epoch, before starting a new epoch with a reduced feature vector averaged across shards.",
+                    "sid": 28,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Iterative feature selection procedure is the key to both efficiency and improved prediction: Without interleaving parallelized stochastic learning with feature selection our largest experiments would not be feasible.",
+                    "sid": 29,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Selecting features jointly across shards and averaging does counter the overfitting effect that is inherent to stochastic updating.",
+                    "sid": 30,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our resulting models are learned on large data sets, but they are small and outperform models that tune feature sets of various sizes on small development sets.",
+                    "sid": 31,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our software is freely available as a part of the cdec1 framework.",
+                    "sid": 32,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 related work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The great promise of discriminative training for SMT is the possibility to design arbitrarily expressive, complex, or overlapping features in great numbers.",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The focus of many approaches thus has been on feature engineering and on adaptations of machine learning algorithms to the special case of SMT (where gold standard rankings have to be created automatically).",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples for adapted algorithms include Maximum-Entropy Models (Och and Ney, 2002; Blunsom et al., 2008), Pairwise Ranking Perceptrons (Shen et al., 2004; Watanabe et al., 2006; Hopkins and May, 2011), Structured Perceptrons (Liang et al., 2006a), Boosting (Duh and Kirchhoff, 2008; Wellington et al., 2009), Structured SVMs (Tillmann and Zhang, 2006; Hayashi et al., 2009), MIRA (Watanabe et al., 2007; Chiang et al., 2008; Chiang et al., 2009), and others.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adaptations of the loss functions underlying such algorithms to SMT have recently been described as particular forms of ramp loss optimization (McAllester and Keshet, 2011; Gimpel and Smith, 2012).",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All approaches have been shown to scale to large feature sets and all include some kind of regularization method.",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, most approaches have been confined to training on small tuning sets.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exceptions where discriminative SMT has been used on large training data are Liang et al. (2006a) who trained 1.5 million features on 67,000 sentences, Blunsom et al.",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) who trained 7.8 million rules on 100,000 sentences, or Tillmann and Zhang (2006) who used 230,000 sentences for training.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is inspired by Duh et al. (2010) who applied multi-task learning for improved generalization in n-best reranking.",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to our work, Duh et al. (2010) did not incorporate multitask learning into distributed learning, but defined tasks as n-best lists, nor did they develop new algorithms, but used off-the-shelf multi-task tools.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 local features for synchronous cfgs",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The work described in this paper is based on the SMT framework of hierarchical phrase-based translation (Chiang, 2005; Chiang, 2007).",
+                    "sid": 43,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translation rules are extracted from word-aligned parallel sentences and can be seen as productions of a synchronous CFG.",
+                    "sid": 44,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples are rules like (1)-(3) shown in Figure 1.",
+                    "sid": 45,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Local features are designed to be readable directly off the rule at decoding time.",
+                    "sid": 46,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use three rule templates in our work: Rule identifiers: These features identify each rule by a unique identifier.",
+                    "sid": 47,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such features correspond to the relative frequencies of rewrites rules used in standard models.",
+                    "sid": 48,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rule n-grams: These features identify n-grams of consecutive items in a rule.",
+                    "sid": 49,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use bigrams on source-sides of rules.",
+                    "sid": 50,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such features identify possible source side phrases and thus can give preference to rules including them.2 Rule shape: These features are indicators that abstract away from lexical items to templates that identify the location of sequences of terminal symbols in relation to non-terminal symbols, on both the source- and target-sides of each rule used.",
+                    "sid": 51,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, both rules (1) and (2) map to the same indicator, namely that a rule is being used that consists of a (NT, term*, NT, term*) pattern on its source side, and an (NT, term*, NT) pattern on its target side.",
+                    "sid": 52,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rule (3) maps to a different template, that of (NT, term*, NT) on source and target sides.",
+                    "sid": 53,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 joint feature selection in distributed",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "The following discussion of learning methods is based on pairwise ranking in a Stochastic Gradient Descent (SGD) framework.",
+                    "sid": 54,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting algorithms can be seen as variants of the perceptron algorithm.",
+                    "sid": 55,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let each translation candidate be represented by a feature vector x E IRD where preference pairs for training are prepared by sorting translations according to smoothed sentence-wise BLEU score (Liang et al., 2006a) against the reference.",
+                    "sid": 56,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a preference pair xj = (x(1) j , we consider the following hinge loss-type objective function: where (a)+ = max(0, a) , w E IRD is a weight vector, and (\u00b7, \u00b7) denotes the standard vector dot product.",
+                    "sid": 57,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instantiating SGD to the following stochastic subgradient leads to the perceptron algorithm for pairwise ranking3 (Shen and Joshi, 2005): \ufffd Our baseline algorithm 1 (SDG) scales pairwise ranking to large scale scenarios.",
+                    "sid": 58,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm takes an average over the final weight updates of each epoch instead of keeping a record of all weight updates for final averaging (Collins, 2002) or for voting (Freund and Schapire, 1999).",
+                    "sid": 59,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 1 SGD: int I, T, float 77 Initialize w0,0,0 F 0. for epochs t F 0 ... T \u2212 1: do for all i E {0 ...",
+                    "sid": 60,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I \u2212 11: do Decode ith input with wt,i,0. for all pairs xj, j E {0 ... P// \u2212 11: do While stochastic learning exhibits a runtime behavior that is linear in sample size (Bottou, 2004), very large datasets can make sequential processing infeasible.",
+                    "sid": 61,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 2 (MixSGD) addresses this problem by parallelization in the framework of MapReduce (Dean and Ghemawat, 2004).",
+                    "sid": 62,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 2 MixSGD: int I, T, Z, float 77 Partition data into Z shards, each of size S F I/Z; distribute to machines. for all shards z E {1 ... Z1: parallel do Initialize wz,0,0,0 F 0. for epochs t F 0 ... T \u2212 1: do for all i E {0 ... S \u2212 11: do Decode ith input with wz,t,i,0.",
+                    "sid": 63,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "for all pairs xj, j E {0 ... P \u2212//11: do Algorithm 2 is a variant of the SimuParallelSGD algorithm of Zinkevich et al. (2010) or equivalently of the parameter mixing algorithm of McDonald et al.",
+                    "sid": 64,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010).",
+                    "sid": 65,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key idea of algorithm 2 is to partition the data into disjoint shards, then train SGD on each shard in parallel, and after training mix the final parameters from each shard by averaging.",
+                    "sid": 66,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm requires no communication between machines until the end.",
+                    "sid": 67,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McDonald et al. (2010) also present an iterative mixing algorithm where weights are mixed from each shard after training a single epoch of the perceptron in parallel on each shard.",
+                    "sid": 68,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The mixed weight vector is re-sent to each shard to start another epoch of training in parallel on each shard.",
+                    "sid": 69,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm corresponds to our algorithm 3 (IterMixSGD).",
+                    "sid": 70,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parameter mixing by averaging will help to ease the feature sparsity problem, however, keeping feature vectors on the scale of several million features in memory can be prohibitive.",
+                    "sid": 71,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If network latency is a bottleneck, the increased amount of information sent across the network after each epoch may be a further problem.",
+                    "sid": 72,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm 4 (IterSelSGD) introduces feature selection into distributed learning for increased efficiency and as a more radical measure against overfitting.",
+                    "sid": 73,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key idea is to view shards as tasks, and to apply methods for joint feature selection from multi-task learning to achieve small sets of features that are useful across all tasks or shards.",
+                    "sid": 74,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm represents weights in a Z-by-D matrix W = [wz1 |... |wzZ]T of stacked D-dimensional weight vectors across Z shards.",
+                    "sid": 75,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compute the f2 norm of the weights in each feature column, sort features by this value, and keep K features in the model.",
+                    "sid": 76,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This feature selection procedure is done after each epoch.",
+                    "sid": 77,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Reduced weight vectors are mixed and the result is re-sent to each shard to start another epoch of parallel training on each shard.",
+                    "sid": 78,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm can be seen as an instance of f1/f2 regularization as follows: Let wd be the dth column vector of W, representing the weights for the dth feature across tasks/shards. f1/f2 regularization penalizes weights W by the weighted f1/f2 norm",
+                    "sid": 79,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "a||w||1,2 = a",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Each f2 norm of a weight column represents the relevance of the corresponding feature across tasks/shards.",
+                    "sid": 80,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The f1 sum of the f2 norms enforces a selection among features based on these norms.",
+                    "sid": 81,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider for example the two 5-feature, 3task weight matrices in Figure 2.",
+                    "sid": 82,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assuming the same loss for both matrices, the right-hand side matrix is preferred because of a smaller f1/f2 norm (12 instead of 18).",
+                    "sid": 83,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This matrix shares features across tasks which leads to larger f2 norms for some columns (here ||w1||2 and ||w2||2) and forces other columns to zero.",
+                    "sid": 84,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This results in shrinking the matrix to those features that are useful across all tasks.",
+                    "sid": 85,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm is related to Obozinski et al. (2010)\u2019s approach to f1/f2 regularization where feature columns are incrementally selected based on the f2 norms of the gradient vectors corresponding to feature columns.",
+                    "sid": 86,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their algorithm is itself an extension of gradient-based feature selection based on the f1 norm, e.g., Perkins et al. (2003).4 In contrast to these approaches we approximate the gradient by using the weights given by the ranking algorithm itself.",
+                    "sid": 87,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This relates our work to weight-based recursive feature elimination (RFE) (Lal et al., 2006).",
+                    "sid": 88,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, algorithm 4 performs feature selection based on a choice of meta-parameter of K features instead of by thresholding a regularization meta-parameter A, however, these techniques are equivalent and can be transformed into each other.",
+                    "sid": 89,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 experiments",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The datasets used in our experiments are versions of the News Commentary (nc), News Crawl (crawl) and Europarl (ep) corpora described in Table 1.",
+                    "sid": 90,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation direction is German-to-English.",
+                    "sid": 91,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SMT framework used in our experiments is hierarchical phrase-based translation (Chiang, 2007).",
+                    "sid": 92,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the cdec decoder5 (Dyer et al., 2010) and induce SCFG grammars from two sets of symmetrized alignments using the method described by Chiang (2007).",
+                    "sid": 93,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All data was tokenized and lowercased; German compounds were split (Dyer, 2009).",
+                    "sid": 94,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For word alignment of the news-commentary data, we used GIZA++ (Och and Ney, 2000); for aligning the Europarl data, we used the Berkeley aligner (Liang et al., 2006b).",
+                    "sid": 95,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before training, we collect all the grammar rules necessary to translate each individual sentence into separate files (so-called per-sentence grammars) (Lopez, 2007).",
+                    "sid": 96,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When decoding, cdec loads the appropriate file immediately prior to translation of the sentence.",
+                    "sid": 97,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The computational overhead is minimal compared to the expense of decoding.",
+                    "sid": 98,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, deploying disk space instead of memory fits perfectly into the MapReduce framework we are working in.",
+                    "sid": 99,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the extraction of grammars for training is done in a leave-one-out fashion (Zollmann and Sima\u2019an, 2005) where rules are extracted for a parallel sentence pair only if the same rules are found in other sentences of the corpus as well.",
+                    "sid": 100,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3-gram (news-commentary) and 5-gram (Europarl) language models are trained on the data described in Table 1, using the SRILM toolkit (Stolcke, 2002) and binarized for efficient querying using kenlm (Heafield, 2011).",
+                    "sid": 101,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the 5-gram language models, we replaced every word in the lm training data with <unk> that did not appear in the English part of the parallel training data to build an open vocabulary language model.",
+                    "sid": 102,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training data for discriminative learning are prepared by comparing a 100-best list of translations against a single reference using smoothed persentence BLEU (Liang et al., 2006a).",
+                    "sid": 103,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the BLEU-reordered n-best list, translations were put into sets for the top 10% level (HI), the middle 80% level (MID), and the bottom 10% level (LOW).",
+                    "sid": 104,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These level sets are used for multipartite ranking where translation pairs are built between the elements in HI-MID, HI-LOW, and MID-LOW, but not between translations inside sets on the same level.",
+                    "sid": 105,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This idea is depicted graphically in Figure 3.",
+                    "sid": 106,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The intuition is to ensure that good translations are preferred over bad translations without teasing apart small differences.",
+                    "sid": 107,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For evaluation, we used the mteval-v11b.pl script to compute lowercased BLEU-4 scores (Papineni et al., 2001).",
+                    "sid": 108,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical significance was measured using an Approximate Randomization test (Noreen, 1989; Riezler and Maxwell, 2005).",
+                    "sid": 109,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All experiments for training on dev sets were carried out on a single computer.",
+                    "sid": 110,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For grammar extraction and training of the full data set we used a 30 node hadoop Map/Reduce cluster that can handle 300 jobs at once.",
+                    "sid": 111,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We split the data into 2290 shards for the ep runs and 141 shards for the nc runs, each shard holding about 1,000 sentences, which corresponds to the dev set size of the nc data set.",
+                    "sid": 112,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline learner in our experiments is a pairwise ranking perceptron that is used on various features and training data and plugged into various metaalgorithms for distributed processing.",
+                    "sid": 113,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The perceptron algorithm itself compares favorably to related learning techniques such as the MIRA adaptation of Chiang et al. (2008).",
+                    "sid": 114,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 gives a boxplot depicting BLEU-4 results for 100 runs of the MIRA implementation of the cdec package, tuned on dev-nc, and evaluated on the respective test set test-nc.6 We see a high variance (whiskers denote standard deviations) around a median of 27.2 BLEU and a mean of 27.1 BLEU.",
+                    "sid": 115,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fluctuation of results is due to sampling training examples from the translation hy6MIRA was used with default meta parameters: 250 hypothesis list to search for oracles, regularization strength C = 0.01 and using 15 passes over the input.",
+                    "sid": 116,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It optimized IBM BLEU-4.",
+                    "sid": 117,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The initial weight vector was 0. commentary (nc) data.",
+                    "sid": 118,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature groups are 12 dense features (default), rule identifiers (id), rule n-gram (ng), and rule shape (shape).",
+                    "sid": 119,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical significance at p-level < 0.05 of a result difference on the test set to a different algorithm applied to the same feature group is indicated by raised algorithm number.",
+                    "sid": 120,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2020 indicates statistically significant differences to best result across features groups for same algorithm, indicated in bold face.",
+                    "sid": 121,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "@ indicates the optimal number of epochs chosen on the devtest set. pergraph as is done in the cdec implementation of MIRA.",
+                    "sid": 122,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found similar fluctuations for the cdec implementations of PRO (Hopkins and May, 2011) or hypergraph-MERT (Kumar et al., 2009) both of which depend on hypergraph sampling.",
+                    "sid": 123,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the perceptron is deterministic when started from a zero-vector of weights and achieves favorable 28.0 BLEU on the news-commentary test set.",
+                    "sid": 124,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we are interested in relative improvements over a stable baseline, we restrict our attention in all following experiments to the perceptron.7 Table 2 shows the results of the experimental comparison of the 4 algorithms of Section 4.",
+                    "sid": 125,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 7Absolute improvements would be possible, e.g., by using larger language models or by adding news data to the ep training set when evaluating on crawl test sets (see, e.g., Dyer et al. (2011)), however, this is not the focus of this paper. default features include 12 dense models defined on SCFG rules;8 The sparse features are the 3 templates described in Section 3.",
+                    "sid": 126,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All feature weights were tuned together using algorithms 1-4.",
+                    "sid": 127,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If not indicated otherwise, the perceptron was run for 10 epochs with learning rate q = 0.0001, started at zero weight vector, using deduplicated 100-best lists.",
+                    "sid": 128,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results on the news-commentary (nc) data show that training on the development set does not benefit from adding large feature sets \u2013 BLEU result differences between tuning 12 default features and tuning the full set of 180,000 features are not significant.",
+                    "sid": 129,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, scaling all features to the full training set shows significant improvements for algorithm 3, and especially for algorithm 4, which gains 0.8 BLEU points over tuning 12 features on the development set.",
+                    "sid": 130,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of features rises to 4.7 million without feature selection, which iteratively selects 100,000 features with best f2 norm values across shards.",
+                    "sid": 131,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature templates such as rule n-grams and rule shapes only work if iterative mixing (algorithm 3) or feature selection (algorithm 4) are used.",
+                    "sid": 132,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adding rule id features works in combination with other sparse features.",
+                    "sid": 133,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows results for algorithms 1 and 4 on the Europarl data (ep) for different devtest and test sets.",
+                    "sid": 134,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Europarl data were used in all runs for training and for setting the meta-parameter of number of epochs.",
+                    "sid": 135,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Testing was done on the Europarl test set and news crawl test data from the years 2010 and 2011.",
+                    "sid": 136,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here tuning large feature sets on the respective dev sets yields significant improvements of around 2 BLEU points over tuning the 12 default features on the dev sets.",
+                    "sid": 137,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another 0.5 BLEU points (test-crawl11) or even 1.3 BLEU points (testcrawl10) are gained when scaling to the full training set using iterative features selection.",
+                    "sid": 138,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Result differences on the Europarl test set were not significant for moving from dev to full train set.",
+                    "sid": 139,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithms 2 and 3 were infeasible to run on Europarl data beyond one epoch because features vectors grew too large to be kept in memory.",
+                    "sid": 140,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 discussion",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We presented an approach to scaling discriminative learning for SMT not only to large feature sets but also to large sets of parallel training data.",
+                    "sid": 141,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since inference for SMT (unlike many other learning problems) is very expensive, especially on large training sets, good parallelization is key.",
+                    "sid": 142,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is made feasible and effective by applying joint feature selection across distributed stochastic learning processes.",
+                    "sid": 143,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, our local features are efficiently computable at runtime.",
+                    "sid": 144,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithms and features are generic and can easily be reimplemented and make our results relevant across datasets and language pairs.",
+                    "sid": 145,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work, we would like to investigate more sophisticated features, better learners, and in general improve the components of our system that have been neglected in the current investigation of relative improvements by scaling the size of data and feature sets.",
+                    "sid": 146,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ultimately, since our algorithms are inspired by multi-task learning, we would like to apply them to scenarios where a natural definition of tasks is given.",
+                    "sid": 147,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, patent data can be characterized along the dimensions of patent classes and patent text fields (W\u00a8aschle and Riezler, 2012) and thus are well suited for multi-task translation.",
+                    "sid": 148,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "Stefan Riezler and Patrick Simianer were supported in part by DFG grant \u201cCross-language Learning-toRank for Patent Retrieval\u201d.",
+                    "sid": 149,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chris Dyer was supported in part by a MURI grant \u201cThe linguisticcore approach to structured translation and analysis of low-resource languages\u201d from the US Army Research Office and a grant \u201cUnsupervised Induction of Multi-Nonterminal Grammars for SMT\u201d from Google, Inc.",
+                    "sid": 150,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1607 @@
+{
+    "ID": "D11-1039",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Bootstrapping Semantic Parsers from Conversations",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conversations provide rich opportunities for interactive, continuous learning.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When something goes wrong, a system can ask for clarification, rewording, or otherwise redirect the interaction to achieve its goals.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present an approach for using conversational interactions of this type to induce semantic parsers.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We demonstrate learning without any explicit annotation of the meanings of user utterances.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we model meaning with latent variables, and introduce a loss function to measure how well potential meanings match the conversation.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This loss drives the overall learning approach, which induces a weighted CCG grammar that could be used to automatically bootstrap the semantic analysis component in a complete dialog system.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on DARPA Communicator conversational logs demonstrate effective learning, despite requiring no explicit meaning annotations.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Conversational interactions provide significant opportunities for autonomous learning.",
+                    "sid": 8,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A well-defined goal allows a system to engage in remediations when confused, such as asking for clarification, rewording, or additional explanation.",
+                    "sid": 9,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The user\u2019s response to such requests provides a strong, if often indirect, signal that can be used to learn to avoid the original confusion in future conversations.",
+                    "sid": 10,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we show how to use this type of conversational feedback to learn to better recover the meaning of user utterances, by inducing semantic parsers from unannotated conversational logs.",
+                    "sid": 11,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe that this style of learning will contribute to the long term goal of building self-improving dialog systems that continually learn from their mistakes, with little or no human intervention.",
+                    "sid": 12,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many dialog systems use a semantic parsing component to analyze user utterances (e.g., Allen et al., 2007; Litman et al., 2009; Young et al., 2010).",
+                    "sid": 13,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in a flight booking system, the sentence Sent: I want to go to Seattle on Friday LF: \u03bbx.to(x, SEA) \u2227 date(x, FRI) might be mapped to the logical form (LF) meaning representation above, a lambda-calculus expression defining the set of flights that match the user\u2019s desired constraints.",
+                    "sid": 14,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This LF is a representation of the semantic content that comes from the sentence, and would be input to a context-dependent understanding component in a full dialog system, for example to find the date that the symbol FRI refers to.",
+                    "sid": 15,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To induce semantic parsers from interactions, we consider user statements in conversational logs and model their meaning with latent variables.",
+                    "sid": 16,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We demonstrate that it is often possible to use the dialog that follows a statement (including remediations such as clarifications, simplifications, etc.) to learn the meaning of the original sentence.",
+                    "sid": 17,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, consider the first user utterance in Figure 1, where the system failed to understand the user\u2019s request.",
+                    "sid": 18,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To complete the task, the system must use a remediation strategy.",
+                    "sid": 19,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, it takes the initiative by asking for and confirming each flight constraint in turn.",
+                    "sid": 20,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This strategy produces an unnatural conversation but provides supervision for learning the meaning of the original utterance.",
+                    "sid": 21,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can easily record representations of the meanings the system intended to convey at each step, as seen in Figure 1, and use this indirect supervision for learning.",
+                    "sid": 22,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning from this weak signal is challenging.",
+                    "sid": 23,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In any specific conversation, the system\u2019s remediations can fail to recover aspects of the original user meaning and can introduce spurious constraints, for example when users change their goals mid conversation.",
+                    "sid": 24,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To learn effectively, the model must accumulate evidence from many interactions to best recover the meaning of each specific sentence.",
+                    "sid": 25,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will learn semantic parsers defined by probabilistic Combinatory Categorial Grammars (PCCGs), which include both a lexicon and a weighted linear model for parse selection.",
+                    "sid": 26,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lexicon specifies the meanings of individual words and phrases, while the parameters of a parsing model define how to best combine word- and phrase-level meanings to analyze complete sentences.",
+                    "sid": 27,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To learn without labeled meaning representations, we make use of a variant of the loss-sensitive Perceptron algorithm (Singh-Miller and Collins, 2007).",
+                    "sid": 28,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define loss functions to provide a rough measure of (1) how well a candidate meaning for a utterance matches the conversation that follows it and (2) how well the candidate matches our expectations about the types of things that are often said in the dialog\u2019s domain.",
+                    "sid": 29,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These notions of loss drive not only the parameter estimation but also the grammar induction process that constructs the CCG lexicon.",
+                    "sid": 30,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on conversation logs from the DARPA Communicator corpus (Walker et al., 2002) demonstrate the feasibility of our approach.",
+                    "sid": 31,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper makes the following contributions: that demonstrate effective learning from conversations alone.",
+                    "sid": 32,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 problem",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Our goal is to learn a function that maps a sentence x to a lambda-calculus expression z.",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume access to logs of conversations with automatically generated annotation of system utterance meanings, but no explicit labeling of each user utterance meaning.",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a conversation C = (U, O) to be a sequence of utterances U\ufffd = [uo, ... , um] and a set of conversational objects O.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An object o E O is an entity that is being discussed, for example there would be a unique object for each flight leg discussed in a travel planning conversation.",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each utterance ui = (s, x, a, z) represents the speaker s E {User, System} producing the natural language statement x which asserts a speech act a E {ASK, CONFIRM, ...} with meaning representation z.",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, from the second system utterance in Figure 1 the question x =\u201cLeaving what city?\u201d is an a=ASK speech act with lambda-calculus meaning z = \u03bbx.from(fl, x).",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This meaning represents the fact that the system asked for the departure city for the conversational object o = fl representing the flight leg that is currently being discussed.",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will learn from conversations where the speech acts a and logical forms z for user utterances are unlabeled.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such data can be generated by recording interactions, along with each system\u2019s internal representation of its own utterances.",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, since we will be analyzing sentences at a specific point in a complete conversation, we define our training data as a set {(ji, Ci)|i = 1... n}.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each pair is a conversation Ci and the index ji of the user utterance x in Ci whose meaning we will attempt to learn to recover.",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, the same conversation C can be used in multiple examples, each with a different sentence index.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 8 provides the details of how the data was gathered for our experiments.",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 overview of approach",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We will present an algorithm for learning a weighted CCG parser, as defined in Section 5, that can be used to map sentences to logical forms.",
+                    "sid": 46,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach induces a lexicon to represent the meanings of words and phrases while also estimating the parameters of a weighted linear model for selecting the best parse given the lexicon.",
+                    "sid": 47,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning As defined in Section 2, the algorithm takes a set of n training examples, {(ji, Ci) : i = 1, ... , n}.",
+                    "sid": 48,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each example, our goal is to learn to parse the user utterance x at position ji in Ci.",
+                    "sid": 49,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training data contains no direct evidence about the logical form z that should be paired with x, or the CCG analysis that would be used to construct z.",
+                    "sid": 50,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We model all of these choices as latent variables.",
+                    "sid": 51,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To learn effectively in this complex, latent space, we introduce a loss function L(z, j, C) E R that measures how well a logical form z models the meaning for the user utterance at position j in C. In Section 6, we will present the details of the loss we use, which is designed to be sensitive to remediations in C (system requests for clarification, etc.) but also be robust to the fact that conversations often do not uniquely determine which z should be selected, for example when the user prematurely ends the discussion.",
+                    "sid": 52,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, in Section 7, we present an approach for incorporating this loss function into a complete algorithm that induces a CCG lexicon and estimates the parameters of the parsing model.",
+                    "sid": 53,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This learning setup focuses on a subproblem in dialog; semantic interpretation.",
+                    "sid": 54,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not yet learn to recover user speech acts or integrate the logical form into the context of the conversation.",
+                    "sid": 55,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are important areas for future work.",
+                    "sid": 56,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation We will evaluate performance on a test set {(xi, zi)|i = 1, ... , m} of m sentences xi that have been explicitly labeled with logical forms zi.",
+                    "sid": 57,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This data will allow us to directly evaluate the quality of the learned model.",
+                    "sid": 58,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each sentence is analyzed with the learned model alone; the loss function and any conversational context are not used during evaluation.",
+                    "sid": 59,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parsers that perform well in this setting will be strong candidates for inclusion in a more complete dialog system, as motivated in Section 1.",
+                    "sid": 60,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 related work",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Most previous work on learning from conversational interactions has focused on the dialog sub-problems of response planning (e.g., Levin et al., 2000; Singh et al., 2002) and natural language generation (e.g., Lemon, 2011).",
+                    "sid": 61,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are not aware of previous work on inducing semantic parsers from conversations.",
+                    "sid": 62,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been significant work on supervised learning for inducing semantic parsers.",
+                    "sid": 63,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Various techniques were applied to the problem including machine translation (Papineni et al., 1997; Ramaswamy and Kleindienst, 2000; Wong and Mooney, 2006; 2007; Matuszek et al., 2010), higherorder unification (Kwiatkowski et al., 2010), parsing (Ruifang and Mooney, 2006; Lu et al., 2008), inductive logic programming (Zelle and Mooney, 1996; Thompson and Mooney, 2003; Tang and Mooney, 2000), probabilistic push-down automata (He and Young, 2005; 2006) and ideas from support vector machines and string kernels (Kate and Mooney, 2006; Nguyen et al., 2006).",
+                    "sid": 64,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithms we develop in this paper build on previous work on supervised learning of CCG parsers (Zettlemoyer and Collins, 2005; 2007), as we describe in Section 5.3.",
+                    "sid": 65,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is also work on learning to do semantic analysis with alternate forms of supervision.",
+                    "sid": 66,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clarke et al. (2010) and Liang et al.",
+                    "sid": 67,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) describe approaches for learning semantic parsers from questions paired with database answers, while Goldwasser et al. (2011) presents work on unsupervised learning.",
+                    "sid": 68,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach provides an alternative method of supervision that could complement these approaches.",
+                    "sid": 69,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, there has been significant recent work on learning to do other, reI want to go from Boston to New York and then to Chicago lated, natural language semantic analysis tasks from context-dependent database queries (Miller et al., 1996; Zettlemoyer and Collins, 2009), grounded event streams (Chen et al., 2010; Liang et al., 2009), environment interactions (Branavan et al., 2009; 2010; Vogel and Jurafsky, 2010), and even unannotated text (Poon and Domingos, 2009; 2010).",
+                    "sid": 70,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the DARPA Communicator data (Walker et al., 2002) has been previously studied.",
+                    "sid": 71,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Walker and Passonneau (2001) introduced a schema of speech acts for evaluation of the DARPA Communicator system performance.",
+                    "sid": 72,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Georgila et al. (2009) extended this annotation schema to user utterances using an automatic process.",
+                    "sid": 73,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our speech acts extend this work to additionally include full meaning representations.",
+                    "sid": 74,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 mapping sentences to logical form",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We will use a weighted linear CCG grammar for semantic parsing, as briefly reviewed in this section.",
+                    "sid": 75,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combinatory categorial grammars (CCGs) are a linguistically-motivated model for a wide range of language phenomena (Steedman, 1996; 2000).",
+                    "sid": 76,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A CCG is defined by a lexicon and a set of combinators.",
+                    "sid": 77,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The grammar defines a set of possible parse trees, where each tree includes syntactic and semantic information that can be used to construct logical forms for sentences.",
+                    "sid": 78,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lexicon contains entries that define categories for words or phrases.",
+                    "sid": 79,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the second lexical entry in the parse in Figure 2 is: from := (N\\N)/NP : Ay.Af.Ax.f(x) n from(x, y) Each category includes both syntactic and semantic information.",
+                    "sid": 80,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the phrase \u201cfrom\u201d is assigned the category with syntax (N\\N)/NP and semantics Ay.Af.Ax.f(x) n from(x, y).",
+                    "sid": 81,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The outermost syntactic forward slash specifies that the entry must first be combined with an NP to the right (the departure city), while the inner back slash specifies that it will later modify a noun N to the left (to add a constraint to a set of flights).",
+                    "sid": 82,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lambda-calculus semantic expression is designed to build the appropriate meaning representation at each of these steps, as seen in the parse in Figure 2.",
+                    "sid": 83,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, we make use of typed lambda calculus to represent meaning (Carpenter, 1997), both in the lexicon and in intermediate parse tree nodes.",
+                    "sid": 84,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also introduce an extension for modeling arraytyped variables to represent lists of individual entries.",
+                    "sid": 85,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These constructions are used, for example, to model sentences describing a sequence of segments while specifying flight preferences.",
+                    "sid": 86,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows how a CCG parse builds a logical form for a complete sentence with an array-typed variable.",
+                    "sid": 87,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each intermediate node in the tree is constructed with one of a small set of CCG combinator rules, see the explanation from Steedman (1996; 2000).",
+                    "sid": 88,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make use of the standard application, composition and coordination combinators, as well as type-shifting rules introduced by Zettlemoyer and Collins (2007) to model spontaneous, unedited text.",
+                    "sid": 89,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A weighted linear CCG (Clark and Curran, 2007) provides a ranking on the space of possible parses under the grammar, which can be used to select the best logical form for a sentence.",
+                    "sid": 90,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This type of model is closely related to several other approaches (Ratnaparkhi et al., 1994; Johnson et al., 1999; Lafferty et al., 2001; Collins, 2004; Taskar et al., 2004).",
+                    "sid": 91,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let x be a sentence, y be a CCG parse, and GEN(x; A) be the set of all possible CCG parses for x given the lexicon A.",
+                    "sid": 92,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Define O(x, y) E Rd to be a d-dimensional feature\u2013vector representation and 0 E Rd to be a parameter vector.",
+                    "sid": 93,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The optimal parse for sentence x is and the final output logical form z is the lambdacalculus expression at the root of y*(x).",
+                    "sid": 94,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compute y*(x) with a CKY-style chart parsing algorithm.",
+                    "sid": 95,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since each chart entry contains a full lambda-calculus meaning expression, we use N-best pruning to control the number of options we consider at each span.",
+                    "sid": 96,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning a model of this form involves learning the parameters 0 and the lexicon A.",
+                    "sid": 97,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will show that this is possible from conversational logs that do not contain any explicit labeling of the logical forms for user utterances.",
+                    "sid": 98,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous work on lexical induction, including the GENLEX approach which we briefly review here, has required labeled logical meaning representations.",
+                    "sid": 99,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 7, we will introduce a new way of using GENLEX to learn from unannotated conversation logs.",
+                    "sid": 100,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The supervised CCG learning algorithms of Zettlemoyer and Collins (2005; 2007) induce a weighted CCG from training examples (xi, zi) for i = 1... n, where xi is a sentence and zi is the corresponding lambda-calculus meaning representation.",
+                    "sid": 101,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The output from the algorithm is a pair (0, A) containing the learned parameters and CCG lexicon.",
+                    "sid": 102,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They defined the function GENLEX(x, z) to map a sentence x and its meaning z to a large set of potential lexical entries.",
+                    "sid": 103,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These entries are generated with rules that consider the logical form z and guess potential CCG categories.",
+                    "sid": 104,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the rule p \u2192 (N\\N)/NP : Ay.Af.Ax.f(x) n p(x, y) introduces categories commonly used to model certain types of prepositions.",
+                    "sid": 105,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This rule would, for example, introduce the category (N\\N)/NP : Ay.Af.Ax.f(x) n to(x, y) for any logical form z that contains the constant to.",
+                    "sid": 106,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GENLEX uses a small set of rules of this type to generate categories that are paired with all possible substrings in x to form an overly general lexicon.",
+                    "sid": 107,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complete learning algorithm then simultaneously selects a small subset of all entries generated by GENLEX and estimates parameter values 0.",
+                    "sid": 108,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zettlemoyer and Collins (2005) present a more detailed explanation.",
+                    "sid": 109,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 measuring loss",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "In Section 7, we will present a loss-sensitive learning algorithm that models the meaning of user utterances as latent variables to be estimated from conversational interactions.",
+                    "sid": 110,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first introduce a loss function to measure the quality of potential meaning representations.",
+                    "sid": 111,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This loss function L(z, j, C) E R indicates how well a logical expression z represents the meaning of the j-th user utterance in conversation C. For example, consider the first user utterance (j = 2) in Figure 3, which is a request for a return trip from Boston to New York.",
+                    "sid": 112,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We would like to assign the lowest loss to the meaning representation (d) in Figure 3 that correctly encodes all of the stated constraints.",
+                    "sid": 113,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make use of a loss function with two parts: L(z, j,C) = Lc(z, j,C) + Ld(z).",
+                    "sid": 114,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The conversation loss Lc (defined in Section 6.1) measures how well the candidate meaning representation fits the conversation, for example incorporating information recovered through conversational remediations as motivated in Section 1.",
+                    "sid": 115,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The domain loss Ld (described in Section 6.2) measures how well a logical form z matches domain expectations, such as the fact that flights can only have a single origin.",
+                    "sid": 116,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These functions guide the types of meaning representations we expect to see, but in many cases will fail to specify a unique best option, for example in conversations where the user prematurely terminates the interaction.",
+                    "sid": 117,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 7, we will present a complete, loss-driven learning algorithm that is robust to these types of ambiguities while inducing a weighted CCG parser from conversations.",
+                    "sid": 118,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use a conversation loss function Lc(z, j, C) that provides a rough indication of how well the logical expression z represents a potential meaning for the user utterance at position j in C. For example, the first user utterance (j = 2) in Figure 3 is a request for a return trip from Boston to New York where the user has explicitly mentioned both legs.",
+                    "sid": 119,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The figure also shows five options (a-e) for the logical form z.",
+                    "sid": 120,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We want to assign the lowest loss to option (d), which includes all of the stated constraints.",
+                    "sid": 121,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The loss is computed in four steps for a user utterance x at position j by (1) selecting a subset of system utterances in the conversation C, (2) extracting and computing loss for semantic content from selected system utterances, (3) aligning the subexpressions in z to the extracted semantic content, and (4) computing the minimal loss value from the best alignment.",
+                    "sid": 122,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 3, the loss for the candidate logical forms is computed by considering the segment of system utterances up until the conversation end.",
+                    "sid": 123,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Within this segment, the matching for expression (d) involves mapping the origin and departure constraints for the first leg (Boston - New York) onto the earlier system confirmations while also aligning the ones for the second leg to system utterances later in the selected portion of the conversation.",
+                    "sid": 124,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the overall score depends on the quality of the alignment, for example how many of the constraints match to confirmations.",
+                    "sid": 125,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This section presents the full approach.",
+                    "sid": 126,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Segmentation For a user utterance at position j, we select all system utterances from j \u2212 1 until the system believes it has completed the current subtask, as indicated by a reset action or final offer.",
+                    "sid": 127,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call this selected segment \u00afC.",
+                    "sid": 128,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 3, C\u00af ends with a reset, but in a successful interaction it would have ended with the offer of a specific flight.",
+                    "sid": 129,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Extracting Properties A property is a predicateentity-value triplet, where the entity can be a variable from z or a conversational object.",
+                    "sid": 130,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, (from, fl, BOS) is a property where fl is a object from C\u00af and (from, x, BOS) is a property from z = Ax.from(x, BOS).",
+                    "sid": 131,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define P& to be the set of properties from logical forms for system utterances in \u00afC.",
+                    "sid": 132,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, we define Pz to be the set of properties in z.",
+                    "sid": 133,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scoring System Properties For each system property p E Pj we compute its position value pos(p), which is a normalized weighted average over all the positions where it appears in a logical form.",
+                    "sid": 134,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each mention the weight is obtained from its speech act.",
+                    "sid": 135,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, properties that are explicitly confirmed contribute more to the average than those that were merely offered to the user in a select statement.",
+                    "sid": 136,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use pos(p) to compute a loss loss(p) for each property p E Pj.",
+                    "sid": 137,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first define Pff' to be all properties in P& with entity e. For entity e and position d, we define the entity-normalization function: d \u2212 minp\u2208PC\u00af' pos(p) For a given property p E Pj with an entity e we compute the loss value: Where n\ufffd1 e is the inverse of ne.",
+                    "sid": 138,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This loss value is designed to, first, provide less loss for later properties so that it, for example, favors the last property in a series of statements that finally resolves a confusion in the conversation.",
+                    "sid": 139,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, the loss value is lower for objects mentioned closer to the user utterance x, thereby preferring objects discussed sooner.",
+                    "sid": 140,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Matching Properties An alignment A maps variables in z to conversational objects in \u00afC, for example the flight legs fl1 and fl2 being discussed in Figure 3.",
+                    "sid": 141,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use alignments to match properties of z and \u00afC.",
+                    "sid": 142,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this we extend the alignment function A to apply to properties, for example A((from, x, BOS)) = (from, A(x), BOS).",
+                    "sid": 143,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scoring Alignments Finally, we compute the conversation loss L,(z, j, C) as follows: The function s(A(p.), ps) E R computes the compatibility of the two input properties.",
+                    "sid": 144,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is zero if A(p.) =\ufffd ps.",
+                    "sid": 145,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, it returns loss(ps).",
+                    "sid": 146,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We approximate the min computation in L, over alignments A as follows.",
+                    "sid": 147,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a logical form z at position j, we align the outer-most variable to the conversational object in C\u00af that is being discussed at j.",
+                    "sid": 148,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remaining variables are aligned greedily to minimize the loss, by selecting a single conversational object for each in turn.",
+                    "sid": 149,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, for each aligned variable, we increase the loss by one for each unmatched property from Pz.",
+                    "sid": 150,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This increases the loss of logical forms that include spurious information.",
+                    "sid": 151,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, since a conversation might stop prematurely and therefore won\u2019t discuss the entire user request, we only increase the loss for variables that are already aligned.",
+                    "sid": 152,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this purpose, we define an aligned variable to be one that has at least one property matched successfully.",
+                    "sid": 153,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also make use of a domain loss function Ld(z) E R. The function takes a logical form z and returns the number of violations there are in z to a set of constraints on logical forms that occur commonly in the dialog domain.",
+                    "sid": 154,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in a travel domain, a violation might occur if a flight leg has two different destination cities.",
+                    "sid": 155,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of possible violations must be specified for each dialog system, but can often be compiled from existing resources, such as a database of valid flight ticketing options.",
+                    "sid": 156,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we will use a set of eight simple constraints to check for violations in flight Inputs: Training set {(ji, Ci) : i = 1 ... n} where each example includes the index ji of a sentence xi in the conversation Ci.",
+                    "sid": 157,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initial lexicon A0.",
+                    "sid": 158,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Number of iterations T. Margin ry.",
+                    "sid": 159,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Beam size k for lexicon generation.",
+                    "sid": 160,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Loss function L(x, j, C), as described in Section 6.",
+                    "sid": 161,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Definitions: GENLEX(x, C) takes as input a sentence and a conversation and returns a set of lexical items as described in Section 7.",
+                    "sid": 162,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GEN(x; A) is the set of all possible CCG parses for x given the lexicon A. LF(y) returns the logical form z at the root of the parse tree y.",
+                    "sid": 163,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let 4)i(y) be shorthand for the feature function 4)(xi, y) defined in Section 5.",
+                    "sid": 164,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Define LEX(y) to be the set of lexical entries used in parse y.",
+                    "sid": 165,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, let MINLi(Y) be {y|\u2200y0 E Y, L(LF(y), ji, Ci) \u2264 L(LF(y0), ji, Ci)}, the set of minimal loss parses in Y . itineraries, which can have multiple legs.",
+                    "sid": 166,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These include, for example, checking that the legs have unique origins and destinations that match across the entire itinerary.",
+                    "sid": 167,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in Figure 3 the logical forms (a), (b) and (d) will have no violations; they describe valid flights.",
+                    "sid": 168,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Example (c) has a single violation: a flight has two origins.",
+                    "sid": 169,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Example (e) violates a more complex constraint: the second flight\u2019s origin is different from the first flight\u2019s destination.",
+                    "sid": 170,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 learning",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "Figure 4 presents the complete learning algorithm.",
+                    "sid": 171,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume access to training examples, {(ji,Ci) : dex ji of a sentence xi in the conversation Ci.",
+                    "sid": 172,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm learns a weighted CCG parser, described in Section 5, including both a lexicon \u039b and parameters \u03b8.",
+                    "sid": 173,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach is online, considering each example in turn and performing two steps: (1) expanding the lexicon and (2) updating the parameters.",
+                    "sid": 174,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Step 1: Lexical Induction We introduce new lexical items by selecting candidates from the function GENLEX, following previous work (Zettlemoyer and Collins, 2005; 2007) as reviewed in Section 5.3.",
+                    "sid": 175,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we face the new challenge that there is no labeled logical-form meaning z.",
+                    "sid": 176,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, let ZC\u00af be set of all logical forms that appear in system utterances in the relevant conversation segment \u00afC.",
+                    "sid": 177,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will now define the conversational lexicon set: where we use logical forms from system utterances to guess possible CCG categories for analyzing the user utterance.",
+                    "sid": 178,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach will overgeneralize, when the system talks about things that are unrelated to what the user said, and will also often be incomplete, for example when the system does not repeat parts of the original content.",
+                    "sid": 179,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it provides a way of guessing lexical items that can be combined with previously learned ones, which can fill in any gaps and help select the best analysis.",
+                    "sid": 180,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Step 1(a) in Figure 4 uses GENLEX to temporarily create a large set of potential categories based on the conversation.",
+                    "sid": 181,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Steps (b-d) select a small subset of these entries to add to the current lexicon \u039b: we find the k-best parses under the model, rerank them according to loss, find the lexical items used in the best trees, and add them to \u039b.",
+                    "sid": 182,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach favors lexical items that are used in highscoring but low-loss analyses, as computed given the current model.",
+                    "sid": 183,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Step 2: Parameter Updates Given the loss function G(x, i, C), we use a variant of a loss-sensitive perceptron to update the parameters (Singh-Miller and Collins, 2007).",
+                    "sid": 184,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Steps (a-c), for the current example i, we compute the relative loss function \u0394i that scales with the loss achieved by the best and worst possible parses under the model.",
+                    "sid": 185,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to previous work, we do not only compute the loss over a fixed n-best list of possible outputs, but instead use the current model score to recompute the options at each update.",
+                    "sid": 186,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, Steps (d-e) find the set Ri of least loss analyses and Ei of higher-loss candidates whose models scores are not separated by at least -y\u0394i, where -y is a margin scale constant.",
+                    "sid": 187,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final update (Step f) is additive and increases the parameters for features indicative of the analyses with less loss while down weighting those for parses that were not sufficiently separated.",
+                    "sid": 188,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discussion This algorithm uses the conversation to drive learning in two ways: it guides the lexical items that are proposed while also providing the conversational feedback that defines the loss used to update the parameters.",
+                    "sid": 189,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting approach is, at every step, using information about how the conversation progressed after a user utterance to reconstruct the meaning of the original statement.",
+                    "sid": 190,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "8 data sets",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "For evaluation, we used conversation logs from the Lucent and BBN dialog systems in the DARPA Communicator corpus (Walker et al., 2002).",
+                    "sid": 191,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We selected these systems since they provide significant opportunities for learning.",
+                    "sid": 192,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They asked relatively open ended questions, allowing for more complex user responses, while also using a number of simple remediating strategies to recover from misunderstandings.",
+                    "sid": 193,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The original conversational logs included unannotated transcripts of system and user utterances.",
+                    "sid": 194,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspired by the speech act labeling approach of Walker and Passonneau (2001), we wrote a set of scripts to label the speech acts and logical forms for system statements.",
+                    "sid": 195,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This could be done with high accuracy since the original text was generated with templates.",
+                    "sid": 196,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These labels represent what the system explicitly said and do not require complex, potentially error-prone annotation of the full state of the original dialog system.",
+                    "sid": 197,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of speech acts includes confirmations, information requests, selects, offers, instructions, and a miscellaneous category.",
+                    "sid": 198,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data sets include a total of 376 conversations, divided into training and testing sets.",
+                    "sid": 199,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 provides details about the training and testing sets, as well as general data set statistics.",
+                    "sid": 200,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We developed our system using 4-fold cross validation on the training sets.",
+                    "sid": 201,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although there are approximately 12,000 user utterances in the data sets, the vast majority are simple, short phrases (such as \u201cyes\u201d or \u201cno\u201d) which are not useful for learning a semantic parser.",
+                    "sid": 202,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We select user utterances with a small set of heuristics, including a threshold (6 for Lucent, 4 for BBN) on the number of words and requiring that at least one noun phrase is present from our initial lexicon.",
+                    "sid": 203,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach was manually developed to perform well on the training sets, but is not perfect and does introduce a small amount of noise into the data.",
+                    "sid": 204,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "9 experimental setup",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "This section describes our experimental setup and comparisons.",
+                    "sid": 205,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We follow the setup of Zettlemoyer and Collins (2007) where possible, including feature design, initialization of the semantic parser, and evaluation metrics, as reviewed below.",
+                    "sid": 206,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features and Parser The features include indicators for lexical item use, properties of the logical form that is being constructed, and indicators for parsing operators used to build the tree.",
+                    "sid": 207,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser attempts to boost recall with a two-pass strategy that allows for word skipping if the initial parse fails.",
+                    "sid": 208,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initialization and Parameters We use an initial lexicon that includes a list of domain-specific noun phrases, such as city and airport names, and a list of domain-independent categories for closed-class words such as \u201cthe\u201d and \u201cand\u201d.",
+                    "sid": 209,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also used a time and number parser to expand this lexicon for each input sentence with the BIU Number Normalizer.1 The learning parameters were tuned using the development sets: the margin constant y is set to 0.5, we use 6 iterations and take the top 30 parses for lexical generation (step 1, figure 4).",
+                    "sid": 210,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser used for parameter update (step 2, figure 4) has a beam of 250.",
+                    "sid": 211,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parameter vector is initialized to \u00af0.",
+                    "sid": 212,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation Metrics For evaluation, we measure performance against gold standard labels.",
+                    "sid": 213,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report both the number of exact matches, fully correct logical forms, and a partial-credit number.",
+                    "sid": 214,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We measure partial-credit accuracy by mapping logical forms to attribute-value pairs (for example, the expression from(x, LA) will be mapped to from = LA) and report precision and recall on attribute sets.",
+                    "sid": 215,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This more lenient measure does not test the overall structure of the logical expression, only its components.",
+                    "sid": 216,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Systems We compare performance with the following systems: Full Supervision: We measured how a fully supervised approach would perform on our data by handlabeling the training data and using a 0-1 loss function that tests if the output logical form matches the labeled one.",
+                    "sid": 217,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For lexicon generation, the labels were used instead of the conversation.",
+                    "sid": 218,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No Conversation Baseline: We also report results for a no conversation baseline.",
+                    "sid": 219,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This baseline system is constructed by making two modifications to the full approach.",
+                    "sid": 220,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We remove the conversation loss function and apply the GENLEX templates to every possible logical constant, instead of only those in the conversation.",
+                    "sid": 221,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This baseline allows us to measure the importance of having access to the conversations by completely ignoring the context for each sentence.",
+                    "sid": 222,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ablations: In addition to the baseline above, we also do ablation tests by turning off various individual components of the complete algorithm.",
+                    "sid": 223,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "10 results",
+            "number": "10",
+            "sents": [
+                {
+                    "text": "Table 2 shows exact match results for the development sets, including different system configurations.",
+                    "sid": 224,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report mean results across four folds.",
+                    "sid": 225,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To verify their contributions, we include results where we ablate the conversational loss and domain loss functions.",
+                    "sid": 226,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both are essential.",
+                    "sid": 227,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test results are listed in Table 3.",
+                    "sid": 228,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The full method significantly outperforms the baseline, indicating that we are making effective use of the conversational feedback, although we do not yet match the fully supervised result.",
+                    "sid": 229,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The poor baseline performance is not surprising, given the difficulty of the task and lack of guidance when the conversations are removed.",
+                    "sid": 230,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The partial-credit numbers also demonstrate an empirical trend that we observed; in many cases where we do not produce the correct logical form, the output is often close to correct, with only one or two missed flight constraints.",
+                    "sid": 231,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between the two systems is evident.",
+                    "sid": 232,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BBN system presents a simpler approach to the dialog problem by creating a more constrained conversation.",
+                    "sid": 233,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is done by handling one flight at a time, in the case of flight planing, and posing simple and close ended questions to the user.",
+                    "sid": 234,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such an approach encourages the user to make simpler requests, with relatively few constraints in each request.",
+                    "sid": 235,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the Lucent system presents a less-constrained approach: interactions start with an open ended prompt and the conversations flow in a more natural, less constrained fashion.",
+                    "sid": 236,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BBN\u2019s simplified approach makes it easier for learning, giving us superior performance when compared to the Lucent system, despite the smaller training set.",
+                    "sid": 237,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is true for both our approach and supervised learning.",
+                    "sid": 238,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared the logical forms recovered by the best conversational model to the labeled ones in the training set.",
+                    "sid": 239,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of the errors came from cases where the dialog system never fully recovered from confusions in the conversation.",
+                    "sid": 240,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the Lucent system almost never understood user utterances that specified flight arrival times.",
+                    "sid": 241,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since it was unable to consistently recover and introduce this constraint, the user would often just recalculate and specify a departure time that would achieve the original goal.",
+                    "sid": 242,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This type of failure provides no signal for our learning algorithm, whereas the fully supervised algorithm would use labeled logical forms to resolve the confusion.",
+                    "sid": 243,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, the test set had more sentences that suffered such failures than the development set, which contributed to the performance gap.",
+                    "sid": 244,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "11 discussion",
+            "number": "11",
+            "sents": [
+                {
+                    "text": "We presented a loss-driven learning approach that induces the lexicon and parameters of a CCG parser for mapping sentences to logical forms.",
+                    "sid": 245,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The loss was defined over the conversational context, without requiring annotation of user utterances meaning.",
+                    "sid": 246,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The overall approach assumes that, in aggregate, the conversations contain sufficient signal (remediations such as clarification, etc.) to learn effectively.",
+                    "sid": 247,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we satisfied this requirement by using logs from automated systems that deployed reasonably effective recovery strategies.",
+                    "sid": 248,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An important area for future work is to consider how this learning can be best integrated into a complete dialog system.",
+                    "sid": 249,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This would include designing remediation strategies that allow for the most effective learning and considering how similar techniques could be used simultaneously for other dialog subproblems.",
+                    "sid": 250,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "12",
+            "sents": [
+                {
+                    "text": "The research was supported by funding from the DARPA Computer Science Study Group.",
+                    "sid": 251,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thanks to Dan Weld, Raphael Hoffmann, Jonathan Berant, Hoifung Poon and Mark Yatskar for their suggestions and comments.",
+                    "sid": 252,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also thank Shachar Mirkin for providing access to the BIU Normalizer.",
+                    "sid": 253,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

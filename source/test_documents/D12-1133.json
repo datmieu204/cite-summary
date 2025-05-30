@@ -1,0 +1,1037 @@
+{
+    "ID": "D12-1133",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "A Transition-Based System for Joint Part-of-Speech Tagging and Labeled Non-Projective Dependency Parsing",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most current dependency parsers presuppose that input words have been morphologically disambiguated using a part-of-speech tagger before parsing begins.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a transitionbased system for joint part-of-speech tagging and labeled dependency parsing with nonprojective trees.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental evaluation on Chinese, Czech, English and German shows consistent improvements in both tagging and parsing accuracy when compared to a pipeline system, which lead to improved state-of-theart results for all languages.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Dependency-based syntactic parsing has been the focus of intense research efforts during the last decade, and the state of the art today is represented by globally normalized discriminative models that are induced using structured learning.",
+                    "sid": 4,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Graphbased models parameterize the parsing problem by the structure of the dependency graph and normally use dynamic programming for inference (McDonald et al., 2005; McDonald and Pereira, 2006; Carreras, 2007; Koo and Collins, 2010; Bohnet, 2010), but other inference methods have been explored especially for non-projective parsing (Riedel and Clarke, 2006; Smith and Eisner, 2008; Martins et al., 2009; Martins et al., 2010; Koo et al., 2010).",
+                    "sid": 5,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transitionbased models parameterize the problem by elementary parsing actions and typically use incremental beam search (Titov and Henderson, 2007; Zhang and Clark, 2008; Zhang and Clark, 2011).",
+                    "sid": 6,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Despite notable differences in model structure, graph-based and transition-based parsers both give state-of-theart accuracy with proper feature selection and optimization (Koo and Collins, 2010; Zhang and Nivre, 2011; Bohnet, 2011).",
+                    "sid": 7,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is noteworthy, however, that almost all dependency parsers presuppose that the words of an input sentence have been morphologically disambiguated using (at least) a part-of-speech tagger.",
+                    "sid": 8,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is in stark contrast to the best parsers based on PCFG models, such as the Brown parser (Charniak and Johnson, 2005) and the Berkeley parser (Petrov et al., 2006; Petrov and Klein, 2007), which not only can perform their own part-of-speech tagging but normally give better parsing accuracy when they are allowed to do so.",
+                    "sid": 9,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that joint models for tagging and parsing might improve accuracy also in the case of dependency parsing.",
+                    "sid": 10,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has been argued that joint morphological and syntactic disambiguation is especially important for richly inflected languages, where there is considerable interaction between morphology and syntax such that neither can be fully disambiguated without considering the other.",
+                    "sid": 11,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, Lee et al. (2011) show that a discriminative model for joint morphological disambiguation and dependency parsing outperforms a pipeline model in experiments on Latin, Ancient Greek, Czech and Hungarian.",
+                    "sid": 12,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, Li et al. (2011) and Hatori et al.",
+                    "sid": 13,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) report improvements with a joint model also for Chinese, which is not a richly inflected language but is nevertheless rich in part-of-speech ambiguities.",
+                    "sid": 14,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present a transition-based model for joint part-of-speech tagging and labeled dependency parsing with non-projective trees.",
+                    "sid": 15,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that joint modeling improves both tagging and parsing accuracy, leading to state-of-the-art accuracy for richly inflected languages like Czech and German as well as more configurational languages like Chinese and English.",
+                    "sid": 16,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To our knowledge, this is the first joint system that performs labeled dependency parsing.",
+                    "sid": 17,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also the first joint system that achieves state-of-the-art accuracy for non-projective dependency parsing.",
+                    "sid": 18,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 transition-based tagging and parsing",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Transition-based dependency parsing was pioneered by Yamada and Matsumoto (2003) and Nivre et al. (2004), who used classifiers trained to predict individual actions of a deterministic shift-reduce parser.",
+                    "sid": 19,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent research has shown that better accuracy can be achieved by using beam search and optimizing models on the entire sequence of decisions needed to parse a sentence instead of single actions (Zhang and Clark, 2008; Huang and Sagae, 2010; Zhang and Clark, 2011; Zhang and Nivre, 2011; Bohnet, 2011).",
+                    "sid": 20,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, a number of different transition systems have been proposed, in particular for dealing with non-projective dependencies, which were beyond the scope of early systems (Attardi, 2006; Nivre, 2007; Nivre, 2009; Titov et al., 2009).",
+                    "sid": 21,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we start by defining a transition system for joint tagging and parsing based on the non-projective transition system proposed in Nivre (2009).",
+                    "sid": 22,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then show how to perform beam search and structured online learning with this model, and conclude by discussing feature representations.",
+                    "sid": 23,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a set P of part-of-speech tags and a set D of dependency labels, a tagged dependency tree for a sentence x = w1, ... , wn is a directed tree T = (Vx, A) with labeling functions 7r and 6 such that: The set Vx of nodes is the set of positive integers up to and including n, each corresponding to the linear position of a word in the sentence, plus an extra artificial root node 0.",
+                    "sid": 24,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set A of arcs is a set of pairs (i, j), where i is the head node and j is the dependent node.",
+                    "sid": 25,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The functions 7r and 6 assign a unique part-of-speech label to each node/word and a unique dependency label to each arc, respectively.",
+                    "sid": 26,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This notion of dependency tree differs from the standard definition only by including part-of-speech labels as well as dependency labels (K\u00a8ubler et al., 2009).",
+                    "sid": 27,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Nivre (2008), we define a transition system for dependency parsing as a quadruple 5 = (C, T, cs, Ct), where A transition sequence for a sentence x in 5 is a sequence of configuration-transition pairs C0,m = In this paper, we take the set C of configurations to be the set of all 5-tuples c = (E, B, A, 7r, 6) such that E (the stack) and B (the buffer) are disjoint sublists of the nodes Vx of some sentence x, A is a set of dependency arcs over Vx, and 7r and 6 are labeling functions as defined above.",
+                    "sid": 28,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take the initial configuration for a sentence x = w1, ... , wn to be cs(x) = ([0], [1, ... , n], 11, 1, 1), where L is the function that is undefined for all arguments, and we take the set Ct of terminal configurations to be the set of all configurations of the form c = ([0], [ ], A, 7r, 6) (for any A, 7r and 6).",
+                    "sid": 29,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tagged dependency tree defined for x by c = (E, B, A, 7r, 6) is the tree (Vx, A) with labeling functions 7r and 6, which we write TREE(x, c).",
+                    "sid": 30,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set T of transitions is shown in Figure 1.",
+                    "sid": 31,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LEFT-ARCd and RIGHT-ARCd transitions both add an arc (with dependency label d) between the two nodes on top of the stack and replaces these nodes by the head node of the new arc (which is the rightmost node for LEFT-ARCd and the leftmost node for RIGHT-ARCd).",
+                    "sid": 32,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SHIFTp transition extracts the first node in the buffer, pushes it onto the stack and labels it with the part-of-speech tag p. The SWAP transition extracts the second topmost node from the stack and moves it back to the buffer, subject to the condition that the two top nodes on the stack are still in the order given by the sentence.",
+                    "sid": 33,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Except for the addition of a tag parameter p to the SHIFT transition, this is equivalent to the system described in Nivre (2009), which thanks to the SWAP transition can handle arbitrary non-projective trees.",
+                    "sid": 34,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The soundness and completeness results given in that paper trivially carry over to the new system.",
+                    "sid": 35,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only thing to note is that, before a terminal configuration can be reached, every word has to be pushed onto the stack in a SHIFTp transition, which ensures that every node/word in the output tree will be tagged.",
+                    "sid": 36,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While early transition-based parsers generally used greedy best-first inference and locally trained classifiers, recent work has shown that higher accuracy can be obtained using beam search and global structure learning to mitigate error propagation.",
+                    "sid": 37,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, it seems that the globally learned models can exploit a much richer feature space than locally trained classifiers, as shown by Zhang and Nivre (2011).",
+                    "sid": 38,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since joint tagging and parsing increases the size of the search space and is likely to require novel features, we use beam search in combination with structured perceptron learning.",
+                    "sid": 39,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The beam search algorithm used to derive the best parse y for a sentence x is outlined in Figure 2.",
+                    "sid": 40,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the sentence x, it takes as input a weight vector w corresponding to a linear model for scoring transitions out of configurations and two prunw and beam parameters b1 and b2.",
+                    "sid": 41,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The symbols h.c, h.s and h.f denote, respectively, the configuration, score and feature representation of a hypothesis h; h.c.A denotes the arc set of h.c. ing parameters b1 and b2.",
+                    "sid": 42,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A parse hypothesis h is represented by a configuration h.c, a score h.s and a feature vector h.f for the transition sequence up to h.c.",
+                    "sid": 43,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hypotheses are stored in the list BEAM, which is sorted by descending scores and initialized to hold the hypothesis h0 corresponding to the initial configuration cs(x) with score 0.0 and all features set to 0.0 (lines 1\u20134).",
+                    "sid": 44,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the main loop (lines 5\u201313), a set of new hypotheses is derived and stored in the list TMP, which is finally pruned and assigned as the new value of BEAM.",
+                    "sid": 45,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main loop terminates when all hypotheses in BEAM contain terminal configurations, and the dependency tree extracted from the top scoring hypothesis is returned (lines 14\u201316).",
+                    "sid": 46,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of new hypotheses is created in two nested loops (lines 7\u201312), where every hypothesis h in BEAM is updated using every permissible transition t for the configuration h.c.",
+                    "sid": 47,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature representation of the new hypothesis is obtained by adding the feature vector f(t, h.c) for the current configurationtransition pair to the feature vector of the old hypothesis (line 9).",
+                    "sid": 48,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, the score of the new hypothesis is the sum of the score f(t, h.c) \u00b7 w of the current configuration-transition pair and the score of the old hypothesis (line 10).",
+                    "sid": 49,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature representation/score of a complete parse y for x with transition sequence C0,m is thus the sum of the feature representations/scores of the configurationtransition pairs in C0,m: Finally, the configuration of the new hypothesis is obtained by evaluating t(h.c) (line 11).",
+                    "sid": 50,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new hypothesis is then inserted into TMP in score-sorted order (line 12).",
+                    "sid": 51,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pruning parameters b1 and b2 determine the number of hypotheses allowed in the beam and at the same time control the tradeoff between syntactic and morphological ambiguity.",
+                    "sid": 52,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we extract the b1 highest scoring hypotheses with distinct dependency trees.",
+                    "sid": 53,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we extract the b2 highest scoring remaining hypotheses, which will typically be tagging variants of dependency trees that are already in the beam.",
+                    "sid": 54,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, we prevent the beam from getting filled up with too many tagging variants of the same dependency tree, which was found to be harmful in preliminary experiments.",
+                    "sid": 55,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One final thing to note about the inference algorithm is that the notion of permissibility for a transition t out of a configuration c can be used to capture not only formal constraints on transitions \u2013 such as the fact that it is impossible to perform a SHIFTp transition with an empty buffer or illegal to perform a LEFT-ARCd transition with the special root node on top of the stack \u2013 but also to filter out unlikely dependency labels or tags.",
+                    "sid": 56,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, in the experiments later on, we will typically constrain the parser so that SHIFTp is permissible only if p is one of the k best part-of-speech tags with a score no more than \u03b1 below the score of the 1-best tag, as determined by a preprocessing tagger.",
+                    "sid": 57,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also filter out instances of LEFT-ARCd and RIGHT-ARCd, where d does not occur in the training data for the predicted part-ofspeech tag combination of the head and dependent.",
+                    "sid": 58,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This procedure leads to a significant speed up.",
+                    "sid": 59,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to learn a weight vector w from a training set {(xj, yj)1 j=1 of sentences with their tagged dependency trees, we use a variant of the structured perceptron, introduced by Collins (2002), which makes N iterations over the training data and updates the weight vector for every sentence xj where the highest scoring parse y* is different from yj.",
+                    "sid": 60,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More precisely, we use the passive-aggressive update of Crammer et al. (2006): where We also use the early update strategy found beneficial for parsing in several previous studies (Collins and Roark, 2004; Zhang and Clark, 2008; Huang and Sagae, 2010), which means that, during learning, we terminate the beam search as soon as the hypothesis corresponding to the gold parse yj falls out of the beam and update with respect to the partial transition sequence constructed up to that point.",
+                    "sid": 61,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we use the standard technique of averaging over all weight vectors, as originally proposed by Collins (2002).",
+                    "sid": 62,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As already noted, the feature representation f(x, y) of an input sentence x with parse y decomposes into feature representations f(c, t) for the transitions t(c) needed to derive y from cs(x).",
+                    "sid": 63,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features may refer to any aspect of a configuration, as encoded in the stack E, the buffer B, the arc set A and the labelings 7r and S. In addition, we assume that each word w in the input is assigned up to k candidate part-of-speech tags 7ri(w) with corresponding scores s(7ri(w)). use Ei and Bi to denote the ith token in the stack E and buffer B, respectively, with indexing starting at 0, and we use the following functors to extract properties of a token: \u03c0i() = ith best tag; s(\u03c0i()) = score of ith best tag; \u03c0() = finally predicted tag; w() = word form; pi() = word prefix of i characters; si() = word suffix of i characters.",
+                    "sid": 64,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Score differences are binned in discrete steps of 0.05.",
+                    "sid": 65,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bulk of features used in our system are taken from Zhang and Nivre (2011), although with two important differences.",
+                    "sid": 66,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First of all, like Hatori et al. (2011), we have omitted all features that presuppose an arc-eager parsing order, since our transition system defines an arc-standard order.",
+                    "sid": 67,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, any feature that refers to the part-of-speech tag of a word w in the buffer B will in our system refer to the topscoring tag \u03c01(w), rather than the finally predicted tag.",
+                    "sid": 68,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, for a word in the stack E, part-ofspeech features refer to the tag \u03c0(w) chosen when shifting w onto the stack (which may or may not be the same as \u03c01(w)).",
+                    "sid": 69,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the standard features for transitionbased dependency parsing, we have added features specifically to improve the tagging step in the joint model.",
+                    "sid": 70,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The templates for these features, which are specified in Figure 3, all involve the ith best tag assigned to the first word of the buffer B (the next word to be shifted in a SHIFTP transition) in combination with neighboring words, word prefixes, word suffixes, score differences and tag rank.",
+                    "sid": 71,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, in some experiments, we make use of two additional feature sets, which we call graph features (G) and cluster features (C), respectively.",
+                    "sid": 72,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Graph features are defined over the factors of a graph-based dependency parser, which was shown to improve the accuracy of a transition-based parser by Zhang and Clark (2008).",
+                    "sid": 73,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, while their features were limited to certain first- and second-order factors, we use features over second- and third-order factors as found in the parsers of Bohnet and Kuhn (2012).",
+                    "sid": 74,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features are scored as soon as the factors are completed, using a technique that is similar to what Hatori et al. (2011) call delayed features, although they use it for part-of-speech tags in the lookahead while we use it for subgraphs of the dependency tree.",
+                    "sid": 75,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cluster features, finally, are features over word clusters, as first used by Koo et al. (2008), which replace part-of-speech tag features.2 We use a hash kernel to map features to weights.",
+                    "sid": 76,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has been observed that most of the computing time in feature-rich parsers is spent retrieving the index of each feature in the weight vector (Bohnet, 2010).",
+                    "sid": 77,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is usually done via a hash table, but significant speedups can be achieved by using a hash kernel, which simply replaces table lookup by a hash function (Bloom, 1970; Shi et al., 2009; Bohnet, 2010).",
+                    "sid": 78,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The price to pay for these speedups is that there may be collisions, so that different features are mapped to the same index, but this is often compensated by the fact that the lower time and memory requirements of the hash kernel enables the use of negative features, that is, features that are never seen in the training set but occur in erroneous hypotheses at training time and can therefore be helpful also at inference time.",
+                    "sid": 79,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, the hash kernel often improves accuracy as well as efficiency compared to traditional techniques that only make use of features that occur in gold standard parses (Bohnet, 2010).",
+                    "sid": 80,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 experiments",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We have evaluated the model for joint tagging and dependency parsing on four typologically diverse languages: Chinese, Czech, English, and German.",
+                    "sid": 81,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the experiments use the CoNLL 2009 data sets with the training, development and test split used in the Shared Task (Haji\u02c7c et al., 2009), but for better comparison with previous work we also report results for the standard benchmark data sets for Chinese and English.",
+                    "sid": 82,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Chinese, this is the Penn Chinese Treebank 5.1 (CTB5), converted with the head-finding rules and conversion tools of Zhang and Clark (2008), and with the same split as in Zhang and Clark (2008) and Li et al. (2011).3 For English, this is the WSJ section of the Penn Treebank, converted with the head-finding rules of Yamada and Matsumoto (2003) and the labeling rules of Nivre (2006).4 In order to assign k-best part-of-speech tags and scores to words in the training set, we used a perceptron tagger with 10-fold jack-knifing.",
+                    "sid": 83,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same type of tagger was trained on the entire training set in order to supply tags for the development and test sets.",
+                    "sid": 84,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature set of the tagger was optimized for English and German and provides state-of-theart accuracy for these two languages.",
+                    "sid": 85,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 1-best tagging accuracy for section 23 of the Penn Treebank is 97.28, which is on a par with Toutanova et al. (2003).",
+                    "sid": 86,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For German, we obtain a tagging accuracy of 97.24, which is close to the 97.39 achieved by the RF-Tagger (Schmid and Laws, 2008), which to our knowledge is the best tagger for German.5 The results are not directly comparable to the RF-Tagger as it was evaluated on a different part of the Tiger Treebank and trained on a larger part of the Treebank.",
+                    "sid": 87,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We could not use the larger training set as it contains the test set of the CoNLL 2009 data that we use to evaluate the joint model.",
+                    "sid": 88,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Czech, the 1best tagging accuracy is 99.11 and for Chinese 92.65 on the CoNLL 2009 test set.",
+                    "sid": 89,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained parsers with 25 iterations and report results for the model obtained after the last iteration.",
+                    "sid": 90,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For cluster features, available only for English and German, we used standard Brown clusters based on the English and German Gigaword Corpus.",
+                    "sid": 91,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We restricted the vocabulary to words that occur at least 10 times, used 800 clusters, and took cluster prefixes of length 6 to define features.",
+                    "sid": 92,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report the following evaluation metrics: partof-speech accuracy (POS), unlabeled attachment score (UAS), labeled attachment score (LAS), and tagged labeled attachment score (TLAS).",
+                    "sid": 93,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TLAS is a new metric defined as the percentage of words that are assigned the correct part-of-speech tag, the correct head and the correct dependency label.",
+                    "sid": 94,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In line with previous work, punctuation is included in the evaluation for the CoNLL data sets but excluded for the two benchmark data sets.",
+                    "sid": 95,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 presents results on the development sets of the CoNLL 2009 shared task with varying values of the two tag parameters k (number of candidates) and \u03b1 (maximum score difference to 1-best tag) and beam parameters fixed at b1 = 40 and b2 = 4.",
+                    "sid": 96,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the combined TLAS score on the development set to select the optimal settings for each language.",
+                    "sid": 97,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Chinese, we obtain the best result with 3 tags and a threshold of 0.1.6 Compared to the baseline, we observe a POS improvement of 0.60 and a LAS improvement of 0.51.",
+                    "sid": 98,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Czech, we get the best TLAS with k = 3 and \u03b1 = 0.2, where POS improves by 0.06 and LAS by 0.46.",
+                    "sid": 99,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For English, the best setting is k = 2 and \u03b1 = 0.1 with a POS improvement of 0.17 and a LAS improvement of 0.62.",
+                    "sid": 100,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For German, finally, we see the greatest improvement with k = 3 the updated scores later reported due to some improvements of the parser.",
+                    "sid": 101,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rows 3\u20134: Baseline (k = 1) and best settings for k and \u03b1 on development set.",
+                    "sid": 102,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rows 5\u20136: Wider beam (b1 = 80) and added graph features (G) and cluster features (C).",
+                    "sid": 103,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second beam parameter b2 fixed at 4 in all cases. and \u03b1 = 0.3, where POS improves by 0.66 and LAS by 0.86.",
+                    "sid": 104,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows the results on the CoNLL 2009 test sets.",
+                    "sid": 105,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all languages except English, we obtain state-of-the-art results already with bi = 40 (row 4), and for all languages both tagging and parsing accuracy improve compared to the baseline (row 3).",
+                    "sid": 106,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement in TLAS is statistically significant with p < 0.01 for all languages (paired t-test).",
+                    "sid": 107,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Row 5 shows the scores with a beam of 80 and the additional graph features.",
+                    "sid": 108,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here the LAS scores for Chinese, Czech and German are higher than the best results on the CoNLL 2009 data sets, and the score for English is highly competitive.",
+                    "sid": 109,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Chinese, we achieve 78.51 LAS, which is 1.5 percentage points higher than the reference score, while the POS score is 0.54 higher than our baseline.",
+                    "sid": 110,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Czech, we get 83.73 LAS, which is by far the highest score reported for this data set, together with state-of-the-art POS accuracy.",
+                    "sid": 111,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For German, we obtain 89.05 LAS and 97.78 POS, which in both cases is substantially better than in the CoNLL shared task.",
+                    "sid": 112,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe it is also the highest POS accuracy ever reported for a tagger/parser trained only on the Tiger Treebank.",
+                    "sid": 113,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Row 6, finally, presents results with added cluster features for English and German, which results in additional improvements in all metrics.",
+                    "sid": 114,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 gives the results for the Penn Treebank converted with the head-finding rules of Yamada and Matsumoto (2003) and the labeling rules of Nivre (2006).",
+                    "sid": 115,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use k = 3 and \u03b1 = 0.4, which gave the best results on the development set.",
+                    "sid": 116,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The UAS improves by 0.24 when we do joint tagging and parsing.",
+                    "sid": 117,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The POS accuracy improves slightly by 0.12 but to a lower degree than for the English CoNLL data where we observed an improvement of 0.20.",
+                    "sid": 118,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonetheless, the improvement in the joint TLAS score is statistically significant at p < 0.01 (paired t-test).",
+                    "sid": 119,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our joint tagger and dependency parser with graph features gives very competitive unlabeled dependency scores for English with 93.38 UAS.",
+                    "sid": 120,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To the best of our knowledge, this is the highest score reported for a (transition-based) dependency parser that does not use additional information sources.",
+                    "sid": 121,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By adding cluster features and widening the beam to bi = 80, we achieve 93.67 UAS.",
+                    "sid": 122,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also obtain a POS accuracy of 97.42, which is on a par with the best results obtained using semi-supervised taggers (S\u00f8gaard, 2011).",
+                    "sid": 123,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows the results for the Chinese Penn Treebank CTB 5.1 together with related work.",
+                    "sid": 124,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In experiments with the development set, we could confirm the results from the Chinese CoNLL data set and obtained the best results with the same settings (k = 3, \u03b1 = 0.1).",
+                    "sid": 125,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With bi = 40, UAS improves by 0.25 and POS by 0.30, and the TLAS improvement is again highly significant (p < 0.01, paired t-test).",
+                    "sid": 126,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We get the highest UAS, 81.42, with a beam of 80 and added graph features, in which case POS accuracy increases from 92.81 to 93.24.",
+                    "sid": 127,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our tagger was not optimized for Chinese, we have lower baseline results for the tagger than both Li et al. (2011) and Hatori et al.",
+                    "sid": 128,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) but still manage to achieve the highest reported UAS.",
+                    "sid": 129,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The speed of the joint tagger and dependency parser is quite reasonable with about 0.4 seconds per sentence on the WSJ-PTB test set, given that we perform tagging and labeled parsing with a beam of 80 while incorporating the features of a third-order graph-based model.",
+                    "sid": 130,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments were performed on a computer with an Intel i7-3960X CPU (3.3 GHz and 6 cores).",
+                    "sid": 131,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These performance values are preliminary since we are still working on the speed-up of the parser.",
+                    "sid": 132,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to better understand the benefits of the joint model, we performed an error analysis for German parts of speech in German with F-scores for the left-handside category.",
+                    "sid": 133,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ADJ* (ADJD or ADJA) = adjective; ADV = adverb; ART = determiner; APPR = preposition; NE = proper noun; NN = common noun; PRELS = relative pronoun; VVFIN = finite verb; VVINF = non-finite verb; VAFIN = finite auxiliary verb; VAINF = non-finite auxiliary verb; VVPP = participle; XY = not a word.",
+                    "sid": 134,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use \u03b1* to denote the set of categories with \u03b1 as a prefix. and English, where we compared the baseline and the joint model with respect to F-scores for individual part-of-speech categories and dependency labels.",
+                    "sid": 135,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the part-of-speech categories, we found an improvement across the board for both languages, with no category having a significant decrease in F-score, but we also found some interesting patterns for categories that improved more than the average.",
+                    "sid": 136,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 shows selected entries from the confusion matrix for German, where we see substantial improvements for finite and non-finite verbs, which are often morphologically ambiguous but which can be disambiguated using syntactic context.",
+                    "sid": 137,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also see improved accuracies for common and proper nouns, which are both capitalized in standard German orthography and therefore often mistagged, and for relative pronouns, which are less often confused for determiners in the joint model.",
+                    "sid": 138,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 gives a similar snapshot for English, and we again see improvements for verb categories that are often morphologically ambiguous, such as past participles, which can be confused for past tense verbs, and present tense verbs in third person singular, which can be confused for nouns.",
+                    "sid": 139,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also see some improvement for the singular noun categoparts of speech in English with F-scores for the left-handside category.",
+                    "sid": 140,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DT = determiner; IN = preposition or subordinating conjunction; JJ = adjective; JJR = comparative adjective; NN = singular or mass noun; NNS = plural noun; POS = possessive clitic; RB = adverb; RBR = comparative adverb; RP = particle; UH = interjection; VB = base form verb; VBD = past tense verb; VBG = gerund or present participle; VBN = past participle; VBP = present tense verb, not 3rd person singular; VBZ = present tense verb, 3rd person singular.",
+                    "sid": 141,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use \u03b1* to denote the set of categories with \u03b1 as a prefix. ry and for adverbs, which are less often confused for prepositions or subordinating conjunctions thanks to the syntactic information in the joint model.",
+                    "sid": 142,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For dependency labels, it is hard to extract any striking patterns and it seems that we mainly see an improvement in overall parsing accuracy thanks to less severe tagging errors.",
+                    "sid": 143,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is worth observing that, for both English and German, we see significant F-score improvements for the core grammatical functions subject (91.3 \u2014* 92.1 for German, 95.6 \u2014* 96.1 for English) and object (86.9 \u2014* 87.9 for German, 90.2 \u2014* 91.9 for English).",
+                    "sid": 144,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 related work",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Our work is most closely related to Lee et al. (2011), Li et al.",
+                    "sid": 145,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) and Hatori et al. (2011), who all present discriminative models for joint tagging and dependency parsing.",
+                    "sid": 146,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, all three models only perform unlabeled parsing, while our model incorporates dependency labels into the parsing process.",
+                    "sid": 147,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whereas Lee et al. (2011) and Li et al.",
+                    "sid": 148,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) take a graph-based approach to dependency parsing, Hatori et al. (2011) use a transition-based model similar to ours but limited to projective dependency trees.",
+                    "sid": 149,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both Li et al. (2011) and Hatori et al.",
+                    "sid": 150,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) only evaluate their model on Chinese, and of these only Hatori et al. (2011) report consistent improvements in both tagging and parsing accuracy.",
+                    "sid": 151,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like our system, the parser of Lee et al. (2011) can handle nonprojective trees and experimental results are presented for four languages, but their graph-based model is relatively simple and the baselines therefore well below the state of the art.",
+                    "sid": 152,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are thus the first to show consistent improvements in both tagging and (labeled) parsing accuracy across typologically diverse languages at the state-of-the-art level.",
+                    "sid": 153,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, the capacity to handle non-projective dependencies, which is crucial to attain good performance on Czech and German, does not seem to hurt performance on English and Chinese, where the benchmark sets contain only projective trees.",
+                    "sid": 154,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of beam search in transition-based dependency parsing in order to mitigate the problem of error propagation was first proposed by Johansson and Nugues (2006), although they still used a locally trained model.",
+                    "sid": 155,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Globally normalized models were first explored by Titov and Henderson (2007), who were also the first to use a parameterized SHIFT transition like the one found in both Hatori et al. (2011) and our own work, although Titov and Henderson (2007) used it to define a generative model by parameterizing the SHIFT transition by an input word.",
+                    "sid": 156,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhang and Clark (2008) was the first to combine beam search with a globally normalized discriminative model, using structured perceptron learning and the early update strategy of Collins and Roark (2004), and also explored the addition of graphbased features to a transition-based parser.",
+                    "sid": 157,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach was further pursued in Zhang and Clark (2011) and was used by Zhang and Nivre (2011) to achieve state-of-the-art results in dependency parsing for both Chinese and English through the addition of rich non-local features.",
+                    "sid": 158,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Huang and Sagae (2010) combined structured perceptron learning and beam search with the use of a graph-structured stack to allow ambiguity packing in the beam, a technique that was reused by Hatori et al. (2011).",
+                    "sid": 159,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, as noted in the introduction, although joint tagging and parsing is rare in dependency parsing, most state-of-the-art parsers based on PCFG models naturally incorporate part-of-speech tagging and usually achieve better parsing accuracy (albeit not always tagging accuracy) with a joint model than with a pipeline approach (Collins, 1997; Charniak, 2000; Charniak and Johnson, 2005; Petrov et al., 2006).",
+                    "sid": 160,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Models that in addition incorporate morphological analysis and segmentation have been explored by Tsarfaty (2006), Cohen and Smith (2007), and Goldberg and Tsarfaty (2008) with special reference to Hebrew parsing.",
+                    "sid": 161,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 conclusion",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We have presented the first system for joint partof-speech tagging and labeled dependency parsing with non-projective dependency trees.",
+                    "sid": 162,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation on four languages shows consistent improvements in both tagging and parsing accuracy over a pipeline system with state-of-the-art results across the board.",
+                    "sid": 163,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The error analysis reveals improvements in tagging accuracy for syntactically central categories, mainly verbs, with improvement in syntactic accuracy for core grammatical functions as a result.",
+                    "sid": 164,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work we intend to explore joint models that incorporate not only basic part-of-speech tags but also more fine-grained morphological features.",
+                    "sid": 165,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

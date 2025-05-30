@@ -1,0 +1,1247 @@
+{
+    "ID": "P13-1110",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Recent advances in large-margin learning have shown that better generalization can be achieved by incorporating higher order information into the optimization, such as the spread of the data.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these solutions are impractical in complex structured prediction problems such as statistical machine translation.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present an online gradient-based algorithm for relative margin maximization, which bounds the spread of the projected data while maximizing the margin.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate our optimizer on ChineseEnglish and ArabicEnglish translation tasks, each with small and large feature sets, and show that our learner is able to achieve significant improvements of 1.22 BLEU and 1.74.3 TER on average over state-of-the-art optimizers with the large feature set.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The desire to incorporate high-dimensional sparse feature representations into statistical machine translation (SMT) models has driven recent research away from Minimum Error Rate Training (MERT) (Och, 2003), and toward other discriminative methods that can optimize more features.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples include minimum risk (Smith and Eisner, 2006), pairwise ranking (PRO) (Hopkins and May, 2011), RAMPION (Gimpel and Smith, 2012), and variations of the margin-infused relaxation algorithm (MIRA) (Watanabe et al., 2007; Chiang et al., 2008; Cherry and Foster, 2012).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the objective function and optimization method vary for each optimizer, they can all be broadly described as learning a linear model, or parameter vector w, which is used to score alternative translation hypotheses.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In every SMT system, and in machine learning in general, the goal of learning is to find a model that generalizes well, i.e. one that will yield good translations for previously unseen sentences.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, as the dimension of the feature space increases, generalization becomes increasingly difficult.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since only a small portion of all (sparse) features may be observed in a relatively small fixed set of instances during tuning, we are prone to overfit the training data.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An alternative approach for solving this problem is estimating discriminative feature weights directly on the training bi- text (Tillmann and Zhang, 2006; Blunsom et al., 2008; Simianer et al., 2012), which is usually substantially larger than the tuning set, but this is complementary to our goal here of better generalization given a fixed size tuning set.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to achieve that goal, we need to carefully choose what objective to optimize, and how to perform parameter estimation of w for this objective.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focus on large-margin methods such as SVM (Joachims, 1998) and passive-aggressive algorithms such as MIRA.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuitively these seek a w such that the separating distance in geometric space of two hypotheses is at least as large as the cost incurred by selecting the incorrect one.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This criterion performs well in practice at finding a linear separator in high-dimensional feature spaces (Tsochantaridis et al., 2004; Crammer et al., 2006).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now, recent advances in machine learning have shown that the generalization ability of these learners can be improved by utilizing second order information, as in the Second Order Perceptron (CesaBianchi et al., 2005), Gaussian Margin Machines (Crammer et al., 2009b), confidence- weighted learning (Dredze and Crammer, 2008), AROW (Crammer et al., 2009a; Chiang, 2012) and Relative Margin Machines (RMM) (Shivaswamy and Jebara, 2009b).",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The latter, RMM, was introduced as an effective and less computationally expensive way to incorporate the spread of the data \u2013 second order information about the 1116 Proceedings of the 51st Annual Meeting of the Association for Computational Linguistics, pages 1116\u20131126, Sofia, Bulgaria, August 49 2013.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2013 Association for Computational Linguistics distance between hypotheses when projected onto the line defined by the weight vector w. Unfortunately, not all advances in machine learning are easy to apply to structured prediction problems such as SMT; the latter often involve latent variables and surrogate references, resulting in loss functions that have not been well explored in machine learning (Mcallester and Keshet, 2011; Gimpel and Smith, 2012).",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although Shivaswamy and Jebara extended RMM to handle sequential structured prediction (Shivaswamy and Jebara, even where previously MERT was shown to be advantageous (\u00a75).",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we discuss the spread and other key issues of RM (\u00a76), and conclude with discussion of future work (\u00a77).",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "learning in smt. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Given an input sentence in the source language x \u2208 X , we want to produce a translation y \u2208 Y(x) using a linear model parameterized by a weight vector w: 2009a), their batch approach to quadratic optimization, using existing off-the-shelf QP solvers, does not provide a practical solution: as Taskar et (y\u2217, d\u2217) = arg max (y,d)\u2208Y(x),D(x) w f (x, y, d) al.",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) observe, \u201coff-the-shelf QP solvers tend to scale poorly with problem and training sample size\u201d for structured prediction problems..",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This motivates an online gradient-based optimization approach\u2014an approach that is particularly attractive because its simple update is well suited for efficiently processing structured objects with sparse features (Crammer et al., 2012).",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contributions of this paper include (1) introduction of a loss function for structured RMM in the SMT setting, with surrogate reference translations and latent variables; (2) an online gradient- based solver, RM, with a closed-form parameter update to optimize the relative margin loss; and (3) an efficient implementation that integrates well with the open source cdec SMT system (Dyer et al., 2010).1 In addition, (4) as our solution is not dependent on any specific QP solver, it can be easily incorporated into practically any gradient- based learning algorithm.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After background discussion on learning inSMT (\u00a72), we introduce a novel online learning al gorithm for relative margin maximization suitable for SMT (\u00a73).",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we introduce RMM (\u00a73.1) and propose a latent structured relative margin objective which incorporates cost-augmented hypothesis selection and latent variables.",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we derive a simple closed-form online update necessary to create a large margin solution while simultaneously bounding the spread of the projection ofthe data (\u00a73.2).",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ChineseEnglish translation exper iments show that our algorithm, RM, significantly outperforms strong state-of-the-art optimizers, in both a basic feature setting and high-dimensional(sparse) feature space (\u00a74).",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additional Arabic English experiments further validate these results, where w f (x, y, d) is the weighted feature scoring function, hereafter s(x, y, d), and Y(x) is the space of possible translations of x. While many derivations d \u2208 D(x) can produce a given transla tion, we are only able to observe y; thus we model d as a latent variable.",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although our models are actually defined over derivations, they are always paired with translations, so our feature function f (x, y, d) is defined over derivation\u2013translation pairs.2 The learning goal is then to estimate w. The instability of MERT in larger feature sets (Foster and Kuhn, 2009; Hopkins and May, 2011), has motivated many alternative tuning methods for SMT.",
+                    "sid": 30,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These include strategies based on batch log-linear models (Tillmann and Zhang, 2006; Blunsom et al., 2008), as well as the introduction of online linear models (Liang et al., 2006a; Arun and Koehn, 2007).",
+                    "sid": 31,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent batch optimizers, PRO and RAMPION, and Batch-MIRA (Cherry and Foster, 2012), have been partly motivated by existing MT infrastructures, as they iterate between decoding the entire tuning set and optimizing the parameters.",
+                    "sid": 32,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PRO considers tuning a classification problem and employs a binary classifier to rank pairs of outputs.",
+                    "sid": 33,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RAMPION aims to address the disconnect between MT and machine learning by optimizing a structured ramp loss with a concave-convex procedure.",
+                    "sid": 34,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Large-Margin Learning.",
+                    "sid": 35,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Online large-margin algorithms, such as MIRA, have also gained prominence in SMT, thanks to their ability to learn models in high-dimensional feature spaces (Watanabe et al., 2007; Chiang et al., 2009).",
+                    "sid": 36,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The usual presentation of MIRA\u2019s optimization problem is given as a quadratic program: 1 https://github.com/veidel/cdec 2 We may omit d in some equations.",
+                    "sid": 37,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "for clarity.",
+                    "sid": 38,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "wt+1 = arg min w ||w \u2212 wt||2 + C \u03bei (1) s.t. s(xi, yi, d) \u2212 s(xi, y1, d) \u2265 \u2206i(y1) \u2212 \u03bei where y1 is the single most violated constraint, the cost \u2206i(y) is computed using an external measure of quality, such as 1BLEU(yi, y), and a slack variable \u03bei is introduced to allow for non-separable instances.",
+                    "sid": 39,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C acts as a regularization parameter, trading off between margin maximization and constraint violations.",
+                    "sid": 40,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While solving the optimization problem relies on computing the margin between the correct output yi, and y1, in SMT our decoder is often inca pable of producing the reference translation, i.e. yi \u2208/ Y(xi).",
+                    "sid": 41,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We must instead resort to selecting a surrogate reference, y+ \u2208 Y(xi).",
+                    "sid": 42,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This issue has recently received considerable attention (Liang et al., 2006a; Eidelman, 2012; Chiang, 2012), with preference given to surrogate references obtained through cost-diminished hypothesis selection.",
+                    "sid": 43,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, y+ is selected based on a combination of model score and error metric from the k-best list produced by our current model.",
+                    "sid": 44,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A similar selection is made for the cost-augmented hypothesis y\u2212 \u2208 Y(xi): (b) Figure 1: (a) RM and large margin solution comparison and (b) the spread of the projections given by each.",
+                    "sid": 45,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RM and large margin solutions are shown with a darker dotted line and a darker solid line, respectively.",
+                    "sid": 46,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the relative margin machine in smt. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 Relative Margin Machine.",
+                    "sid": 47,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The margin, the distance between the correct hypothesis and incorrect one, is defined bys(x , y+, d+) and s(x , y\u2212, d\u2212).",
+                    "sid": 48,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is maxi i i (y+, d+) \u2190 arg max (y,d)\u2208Y(xi ),D(xi ) s(xi, y, d) \u2212 \u2206i(y) mized by minimizing the norm in SVM, or analogously, the proximity constraint in MIRA: 1 2 (y\u2212, d\u2212) \u2190 arg max (y,d)\u2208Y(xi ),D(xi ) s(xi, y, d) + \u2206i(y) arg minw 2 ||w \u2212 wt|| . However, theoretical re sults supporting large-margin learning, such as the In this setting, the optimization problem becomes: 1 VC-dimension (Vapnik, 1995) or the Rademacher bound (Bartlett and Mendelson, 2003) consider wt+1 = arg min w ||w \u2212 wt||2 + C \u03bei (2) measures of complexity, in addition to the empir ical performance, when describing future predic s.t. \u03b4s(xi, y+, y\u2212) \u2265 \u2206i(y\u2212) \u2212 \u2206i(y+) \u2212 \u03bei where \u03b4s(xi, y+, y\u2212)=s(xi, y+, d+)-s(xi, y\u2212, d\u2212) This leads to a variant of the structured ramp loss to be optimized: = tive ability.",
+                    "sid": 49,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The measures of complexity usually take the form of some value on the radius of the data, such as the ratio of the radius of the data to the margin (Shivaswamy and Jebara, 2009a).",
+                    "sid": 50,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As radius is a way of measuring spread in any projection direction, here we will specifically be in \u2212 max (y+ ,d+ )\u2208Y(xi ),D(xi ) + max (y\u2212,d\u2212)\u2208Y(xi ),D(xi ) s(xi, y+, d+) \u2212 \u2206i(y+) s(xi, y\u2212, d\u2212) + \u2206i(y\u2212) (3) terested in the the spread of the data as measured after the projection defined by the learned model w. More formally, the spread is the distance between y+, and the worst candidate The passive-aggressive update (Crammer et al., (yw , dw ) \u2190 arg min(y,d) (xi ),D (xi ) s(xi, y, d),2006), which is used to solve this problem, up dates w on each round such that the score of the correct hypothesis y+ is greater than the score of the incorrect y\u2212 by a margin at least as large as the cost incurred by predicting the incorrect hypothesis, while keeping the change to w small.",
+                    "sid": 51,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "after projecting both onto the line defined by the weight vector w. For each y1, this projection is conveniently given by s(xi, y1, d), thus the spread is calculated as \u03b4s(xi, y+, yw ).",
+                    "sid": 52,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RMM was introduced as a generalization over SVM that incorporates both the margin constraint and information regarding the spread of the data.",
+                    "sid": 53,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relative margin is the ratio of the absolute, or maximum margin, to the spread of the projected data.",
+                    "sid": 54,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, the RMM learns a large margin solution relative to the spread of the data, or in other words, creates a max margin while simultaneously bounding the spread of the projected data.",
+                    "sid": 55,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a concrete example, consider the plot shown in Figure 1(a), with hypotheses represented by two-dimensional feature vectors.",
+                    "sid": 56,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The point marked with a circle in the upper right represents f (xi, y+), while all other squares represent alter native incorrect hypotheses f (xi, y1).",
+                    "sid": 57,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The large margin decision boundary is shown with a darker solid line, while the relative margin solution is shown with a darker dotted line.",
+                    "sid": 58,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lighter lines parallel to each define the margins, with the square at the intersection being f (xi, y\u2212).",
+                    "sid": 59,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bottom portion of Figure 1(b) presents an alternative view of each solution, showing the projections of the cient optimization procedure that does not require batch training or an off-the-shelf QP solver.",
+                    "sid": 60,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 RM Algorithm.",
+                    "sid": 61,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We address the above-mentioned limitations by introducing a novel online learning algorithm for relative margin maximization, RM.",
+                    "sid": 62,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relative margin solution is obtained by maximizing the same margin as Equation (2), but now with respect to the distance between y+, and the worst candidate yw . Thus, the relative margin dictates trading-off between a large margin as before, and a small spread of the projection, in other words, bounding the distance between y+ and yw . The additional computation required, namely, obtaining yw , is efficient to perform, and has likely already happened while obtaining the k-best derivations necessary for the margin update.",
+                    "sid": 63,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The online latent structured soft relative margin optimization problem is then: hypotheses given the learned model of each.",
+                    "sid": 64,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that with a large margin solution, although the wt+1 = arg min w ||w \u2212 wt||2 + C \u03bei + D\u03c4i distance between y+ and y\u2212 is greater, the points are highly spread, extending far to the left of the decision boundary.",
+                    "sid": 65,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, with a relative margin, although we have a smaller absolute margin, the spread is smaller, all points being within a smaller distance E of the decision boundary.",
+                    "sid": 66,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The higher the spread of the projection, the higher the variance of the projected points, and the greater the likelihood that we will mislabel a new instance, since the high variance projections may cross the learned decision boundary.",
+                    "sid": 67,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In higher dimensions, accounting for the spread becomes even more crucial, as will be discussed in Section 6.3 Although RMM is theoretically well-founded and improves practical performance over large s.t.: \u03b4s(xi, y+, y\u2212) \u2265 \u2206i(y\u2212) \u2212 \u2206i(y+) \u2212 \u03bei \u2212 B \u2212 \u03c4i \u2264 \u03b4s(xi, y+, yw ) \u2264 B + \u03c4i (4) where additional bounding constraints are added to the usual margin constraints in order to contain the spread by bounding the difference in projections.",
+                    "sid": 68,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B is an additional parameter; it controls the spread, trading off between margin maximization and spread minimization.",
+                    "sid": 69,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that when B \u2192 \u221e, the bounding constraints disappear, andwe are left with the original problem in Equa tion (2).",
+                    "sid": 70,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "D, which plays an analogous role to C , allows penalized violations of the bounding constraints.",
+                    "sid": 71,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dual of Equation (4) can be derived as: margin learning in the settings where it was introduced, it is unsuitable for most complex structured max = \u03b1,\u03b2,\u03b2\u2217 y\u2208Y (xi ) I \u03b1y \u2212 B y\u2208Y (xi ) \u03b2y \u2212 B \u2217 y\u2208Y (xi ) prediction in NLP.",
+                    "sid": 72,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonetheless, since structured RMM is a generalization of Structured SVM, \u2212 1 \u03b1 \u03c9 (y+ , y) \u2212 2 y i y\u2208Y (xi ) \u03b2y \u03c9i (y+ , y) y\u2208Y (xi ) which shares its underlying objective with MIRA, our intuition is that SMT should be able to benefit + \u03b2\u2217\u03c9 (y+ , y), y i y\u2208Y (xi ) as well.",
+                    "sid": 73,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But to take advantage of the second-order information RMM utilizes for increased general y \u2208Y (xj ) \u03b1y \u03c9j (y , y ) \u2212 y \u2208Y (xj ) \u03b2y \u03c9j (y , y )izability in SMT, we need a computationally effi 3 The motivation of confidence-weighted estimation (Dredze and Crammer, 2008) and AROW (Crammer et al., 2009a) is related in spirit.",
+                    "sid": 74,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use second-order + y \u2208Y (xj ) y \u03c9j (y \\ , y ) (5) information in the form of a distribution over weights to change the maximum margin solution.",
+                    "sid": 75,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where the \u03b1 Lagrange multiplier corresponds to the standard margin constraint, while \u03b2 and \u03b2\u2217 each correspond to a bounding constraint, and \u03c9i(y+, y1) corresponds to the difference of Algorithm 2 RM update with \u03b1, \u03b2, \u03b2\u2217 1: procedure OPTIMIZE(w, S1 , S2 , S3 , C, B)f (xi, y+, d+) and f (xi, y1, d1).",
+                    "sid": 76,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weight up 2: while w changes do i i i 3: if 1 > 1 then date can then be obtained from the dual variables: 4: UPDATEMARGIN(w, S1 , C ) 5: end if 2 y \u03c9 (y+ , y) 6: if Si > 1 then \u03b1y \u03c9i (y+ , y) \u2212 \u03b2y \u03c9i (y+ , y) + \u03b2\u2217 i 7: UPDATEUPPERBOUND(w, S2 , B) (6) 8: end if 9: if S3 > 1 then iThe dual in Equation (5) can be optimized us 10: UPDATELOWERBOUND(w, S3 , B) ing a cutting plane algorithm, an effective method for solving a relaxed optimization problem in the dual, used in Structured SVM, MIRA, and 11: end if 12: end while 13: end procedure 14: procedure UPDATEMARGIN(w, S1 , C ) RMM (Tsochantaridis et al., 2004; Chiang, 2012; 15: \u03b1y \u2190 0 for all y \u2208 1 16: \u03b1y+ \u2190 C Shivaswamy and Jebara, 2009a).",
+                    "sid": 77,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cutting plane presented in Alg.",
+                    "sid": 78,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 decomposes the overall problem into subproblems which are solved independently by creating working sets Sj , which correspond to the largest violations of either the margin constraint, or bounding constraints, and iteratively satisfying the constraints in each set.",
+                    "sid": 79,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cutting plane in Alg.",
+                    "sid": 80,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 makes use of the i 17: for n \u2190 1...M axI ter do 18: Select two constraints y, y from S1 i 19: \u2206i (y )\u2212\u2206i (y)\u2212\u03b4s(xi , y, y ) ||\u03c9(y,y )||2 20: \u03b3\u03b1 \u2190 max(\u2212\u03b1y , min(\u03b1y , \u03b3\u03b1 )) 21: \u03b1y \u2190 \u03b1y + \u03b3\u03b1 ; \u03b1y \u2190 \u03b1y \u2212 \u03b3\u03b1 22: w \u2190 w + \u03b3\u03b1 (\u03c9(y, y )) 23: end for 24: end procedure 25: procedure UPDATEUPPERBOUND(w, S2 , B) 26: \u03b2y \u2190 0 for all y \u2208 S2the closed-form gradient-based updates we de 27: for n \u2190 1...M axI ter do rived for RM presented in Alg.",
+                    "sid": 81,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 82,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The updates 28: Select one constraint y from S2 amount to performing a subgradient descent step to update w in accordance with the constraints.",
+                    "sid": 83,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "29: \u03b3\u03b2 \u2190 max(0, 30: \u03b2y \u2190 \u03b2y + \u03b3\u03b2 B\u2212\u03b4s(xi ,y+ ,y) ||\u03c9(y+ ,y)||2 Since the constraint matrix of the dual program is not strictly decomposable across constraint types, we are in effect solving an approximation of the 31: w \u2190 w \u2212 \u03b3\u03b2 (\u03c9(y+ , y)) 32: end for 33: end procedure 34: procedure UPDATELOWERBOUND(w, S3 , B) \u03b2\u2217 3 35: y \u2190 0 for all y \u2208 Si original problem.",
+                    "sid": 84,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "36: for n \u2190 1...M axI ter do 37: Select one constraint y from S3 Algorithm 1 RM Cutting Plane Algorithm 38: \u03b3\u03b2\u2217 \u2190 max(0, \u2212B\u2212\u03b4s(xi ,y ,y) ) (adapted from (Shivaswamy and Jebara, 2009a)) 39: \u03b2\u2217 \u2217 \u03b2\u2217 ||\u03c9(y+ ,y)||2 Require: ith training example (xi , yi ), weight w, margin reg.",
+                    "sid": 85,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C , bound B, bound reg.",
+                    "sid": 86,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "D, , B 1: S1 \u2190 y+ , S2 \u2190 y+ , S3 \u2190 y+ y \u2190 \u03b2y + \u03b3 40: w \u2190 w + \u03b3\u03b2\u2217 (\u03c9(y+ 41: end for 42: end procedure , y)) i i i 2: repeat 3: H (y) := \u2206i (y) \u2212 \u2206i (y+ ) \u2212 \u03b4s(xi , y+ , y) 4: y1 \u2190 arg maxy\u2208Y (xi ) H (y) 5: y2 \u2190 arg maxy\u2208Y (xi ) G(y) := \u03b4s(xi , y 6: y3 \u2190 arg miny\u2208Y (xi ) \u2212G(y) 7: \u03be \u2190 max {0, maxy\u2208Si H (y)} 8: V1 \u2190 H (y1 ) \u2212 \u03be \u2212 9: V2 \u2190 G(y2 ) \u2212 B \u2212 B 10: V3 \u2190 \u2212G(y3 ) \u2212 B \u2212 B 11: j \u2190 arg maxj \u2208{1,2,3} Vj 12: if Vj > 0 then 13: Sj \u2190 Sj \u222a {yj } , y) each set, if there is one, and perform the corre sponding parameter updates in Alg.",
+                    "sid": 87,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 88,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer to the resulting passive aggressive algorithm as RM-PA, and the cutting plane version as RMCP.",
+                    "sid": 89,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Preliminary experiments showed that RM PA performs on par with RMCP, thus RM-PA is the one used in the empirical evaluation below.",
+                    "sid": 90,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i i 14: OPTIMIZE( 15: end if w, S1 , S2 , S3 , C, B) r> see Alg.",
+                    "sid": 91,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 i i i A graphical depiction of the passive-aggressive RM update is presented in Figure 2.",
+                    "sid": 92,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The upper.",
+                    "sid": 93,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "16: until S1 , S2 , S3 do not change i i i Alternatively, we could utilize a passive- aggressive updating strategy (Crammer et al., 2006), which would simply bypass the cutting plane and select the most violated constraint for right circle represents y+, while all other squares represent alternative hypotheses y1.",
+                    "sid": 94,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in the stan dard MIRA solution, we select the maximum margin constraint violator, y\u2212, shown as the triangle, and update such that the margin is greater than the cost.",
+                    "sid": 95,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, we select the maximum bound dist > B Bounding Constraint dist B cost > mar gin margin cost English side of the corpus with additional words from non-NYT and non LAT, randomly selected portions of the Gigaword v4 corpus, using modified KneserNey smoothing (Chen and Goodman, 1996).",
+                    "sid": 96,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used cdec (Dyer et al., 2010) as our hierarchical phrase based decoder, and tuned the parameters of the system to optimize BLEU (Pap- ineni et al., 2002) on the NIST MT06 corpus.",
+                    "sid": 97,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We applied several competitive optimizers as Margin Constraint Model Score Figure 2: RM update with margin and bounding constraints.",
+                    "sid": 98,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The diagonal dotted line depicts cost\u2013margin equilibrium.",
+                    "sid": 99,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vertical gray dotted line depicts the bound B. White arrows indicate updates triggered by constraint violations.",
+                    "sid": 100,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Squares are data points in the k-best list not selected for update in this round.",
+                    "sid": 101,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "task Corpus Sentences Tokens En Zh/Ar MT05 1082 35k 33k training 1M 23.7M 22.8M tune (MT06) 1797 55k 49k baselines: hypergraph-based MERT (Kumar et al., 2009), k-best variants of MIRA (Crammer et al., 2006; Chiang et al., 2009), PRO (Hopkins and May, 2011), and RAMPION (Gimpel and Smith, 2012).",
+                    "sid": 102,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size of the k-best list was set to 500 for RAMPION, MIRA and RM, and 1500 for PRO, with both PRO and RAMPION utilizing k best aggregation across iterations.",
+                    "sid": 103,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RAMPION settings were as described in (Gimpel and Smith, 2012), and PRO settings as described in (Hopkins and May, 2011), with PRO requiring regularization tuning in order to be competitive with the other optimizers.",
+                    "sid": 104,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MIRA and RM were run with 15 paral Donald et al., 2010).",
+                    "sid": 105,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All optimizers were implemented in cdec and use the same system config ArEn MT05 1056 36k 33k uration, thus the only indepen dent variable is the MT08 1360 51k 45k 4-gram LM 24M 600M \u2013 Table 1: Corpus statistics ing constraint violator, yw , shown as the upside- down triangle, and update so the distance from y+ is no greater than B.",
+                    "sid": 106,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1 Setup.",
+                    "sid": 107,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To evaluate the advantage of explicitly accounting for the spread of the data, we conducted several experiments on two ChineseEnglish translation test sets, using two different feature sets in each.",
+                    "sid": 108,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For training we used the non-UN and non-HK Hansards portions of the NIST training corpora, which was segmented using the Stanford segmenter (Tseng et al., 2005).",
+                    "sid": 109,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data statistics are summarized in the top half of Table 1.",
+                    "sid": 110,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English data was lowercased, tokenized and aligned using GIZA++ (Och and Ney, 2003) to obtain bidirectional alignments, which were symmetrized using the grow-diag-final-and method (Koehn et al., 2003).",
+                    "sid": 111,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained a 4-gram LM on the optimizer itself.",
+                    "sid": 112,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set C to 0.01, and M axI ter to 100.",
+                    "sid": 113,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We selected the bound step size D, based on performance on a held-out dev set, to be 0.01 for the basic feature set and 0.1 for the sparse feature set.",
+                    "sid": 114,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bound constraint B was set to 1.4 The approximate sentence-level BLEU cost \u2206i is computed in a manner similar to (Chiang et al., 2009), namely, in the context of previous 1-best translations of the tuning set.",
+                    "sid": 115,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All results are averaged over 3 runs.",
+                    "sid": 116,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Feature.",
+                    "sid": 117,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sets We experimented with a small (basic) feature set, and a large (sparse) feature set.",
+                    "sid": 118,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the small feature set, we use 14 features, including a language model, 5 translation model features, penalties for unknown words, the glue rule, and rule arity.",
+                    "sid": 119,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For experiments with a larger feature set, we introduced additional lexical and non-lexical sparse Boolean features of the form commonly found in the literature (Chiang et al., 2009; Watan 4 We also conducted an investigation into the setting of the B parameter.",
+                    "sid": 120,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We explored alternative values for B, as well as scaling it by the current candidate\u2019s cost, and found that the optimizer is fairly insensitive to these changes, resulting in only minor differences in BLEU.",
+                    "sid": 121,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Optimizer Zh Ar MIRA 35k 37k PRO 95k 115k RAMPION 22k 24k RM 30k 32k Active+Inactive 3.4M 4.9M Table 2: Active sparse feature templates abe et al., 2007; Simianer et al., 2012).",
+                    "sid": 122,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-lexical features include structural distortion, which captures the dependence between reordering and the size of a filler, and rule shape, which bins grammar rules by their sequence of terminals and nonterminals (Chiang et al., 2008).",
+                    "sid": 123,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexical features on rules include rule ID, which fires on a specific grammar rule.",
+                    "sid": 124,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also introduce context-dependent lexical features for the 300 most frequent aligned word pairs (f ,e) in the training corpus, which fire on triples (f ,e,f+1) and (f ,e,f\u22121), capturing when we see f aligned to e, with f+1 and f\u22121 occurring to the right or left of f , respectively.",
+                    "sid": 125,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All other words fall into the default (unk) feature bin.",
+                    "sid": 126,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we have insertion and deletion features for the 150 most frequently unaligned target and source words.",
+                    "sid": 127,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These feature templates resulted in a total of 3.4 million possible features, of which only a fraction were active for the respective tuning set and optimizer, as shown in Table 2.",
+                    "sid": 128,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Results.",
+                    "sid": 129,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As can be seen from the results in Table 3, our RM method was the best performer in all ChineseEnglish tests according to all measures \u2013 up to 1.9 BLEU and 6.6 TER over MIRA \u2013 even though we only optimized for BLEU.5 Surprisingly, it seems that MIRA did not benefit as much from the sparse features as RM.",
+                    "sid": 130,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are especially notable for the basic feature setting \u2013 up to 1.2 BLEU and 4.6 TER improvement over MERT \u2013 since MERT.",
+                    "sid": 131,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "has been shown to be competitive with small numbers of features compared to high-dimensional optimizers such as MIRA (Chiang et al., 2008).",
+                    "sid": 132,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the tuning set, the decoder performance was consistently the lowest with RM, compared to the 5 In the small feature set RAMPION yielded similar best BLEU scores, but worse TER.",
+                    "sid": 133,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In preliminary experiments with a smaller trigram LM, our RM method consistently yielded the highest scores in all ChineseEnglish tests \u2013 up to 1.6 BLEU and 6.4 TER from MIRA, the second best performer.",
+                    "sid": 134,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "other optimizers.",
+                    "sid": 135,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe this is due to the RM bounding constraint being more resistant to overfitting the training data, and thus allowing for improved generalization.",
+                    "sid": 136,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conversely, while PRO had the second lowest tuning scores, it seemed to display signs of underfitting in the basic and large feature settings.",
+                    "sid": 137,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "additional experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In order to explore the applicability of our approach to a wider range of languages, we also evaluated its performance on ArabicEnglish translation.",
+                    "sid": 138,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All experimental details were the same as above, except those noted below.",
+                    "sid": 139,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For training, we used the non-UN portion of the NIST training corpora, which was segmented using an HMM segmenter (Lee et al., 2003).",
+                    "sid": 140,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dataset statistics are given in the bottom part of Table 1.",
+                    "sid": 141,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sparse feature templates resulted here in a total of 4.9 million possible features, of which again only a fraction were active, as shown in Table 2.",
+                    "sid": 142,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As can be seen in Table 4, in the smaller feature set, RM and MERT were the best performers, with the exception that on MT08, MIRA yielded somewhat better (+0.7) BLEU but a somewhat worse (-0.9) TER score than RM.",
+                    "sid": 143,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the large feature set, RM is again the best performer, except, perhaps, a tied BLEU score with MIRA on MT08, but with a clear 1.8 TER gain.",
+                    "sid": 144,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both ArabicEnglish feature sets, MIRA seems to take the second place, while RAMPION lags behind, unlike in ChineseEnglish (\u00a74).6 Interestingly, RM achieved substantially higher BLEU precision scores in all tests for both language pairs.",
+                    "sid": 145,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this was also usually coupled had a higher brevity penalty (BP) than MIRA, with the BP increasing slightly when moving to the sparse setting.",
+                    "sid": 146,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The trend of the results, summarized as RM gain over other optimizers averaged over all test sets, is presented in Table 5.",
+                    "sid": 147,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RM shows clear advantage in both basic and sparse feature sets, over all other state-of-the-art optimizers.",
+                    "sid": 148,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The RM gains are notably higher in the large feature set, which we take 6 In our preliminary experiments with the smaller trigram LM, MERT did better on MT05 in the smaller feature set, and MIRA had a small advantage in two cases.",
+                    "sid": 149,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RAMPION performed similarly to RM on the smaller feature set.",
+                    "sid": 150,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RM\u2019s loss was only up to 0.8 BLEU (0.7 TER) from MERT or MIRA, while its gains were up to 1.7 BLEU and 2.1 TER over MIRA.",
+                    "sid": 151,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "O pt i m iz er S m all (b as ic) fe at ur e se t La rg e (s pa rs e) fe at ur e set T u n e M T 0 3 M T 0 5 T u n e M T 0 3 M T 0 5 \u2191 B LE U \u2191 B LE U \u2193T ER \u2191 B LE U \u2193T ER \u2191 B LE U \u2191 B LE U \u2193T ER \u2191 B LE U \u2193T ER M E R T 3 5 . 4 3 5 . 8 60.8 3 2 . 4 63.9 M I R A 3 5 . 5 3 5 . 8 61.1 3 2 . 1 64.6 3 6 . 6 3 5 . 9 60.6 3 2 . 1 64.1 P R O 3 4 . 1 3 6 . 0 60.2 3 1 .",
+                    "sid": 152,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "63.4",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "3 5 . 7 3 4 .",
+                    "sid": 153,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "56.1",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "3 1 . 4 59.1 R A M PI O N 3 5 . 1 3 6 . 5 58.6 3 3 . 0 61.3 3 6 . 7 3 6 .",
+                    "sid": 154,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "57.7",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "3 3 . 3 60.6 R M 3 1 . 3 3 6 . 5 56.4 3 3 . 6 59.3 3 3 . 2 3 7 . 5 54.6 3 4 . 0 57.5 Table 3: Performance on ZhEn with basic (left) and sparse (right) feature sets on MT03 and MT05.",
+                    "sid": 155,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "O pt i m iz er S m all (b as ic) fe at ur e se t La rg e (s pa rs e) fe at ur e set T u n e M T 0 5 M T 0 8 T u n e M T 0 5 M T 0 8 \u2191 B LE U \u2191 B LE U \u2193T ER \u2191 B LE U \u2193T ER \u2191 B LE U \u2191 B LE U \u2193T ER \u2191 B LE U \u2193T ER M E R T 4 3 . 8 5 3 . 3 40.2 4 1 . 0 50.7 M I R A 4 3 . 0 5 2 . 8 40.8 4 1 . 3 50.6 4 4 . 4 5 3 . 4 40.1 4 1 . 8 50.2 P R O 4 1 . 5 5 1 . 3 41.5 3 9 . 4 51.5 4 6 . 8 5 3 . 2 40.0 4 1 . 4 49.7 R A M PI O N 4 2 . 4 5 2 . 0 40.8 4 0 . 0 50.8 4 4 . 6 5 2 . 9 40.4 4 1 . 0 50.4 R M 3 8 . 5 5 3 . 3 39.8 4 0 . 6 49.7 4 3 . 0 5 5 . 3 37.5 4 1 . 8 48.4 Table 4: Performance on ArEn with basic (left) and sparse (right) feature sets on MT05 and MT08.",
+                    "sid": 156,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "O pt i m iz er S m a l l s e t B L E U T E R L a r g e s e t B L E U T E R M E R T 0 . 4 2.6 M I R A 0 . 5 3.0 1 . 4 4.3 P R O 1 . 4 2.9 2 . 0 1.7 R A M PI O N 0 . 6 1.6 1 . 2 2.8 Table 5: RM gain over other optimizers averaged over all test sets.",
+                    "sid": 157,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "as an indication for the importance of bounding the spread.",
+                    "sid": 158,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Spread analysis: For RM, the average spread of the projected data in the ChineseEnglish small feature set was 0.9\u00b13.6 for all tuning iterations,and 0.7\u00b12.9 for the iteration with the highest de coder performance.",
+                    "sid": 159,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In comparison, the spread of the data for MIRA was 5.9\u00b120.5 for the best it eration.",
+                    "sid": 160,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the sparse setting, RM had an average spread of 0.9\u00b12.4 for the best iteration, while MIRA had a spread of 14.0\u00b131.1.",
+                    "sid": 161,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, on ArabicEnglish, RM had a spread of 0.7\u00b12.4 in the small setting, and 0.82\u00b11.4 in the sparse setting, while MIRA\u2019s spread was 9.4\u00b126.8 and11.4\u00b122.1, for the small and sparse settings, re spectively.",
+                    "sid": 162,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that the average spread for RM stays about the same when moving to higher dimensions, with the variance decreasing in both cases.",
+                    "sid": 163,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For MIRA, however, the average spread increases in both cases, with the variance being much higher than RM.",
+                    "sid": 164,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, observe that the spread of MIRA on Chinese grows from 5.9 to 14.0 in the sparse feature setting.",
+                    "sid": 165,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While bounding the spread is useful in the low-dimensional setting (0.71.5 BLEU gain with RM over MIRA as shown in Table 3), accounting for the spread is even more crucial with sparse features, where MIRA gains only up to 0.1 BLEU, while RM gains 1 BLEU.",
+                    "sid": 166,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results support the claim that our imposed bound B indeed helps decrease the spread, and that, in turn, lower spread yields better generalization performance.",
+                    "sid": 167,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Error Analysis: The inconclusive advantage of RM over MIRA (in BLEU vs. TER scores) on ArabicEnglish MT08 calls for a closer look.",
+                    "sid": 168,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore we conducted a coarse error analysis on 15 randomly selected sentences from MERT, RMM and MIRA, with basic and sparse feature settings for the latter two.",
+                    "sid": 169,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This sample yielded 450 data points for analysis: output of the 5 conditions on 15 sentences scored in 6 violation categories.",
+                    "sid": 170,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The categories were: function word drop, content word drop, syntactic error (with a reasonable meaning), semantic error (regardless of syntax), word order issues, and function word mis- translation and \u201challucination\u201d.",
+                    "sid": 171,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The purpose of this analysis was to get a qualitative feel for the output of each model, and a better idea as to why we obtained performance improvements.",
+                    "sid": 172,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RM no ticeably had more word order and excess/wrong function word issues in the basic feature setting than any optimizer.",
+                    "sid": 173,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, RM seemed to benefit the most from the sparse features, as its bad word order rate dropped close to MIRA, and its excess/wrong function word rate dropped below that of MIRA with sparse features (MIRA\u2019s rate actually doubled from its basic feature set).",
+                    "sid": 174,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conjecture both these issues will be ameliorated with syntactic features such as those in Chiang et al.",
+                    "sid": 175,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008).",
+                    "sid": 176,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This correlates with our observation that RM\u2019s overall BLEU score is negatively impacted by the BP, as the BLEU precision scores are noticeably higher.",
+                    "sid": 177,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "K-best: RM is potentially more sensitive to the size and order of the k-best list.",
+                    "sid": 178,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While MIRA is only concerned with the margin between y+ and y\u2212, RM also accounts for the distance between y+ and yw . It might be the case that a larger k-best, or revisiting previous strategies for y+ and y\u2212 selec tion, such as bold updating, local updating (Liang et al., 2006b), or maxBLEU updating (Tillmann and Zhang, 2006) might have a greater impact.",
+                    "sid": 179,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, we only explored several settings of B, and there remains a continuum of RM solutions that trade off between margin and spread in different ways.",
+                    "sid": 180,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Active features: Perhaps contrary to expectation, we did not see evidence of a correlation between the number of active features and optimizer performance.",
+                    "sid": 181,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RAMPION, with the fewest features, is the closest performer to RM in Chinese, while MIRA, with a greater number, is the closest on Arabic.",
+                    "sid": 182,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also notice that while PRO had the lowest BLEU scores in Chinese, it was competitive in Arabic with the highest number of features.",
+                    "sid": 183,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 Conclusions and Future Work.",
+                    "sid": 184,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have introduced RM, a novel online margin- based algorithm designed for optimizing high- dimensional feature spaces, which introduces constraints into a large-margin optimizer that bound the spread of the projection of the data while maximizing the margin.",
+                    "sid": 185,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The closed-form online update for our relative margin solution accounts for surrogate references and latent variables.",
+                    "sid": 186,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimentation in statistical MT yielded significant improvements over several other state- of-the-art optimizers, especially in a high- dimensional feature space (up to 2 BLEU and 4.3 comparable performance according to two scoring methods in two language pairs, with two test sets each, in small and large feature settings.",
+                    "sid": 187,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, across conditions, RM always yielded the best combined TERBLEU score.7 These improvements are achieved using standard, relatively small tuning sets, contrasted with improvements involving sparse features obtained using much larger tuning sets, on the order of hundreds of thousands of sentences (Liang et al., 2006a; Tillmann and Zhang, 2006; Blunsom et al., 2008; Simianer et al., 2012).",
+                    "sid": 188,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our approach is complementary to scaling up the tuning data, in future work we intend to combine these two methods.",
+                    "sid": 189,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work we also intend to explore using additional sparse features that are known to be useful in translation, e.g. syntactic features explored by Chiang et al.",
+                    "sid": 190,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008).",
+                    "sid": 191,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, although motivated by statistical machine translation, RM is a gradient-based method that can easily be applied to other problems.",
+                    "sid": 192,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to investigate its utility elsewhere in NLP (e.g. for parsing) as well as in other domains involving high-dimensional structured prediction.",
+                    "sid": 193,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We would like to thank Pannaga Shivaswamy for valuable discussions, and the anonymous reviewers for their comments.",
+                    "sid": 194,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Vladimir Eidelman is supported by a National Defense Science and Engineering Graduate Fellowship.",
+                    "sid": 195,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was also supported in part by the BOLT program of the Defense Advanced Research Projects Agency, Contract HR001112-C-0015.",
+                    "sid": 196,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

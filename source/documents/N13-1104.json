@@ -1,0 +1,1625 @@
+{
+    "ID": "N13-1104",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "In natural-language discourse, related events tend to appear near each other to describe a larger scenario.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such structures can be formalized by the notion of a frame (a.k.a. template), which comprises a set of related events and prototypical participants and event transitions.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Identifying frames is a prerequisite for information extraction and natural language generation, and is usually done manually.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Methods for inducing frames have been proposed recently, but they typically use ad hoc procedures and are difficult to diagnose or extend.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we propose the first probabilistic approach to frame induction, which incorporates frames, events, and participants as latent topics and learns those frame and event transitions that best explain the text.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of frame components is inferred by a novel application of a split-merge method from syntactic parsing.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In end-to-end evaluations from text to induced frames and extracted facts, our method produces state-of-the-art results while substantially reducing engineering effort.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Events with causal or temporal relations tend to occur near each other in text.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a BOMBING scenario in an article on terrorism might begin with a DETONATION event, in which terrorists set off a bomb.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, a DAMAGE event might ensue to describe the resulting destruction and any casualties, followed by an INVESTIGATION event \u2217This research was undertaken during the author\u2019s internship at Microsoft Research.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "covering subsequent police investigations.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Afterwards, the BOMBING scenario may transition into a CRIMINAL-PROCESSING scenario, which begins with police catching the terrorists, and proceeds to a trial, sentencing, etc. A common set of participants serves as the event arguments; e.g., the agent (or subject) of DETONATION is often the same as the theme (or object) of INVESTIGATION and corresponds to a PERPETRATOR.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such structures can be formally captured by the notion of a frame (a.k.a. template, scenario), which consists of a set of events with prototypical transitions, as well as a set of slots representing the common participants.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Identifying frames is an explicit or implicit prerequisite for many NLP tasks.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Information extraction, for example, stipulates the types of events and slots that are extracted for a frame or template.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Online applications such as dialogue systems and personal-assistant applications also model users\u2019 goals and subgoals using frame-like representations.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In natural-language generation, frames are often used to represent contents to be expressed as well as to support surface realization.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Until recently, frames and related representations have been manually constructed, which has limited their applicability to a relatively small number of domains and a few slots within a domain.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, additional manual effort is needed after the frames are defined in order to extract frame components from text (e.g., in annotating examples and designing features to train a supervised learning model).",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paradigm makes generalizing across tasks difficult, and might suffer from annotator bias.Recently, there has been increasing interest in au 837 Proceedings of NAACLHLT 2013, pages 837\u2013846, Atlanta, Georgia, 9\u201314 June 2013.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2013 Association for Computational Linguistics tomatically inducing frames from text.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A notable example is Chambers and Jurafsky (2011), which first clusters related verbs to form frames, and then clusters the verbs\u2019 syntactic arguments to identify slots.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Chambers and Jurafsky (2011) represents a major step forward in frame induction, it is also limited in several aspects.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The clustering used ad hoc steps and customized similarity metrics, as well as an additional retrieval step from a large external text corpus for slot generation.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This makes it hard to replicate their approach or adapt it to new domains.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lacking a coherent model, it is also difficult to incorporate additional linguistic insights and prior knowledge.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present PROFINDER (PRObabilistic Frame INDucER), the first probabilistic approach to frame induction.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROFINDER defines a joint distribution over the words in a document and their frame assignments by modeling frame and event transitions, correlations among events and slots, and their surface realizations.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a set of documents, PROFINDER outputs a set of induced frames with learned parameters, as well as the most probable frame assignments that can be used for event and entity extraction.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The numbers of events and slots are dynamically determined by a novel application of the split-merge approach from syntactic parsing (Petrov et al., 2006).",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In end-to-end evaluations from text to entity extraction using standard MUC and TAC datasets, PROFINDER achieved state-of-the-art results while significantly reducing engineering effort and requiring no external data.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "In information extraction and other semantic processing tasks, the dominant paradigm requires two stages of manual effort.",
+                    "sid": 32,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the target representation is defined manually by domain experts.",
+                    "sid": 33,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, manual effort is required to construct an extractor or to annotate examples to train a machine-learning system.",
+                    "sid": 34,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, there has been a burgeoning body of work in reducing such manual effort.",
+                    "sid": 35,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a popular approach to reduce annotation effort is bootstrapping from seed examples (Patwardhan and Riloff, 2007; Huang and Riloff, 2012).",
+                    "sid": 36,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this still requires prespecified frames or templates, and selecting seed words is often a challenging task (Curran et al., 2007).",
+                    "sid": 37,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Filatova et al.",
+                    "sid": 38,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) construct simple domain templates by mining verbs and the named entity type of verbal arguments that are topical, whereas Shinyama and Sekine (2006) identify query-focused slots by clustering common named entities and their syntactic contexts.",
+                    "sid": 39,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Open IE (Banko and Etzioni, 2008) limits the manual effort to designing a few domain-independent relation patterns, which can then be applied to extract relational triples from text.",
+                    "sid": 40,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While extremely scalable, this approach can only extract atomic factoids within a sentence, and the resulting triples are noisy, non-canonicalized text fragments.",
+                    "sid": 41,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More relevant to our approach is the recent work in unsupervised semantic induction, such as unsupervised semantic parsing (Poon and Domingos, 2009), unsupervised semantical role labeling (Swier and Stevenson, 2004) and induction (Lang and Lap- ata, 2011, e.g.), and slot induction from web search logs (Cheung and Li, 2012).",
+                    "sid": 42,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in PROFINDER, they model distributional contexts for slots and roles.",
+                    "sid": 43,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these approaches focus on the semantics of independent sentences or queries, and do not capture discourse-level dependencies.",
+                    "sid": 44,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The modeling of frame and event transitions in PROFINDER is similar to a sequential topic model (Gruber et al., 2007), and is inspired by the successful applications of such topic models in sum- marization (Barzilay and Lee, 2004; Daume\u00b4 III and Marcu, 2006; Haghighi and Vanderwende, 2009, inter alia).",
+                    "sid": 45,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are, however, two main differences.",
+                    "sid": 46,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, PROFINDER contains not a single sequential topic model, but two (for frames and events, respectively).",
+                    "sid": 47,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, it also models the interdependencies among events, slots, and surface text, which is analogous to the USP model (Poon and Domingos, 2009).",
+                    "sid": 48,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROFINDER can thus be viewed as a novel combination of state-of-the-art models in unsupervised semantics and discourse modeling.",
+                    "sid": 49,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In terms of aim and capability, PROFINDER is most similar to Chambers and Jurafsky (2011), which culminated from a series of work for identifying correlated events and arguments in narratives (Chambers and Jurafsky, 2008; Chambers and Jurafsky, 2009).",
+                    "sid": 50,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By adopting a probabilistic approach, PROFINDER has a sound theoretical underpinning, and is easy to modify or extend.",
+                    "sid": 51,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in Section 3, we show how PROFINDER can easily be augmented with additional linguistically-motivated features.",
+                    "sid": 52,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Likewise, PROFINDER can easily be used as a semi-supervised system if some slot designations and labeled examples are available.",
+                    "sid": 53,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea of representing and capturing stereotypical knowledge has a long history in artificial intelligence and psychology, and has assumed various names such as frames (Minsky, 1974), schemata (Rumelhart, 1975), and scripts (Schank and Abelson, 1977).",
+                    "sid": 54,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the linguistics and computational linguistics communities, frame semantics (Fillmore, 1982) uses frames as the central representation of word meaning, culminating in the development of FrameNet (Baker et al., 1998), which contains over 1000 manually annotated frames.",
+                    "sid": 55,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A similarly rich lexical resource is the MindNet project (Richardson et al., 1998).",
+                    "sid": 56,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our notion of frame is related to these representations, but there are also subtle differences.",
+                    "sid": 57,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Minsky\u2019s frame emphasizes inheritance, which we do not model in this paper1.",
+                    "sid": 58,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in semantic role labeling, FrameNet focuses on semantic roles and does not model event or frame transitions, so the scope of its frames is often no more than an event in our model.",
+                    "sid": 59,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps the most similar to our frame is Roger Schank\u2019s scripts, which capture prototypical events and participants in a scenario such as restaurant dining.",
+                    "sid": 60,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In their approach, however, scripts are manually defined, making it hard to generalize.",
+                    "sid": 61,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this regard, our work may be viewed as an attempt to revive a long tradition in AI and linguistics, by leveraging the recent advances in computational power, NLP, and machine learning.",
+                    "sid": 62,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "probabilistic frame induction. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "In this section, we present PROFINDER, a probabilistic model for frame induction.",
+                    "sid": 63,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let F be a set of frames, where each frame F = (EF , SF ) comprises a unique set of events EF and slots SF . Given a document D and a word w in D, Zw = (f, e) repre sents an assignment of w to frame f \u2208 F and frame element e \u2208 Ef \u222a Sf . At the heart of PROFINDER is a generative model P\u03b8 (D, Z ) that defines a joint distribution over document D and the frame assignment to its words Z . Given a set of documents D, 1 This should be a straightforward extension \u2014 using the split-and-merge approach, PROFINDER already produces a hierarchy of events and slots in learning, although currently it makes no use of the intermediate levels.",
+                    "sid": 64,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "frame induction in PROFINDER amounts to determining the number of events and slots in each frame, as well as learning the parameters \u03b8 by summing out the latent assignments Z to maximize the likelihood of the document set n P\u03b8 (D).",
+                    "sid": 65,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "D\u2208D The induced frames identify the key event structures in the document set.",
+                    "sid": 66,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, PROFINDER can conduct event and entity extraction by computing the most probable frame assignment Z . In the remainder of the section, we first present the base model for PROFINDER.",
+                    "sid": 67,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then introduce several linguistically motivated refinements, as well as efficient algorithms for learning and inference in PROFINDER.",
+                    "sid": 68,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Base Model.",
+                    "sid": 69,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabilistic formulation of PROFINDER makes it extremely flexible for incorporating linguistic intuition and prior knowledge.",
+                    "sid": 70,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we design our PROFINDER model to capture three types of dependencies.",
+                    "sid": 71,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Frame transitions between clauses A sentence contains one or more clauses, each of which is a minimal unit expressing a proposition.",
+                    "sid": 72,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A clause is unlikely to straddle different frames, so we stipulate that the words in a clause be assigned to the same frame.",
+                    "sid": 73,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, frame transitions can happen between clauses, and we adopt the common Markov assumption that the frame of a clause only depends on the previous clause in the document.",
+                    "sid": 74,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clauses are automatically extracted from the dependency parse and further decomposed into an event head and its syntactic arguments.",
+                    "sid": 75,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Event transitions within a frame Events tend to transition into related events in the same frame, as determined by their causal or temporal relations.",
+                    "sid": 76,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each clause is assigned an event compatible with its frame assignment (i.e., the event is in the given frame).",
+                    "sid": 77,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like frame transitions, we assume that the event assignment of a clause depends only on the event of the previous clause.",
+                    "sid": 78,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Emission of event heads and slot words Similar to topics in topic models, each event determines a multinomial from which the event head is generated; e.g., a DETONATION event might use verbs such as detonate, set off or nouns such as denotation, bombing as its event head.",
+                    "sid": 79,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, as in USP (Poon and Domingos, 2009), an event also contains a multinomial of slots for each of its argument types2; e.g., the agent argument of a DETONATION event is generally the PERPETRATOR slot of the BOMBING frame.",
+                    "sid": 80,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, each slot has its own multinomials for generating the argument head and dependency label, regardless of the event.",
+                    "sid": 81,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, let D be a document and C1, \u00b7 \u00b7 \u00b7 , Cl be its clauses, the PROFINDER model is defined by P\u03b8 (D, Z ) = PF\u2212INIT(F1) \u00d7 n PF\u2212TRAN(Fi+1|Fi) i \u00d7 PE\u2212INIT(E1|F1) n age additional linguistic intuition.",
+                    "sid": 82,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROFINDER incorporates three such refinements.",
+                    "sid": 83,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Background frame Event narratives often contain interjections of general content common to all frames.",
+                    "sid": 84,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in newswire articles, ATTRIBUTION is commonplace to describe who said or reported a particular quote or fact.",
+                    "sid": 85,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To avoid contaminating frames with generic content, we introduce a background frame with its own events, slots, and emission distributions, and a binary switch vari able Bi \u2208 {BK G, C N T } that determines whether clause i is generated from the actual content frame Fi (C N T ) or background (BK G).",
+                    "sid": 86,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also stipulate that if BK G is chosen, the nominal frame stays the same as the previous clause.",
+                    "sid": 87,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stickiness in frame and event transitions Prior \u00d7 i n \u00d7 i n \u00d7 i,j n \u00d7 i,j n \u00d7 i,j PE\u2212TRAN(Ei+1|Ei, Fi+1, Fi) PE\u2212HEAD(ei| Ei) PSLOT(Si,j |Ei,j , Ai,j ) PA\u2212HEAD(ai, j |Si,j ) PA\u2212DEP(dep i,j |Si,j ) work has demonstrated that promoting topic coherence in natural language discourse helps discourse modeling (Barzilay and Lee, 2004).",
+                    "sid": 88,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extend PROFINDER to leverage this intuition by incorporating a \u201cstickiness\u201d prior (Haghighi and Vanderwende, 2009) to encourage neighboring clauses to stay in the same frame.",
+                    "sid": 89,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, along with introducing the background frame, the frame transition component now becomes PF\u2212TRAN(Fi+1| Fi, Bi+1) = (1) Here, Fi, Ei denote the frame and event assignment to clause Ci, respectively, and ei denotes the \uf8f4\uf8f11(Fi+1 = Fi), if Bi+1 = BK G \uf8f2\u03b21(F = F )+ event head.",
+                    "sid": 90,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the j-th argument of clause i, Si,j denotes the slot assignment, Ai,j the argument \uf8f4\uf8f3(1 \u2212 \u03b2)PF\u2212 TRAN(Fi+1|Fi), if Bi+1 = C N T type, ai,j the head word, and depi,j the dependency from the event head.",
+                    "sid": 91,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PE\u2212TRAN(Ei+1|Ei, Fi+1, Fi) = PE\u2212INIT(Ei+1|Fi+1) if Fi+1 /= Fi.",
+                    "sid": 92,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Essentially, PROFINDER combines a frame HMM with an event HMM, where the first models frame transition and emits events, and the second models event transition within a frame and emits argument slots.",
+                    "sid": 93,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Model refinements.",
+                    "sid": 94,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The base model captures the main dependencies in event narrative, but it can be easily extended to lever 2 USP generates the argument types along with events from clustering.",
+                    "sid": 95,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity, in PROFINDER we simply classify a syntactic argument into subject, object, and prepositional object, according to its Stanford dependency to the event head.",
+                    "sid": 96,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where \u03b2 is the stickiness parameter, and the event transition component correspondingly becomes PE\u2212TRAN(Ei+1|Ei, Fi+1, Fi, Bi+1) = (2) \uf8f4\uf8f11(Ei+1 = Ei), if Bi+1 = BK G \uf8f2PE TRAN(Ei+1|Ei), if B = C N T , F = F \uf8f4\uf8f3PE\u2212INIT(Ei+1), if Bi+1 = C N T , Fi /= Fi+1 Argument dependencies as caseframes As noticed in previous work such as Chambers and Juraf- sky (2011), the combination of an event head and a dependency relation often gives a strong signal of the slot that is indicated.",
+                    "sid": 97,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, bomb > nsubj (subject argument of bomb) often indicates a PERPETRATOR.",
+                    "sid": 98,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, rather than simply emitting 1.",
+                    "sid": 99,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generate whether this clause is background.",
+                    "sid": 100,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Background \ufffd1 \ufffd\ud835\udc41 (Bi \u2208 {C N T , BK G} \u223c PBKG (B)) Frame Event Arguments \ufffd1 \ufffd1 \ufffd\ufffd1 . . .",
+                    "sid": 101,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\ufffd1 Event head \ufffd\ud835\udc41 \ufffd\ud835\udc41 \ufffd\ufffd\ud835\udc41 \ufffd\ud835\udc41 2.",
+                    "sid": 102,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generate the frame Fi and event Ei from PF\u2212INI T(F ), PE\u2212INI T(E), or accor ding to equati ons 1 and 2 3.",
+                    "sid": 103,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generate the observed event head ei from PE\u2212HEA D(ei|Ei ).",
+                    "sid": 104,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "for. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "each event argument : (a) Gene rate the slot Si,j from PS LOT (S |E , A, B) . \ufffd\ufffd\ufffd\ufffd1 \ufffd\ufffd 1 \ufffd\ufffd\ufffd\ufffd\ud835\udc41 \ud835\udc4e\ud835\udc41 (b) Generate the dependency/c aseframe emis \ufffd1 \ufffd\ud835\udc41 \ufffd sion depi,j \u223c PA \u2212DEP(dep|S) and the \ufffd\ufffd\u2212 \ufffd\ufffd\ud835\udc43 \ufffd\ufffd\u2212 \ud835\udc3b\ufffd\ud835\udc34\ufffd \ufffd \ufffd \ufffd\u2212 |\ufffd\ufffd| \ud835\udc3b\ufffd\ud835\udc34\ufffd |\ufffd| |\ufffd| lemma of the head word of the event argument ai,j \u223c PA\u2212HEAD( a|S).",
+                    "sid": 105,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.4 Learning and.",
+                    "sid": 106,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inference Figure 1: Graphical representation of our model.",
+                    "sid": 107,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hyper- parameters, the stickiness factor, and the frame and event initial and transition distributions are not shown for clarity.",
+                    "sid": 108,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the dependency from the event head to an event argument depi,j , our model instead emits the pair of event head and dependency relation, which we call a caseframe following Bean and Riloff (2004).",
+                    "sid": 109,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Full generative story.",
+                    "sid": 110,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To summarize, the distributions that are learned by our model are the default distributions PBKG(B), PF\u2212INIT(F ), PE\u2212INIT(E); the transition distri butions PF\u2212TRAN(Fi+1|Fi), PE\u2212TRAN(Ei+1|Ei); and the emission distributions PSLOT(S|E, A, B), PE\u2212HEAD(e|E, B), PA\u2212HEAD(a|S), PA\u2212DEP(dep|S).We used additive smoothing with uniform Dirich let priors for all the multinomials.",
+                    "sid": 111,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The overall generative story of our model is as follows: 1.",
+                    "sid": 112,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Draw a Bernoulli distribution for PBKG(B).",
+                    "sid": 113,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 114,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Draw the frame, event, and slot distributions.",
+                    "sid": 115,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 116,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Draw an event head emission distribution.",
+                    "sid": 117,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PE\u2212HEAD(e|E, B) for each frame including the background frame 4.",
+                    "sid": 118,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Draw event argument lemma and caseframe.",
+                    "sid": 119,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "emission distributions for each slot in each frame including the background frame",
+                    "sid": 120,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "for each clause in each document, generate the. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "clause-internal structure.",
+                    "sid": 121,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The clause-internal structure at clause i is generated by the following steps: Our generative model admits efficient inference by dynamic programming.",
+                    "sid": 122,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, after collapsing the latent assignment of frame, event, and background into a single hidden variable for each clause, the expectation and most probable assignment can be computed using standard forward-backward and Viterbi algorithms on fixed tree structures.",
+                    "sid": 123,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parameter learning can be done using EM by alternating the computation of expected counts and the maximization of multinomial parameters.",
+                    "sid": 124,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, PROFINDER uses incremental EM, which has been shown to have better and faster convergence properties than standard EM (Liang and Klein, 2009).",
+                    "sid": 125,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Determining the optimal number of events and slots is challenging.",
+                    "sid": 126,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One solution is to adopt a non- parametric Bayesian method by incorporating a hierarchical prior over the parameters (e.g., a Dirichlet process).",
+                    "sid": 127,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this approach can impose unrealistic restrictions on the model choice and result in intractability which requires sampling or approximate inference to overcome.",
+                    "sid": 128,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, EM learning can suffer from local optima due to its non- convex learning objective, especially when dealing with a large number hidden states without a good initialization.",
+                    "sid": 129,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address these issues, we adopt a novel application of the split-merge method previously used in syntactic parsing for inferring refined latent syntactic categories (Petrov et al., 2006).",
+                    "sid": 130,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the model is initialized with a number of frames, which is a hyperparameter, and each frame is associated with one event and two slots.",
+                    "sid": 131,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Starting from this minimal structure, EM training begins.",
+                    "sid": 132,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After a number of iterations, each event and slot state is \u201csplit\u201d in two; that is, each original state now becomes two new states.",
+                    "sid": 133,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each of the new states is generated with half of the probability of the original, and contains a duplicate of the associated emission distributions.",
+                    "sid": 134,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some perturbation is then added to the probabilities to break symmetry.",
+                    "sid": 135,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After splitting, we merge back a portion of the newly split events and slots that result in the least improvement in the likelihood of the training data.",
+                    "sid": 136,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For more details on split-merge, see Petrov et al.",
+                    "sid": 137,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) By adjusting the number of split-merge cycles and the merge parameters, our model learns the number of events and slots in a dynamical fashion that is tailored to the data.",
+                    "sid": 138,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, our model starts with a small number of frame elements, which reduces the number of local optima and facilitates initial learning.",
+                    "sid": 139,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After each split, the subsequent learning starts with (a perturbed version of) the previously learned parameters, which makes a good initialization that is crucial for EM.",
+                    "sid": 140,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, it is also compatible with the hierarchical nature of events and slots.",
+                    "sid": 141,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, slots can first be coarsely split into persons versus locations, and later refined into subcategories such as perpetrators and victims.",
+                    "sid": 142,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 MUC4 Entity Extraction Experiments.",
+                    "sid": 143,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first evaluate our model on a standard entity extraction task, using the evaluation settings from Chambers and Jurafsky (2011) (henceforth, C&J) plate is ignored in final evaluation, so all the clusters that belong to the same slot are then merged across the templates; e.g., the PERPETRATOR clusters for KIDNAPPING and BOMBING are merged.",
+                    "sid": 144,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final precision, recall, and F1 are computed based on these merged clusters.",
+                    "sid": 145,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Correctness is determined by matching head words, and slots marked as optional in MUC are ignored when computing recall.",
+                    "sid": 146,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All hyperparameters are tuned on the development set (see Appendix A for their values).",
+                    "sid": 147,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Named entity type Named entity type is a useful feature to filter out entities for particular slots; e.g. a location cannot be an INSTRUMENT.",
+                    "sid": 148,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus divide each induced cluster into four clusters by named entity type before performing the mapping, following C&J\u2019s heuristic and using a named entity recognizer and word lists derived from WordNet: PERSON/ORGANIZATION, PHYSICAL OBJECT, LOCATION, and OTHER.",
+                    "sid": 149,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Document classification The MUC4 dataset contains many documents that have words related to MUC slots (e.g., plane and aviation), but are not about terrorism.",
+                    "sid": 150,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce precision errors, C&J first filtered irrelevant documents based on the specificity of event heads to learned frames.",
+                    "sid": 151,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To estimate the specificity, they used additional data retrieved from a large external corpus.",
+                    "sid": 152,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In PROFINDER, however, specificity can be easily estimated using the probability distributions learned during training.",
+                    "sid": 153,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, we define the probability of an event head in a frame j as: to enable a head-to-head comparison.",
+                    "sid": 154,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we use the MUC4 data set (1992) , which contains PF (w) = EF \u2208F PE\u2212HEAD(w|E)/|F |, (3) 1300 training and development documents on terrorism in South America, with 200 additional documents for testing.",
+                    "sid": 155,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MUC4 contains four templates: ATTACK, KIDNAPPING, BOMBING, and ARSON.3 All templates share the same set of predefined slots, with the evaluation focusing on the following four: PERPETRATOR, PHYSICAL TARGET, HUMAN TARGET, and INSTRUMENT.",
+                    "sid": 156,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each slot in a MUC template, the system first identifies an induced slot that best maps to it by F1 on the development set.",
+                    "sid": 157,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in C&J, tem 3 Two other templates have negligible counts and are ignored as in C&J. and the probability of a frame given an event head as: P (F |w) = PF (w)/ PF (w).",
+                    "sid": 158,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) F \u2208F We then follow the rest of C&J\u2019s procedure to score each learned frame with each MUC document.",
+                    "sid": 159,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, a document is mapped to a frame if the average PF (w) in the document is above a threshold and the document contains at least one trigger wordwl with P (F |wl) > 0.2.",
+                    "sid": 160,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The threshold and the in duced frame were determined on the development set, and were used to filter irrelevant documents in the test set.",
+                    "sid": 161,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Un su per vis ed me th od s P R F1 E v e n t : A t t a c k E v e n t : D i s c u s s i o n PR OF IN DE R (Th is wo rk) 3 2 37 34 re po rt, pa rti ci pa te, kid ho ld, m ee tin g, tal k, dis Chambers and Jurafsky (2011) 48 25 33 nap, kill, release cuss, investigate With additional information PROFINDER +doc.",
+                    "sid": 162,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "classification 41 44 43 Slot: Perpetrator Slot: Victim PERSON/ORG PERSON/ORG C&J 2011 +granularity 44 36 40 Table 1: Results on MUC4 entity extraction.",
+                    "sid": 163,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C&J 2011 +granularity refers to their experiment in which they mapped one of their templates to five learned clusters rather than one.",
+                    "sid": 164,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results Compared to C&J, PROFINDER is conceptually much simpler, using a single probabilistic model and standard learning and inference algo Words: guerrilla, police, source, person, group Caseframes: report>nsubj, kidnap>nsubj, kill>nsubj, participate>nsubj, release>nsubj Words: people, priest, leader, member, judge Caseframes: kill>dobj, murder>dobj, release>dobj, report>dobj, kidnap>dobj rithms, and not requiring multiple processing steps or customized similarity metrics.",
+                    "sid": 165,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It only used the data in MUC4, whereas C&J required additional text to be retrieved from a large external corpus (Gigaword (Graff et al., 2005)) for each event cluster.",
+                    "sid": 166,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It currently does not make use of coreference information, whereas C&J did.",
+                    "sid": 167,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Remarkably, despite all these, PROFINDER was still able to outperform C&J on entity extraction, as shown in Table 1.",
+                    "sid": 168,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also evaluated PROFINDER\u2019s performance assuming perfect document classification (+doc.",
+                    "sid": 169,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "classification).",
+                    "sid": 170,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This led to a substantially higher precision, suggesting that further improvement is possible from better document classification.",
+                    "sid": 171,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows part of a frame learned by PROFINDER, which includes some slots and events annotated in MUC.",
+                    "sid": 172,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROFINDER is also able to identify events and slots not annotated in MUC, a desirable characteristic of unsupervised methods.",
+                    "sid": 173,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, it found a DISCUSSION event, an ARREST event (call, arrest, express, meet, charge), a PEACE AGREEMENT slot (agreement, rights, law, proposal), and an AUTHORITIES slot (police, government, force, command).",
+                    "sid": 174,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The background frame was able to capture many verbs related to attribution, such as say, continue, add, believe, although it missed report.",
+                    "sid": 175,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Evaluating Frame Induction Using.",
+                    "sid": 176,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Guided Summarization Templates The MUC4 dataset was originally designed for information extraction and focuses on a limited number of template and slot types.",
+                    "sid": 177,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To evalu Figure 2: A partial frame learned by PROFINDER from the MUC4 data set, with the most probable emissions for each event and slot.",
+                    "sid": 178,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Labels are assigned by the authors for readability.",
+                    "sid": 179,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ate PROFINDER\u2019s capabilities in generalizing to a greater variety of text, we designed and conducted a novel evaluation based on the TAC guided- summarization dataset.",
+                    "sid": 180,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This evaluation was inspired by the connection between summarization and information extraction (White et al., 2001), and reflects a conceptualization of summarization as inducing and extracting structured information from source text.",
+                    "sid": 181,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Essentially, we adapted the TAC summarization annotation to create gold-standard slots, and used them to evaluate entity extraction as in MUC4.",
+                    "sid": 182,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dataset We used the TAC 2010 guided- summarization dataset in our experiments (Owczarzak and Dang, 2010).",
+                    "sid": 183,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This data set consists of text from five domains (termed categories in TAC), each with a template defined by TAC organizers.",
+                    "sid": 184,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In total, there are 46 document clusters (termed topics in TAC), each of which contains 20 documents and has eight human-written summaries.",
+                    "sid": 185,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each summary was manually segmented using the Pyramid method (Nenkova and Passonneau, 2004) and each segment was annotated with a slot (termed aspect in TAC) from the corresponding template.",
+                    "sid": 186,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 shows an example and the full set of templates is available at http://www.",
+                    "sid": 187,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "nist.gov/tac/2010/Summarization/ Guided-Summ.2010.guidelines.html.",
+                    "sid": 188,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (a) Accidents and Natural Disasters: WHAT: what happened WHEN: date, time, other temporal markers WHERE: physical location WHY: reasons for accident/disaster WHO AFFECTED: casualties...",
+                    "sid": 189,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DAMAGES: ... caused by the disaster COUNTERMEASURES: rescue efforts...",
+                    "sid": 190,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(b) (WHEN During the night of July 17,) (WHAT a 23-foot <WHAT tsunami) hit the north coast of Papua New Guinea (PNG)>, (WHY triggered by a 7.0 undersea earthquake in the area).",
+                    "sid": 191,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(c) WHEN: night WHAT: tsunami, coast WHY: earthquake Figure 3: (a) A frame from the TAC Guided Summarization task with abbreviated slot descriptions.",
+                    "sid": 192,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(b) A TAC text span, segmented into several contributors with slot labels.",
+                    "sid": 193,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the two WHAT contributors overlap, and are demarcated by different bracket types.",
+                    "sid": 194,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(c) The entities that are extracted for evaluation.",
+                    "sid": 195,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TAC, each annotated segment (Figure 3b) is called a contributor.",
+                    "sid": 196,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation Method We converted the contributors into a form that is more similar to the previous MUC evaluation, so that we can fairly compare against previous work such as C&J that were designed to extract information into that form.",
+                    "sid": 197,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we extracted the head lemma from all the maximal noun phrases found in the contributor (Figure 3c) and treated them as gold-standard entity slots to extract.",
+                    "sid": 198,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While this conversion may not be ideal in some cases, it simplifies the TAC slots and enables automatic evaluation.",
+                    "sid": 199,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave the refinement of this conversion to future work, and believe it could be done by crowdsourcing.",
+                    "sid": 200,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each TAC slot in a TAC category, we extract entities from the summaries that belong to the given TAC category.",
+                    "sid": 201,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A system-induced entity is considered a match to a TAC-derived entity from the same document if the head lemma in the former matches one in the latter.",
+                    "sid": 202,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on this matching criterion, the system-induced slots are mapped to the TAC slots in a way that achieves the best F1 for each TAC slot.",
+                    "sid": 203,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We allow a system slot to map to multiple TAC slots, due to potential overlaps in entities 1-best 5-best Systems P R F1 P R F1 PROFINDER 24 25 24 21 38 27 C&J 58 6.1 11 50 12 20 Table 2: Results on TAC 2010 entity extraction with N - best mapping for N = 1 and N = 5.",
+                    "sid": 204,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intermediate values of N produce intermediate results, and are not shown for brevity.",
+                    "sid": 205,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "among TAC slots.",
+                    "sid": 206,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in a document about a tsunami, earthquake may appear both in the WHAT slot as a disaster itself, and in the CAUSE slot as a cause for the tsunami.",
+                    "sid": 207,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One salient difference between TAC and MUC slots is that TAC slots are often more general than MUC slots.",
+                    "sid": 208,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, TAC slots such as WHY and COUNTERMEASURES likely correspond to multiple slots at the granularity of MUC.",
+                    "sid": 209,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, we also consider mapping the N -best system-induced slots to each TAC slot, for N up to 5.",
+                    "sid": 210,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments We trained PROFINDER and a reimplementation of C&J on the 920 full source texts of TAC 2010, and tested them on the 368 model summaries.",
+                    "sid": 211,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did not provide C&J\u2019s model with access to external data, in order to enable fair comparison with our model.",
+                    "sid": 212,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since all of the summary sentences are expected to be relevant, we did not conduct document or sentence relevance classification in C&J or PROFINDER.",
+                    "sid": 213,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tuned all parameters by twofold cross validation on the summaries.",
+                    "sid": 214,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We computed the overall precision, recall, and F1 by taking a micro- average over the results for each TAC slot.",
+                    "sid": 215,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results The results are shown in Table 2.",
+                    "sid": 216,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROFINDER substantially outperformed C&J in F1, in both 1-best and N -best cases.",
+                    "sid": 217,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in MUC4, the precision of C&J is higher, partly because C&J often did not do much in clustering and produced many small clusters.",
+                    "sid": 218,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the 1-best setting, the average number of entities mapped to each TAC slot by C&J is 21, whereas it is 208 for PROFINDER.",
+                    "sid": 219,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For both systems, the results are generally lower compared to that in MUC4, which is expected since this task is harder given the greater diversity in frames and slots to be induced.",
+                    "sid": 220,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We have presented PROFINDER, the first probabilistic approach to frame induction and shown that it achieves state-of-the-art results on end-to-end entity extraction in standard MUC and TAC data sets.",
+                    "sid": 221,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model is inspired by recent advances in unsupervised semantic induction and content modeling in summarization.",
+                    "sid": 222,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our probabilistic approach makes it easy to extend the model with additional linguistic insights and prior knowledge.",
+                    "sid": 223,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While we have made a case for unsupervised methods and the importance of robustness across domains, our method is also amenable to semi-supervised or supervised learning if annotated data is available.",
+                    "sid": 224,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work, we would like to further investigate frame induction evaluation, particularly in evaluating event clustering.",
+                    "sid": 225,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We would like to thank Nate Chambers for answering questions about his system.",
+                    "sid": 226,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We would also like to thank Chris Quirk for help with preprocessing the MUC corpus, and the members of the NLP group at Microsoft Research for useful discussions.",
+                    "sid": 227,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Appendix A. Hyperparameter Settings We document below the hyperparameter settings for PROFINDER that were used to generate the results in the paper.",
+                    "sid": 228,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Regina Barzilay and Lillian Lee.",
+                    "sid": 229,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2004.",
+                    "sid": 230,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Catching the drift: Probabilistic content models, with applications to generation and summarization.",
+                    "sid": 231,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Proceedings of the Human Language Technology Conference of the North American Chapter of the Association for Computational Linguistics: HLTNAACL 2004.",
+                    "sid": 232,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "David Bean and Ellen Riloff.",
+                    "sid": 233,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2004.",
+                    "sid": 234,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised learning of contextual role knowledge for coreference resolution.",
+                    "sid": 235,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Proceedings of the Human Language Technology Conference of the North American Chapter of the Association for Computational Linguistics: HLTNAACL 2004.",
+                    "sid": 236,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nathanael Chambers and Dan Jurafsky.",
+                    "sid": 237,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2008.",
+                    "sid": 238,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised learning of narrative event chains.",
+                    "sid": 239,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Proceedings of ACL08: HLT, pages 789\u2013797, Columbus, Ohio, June.",
+                    "sid": 240,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Association for Computational Linguistics.",
+                    "sid": 241,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nathanael Chambers and Dan Jurafsky.",
+                    "sid": 242,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2009.",
+                    "sid": 243,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised learning of narrative schemas and their participants.",
+                    "sid": 244,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Proceedings of the Joint Conference of the 47th Annual Meeting of the ACL and the 4th International Joint Conference on Natural Language Processing of the AFNLP.",
+                    "sid": 245,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Association for Computational Linguistics.",
+                    "sid": 246,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nathanael Chambers and Dan Jurafsky.",
+                    "sid": 247,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2011.",
+                    "sid": 248,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Template- based information extraction without the templates.",
+                    "sid": 249,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies, pages 976\u2013986, Portland, Oregon, USA, June.",
+                    "sid": 250,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Association for Computational Linguistics.",
+                    "sid": 251,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Jackie C. K. Cheung and Xiao Li.",
+                    "sid": 252,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2012.",
+                    "sid": 253,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sequence clustering and labeling for unsupervised query intent discovery.",
+                    "sid": 254,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Proceedings of the 5th ACM International Conference on Web Search and Data Mining, pages 383\u2013392.",
+                    "sid": 255,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "James R. Curran, Tara Murphy, and Bernhard Scholz.",
+                    "sid": 256,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2007.",
+                    "sid": 257,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Minimising semantic drift with mutual exclusion bootstrapping.",
+                    "sid": 258,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Proceedings of the 10th Conference of the Pacific Association for Computational Linguistics.",
+                    "sid": 259,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hal Daume\u00b4 III and Daniel Marcu.",
+                    "sid": 260,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2006.",
+                    "sid": 261,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bayesian",
+                    "sid": 262,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

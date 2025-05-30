@@ -1,0 +1,617 @@
+{
+    "ID": "P08-2021",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Given several systems\u2019 automatic translations of the same sentence, we show how to combine them into a confusion network, whose various paths represent composite translations that could be considered in a subsequent rescoring step.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We build our confusion networks using the method of Rosti et al.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007), but, instead of forming alignments using the tercom script (Snover et al., 2006), we create alignments that minimize invWER (Leusch et al., 2003), a form of edit distance that permits properly nested block movements of substrings.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Oracle experiments with Chinese newswire and weblog translations show that our confusion networks contain paths which are significantly better (in terms of BLEU and TER) than those in tercom-based confusion networks.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Large improvements in machine translation (MT) may result from combining different approaches to MT with mutually complementary strengths.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "System-level combination of translation outputs is a promising path towards such improvements.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yet there are some significant hurdles in this path.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One must somehow align the multiple outputs\u2014to identify where different hypotheses reinforce each other and where they offer alternatives.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One must then \u2217This work was partially supported by the DARPA GALE program (Contract No HR001106-20001).",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, we would like to thank the IBM Rosetta team for the availability of several MT system outputs.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "use this alignment to hypothesize a set of new, composite translations, and select the best composite hypothesis from this set.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The alignment step is difficult because different MT approaches usually reorder the translated words differently.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training the selection step is difficult because identifying the best hypothesis (relative to a known reference translation) means scoring all the composite hypotheses, of which there may be exponentially many.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most MT combination methods do create an exponentially large hypothesis set, representing it as a confusion network of strings in the target language (e.g., English).",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(A confusion network is a lattice where every node is on every path; i.e., each time step presents an independent choice among several phrases.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that our contributions in this paper could be applied to arbitrary lattice topologies.)",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Bangalore et al.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2001) show how to build a confusion network following a multistring alignment procedure of several MT outputs.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The procedure (used primarily in biology, (Thompson et al., 1994)) yields monotone alignments that minimize the number of insertions, deletions, and substitutions.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, monotone alignments are often poor, since machine translations (particularly from different models) can vary significantly in their word order.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, when Matusov et al.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) use this procedure, they deterministically reorder each translation prior to the monotone alignment.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The procedure described by Rosti et al.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) has been shown to yield significant improvements in translation quality, and uses an estimate of Translation Error Rate (TER) to guide the alignment.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(TER is defined as the minimum number of inser 81 Proceedings of ACL08: HLT, Short Papers (Companion Volume), pages 81\u201384, Columbus, Ohio, USA, June 2008.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2008 Association for Computational Linguistics tions, deletions, substitutions and block shifts between two strings.)",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A remarkable feature of that procedure is that it performs the alignment of the output translations (i) without any knowledge of the translation model used to generate the translations, and (ii) without any knowledge of how the target words in each translation align back to the source words.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, it only requires a procedure for creating pairwise alignments of translations that allow appropriate re-orderings.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this, Rosti et al.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) use the tercom script (Snover et al., 2006), which uses a number of heuristics (as well as dynamic programming) for finding a sequence of edits (insertions, deletions, substitutions and block shifts) that convert an input string to another.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we show that one can build better confusion networks (in terms of the best translation possible from the confusion network) when the pairwise alignments are computed not by tercom, which approximately minimizes TER, but instead by an exact minimization of invWER (Leusch et al., 2003), which is a restricted version of TER that permits only properly nested sets of block shifts, and can be computed in polynomial time.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The paper is organized as follows: a summary of TER, tercom, and invWER, is presented in Section",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the system combination procedure is summa-. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "rized in Section 3, while experimental (oracle) results are presented in Section 4.",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conclusions are given in Section 5.",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 Comparing tercom and invWER.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tercom script was created mainly in order to measure translation quality based on TER.",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is proved by Shapira and Storer (2002), computation of TER is an NP-complete problem.",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, tercom uses some heuristics in order to compute an approximation to TER in polynomial time.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the rest of the paper, we will denote this approximation as tercomTER, to distinguish it from (the intractable) TER.",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The block shifts which are allowed in tercom have to adhere to the following constraints: (i) A block that has an exact match cannot be moved, and (ii) for a block to be moved, it should have an exact match in its new position.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this sometimes leads to counter-intuitive sequences of edits; for instance, for the sentence pair \u201cthomas jefferson says eat your vegetables\u201d \u201ceat your cereal thomas edison says\u201d, tercom finds an edit sequence of cost 5, instead of the optimum 3.",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the block selection is done in a greedy manner, and the final outcome is dependent on the shift order, even when the above constraints are imposed.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An alternative to tercom, considered in this paper, is to use the Inversion Transduction Grammar (ITG) formalism (Wu, 1997) which allows one to view the problem of alignment as a problem of bilingual parsing.",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, ITGs can be used to find the optimal edit sequence under the restriction that block moves must be properly nested, like parentheses.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, if an edit sequence swaps adjacent substrings A and B of the original string, then any other block move that affects A (or B) must stay completely within A (or B).",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An edit sequence with this restriction corresponds to a synchronous parse tree under a simple ITG that has one nonterminal and whose terminal symbols allow insertion, deletion, and substitution.",
+                    "sid": 46,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The minimum-cost ITG tree can be found by dynamic programming.",
+                    "sid": 47,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This leads to invWER (Leusch et al., 2003), which is defined as the minimum number of edits (insertions, deletions, substitutions and block shifts allowed by the ITG) needed to convert one string to another.",
+                    "sid": 48,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, the minimum- invWER alignments are used for generating confusion networks.",
+                    "sid": 49,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The alignments are found with a 11- rule Dyna program (Dyna is an environment that facilitates the development of dynamic programs\u2014see (Eisner et al., 2005) for more details).",
+                    "sid": 50,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This program was further sped up (by about a factor of 2) with an A\u2217 search heuristic computed by additional code.",
+                    "sid": 51,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, our admissible outside heuristic for aligning two substrings estimated the cost of aligning the words outside those substrings as if reordering those words were free.",
+                    "sid": 52,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was complicated somewhat by type/token issues and by the fact that we were aligning (possibly weighted) lattices.",
+                    "sid": 53,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, the same Dyna program was used for the computation of the minimum invWER path in these confusion networks (oracle path), without having to invoke tercom numerous times to compute the best sentence in an N -best list.",
+                    "sid": 54,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The two competing alignment procedures were Ge nr e C Ns wi th ter co m C N s w it h I T G N W 5 0.",
+                    "sid": 55,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 % ( 2 7.",
+                    "sid": 56,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 % ) 48 .8 % (2 8.",
+                    "sid": 57,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 % ) W B 5 1.",
+                    "sid": 58,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 % ( 2 5.",
+                    "sid": 59,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 % ) 50 .5 % (2 6.",
+                    "sid": 60,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 % ) Table 1: Comparison of average per-document tercomTER with invWER on the EVAL07 GALE Newswire (\u201cNW\u201d) and Weblogs (\u201cWB\u201d) data sets.",
+                    "sid": 61,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "used to estimate the TER between machine translation system outputs and reference translations.",
+                    "sid": 62,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows the TER estimates using tercom and invWER.",
+                    "sid": 63,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These were computed on the translations submitted by a system to NIST for the GALE evaluation in June 2007.",
+                    "sid": 64,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The references used are the post-edited translations for that system (i.e., these are \u201cHTER\u201d approximations).",
+                    "sid": 65,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As can be seen from the table, in all language and genre conditions, in- vWER gives a better approximation to TER than tercomTER.",
+                    "sid": 66,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, out of the roughly 2000 total segments in all languages/genres, tercomTER gives a lower number of edits in only 8 cases!",
+                    "sid": 67,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a clear indication that ITGs can explore the space of string permutations more effectively than tercom.",
+                    "sid": 68,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the system combination approach. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "ITG-based alignments and tercom-based alignments were also compared in oracle experiments involving confusion networks created through the algorithm of Rosti et al.",
+                    "sid": 69,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007).",
+                    "sid": 70,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm entails the following steps: \u2022 Computation of all pairwise alignments between system hypotheses (either using ITGs or tercom); for each pair, one of the hypotheses plays the role of the \u201creference\u201d.",
+                    "sid": 71,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Selection of a system output as the \u201cskeleton\u201d of the confusion network, whose words are used as anchors for aligning all other machine translation outputs together.",
+                    "sid": 72,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each arc has a translation output word as its label, with the special token \u201cNULL\u201d used to denote an insertion/deletion between the skeleton and another system output.",
+                    "sid": 73,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Multiple consecutive words which are inserted relative to the skeleton form a phrase that gets Table 2: TercomTERs of invWER-oracles and (in parentheses) oracle BLEU scores of confusion networks generated with tercom and ITG alignments.",
+                    "sid": 74,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best results per row are shown in bold.",
+                    "sid": 75,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "aligned with an epsilon arc of the confusion network.",
+                    "sid": 76,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Setting the weight of each arc equal to the negative log (posterior) probability of its label; this probability is proportional to the number of systems which output the word that gets aligned in that location.",
+                    "sid": 77,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the algorithm of Rosti et al.",
+                    "sid": 78,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) used N -best lists in the combination.",
+                    "sid": 79,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we used the single- best output of each system; this was done because not all systems were providing N -best lists, and an unbalanced inclusion would favor some systems much more than others.",
+                    "sid": 80,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, for each genre, one of our MT systems was significantly better than the others in terms of word order, and it was chosen as the skeleton.",
+                    "sid": 81,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experimental results. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Table 2 shows tercomTERs of invWER-oracles (as computed by the aforementioned Dyna program) and oracle BLEU scores of the confusion networks.",
+                    "sid": 82,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The confusion networks were generated using 9 MT systems applied to the Chinese GALE 2007 Dev set, which consists of roughly 550 Newswire segments, and 650 Weblog segments.",
+                    "sid": 83,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The confusion networks which were generated with the ITG- based alignments gave significantly better oracle tercomTERs (significance tested with a Fisher sign test, p \u2212 0.02) and better oracle BLEU scores.",
+                    "sid": 84,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU oracle sentences were found using the dynamic-programming algorithm given in Dreyer et al.",
+                    "sid": 85,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) and measured using Philipp Koehn\u2019s evaluation script.",
+                    "sid": 86,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, a comparison between the 1-best paths did not reveal significant differences that would favor one approach or the other (either in terms of tercomTER or BLEU).",
+                    "sid": 87,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also tried to understand which alignment method gives higher probability to paths \u201cclose\u201d to the corresponding oracle.",
+                    "sid": 88,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do that, we computed the probability that a random path from a confusion network is within x edits from its oracle.",
+                    "sid": 89,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This computation was done efficiently using finite-state-machine operations, and did not involve any randomization.",
+                    "sid": 90,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Preliminary experiments with the invWER-oracles show that the probability of all paths which are within x = 3 edits from the oracle is roughly the same for ITG-based and tercom-based confusion networks.",
+                    "sid": 91,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to report our findings for a whole range of x-values in future work.",
+                    "sid": 92,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, a runtime comparison of the two techniques shows that ITGs are much more computationally intensive: on average, ITG-based alignments took1.5 hours/sentence (owing to their O(n6) complex ity), while tercom-based alignments only took 0.4 sec/sentence.",
+                    "sid": 93,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "concluding remarks. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We compared alignments obtained using the widely used program tercom with alignments obtained with ITGs and we established that the ITG alignments are superior in two ways.",
+                    "sid": 94,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically: (a) we showed that invWER (computed using the ITG alignments) gives a better approximation to TER between machine translation outputs and human references than tercom; and (b) in an oracle system combination experiment, we found that confusion networks generated with ITG alignments contain better oracles, both in terms of tercomTER and in terms of BLEU.",
+                    "sid": 95,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Future work will include rescoring results with a language model, as well as exploration of heuristics (e.g., allowing only \u201cshort\u201d block moves) that can reduce the ITG alignment complexity to O(n4).",
+                    "sid": 96,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

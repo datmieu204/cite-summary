@@ -1,0 +1,2927 @@
+{
+    "ID": "J96-3004",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "A Stochastic Finite-State Word-Segmentation Algorithm for Chinese",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The initial stage of text analysis for any NLP task usually involves the tokenization of the input into words.",
+                    "sid": null,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": " For languages like English one can assume, to a first approximation, that word boundaries are given by whitespace or punctuation.",
+                    "sid": null,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": " In various Asian languages, including Chinese, on the other hand, whitespace is never used to delimit words, so one must resort to lexical information to \"reconstruct\" the word-boundary information.",
+                    "sid": null,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": " In this paper we present a stochastic finite-state model wherein the basic workhorse is the weighted finite-state transducer.",
+                    "sid": null,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": " The model segments Chinese text into dictionary entries and words derived by various productive lexical processes, and--since the primary intended application of this model is to text-to-speech synthesis--provides pronunciations for these words.",
+                    "sid": null,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": " We evaluate the system's performance by comparing its segmentation 'Tudgments\" with the judgments of a pool of human segmenters, and the system is shown to perform quite well.",
+                    "sid": null,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the problem. ",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Any NLP application that presumes as input unrestricted text requires an initial phase of text analysis; such applications involve problems as diverse as machine translation, information retrieval, and text-to-speech synthesis (TIS).",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An initial step of any text\u00ad analysis task is the tokenization of the input into words.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a language like English, this problem is generally regarded as trivial since words are delimited in English text by whitespace or marks of punctuation.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus in an English sentence such as I'm going to show up at the ACL one would reasonably conjecture that there are eight words separated by seven spaces.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A moment's reflection will reveal that things are not quite that simple.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are clearly eight orthographic words in the example given, but if one were doing syntactic analysis one would probably want to consider I'm to consist of two syntactic words, namely I and am.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If one is interested in translation, one would probably want to consider show up as a single dictionary word since its semantic interpretation is not trivially derivable from the meanings of show and up.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And if one is interested in TIS, one would probably consider the single orthographic word ACL to consist of three phonological words-lei s'i d/-corresponding to the pronunciation of each of the letters in the acronym.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Space- or punctuation-delimited * 700 Mountain Avenue, 2d451, Murray Hill, NJ 07974, USA.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Email: rlls@bell-labs.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "com t 700 Mountain Avenue, 2d451, Murray Hill, NJ 07974, USA.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Email: cls@bell-labs.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "com t 600 Mountain Avenue, 2c278, Murray Hill, NJ 07974, USA.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Email: gale@research.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "att.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "com \u00a7Cambridge, UK Email: nc201@eng.cam.ac.uk \u00a9 1996 Association for Computational Linguistics (a) B ) ( , : & ; ? ' H o w d o y o u s a y o c t o p u s i n J a p a n e s e ? ' (b) P l a u s i b l e S e g m e n t a t i o n I B X I I 1 : & I 0 0 r i 4 w e n 2 z h a n g l y u 2 z e n 3 m e 0 s h u o l ' J a p a n e s e ' ' o c t o p u s ' ' h o w ' ' s a y ' (c) Figure 1 I m p l a u s i b l e S e g m e n t a t i o n [\u00a7] lxI 1:&I ri4 wen2 zhangl yu2zen3 me0 shuol 'Japan' 'essay' 'fish' 'how' 'say' A Chinese sentence in (a) illustrating the lack of word boundaries.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (b) is a plausible segmentation for this sentence; in (c) is an implausible segmentation.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "orthographic words are thus only a starting point for further analysis and can only be regarded as a useful hint at the desired division of the sentence into words.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whether a language even has orthographic words is largely dependent on the writing system used to represent the language (rather than the language itself); the notion \"orthographic word\" is not universal.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most languages that use Roman, Greek, Cyrillic, Armenian, or Semitic scripts, and many that use Indian-derived scripts, mark orthographic word boundaries; however, languages written in a Chinese-derived writ\u00ad ing system, including Chinese and Japanese, as well as Indian-derived writing systems of languages like Thai, do not delimit orthographic words.1 Put another way, written Chinese simply lacks orthographic words.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Chinese text, individual characters of the script, to which we shall refer by their traditional name of hanzi,Z are written one after another with no intervening spaces; a Chinese sentence is shown in Figure 1.3 Partly as a result of this, the notion \"word\" has never played a role in Chinese philological tradition, and the idea that Chinese lacks any\u00ad thing analogous to words in European languages has been prevalent among Western sinologists; see DeFrancis (1984).",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Twentieth-century linguistic work on Chinese (Chao 1968; Li and Thompson 1981; Tang 1988,1989, inter alia) has revealed the incorrectness of this traditional view.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All notions of word, with the exception of the orthographic word, are as relevant in Chinese as they are in English, and just as is the case in other languages, a word in Chinese may correspond to one or more symbols in the orthog 1 For a related approach to the problem of word-segrnention in Japanese, see Nagata (1994), inter alia..",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 Chinese ?l* han4zi4 'Chinese character'; this is the same word as Japanese kanji..",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Throughout this paper we shall give Chinese examples in traditional orthography, followed.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "immediately by a Romanization into the pinyin transliteration scheme; numerals following each pinyin syllable represent tones.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples will usually be accompanied by a translation, plus a morpheme-by-morpheme gloss given in parentheses whenever the translation does not adequately serve this purpose.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the pinyin transliterations a dash(-) separates syllables that may be considered part of the same phonological word; spaces are used to separate plausible phonological words; and a plus sign (+) is used, where relevant, to indicate morpheme boundaries of interest.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "raphy: A ren2 'person' is a fairly uncontroversial case of a monographemic word, and rplil zhong1guo2 (middle country) 'China' a fairly uncontroversial case of a di\u00ad graphernic word.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relevance of the distinction between, say, phonological words and, say, dictionary words is shown by an example like rpftl_A :;!:Hfllil zhong1hua2 ren2min2 gong4he2-guo2 (China people republic) 'People's Republic of China.'",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Arguably this consists of about three phonological words.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, in a translation system one probably wants to treat this string as a single dictionary word since it has a conventional and somewhat unpredictable translation into English.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, if one wants to segment words-for any purpose-from Chinese sentences, one faces a more difficult task than one does in English since one cannot use spacing as a guide.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, suppose one is building a ITS system for Mandarin Chinese.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For that application, at a minimum, one would want to know the phonological word boundaries.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now, for this application one might be tempted to simply bypass the segmentation problem and pronounce the text character-by-character.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there are several reasons why this approach will not in general work: 1.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many hanzi have more than one pronunciation, where the correct.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "pronunciation depends upon word affiliation: tfJ is pronounced deO when it is a prenominal modification marker, but di4 in the word \u00a7tfJ mu4di4 'goal'; fl; is normally ganl 'dry,' but qian2 in a person's given name.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "some phonological rules depend upon correct word segmentation,. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "including Third Tone Sandhi (Shih 1986), which changes a 3 (low) tone into a 2 (rising) tone before another 3 tone: 'j\";gil, xiao3 [lao3 shu3] 'little rat,' becomes xiao3 { lao2shu3 ], rather than xiao2 { lao2shu3 ], because the rule first applies within the word lao3shu3 'rat,' blocking its phrasal application.",
+                    "sid": 40,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 41,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In various dialects of Mandarin certain phonetic rules apply at the word.",
+                    "sid": 42,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "level.",
+                    "sid": 43,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in Northern dialects (such as Beijing), a full tone (1, 2, 3, or 4) is changed to a neutral tone (0) in the final syllable of many words: Jll donglgual 'winter melon' is often pronounced donglguaO.",
+                    "sid": 44,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The high 1 tone of J1l would not normally neutralize in this fashion if it were functioning as a word on its own.",
+                    "sid": 45,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 46,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TIS systems in general need to do more than simply compute the.",
+                    "sid": 47,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "pronunciations of individual words; they also need to compute intonational phrase boundaries in long utterances and assign relative prominence to words in those utterances.",
+                    "sid": 48,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has been shown for English (Wang and Hirschberg 1992; Hirschberg 1993; Sproat 1994, inter alia) that grammatical part of speech provides useful information for these tasks.",
+                    "sid": 49,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given that part-of-speech labels are properties of words rather than morphemes, it follows that one cannot do part-of-speech assignment without having access to word-boundary information.",
+                    "sid": 50,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Making the reasonable assumption that similar information is relevant for solving these problems in Chinese, it follows that a prerequisite for intonation-boundary assignment and prominence assignment is word segmentation.",
+                    "sid": 51,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The points enumerated above are particularly related to ITS, but analogous arguments can easily be given for other applications; see for example Wu and Tseng's (1993) discussion of the role of segmentation in information retrieval.",
+                    "sid": 52,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are thus some very good reasons why segmentation into words is an important task.",
+                    "sid": 53,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A minimal requirement for building a Chinese word segmenter is obviously a dictionary; furthermore, as has been argued persuasively by Fung and Wu (1994), one will perform much better at segmenting text by using a dictionary constructed with text of the same genre as the text to be segmented.",
+                    "sid": 54,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For novel texts, no lexicon that consists simply of a list of word entries will ever be entirely satisfactory, since the list will inevitably omit many constructions that should be considered words.",
+                    "sid": 55,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Among these are words derived by various productive processes, including: 1.",
+                    "sid": 56,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Morphologically derived words such as, xue2shengl+men0.",
+                    "sid": 57,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(student+plural) 'students,' which is derived by the affixation of the plural affix f, menD to the nounxue2shengl.",
+                    "sid": 58,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 59,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Personal names such as 00, 3R; zhoulenl-lai2 'Zhou Enlai.'",
+                    "sid": 60,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, we.",
+                    "sid": 61,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "can expect famous names like Zhou Enlai's to be in many dictionaries, but names such as :fi lf;f; shi2jil-lin2, the name of the second author of this paper, will not be found in any dictionary.",
+                    "sid": 62,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "transliterated foreign names such as . 3r:\u00aeelli ma3-lai2-xil-ya3. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "'Malaysia.'",
+                    "sid": 63,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, famous place names will most likely be found in the dictionary, but less well-known names, such as 1PM\u00b1 R; bu4lang3-shi4wei2-ke4 'Brunswick' (as in the New Jersey town name 'New Brunswick') will not generally be found.",
+                    "sid": 64,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we present a stochastic finite-state model for segmenting Chinese text into words, both words found in a (static) lexicon as well as words derived via the above-mentioned productive processes.",
+                    "sid": 65,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmenter handles the grouping of hanzi into words and outputs word pronunciations, with default pronunciations for hanzi it cannot group; we focus here primarily on the system's ability to segment text appropriately (rather than on its pronunciation abilities).",
+                    "sid": 66,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model incorporates various recent techniques for incorporating and manipulating linguistic knowledge using finite-state transducers.",
+                    "sid": 67,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It also incorporates the Good-Turing method (Baayen 1989; Church and Gale 1991) in estimating the likelihoods of previously unseen con\u00ad structions, including morphological derivatives and personal names.",
+                    "sid": 68,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will evaluate various specific aspects of the segmentation, as well as the overall segmentation per\u00ad formance.",
+                    "sid": 69,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This latter evaluation compares the performance of the system with that of several human judges since, as we shall show, even people do not agree on a single correct way to segment a text.",
+                    "sid": 70,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, this effort is part of a much larger program that we are undertaking to develop stochastic finite-state methods for text analysis with applications to TIS and other areas; in the final section of this paper we will briefly discuss this larger program so as to situate the work discussed here in a broader context.",
+                    "sid": 71,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 72,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A Brief Introduction to the Chinese Writing System Most readers will undoubtedly be at least somewhat familiar with the nature of the Chinese writing system, but there are enough common misunderstandings that it is as well to spend a few paragraphs on properties of the Chinese script that will be relevant to topics discussed in this paper.",
+                    "sid": 73,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first point we need to address is what type of linguistic object a hanzi repre\u00ad sents.",
+                    "sid": 74,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Much confusion has been sown about Chinese writing by the use of the term ideograph, suggesting that hanzi somehow directly represent ideas.",
+                    "sid": 75,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most accurate characterization of Chinese writing is that it is morphosyllabic (DeFrancis 1984): each hanzi represents one morpheme lexically and semantically, and one syllable phonologi\u00ad cally.",
+                    "sid": 76,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus in a two-hanzi word like lflli?J zhong1guo2 (middle country) 'China' there are two syllables, and at the same time two morphemes.",
+                    "sid": 77,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, since the number of attested (phonemic) Mandarin syllables (roughly 1400, including tonal distinctions) is far smaller than the number of morphemes, it follows that a given syllable could in principle be written with any of several different hanzi, depending upon which morpheme is intended: the syllable zhongl could be lfl 'middle,''clock,''end,' or ,'loyal.'",
+                    "sid": 78,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A morpheme, on the other hand, usually corresponds to a unique hanzi, though there are a few cases where variant forms are found.",
+                    "sid": 79,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, quite a few hanzi are homographs, meaning that they may be pronounced in several different ways, and in extreme cases apparently represent different morphemes: The prenominal modifi\u00ad cation marker eg deO is presumably a different morpheme from the second morpheme of \u00a7eg mu4di4, even though they are written the same way.4 The second point, which will be relevant in the discussion of personal names in Section 4.4, relates to the internal structure of hanzi.",
+                    "sid": 80,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the system devised under the Qing emperor Kang Xi, hanzi have traditionally been classified according to a set of approximately 200 semantic radicals; members of a radical class share a particular structural component, and often also share a common meaning (hence the term 'semantic').",
+                    "sid": 81,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, hanzi containing the INSECT radical !R tend to denote insects and other crawling animals; examples include tr wal 'frog,' feng1 'wasp,' and !Itt she2 'snake.'",
+                    "sid": 82,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, hanzi sharing the GHOST radical _m tend to denote spirits and demons, such as _m gui3 'ghost' itself, II: mo2 'demon,' and yan3 'nightmare.'",
+                    "sid": 83,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the semantic aspect of radicals is by no means completely predictive, the semantic homogeneity of many classes is quite striking: for example 254 out of the 263 examples (97%) of the INSECT class listed by Wieger (1965, 77376) denote crawling or invertebrate animals; similarly 21 out of the 22 examples (95%) of the GHOST class (page 808) denote ghosts or spirits.",
+                    "sid": 84,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we shall argue, the semantic class affiliation of a hanzi constitutes useful information in predicting its properties.",
+                    "sid": 85,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 86,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous Work.",
+                    "sid": 87,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is a sizable literature on Chinese word segmentation: recent reviews include Wang, Su, and Mo (1990) and Wu and Tseng (1993).",
+                    "sid": 88,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Roughly speaking, previous work can be divided into three categories, namely purely statistical approaches, purely lexi\u00ad cal rule-based approaches, and approaches that combine lexical information with sta\u00ad tistical information.",
+                    "sid": 89,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The present proposal falls into the last group.",
+                    "sid": 90,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Purely statistical approaches have not been very popular, and so far as we are aware earlier work by Sproat and Shih (1990) is the only published instance of such an approach.",
+                    "sid": 91,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In that work, mutual information was used to decide whether to group adjacent hanzi into two-hanzi words.",
+                    "sid": 92,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mutual information was shown to be useful in the segmentation task given that one does not have a dictionary.",
+                    "sid": 93,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A related point is that mutual information is helpful in augmenting existing electronic dictionaries, (cf.",
+                    "sid": 94,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 To be sure, it is not always true that a hanzi represents a syllable or that it represents a morpheme.",
+                    "sid": 95,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For.",
+                    "sid": 96,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "example, in Northern Mandarin dialects there is a morpheme -r that attaches mostly to nouns, and which is phonologically incorporated into the syllable to which it attaches: thus men2+r (door+R) 'door' is realized as mer2.",
+                    "sid": 97,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is orthographically represented as 7C.",
+                    "sid": 98,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "so that 'door' would be and in this case the hanzi 7C, does not represent a syllable.",
+                    "sid": 99,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, there is no compelling evidence that either of the syllables of f.ifflll binllang2 'betelnut' represents a morpheme, since neither can occur in any context without the other: more likely fjfflll binllang2 is a disyllabic morpheme.",
+                    "sid": 100,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(See Sproat and Shih 1995.)",
+                    "sid": 101,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the characterization given in the main body of the text is correct sufficiently often to be useful.",
+                    "sid": 102,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Church and Hanks [1989]), and we have used lists of character pairs ranked by mutual information to expand our own dictionary.",
+                    "sid": 103,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonstochastic lexical-knowledge-based approaches have been much more numer\u00ad ous.",
+                    "sid": 104,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two issues distinguish the various proposals.",
+                    "sid": 105,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first concerns how to deal with ambiguities in segmentation.",
+                    "sid": 106,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second concerns the methods used (if any) to ex\u00ad tend the lexicon beyond the static list of entries provided by the machine-readable dictionary upon which it is based.",
+                    "sid": 107,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most popular approach to dealing with seg\u00ad mentation ambiguities is the maximum matching method, possibly augmented with further heuristics.",
+                    "sid": 108,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method, one instance of which we term the \"greedy algorithm\" in our evaluation of our own system in Section 5, involves starting at the beginning (or end) of the sentence, finding the longest word starting (ending) at that point, and then repeating the process starting at the next (previous) hanzi until the end (begin\u00ad ning) of the sentence is reached.",
+                    "sid": 109,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Papers that use this method or minor variants thereof include Liang (1986), Li et al.",
+                    "sid": 110,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1991}, Gu and Mao (1994), and Nie, Jin, and Hannan (1994).",
+                    "sid": 111,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest version of the maximum matching algorithm effectively deals with ambiguity by ignoring it, since the method is guaranteed to produce only one segmentation.",
+                    "sid": 112,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Methods that allow multiple segmentations must provide criteria for choosing the best segmentation.",
+                    "sid": 113,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some approaches depend upon some form of con\u00ad straint satisfaction based on syntactic or semantic features (e.g., Yeh and Lee [1991], which uses a unification-based approach).",
+                    "sid": 114,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Others depend upon various lexical heuris\u00ad tics: for example Chen and Liu (1992) attempt to balance the length of words in a three-word window, favoring segmentations that give approximately equal length for each word.",
+                    "sid": 115,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Methods for expanding the dictionary include, of course, morphological rules, rules for segmenting personal names, as well as numeral sequences, expressions for dates, and so forth (Chen and Liu 1992; Wang, Li, and Chang 1992; Chang and Chen 1993; Nie, Jin, and Hannan 1994).",
+                    "sid": 116,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexical-knowledge-based approaches that include statistical information generally presume that one starts with all possible segmentations of a sentence, and picks the best segmentation from the set of possible segmentations using a probabilistic or cost\u00ad based scoring mechanism.",
+                    "sid": 117,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Approaches differ in the algorithms used for scoring and selecting the best path, as well as in the amount of contextual information used in the scoring process.",
+                    "sid": 118,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest approach involves scoring the various analyses by costs based on word frequency, and picking the lowest cost path; variants of this approach have been described in Chang, Chen, and Chen (1991) and Chang and Chen (1993).",
+                    "sid": 119,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More complex approaches such as the relaxation technique have been applied to this problem Fan and Tsai (1988}.",
+                    "sid": 120,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that Chang, Chen, and Chen (1991), in addition to word-frequency information, include a constraint-satisfication model, so their method is really a hybrid approach.",
+                    "sid": 121,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several papers report the use of part-of-speech information to rank segmentations (Lin, Chiang, and Su 1993; Peng and Chang 1993; Chang and Chen 1993); typically, the probability of a segmentation is multiplied by the probability of the tagging(s) for that segmentation to yield an estimate of the total probability for the analysis.",
+                    "sid": 122,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical methods seem particularly applicable to the problem of unknown-word identification, especially for constructions like names, where the linguistic constraints are minimal, and where one therefore wants to know not only that a particular se\u00ad quence of hanzi might be a name, but that it is likely to be a name with some probabil\u00ad ity.",
+                    "sid": 123,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several systems propose statistical methods for handling unknown words (Chang et al. 1992; Lin, Chiang, and Su 1993; Peng and Chang 1993).",
+                    "sid": 124,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of these approaches (e.g., Lin, Chiang, and Su [1993]) attempt to identify unknown words, but do not ac\u00ad tually tag the words as belonging to one or another class of expression.",
+                    "sid": 125,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is not ideal for some applications, however.",
+                    "sid": 126,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, for TTS it is necessary to know that a particular sequence of hanzi is of a particular category because that knowl\u00ad edge could affect the pronunciation; consider, for example the issues surrounding the pronunciation of ganl I qian2 discussed in Section 1.",
+                    "sid": 127,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Sproat and Shih (1990), performance for Chinese segmentation systems is generally reported in terms of the dual measures of precision and recalP It is fairly standard to report precision and recall scores in the mid to high 90% range.",
+                    "sid": 128,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is almost universally the case that no clear definition of what constitutes a \"correct\" segmentation is given, so these performance measures are hard to evaluate.",
+                    "sid": 129,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Indeed, as we shall show in Section 5, even human judges differ when presented with the task of segmenting a text into words, so a definition of the criteria used to determine that a given segmentation is correct is crucial before one can interpret such measures.",
+                    "sid": 130,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a few cases, the criteria for correctness are made more explicit.",
+                    "sid": 131,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example Chen and Liu (1992) report precision and recall rates of over 99%, but this counts only the words that occur in the test corpus that also occur in their dictionary.",
+                    "sid": 132,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides the lack of a clear definition of what constitutes a correct segmentation for a given Chinese sentence, there is the more general issue that the test corpora used in these evaluations differ from system to system, so meaningful comparison between systems is rendered even more difficult.",
+                    "sid": 133,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The major problem for all segmentation systems remains the coverage afforded by the dictionary and the lexical rules used to augment the dictionary to deal with unseen words.",
+                    "sid": 134,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dictionary sizes reported in the literature range from 17,000 to 125,000 entries, and it seems reasonable to assume that the coverage of the base dictionary constitutes a major factor in the performance of the various approaches, possibly more important than the particular set of methods used in the segmentation.",
+                    "sid": 135,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, even the size of the dictionary per se is less important than the appropriateness of the lexicon to a particular test corpus: as Fung and Wu (1994) have shown, one can obtain substantially better segmentation by tailoring the lexicon to the corpus to be segmented.",
+                    "sid": 136,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the proposal. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Chinese word segmentation can be viewed as a stochastic transduction problem.",
+                    "sid": 137,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More formally, we start by representing the dictionary D as a Weighted Finite State Trans\u00ad ducer (WFST) (Pereira, Riley, and Sproat 1994).",
+                    "sid": 138,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let H be the set of hanzi, p be the set of pinyin syllables with tone marks, and P be the set of grammatical part-of-speech labels.",
+                    "sid": 139,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then each arc of D maps either from an element of H to an element of p, or from E-i.e., the empty string-to an element of P. More specifically, each word is represented in the dictionary as a sequence of arcs, starting from the initial state of D and labeled with an element 5 of Hxp, which is terminated with a weighted arc labeled with an element of Ex P. The weight represents the estimated cost (negative log probability) of the word.",
+                    "sid": 140,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we represent the input sentence as an unweighted finite-state acceptor (FSA) I over H. Let us assume the existence of a function Id, which takes as input an FSA A, and produces as output a transducer that maps all and only the strings of symbols accepted by A to themselves (Kaplan and Kay 1994).",
+                    "sid": 141,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can 5 Recall that precision is defined to be the number of correct hits divided by the total number of items.",
+                    "sid": 142,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "selected; and that recall is defined to be the number of correct hits divided by the number of items that should have been selected.",
+                    "sid": 143,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "then define the best segmentation to be the cheapest or best path in Id(I) o D* (i.e., Id(I) composed with the transitive closure of 0).6 Consider the abstract example illustrated in Figure 2.",
+                    "sid": 144,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this example there are four \"input characters,\" A, B, C and D, and these map respectively to four \"pronunciations\" a, b, c and d. Furthermore, there are four \"words\" represented in the dictionary.",
+                    "sid": 145,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are shown, with their associated costs, as follows: ABj nc 4.0 AB C/jj 6.0 CD /vb 5.",
+                    "sid": 146,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 D/ nc 5.0 The minimal dictionary encoding this information is represented by the WFST in Figure 2(a).",
+                    "sid": 147,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An input ABCD can be represented as an FSA as shown in Figure 2(b).",
+                    "sid": 148,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This FSA I can be segmented into words by composing Id(I) with D*, to form the WFST shown in Figure 2(c), then selecting the best path through this WFST to produce the WFST in Figure 2(d).",
+                    "sid": 149,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This WFST represents the segmentation of the text into the words AB and CD, word boundaries being marked by arcs mapping between f and part-of-speech labels.",
+                    "sid": 150,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the segmentation corresponds to the sequence of words that has the lowest summed unigram cost, the segmenter under discussion here is a zeroth-order model.",
+                    "sid": 151,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is important to bear in mind, though, that this is not an inherent limitation of the model.",
+                    "sid": 152,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, it is well-known that one can build a finite-state bigram (word) model by simply assigning a state Si to each word Wi in the vocabulary, and having (word) arcs leaving that state weighted such that for each Wj and corresponding arc aj leaving Si, the cost on aj is the bigram cost of WiWj- (Costs for unseen bigrams in such a scheme would typically be modeled with a special backoff state.)",
+                    "sid": 153,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 6 we dis\u00ad cuss other issues relating to how higher-order language models could be incorporated into the model.",
+                    "sid": 154,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Dictionary Representation.",
+                    "sid": 155,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we have seen, the lexicon of basic words and stems is represented as a WFST; most arcs in this WFST represent mappings between hanzi and pronunciations, and are costless.",
+                    "sid": 156,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each word is terminated by an arc that represents the transduction between f and the part of speech of that word, weighted with an estimated cost for that word.",
+                    "sid": 157,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cost is computed as follows, where N is the corpus size and f is the frequency: (1) Besides actual words from the base dictionary, the lexicon contains all hanzi in the Big 5 Chinese code/ with their pronunciation(s), plus entries for other characters that can be found in Chinese text, such as Roman letters, numerals, and special symbols.",
+                    "sid": 158,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that hanzi that are not grouped into dictionary words (and are not identified as single\u00ad hanzi words), or into one of the other categories of words discussed in this paper, are left unattached and tagged as unknown words.",
+                    "sid": 159,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other strategies could readily 6 As a reviewer has pointed out, it should be made clear that the function for computing the best path is. an instance of the Viterbi algorithm.",
+                    "sid": 160,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 Big 5 is the most popular Chinese character coding standard in use in Taiwan and Hong Kong.",
+                    "sid": 161,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is. based on the traditional character set rather than the simplified character set used in Singapore and Mainland China.",
+                    "sid": 162,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) IDictionary D I D:d/0.000 B:b/0.000 B:b/0.000 ( b ) ( c ) ( d ) I B e s t P a t h ( I d ( I ) o D * ) I cps:nd4.!l(l() Figure 2 An abstract example illustrating the segmentation algorithm.",
+                    "sid": 163,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The transitive closure of the dictionary in (a) is composed with Id(input) (b) to form the WFST (c).",
+                    "sid": 164,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmentation chosen is the best path through the WFST, shown in (d).",
+                    "sid": 165,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(In this figure eps is c) be implemented, though, such as a maximal-grouping strategy (as suggested by one reviewer of this paper); or a pairwise-grouping strategy, whereby long sequences of unattached hanzi are grouped into two-hanzi words (which may have some prosodic motivation).",
+                    "sid": 166,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have not to date explored these various options.",
+                    "sid": 167,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word frequencies are estimated by a re-estimation procedure that involves apply\u00ad ing the segmentation algorithm presented here to a corpus of 20 million words,8 using 8 Our training corpus was drawn from a larger corpus of mixed-genre text consisting mostly of.",
+                    "sid": 168,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "newspaper material, but also including kungfu fiction, Buddhist tracts, and scientific material.",
+                    "sid": 169,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This larger corpus was kindly provided to us by United Informatics Inc., R.O.C. a set of initial estimates of the word frequencies.9 In this re-estimation procedure only the entries in the base dictionary were used: in other words, derived words not in the base dictionary and personal and foreign names were not used.",
+                    "sid": 170,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best analysis of the corpus is taken to be the true analysis, the frequencies are re-estimated, and the algorithm is repeated until it converges.",
+                    "sid": 171,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly this is not the only way to estimate word-frequencies, however, and one could consider applying other methods: in partic\u00ad ular since the problem is similar to the problem of assigning part-of-speech tags to an untagged corpus given a lexicon and some initial estimate of the a priori probabilities for the tags, one might consider a more sophisticated approach such as that described in Kupiec (1992); one could also use methods that depend on a small hand-tagged seed corpus, as suggested by one reviewer.",
+                    "sid": 172,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In any event, to date, we have not compared different methods for deriving the set of initial frequency estimates.",
+                    "sid": 173,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note also that the costs currently used in the system are actually string costs, rather than word costs.",
+                    "sid": 174,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because our corpus is not annotated, and hence does not distinguish between the various words represented by homographs, such as, which could be /adv jiangl 'be about to' orInc jiang4 '(military) general'-as in 1j\\xiao3jiang4 'little general.'",
+                    "sid": 175,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such cases we assign all of the estimated probability mass to the form with the most likely pronunciation (determined by inspection), and assign a very small probability (a very high cost, arbitrarily chosen to be 40) to all other variants.",
+                    "sid": 176,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case of, the most common usage is as an adverb with the pronunciation jiangl, so that variant is assigned the estimated cost of 5.98, and a high cost is assigned to nominal usage with the pronunciation jiang4.",
+                    "sid": 177,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The less favored reading may be selected in certain contexts, however; in the case of , for example, the nominal reading jiang4 will be selected if there is morphological information, such as a following plural affix ir, menD that renders the nominal reading likely, as we shall see in Section 4.3.",
+                    "sid": 178,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 shows a small fragment of the WFST encoding the dictionary, containing both entries forjust discussed, g:t\u00a5 zhonglhua2 min2guo2 (China Republic) 'Republic of China,' and i\u00a5inl.",
+                    "sid": 179,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "nan2gual 'pumpkin.'",
+                    "sid": 180,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 A Sample Segmentation Using Only Dictionary Words Figure 4 shows two possible paths from the lattice of possible analyses of the input sentence B X:\u00a5 .:.S:P:l 'How do you say octopus in Japanese?' previously shown in Figure 1.",
+                    "sid": 181,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As noted, this sentence consists of four words, namely B X ri4wen2 'Japanese,' :\u00a5, zhanglyu2 'octopus/ :&P:l zen3me0 'how,' and IDt shuol 'say.'",
+                    "sid": 182,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As indicated in Figure 1(c), apart from this correct analysis, there is also the analysis taking B ri4 as a word (e.g., a common abbreviation for Japan), along with X:\u00a5 wen2zhangl 'essay/ and f!!.",
+                    "sid": 183,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "yu2 'fish.'",
+                    "sid": 184,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both of these analyses are shown in Figure 4; fortunately, the correct analysis is also the one with the lowest cost, so it is this analysis that is chosen.",
+                    "sid": 185,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Morphological Analysis.",
+                    "sid": 186,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method just described segments dictionary words, but as noted in Section 1, there are several classes of words that should be handled that are not found in a standard dictionary.",
+                    "sid": 187,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One class comprises words derived by productive morphologi\u00ad cal processes, such as plural noun formation using the suffix ir, menD.",
+                    "sid": 188,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Other classes handled by the current system are discussed in Section 5.)",
+                    "sid": 189,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The morphological anal\u00adysis itself can be handled using well-known techniques from finite-state morphol 9 The initial estimates are derived from the frequencies in the corpus of the strings of hanzi making up.",
+                    "sid": 190,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "each word in the lexicon whether or not each string is actually an instance of the word in question.",
+                    "sid": 191,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00a3 : _ADV: 5.88 If:!",
+                    "sid": 192,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ":zhong1 : 0.0 tjl :huo2 :0.0 (R:spub:/ic of Ch:ina) + .,_,...I : jlong4 :0.0 (mUifaty genG181) 0 \u00a3: _NC: 40.0 Figure 3 Partial Chinese Lexicon (NC = noun; NP = proper noun).c=- - I \u2022=- :il: .;ss:;zhangt \u2022 '-:.",
+                    "sid": 193,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I \u2022 JAPANS :rl4 .\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\"\\)\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\"o\u00b7'\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\"\\:J\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7 \u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7\u00b7'\\; . '.:: ..........0 6.51 9.51 : jj / JAPANESE OCTOPUS 10\u00b728i\u00a3 :_nc HOW SAY f B :rl4 :il: :wen2 t '- \u2022 :zhang!",
+                    "sid": 194,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "!!:\\ :yu2 e:_nc [::!!:zen3 l!f :moO t:_adv il!:shuot ,:_vb i i i 1 \u2022 10.03 13...",
+                    "sid": 195,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7.96 5.55 1 l...................................................................................................................................................................................................J..",
+                    "sid": 196,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 Input lattice (top) and two segmentations (bottom) of the sentence 'How do you say octopus in Japanese?'.",
+                    "sid": 197,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A non-optimal analysis is shown with dotted lines in the bottom frame.",
+                    "sid": 198,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ogy (Koskenniemi 1983; Antworth 1990; Tzoukermann and Liberman 1990; Karttunen, Kaplan, and Zaenen 1992; Sproat 1992); we represent the fact that ir, attaches to nouns by allowing t:-transitions from the final states of all noun entries, to the initial state of the sub-WFST representing f,.",
+                    "sid": 199,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, for our purposes it is not sufficient to repre\u00ad sent the morphological decomposition of, say, plural nouns: we also need an estimate of the cost of the resulting word.",
+                    "sid": 200,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For derived words that occur in our corpus we can estimate these costs as we would the costs for an underived dictionary entry.",
+                    "sid": 201,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So, 1: f, xue2shengl+men0 (student+PL) 'students' occurs and we estimate its cost at 11.43; similarly we estimate the cost of f, jiang4+men0 (general+PL) 'generals' (as in 'J' f, xiao3jiang4+men0 'little generals'), at 15.02.",
+                    "sid": 202,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But we also need an estimate of the probability for a non-occurring though possible plural form like i\u00a5JJ1l.f, nan2gua1-men0 'pumpkins.'",
+                    "sid": 203,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 Here we use the Good-Turing estimate (Baayen 1989; Church and Gale 1991), whereby the aggregate probability of previously unseen instances of a construction is estimated as ni/N, where N is the total number of observed tokens and n1 is the number of types observed only once.",
+                    "sid": 204,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us notate the set of previously unseen, or novel, members of a category X as unseen(X); thus, novel members of the set of words derived in f, menO will be de\u00ad noted unseen(f,).",
+                    "sid": 205,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For irt the Good-Turing estimate just discussed gives us an estimate of p(unseen(f,) I f,)-the probability of observing a previously unseen instance of a construction in ft given that we know that we have a construction in f,.",
+                    "sid": 206,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This Good\u00ad Turing estimate of p(unseen(f,) If,) can then be used in the normal way to define the probability of finding a novel instance of a construction in ir, in a text: p(unseen(f,)) = p(unseen(f,) I f,) p(fn Here p(ir,) is just the probability of any construction in ft as estimated from the frequency of such constructions in the corpus.",
+                    "sid": 207,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, as\u00ad suming a simple bigram backoff model, we can derive the probability estimate for the particular unseen word i\u00a51J1l.",
+                    "sid": 208,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "irL as the product of the probability estimate for i\u00a5JJ1l., and the probability estimate just derived for unseen plurals in ir,: p(i\u00a51J1l.ir,) p(i\u00a51J1l.)p(unseen(f,)).",
+                    "sid": 209,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cost estimate, cost(i\u00a5JJ1l.fn is computed in the obvious way by summing the negative log probabilities of i\u00a5JJ1l.",
+                    "sid": 210,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and f,.",
+                    "sid": 211,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows how this model is implemented as part of the dictionary WFST.",
+                    "sid": 212,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is a (costless) transition between the NC node and f,.",
+                    "sid": 213,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The transition from f, to a final state transduces c to the grammatical tag PL with cost cost(unseen(f,)): cost(i\u00a5JJ1l.ir,) == cost(i\u00a5JJ1l.)",
+                    "sid": 214,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+ cost(unseen(fm, as desired.",
+                    "sid": 215,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the seen word ir, 'gen\u00ad erals,' there is an c:NC transduction from to the node preceding ir,; this arc has cost cost( f,) - cost(unseen(f,)), so that the cost of the whole path is the desired cost( f,).",
+                    "sid": 216,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This representation gives ir, an appropriate morphological decomposition, pre\u00ad serving information that would be lost by simply listing ir, as an unanalyzed form.",
+                    "sid": 217,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the backoff model assumes that there is a positive correlation between the frequency of a singular noun and its plural.",
+                    "sid": 218,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An analysis of nouns that occur in both the singular and the plural in our database reveals that there is indeed a slight but significant positive correlation-R2 = 0.20, p < 0.005; see Figure 6.",
+                    "sid": 219,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that the backoff model is as reasonable a model as we can use in the absence of further information about the expected cost of a plural form.",
+                    "sid": 220,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 Chinese speakers may object to this form, since the suffix f, menD (PL) is usually restricted to.",
+                    "sid": 221,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "attaching to terms denoting human beings.",
+                    "sid": 222,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is possible to personify any noun, so in children's stories or fables, i\u00a5JJ1l.",
+                    "sid": 223,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "f, nan2gual+men0 'pumpkins' is by no means impossible.",
+                    "sid": 224,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "J:j:l :zhongl :0.0 ;m,Jlong4 :0.0 (mHHaryg9tltHBI) \u00a3: _ADV: 5.98 \u00a5 :hua2:o.o E :_NC: 4.41 :mln2:o.o mm : guo2 : 0.0 (RopubllcofChlna) .....,.",
+                    "sid": 225,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 Figure 5 An example of affixation: the plural affix.",
+                    "sid": 226,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.4 Chinese Personal Names.",
+                    "sid": 227,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Full Chinese personal names are in one respect simple: they are always of the form family+given.",
+                    "sid": 228,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The family name set is restricted: there are a few hundred single-hanzi family names, and about ten double-hanzi ones.",
+                    "sid": 229,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given names are most commonly two hanzi long, occasionally one hanzi long: there are thus four possible name types, which can be described by a simple set of context-free rewrite rules such as the following: 1.",
+                    "sid": 230,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "wo rd => na m e 2.",
+                    "sid": 231,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "na me =>1 ha nzi fa mi ly 2 ha nzi gi ve n 3.",
+                    "sid": 232,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "na me =>1 ha nzi fa mi ly 1 ha nzi gi ve n 4.",
+                    "sid": 233,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "na me =>2 ha nzi fa mi ly 2 ha nzi gi ve n 5.",
+                    "sid": 234,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "na me =>2 ha nzi fa mi ly 1 ha nzi gi ve n 6.1 ha nzi fa mi ly => ha nz ii 7.2 ha nzi fa mi ly => ha nzi i ha nz ij 8.1 ha nzi gi ve n => ha nz ii 9.2 ha nzi giv en => ha nzi i ha nz ij The difficulty is that given names can consist, in principle, of any hanzi or pair of hanzi, so the possible given names are limited only by the total number of hanzi, though some hanzi are certainly far more likely than others.",
+                    "sid": 235,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a sequence of hanzi that is a possible name, we wish to assign a probability to that sequence qua name.",
+                    "sid": 236,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can model this probability straightforwardly enough with a probabilistic version of the grammar just given, which would assign probabilities to the individual rules.",
+                    "sid": 237,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, given a sequence F1G1G2, where F1 is a legal single-hanzi family name, and Plural Nouns X g 0 g \"' X X 0 T!i c\"'.",
+                    "sid": 238,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 X u} \"' o; .2 X X><X X XX X X X X X X x X X X X X x X V X X X X .;t'*- XXX:OX X X X X X X 9 x X X XX XX X X X X X X X XXX:< X X>O<XX>!KXX XI<>< \u00bbC X X XX :X: X X \"' X X XX >OO<X>D<XIK X X X X X X --XX\u00bb: XXX X X\u00bbC X X\u00abX...C:XXX X Xll< X X ><XX>IIC:liiC:oiiiiCI--8!X:liiOC!I!S8K X X X 10 100 1000 10000 log(F)_base: R\"2=0.20 (p < 0.005) X 100000 Figure 6 Plot of log frequency of base noun, against log frequency of plural nouns.",
+                    "sid": 239,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "G1 and G2 are hanzi, we can estimate the probability of the sequence being a name as the product of: \u2022 the probability that a word chosen randomly from a text will be a name-p(rule 1), and \u2022 the probability that the name is of the form 1hanzi-family 2hanzi-given-p(rule 2), and \u2022 the probability that the family name is the particular hanzi F1-p(rule 6), and \u2022 the probability that the given name consists of the particular hanzi G1 and G2-p(rule 9) This model is essentially the one proposed in Chang et al.",
+                    "sid": 240,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1992).",
+                    "sid": 241,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first probability is estimated from a name count in a text database, and the rest of the probabilities are estimated from a large list of personal names.n Note that in Chang et al.'s model the p(rule 9) is estimated as the product of the probability of finding G 1 in the first position of a two-hanzi given name and the probability of finding G2 in the second position of a two-hanzi given name, and we use essentially the same estimate here, with some modifications as described later on.",
+                    "sid": 242,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This model is easily incorporated into the segmenter by building a WFST restrict\u00ad ing the names to the four licit types, with costs on the arcs for any particular name summing to an estimate of the cost of that name.",
+                    "sid": 243,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This WFST is then summed with the WFST implementing the dictionary and morphological rules, and the transitive closure of the resulting transducer is computed; see Pereira, Riley, and Sproat (1994) for an explanation of the notion of summing WFSTs.12 Conceptual Improvements over Chang et al.'s Model.",
+                    "sid": 244,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two weaknesses in Chang et al.'s model, which we improve upon.",
+                    "sid": 245,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the model assumes independence between the first and second hanzi of a double given name.",
+                    "sid": 246,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yet, some hanzi are far more probable in women's names than they are in men's names, and there is a similar list of male-oriented hanzi: mixing hanzi from these two lists is generally less likely than would be predicted by the independence model.",
+                    "sid": 247,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a partial solution, for pairs of hanzi that co-occur sufficiently often in our namelists, we use the estimated bigram cost, rather than the independence-based cost.",
+                    "sid": 248,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second weakness is purely conceptual, and probably does not affect the per\u00ad formance of the model.",
+                    "sid": 249,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For previously unseen hanzi in given names, Chang et al. assign a uniform small cost; but we know that some unseen hanzi are merely acci\u00ad dentally missing, whereas others are missing for a reason-for example, because they have a bad connotation.",
+                    "sid": 250,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we have noted in Section 2, the general semantic class to which a hanzi belongs is often predictable from its semantic radical.",
+                    "sid": 251,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not surprisingly some semantic classes are better for names than others: in our corpora, many names are picked from the GRASS class but very few from the SICKNESS class.",
+                    "sid": 252,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other good classes include JADE and GOLD; other bad classes are DEATH and RAT.",
+                    "sid": 253,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can better predict the probability of an unseen hanzi occurring in a name by computing a within-class Good-Turing estimate for each radical class.",
+                    "sid": 254,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assuming unseen objects within each class are equiprobable, their probabilities are given by the Good-Turing theorem as: cis E( n'J.ls) Po oc N * E(N8ls) (2) where p815 is the probability of one unseen hanzi in class cls, E(n'J.15 ) is the expected number of hanzi in cls seen once, N is the total number of hanzi, and E(N(/ 5 ) is the expected number of unseen hanzi in class cls.",
+                    "sid": 255,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of the Good-Turing equation presumes suitable estimates of the unknown expectations it requires.",
+                    "sid": 256,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the denomi 11 We have two such lists, one containing about 17,000 full names, and another containing frequencies of.",
+                    "sid": 257,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "hanzi in the various name positions, derived from a million names.",
+                    "sid": 258,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12 One class of full personal names that this characterization does not cover are married women's names.",
+                    "sid": 259,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where the husband's family name is optionally prepended to the woman's full name; thus ;f:*lf#i xu3lin2-yan2hai3 would represent the name that Ms. Lin Yanhai would take if she married someone named Xu.",
+                    "sid": 260,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This style of naming is never required and seems to be losing currency.",
+                    "sid": 261,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is formally straightforward to extend the grammar to include these names, though it does increase the likelihood of overgeneration and we are unaware of any working systems that incorporate this type of name.",
+                    "sid": 262,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We of course also fail to identify, by the methods just described, given names used without their associated family name.",
+                    "sid": 263,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is in general very difficult, given the extremely free manner in which Chinese given names are formed, and given that in these cases we lack even a family name to give the model confidence that it is identifying a name.",
+                    "sid": 264,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 The cost as a novel given name (second position) for hanzi from various radical classes.",
+                    "sid": 265,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "JA DE G O L D G R AS S SI C K NE SS DE AT H R A T 14.",
+                    "sid": 266,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "98 15.",
+                    "sid": 267,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "52 15.",
+                    "sid": 268,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "76 16.",
+                    "sid": 269,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "25 16.",
+                    "sid": 270,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "30 16.",
+                    "sid": 271,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "42 nator, the N31s can be measured well by counting, and we replace the expectation by the observation.",
+                    "sid": 272,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the numerator, however, the counts of ni1s are quite irregular, in\u00ad cluding several zeros (e.g., RAT, none of whose members were seen).",
+                    "sid": 273,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there is a strong relationship between ni1s and the number of hanzi in the class.",
+                    "sid": 274,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For E(ni1s), then, we substitute a smooth S against the number of class elements.",
+                    "sid": 275,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This smooth guarantees that there are no zeroes estimated.",
+                    "sid": 276,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final estimating equation is then: (3) Since the total of all these class estimates was about 10% off from the Turing estimate n1/N for the probability of all unseen hanzi, we renormalized the estimates so that they would sum to n 1jN.",
+                    "sid": 277,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This class-based model gives reasonable results: for six radical classes, Table 1 gives the estimated cost for an unseen hanzi in the class occurring as the second hanzi in a double GIVEN name.",
+                    "sid": 278,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the good classes JADE, GOLD and GRASS have lower costs than the bad classes SICKNESS, DEATH and RAT, as desired, so the trend observed for the results of this method is in the right direction.",
+                    "sid": 279,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.5 Transliterations of Foreign Words.",
+                    "sid": 280,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Foreign names are usually transliterated using hanzi whose sequential pronunciation mimics the source language pronunciation of the name.",
+                    "sid": 281,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since foreign names can be of any length, and since their original pronunciation is effectively unlimited, the identi\u00ad fication of such names is tricky.",
+                    "sid": 282,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fortunately, there are only a few hundred hanzi that are particularly common in transliterations; indeed, the commonest ones, such as E. bal, m er3, and iij al are often clear indicators that a sequence of hanzi containing them is foreign: even a name like !:i*m xia4mi3-er3 'Shamir,' which is a legal Chi\u00ad nese personal name, retains a foreign flavor because of liM.",
+                    "sid": 283,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a first step towards modeling transliterated names, we have collected all hanzi occurring more than once in the roughly 750 foreign names in our dictionary, and we estimate the probabil\u00ad ity of occurrence of each hanzi in a transliteration (pTN(hanzi;)) using the maximum likelihood estimate.",
+                    "sid": 284,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As with personal names, we also derive an estimate from text of the probability of finding a transliterated name of any kind (PTN).",
+                    "sid": 285,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we model the probability of a new transliterated name as the product of PTN and PTN(hanzi;) for each hanzi; in the putative name.13 The foreign name model is implemented as an WFST, which is then summed with the WFST implementing the dictionary, morpho 13 The current model is too simplistic in several respects.",
+                    "sid": 286,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the common \"suffixes,\" -nia (e.g.,.",
+                    "sid": 287,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Virginia) and -sia are normally transliterated as fbSi!",
+                    "sid": 288,
+                    "ssid": 152,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ni2ya3 and @5:2 xilya3, respectively.",
+                    "sid": 289,
+                    "ssid": 153,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The interdependence between fb or 1/!i, and 5:2 is not captured by our model, but this could easily be remedied.",
+                    "sid": 290,
+                    "ssid": 154,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "logical rules, and personal names; the transitive closure of the resulting machine is then computed.",
+                    "sid": 291,
+                    "ssid": 155,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "evaluation. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this section we present a partial evaluation of the current system, in three parts.",
+                    "sid": 292,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first is an evaluation of the system's ability to mimic humans at the task of segmenting text into word-sized units; the second evaluates the proper-name identification; the third measures the performance on morphological analysis.",
+                    "sid": 293,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To date we have not done a separate evaluation of foreign-name recognition.",
+                    "sid": 294,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation of the Segmentation as a Whole.",
+                    "sid": 295,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous reports on Chinese segmentation have invariably cited performance either in terms of a single percent-correct score, or else a single precision-recall pair.",
+                    "sid": 296,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem with these styles of evaluation is that, as we shall demonstrate, even human judges do not agree perfectly on how to segment a given text.",
+                    "sid": 297,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, rather than give a single evaluative score, we prefer to compare the performance of our method with the judgments of several human subjects.",
+                    "sid": 298,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To this end, we picked 100 sentences at random containing 4,372 total hanzi from a test corpus.14 (There were 487 marks of punctuation in the test sentences, including the sentence-final periods, meaning that the average inter-punctuation distance was about 9 hanzi.)",
+                    "sid": 299,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We asked six native speakers-three from Taiwan (TlT3), and three from the Mainland (M1M3)-to segment the corpus.",
+                    "sid": 300,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we could not bias the subjects towards a particular segmentation and did not presume linguistic sophistication on their part, the instructions were simple: subjects were to mark all places they might plausibly pause if they were reading the text aloud.",
+                    "sid": 301,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An examination of the subjects' bracketings confirmed that these instructions were satisfactory in yielding plausible word-sized units.",
+                    "sid": 302,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(See also Wu and Fung [1994].)",
+                    "sid": 303,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Various segmentation approaches were then compared with human performance: 1.",
+                    "sid": 304,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A greedy algorithm (or maximum-matching algorithm), GR: proceed through the sentence, taking the longest match with a dictionary entry at each point.",
+                    "sid": 305,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 306,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An anti-greedy algorithm, AG: instead of the longest match, take the.",
+                    "sid": 307,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "shortest match at each point.",
+                    "sid": 308,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 309,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method being described-henceforth ST..",
+                    "sid": 310,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two measures that can be used to compare judgments are: 1.",
+                    "sid": 311,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision.",
+                    "sid": 312,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each pair of judges consider one judge as the standard,.",
+                    "sid": 313,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "computing the precision of the other's judgments relative to this standard.",
+                    "sid": 314,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 315,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall.",
+                    "sid": 316,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each pair of judges, consider one judge as the standard,.",
+                    "sid": 317,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "computing the recall of the other's judgments relative to this standard.",
+                    "sid": 318,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly, for judges h and h taking h as standard and computing the precision and recall for Jz yields the same results as taking h as the standard, and computing for h, 14 All evaluation materials, with the exception of those used for evaluating personal names were drawn.",
+                    "sid": 319,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "from the subset of the United Informatics corpus not used in the training of the models.",
+                    "sid": 320,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 Similarity matrix for segmentation judgments.",
+                    "sid": 321,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Jud ges A G G R ST M 1 M 2 M 3 T1 T2 T3 AG 0.7 0 0.7 0 0 . 4 3 0.4 2 0.6 0 0.6 0 0.6 2 0.5 9 GR 0.9 9 0 . 6 2 0.6 4 0.7 9 0.8 2 0.8 1 0.7 2 ST 0 . 6 4 0.6 7 0.8 0 0.8 4 0.8 2 0.7 4 M1 0.7 7 0.6 9 0.7 1 0.6 9 0.7 0 M2 0.7 2 0.7 3 0.7 1 0.7 0 M3 0.8 9 0.8 7 0.8 0 T1 0.8 8 0.8 2 T2 0.7 8 respectively, the recall and precision.",
+                    "sid": 322,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore used the arithmetic mean of each interjudge precision-recall pair as a single measure of interjudge similarity.",
+                    "sid": 323,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows these similarity measures.",
+                    "sid": 324,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average agreement among the human judges is .76, and the average agreement between ST and the humans is .75, or about 99% of the interhuman agreement.15 One can better visualize the precision-recall similarity matrix by producing from that matrix a distance matrix, computing a classical metric multidimensional scaling (Torgerson 1958; Becker, Chambers, Wilks 1988) on that dis\u00ad tance matrix, and plotting the first two most significant dimensions.",
+                    "sid": 325,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The result of this is shown in Figure 7.",
+                    "sid": 326,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The horizontal axis in this plot represents the most significant dimension, which explains 62% of the variation.",
+                    "sid": 327,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the automatic methods, AG, GR, and ST, just discussed, we also added to the plot the values for the current algorithm using only dictionary entries (i.e., no productively derived words or names).",
+                    "sid": 328,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is to allow for fair comparison between the statistical method and GR, which is also purely dictionary-based.",
+                    "sid": 329,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As can be seen, GR and this \"pared-down\" statistical method perform quite similarly, though the statistical method is still slightly better.16 AG clearly performs much less like humans than these methods, whereas the full statistical algorithm, including morphological derivatives and names, performs most closely to humans among the automatic methods.",
+                    "sid": 330,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It can also be seen clearly in this plot that two of the Taiwan speakers cluster very closely together, and the third Tai\u00ad wan speaker is also close in the most significant dimension (the x axis).",
+                    "sid": 331,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two of the Mainlanders also cluster close together but, interestingly, not particularly close to the Taiwan speakers; the third Mainlander is much more similar to the Taiwan speakers.",
+                    "sid": 332,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The breakdown of the different types of words found by ST in the test corpus is given in Table 3.",
+                    "sid": 333,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly the percentage of productively formed words is quite small (for this particular corpus), meaning that dictionary entries are covering most of the 15 GR is .73 or 96%..",
+                    "sid": 334,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "16 As one reviewer points out, one problem with the unigram model chosen here is that there is still a. tendency to pick a segmentation containing fewer words.",
+                    "sid": 335,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, given a choice between segmenting a sequence abc into abc and ab, c, the former will always be picked so long as its cost does not exceed the summed costs of ab and c: while; it is possible for abc to be so costly as to preclude the larger grouping, this will certainly not usually be the case.",
+                    "sid": 336,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, the method reported on here will necessarily be similar to a greedy method, though of course not identical.",
+                    "sid": 337,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the reviewer also points out, this is a problem that is shared by, e.g., probabilistic context-free parsers, which tend to pick trees with fewer nodes.",
+                    "sid": 338,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The question is how to normalize the probabilities in such a way that smaller groupings have a better shot at winning.",
+                    "sid": 339,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an issue that we have not addressed at the current stage of our research.",
+                    "sid": 340,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i..f,..",
+                    "sid": 341,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\"c' 0 + 0 \"0 ' \u2022 + a n t i g r e e d y x g r e e d y < > c u r r e n t m e t h o d o d i e t . o n l y \u2022 Taiwan 0 \u00b7;; 0 c CD E i5 0\"' 9 9 \u2022 Mainland \u2022 \u2022 \u2022 \u2022 -0.30.20.1 0.0 0.1 0.2 Dimension 1 (62%) Figure 7 Classical metric multidimensional scaling of distance matrix, showing the two most significant dimensions.",
+                    "sid": 342,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The percentage scores on the axis labels represent the amount of variation in the data explained by the dimension in question.",
+                    "sid": 343,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 Classes of words found by ST for the test corpus.",
+                    "sid": 344,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word type N % Dic tion ary entr ies 2 , 5 4 3 9 7 . 4 7 Mor pho logi call y deri ved wor ds 3 0 . 1 1 Fore ign tran slite rati ons 9 0 . 3 4 Per son al na mes 5 4 2 . 0 7 cases.",
+                    "sid": 345,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonetheless, the results of the comparison with human judges demonstrates that there is mileage being gained by incorporating models of these types of words.",
+                    "sid": 346,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may seem surprising to some readers that the interhuman agreement scores reported here are so low.",
+                    "sid": 347,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this result is consistent with the results of ex\u00ad periments discussed in Wu and Fung (1994).",
+                    "sid": 348,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wu and Fung introduce an evaluation method they call nk-blind.",
+                    "sid": 349,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under this scheme, n human judges are asked independently to segment a text.",
+                    "sid": 350,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their results are then compared with the results of an automatic segmenter.",
+                    "sid": 351,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given \"word\" in the automatic segmentation, if at least k of the hu\u00ad man judges agree that this is a word, then that word is considered to be correct.",
+                    "sid": 352,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For eight judges, ranging k between 1 and 8 corresponded to a precision score range of 90% to 30%, meaning that there were relatively few words (30% of those found by the automatic segmenter) on which all judges agreed, whereas most of the words found by the segmenter were such that one human judge agreed.",
+                    "sid": 353,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proper-Name Identification.",
+                    "sid": 354,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To evaluate proper-name identification, we randomly se\u00ad lected 186 sentences containing 12,000 hanzi from our test corpus and segmented the text automatically, tagging personal names; note that for names, there is always a sin\u00ad gle unambiguous answer, unlike the more general question of which segmentation is correct.",
+                    "sid": 355,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance was 80.99% recall and 61.83% precision.",
+                    "sid": 356,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, Chang et al. report 80.67% recall and 91.87% precision on an 11,000 word corpus: seemingly, our system finds as many names as their system, but with four times as many false hits.",
+                    "sid": 357,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we have reason to doubt Chang et al.'s performance claims.",
+                    "sid": 358,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without using the same test corpus, direct comparison is obviously difficult; fortunately, Chang et al. include a list of about 60 sentence fragments that exemplify various categories of performance for their system.",
+                    "sid": 359,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of our system on those sentences ap\u00ad peared rather better than theirs.",
+                    "sid": 360,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On a set of 11 sentence fragments-the A set-where they reported 100% recall and precision for name identification, we had 73% recall and 80% precision.",
+                    "sid": 361,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they list two sets, one consisting of 28 fragments and the other of 22 fragments, in which they had 0% recall and precision.",
+                    "sid": 362,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the first of these-the B set-our system had 64% recall and 86% precision; on the second-the C set-it had 33% recall and 19% precision.",
+                    "sid": 363,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that it is in precision that our over\u00ad all performance would appear to be poorer than the reported performance of Chang et al., yet based on their published examples, our system appears to be doing better precisionwise.",
+                    "sid": 364,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we have some confidence that our own performance is at least as good as that of Chang et al.",
+                    "sid": 365,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1992).",
+                    "sid": 366,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a more recent study than Chang et al., Wang, Li, and Chang (1992) propose a surname-driven, non-stochastic, rule-based system for identifying personal names.17 Wang, Li, and Chang also compare their performance with Chang et al.'s system.",
+                    "sid": 367,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fortunately, we were able to obtain a copy of the full set of sentences from Chang et al. on which Wang, Li, and Chang tested their system, along with the output of their system.18 In what follows we will discuss all cases from this set where our performance on names differs from that of Wang, Li, and Chang.",
+                    "sid": 368,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples are given in Table 4.",
+                    "sid": 369,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In these examples, the names identified by the two systems (if any) are underlined; the sentence with the correct segmentation is boxed.19 The differences in performance between the two systems relate directly to three issues, which can be seen as differences in the tuning of the models, rather than repre\u00ad senting differences in the capabilities of the model per se.",
+                    "sid": 370,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first issue relates to the completeness of the base lexicon.",
+                    "sid": 371,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Wang, Li, and Chang system fails on fragment (b) because their system lacks the word youlyoul 'soberly' and misinterpreted the thus isolated first youl as being the final hanzi of the preceding name; similarly our system failed in fragment (h) since it is missing the abbreviation i:lJI!",
+                    "sid": 372,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tai2du2 'Taiwan Independence.'",
+                    "sid": 373,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a rather important source of errors in name identifi\u00ad cation, and it is not really possible to objectively evaluate a name recognition system without considering the main lexicon with which it is used.",
+                    "sid": 374,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "17 They also provide a set of title-driven rules to identify names when they occur before titles such as $t. 1: xianlshengl 'Mr.' or i:l:itr!J tai2bei3 shi4zhang3 'Taipei Mayor.'",
+                    "sid": 375,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Obviously, the presence of a title after a potential name N increases the probability that N is in fact a name.",
+                    "sid": 376,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system does not currently make use of titles, but it would be straightforward to do so within the finite-state framework that we propose.",
+                    "sid": 377,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "18 We are grateful to ChaoHuang Chang for providing us with this set.",
+                    "sid": 378,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that Wang, Li, and Chang's.",
+                    "sid": 379,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "set was based on an earlier version of the Chang et a!.",
+                    "sid": 380,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "paper, and is missing 6 examples from the A set.",
+                    "sid": 381,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "19 We note that it is not always clear in Wang, Li, and Chang's examples which segmented words.",
+                    "sid": 382,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "constitute names, since we have only their segmentation, not the actual classification of the segmented words.",
+                    "sid": 383,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore in cases where the segmentation is identical between the two systems we assume that tagging is also identical.",
+                    "sid": 384,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 Differences in performance between our system and Wang, Li, and Chang (1992).",
+                    "sid": 385,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our System Wang, Li, and Chang a. 1\\!f!IP Eflltii /1\\!f!J:P $1til I b. agm: I a m: c. 5 Bf is Bf 1 d. \"*:t: w _t ff 1 \"* :t: w_tff 1 g., , Transliteration/Translation chen2zhongl-shenl qu3 'music by Chen Zhongshen ' huang2rong2 youlyoul de dao4 'Huang Rong said soberly' zhangl qun2 Zhang Qun xian4zhang3 you2qingl shang4ren2 hou4 'after the county president You Qing had assumed the position' lin2 quan2 'Lin Quan' wang2jian4 'Wang Jian' oulyang2-ke4 'Ouyang Ke' yinl qi2 bu4 ke2neng2 rong2xu3 tai2du2 er2 'because it cannot permit Taiwan Independence so' silfa3-yuan4zhang3 lin2yang2-gang3 'president of the Judicial Yuan, Lin Yanggang' lin2zhangl-hu2 jiangl zuo4 xian4chang3 jie3shuol 'Lin Zhanghu will give an ex\u00ad planation live' jin4/iang3 nian2 nei4 sa3 xia4 de jinlqian2 hui4 ting2zhi3 'in two years the distributed money will stop' gaoltangl da4chi2 ye1zi0 fen3 'chicken stock, a tablespoon of coconut flakes' you2qingl ru4zhu3 xian4fu3 lwu4 'after You Qing headed the county government' Table 5 Performance on morphological analysis.",
+                    "sid": 386,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Affix Pron Base category N found N missed (recall) N correct (precision) t,-,7 The second issue is that rare family names can be responsible for overgeneration, especially if these names are otherwise common as single-hanzi words.",
+                    "sid": 387,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the Wang, Li, and Chang system fails on the sequence 1:f:p:]nian2 nei4 sa3 in (k) since 1F nian2 is a possible, but rare, family name, which also happens to be written the same as the very common word meaning 'year.'",
+                    "sid": 388,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system fails in (a) because of$ shenl, a rare family name; the system identifies it as a family name, whereas it should be analyzed as part of the given name.",
+                    "sid": 389,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the statistical method fails to correctly group hanzi in cases where the individual hanzi comprising the name are listed in the dictionary as being relatively high-frequency single-hanzi words.",
+                    "sid": 390,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example is in (i), where the system fails to group t;,f;?\"$?t!: lin2yang2gang3 as a name, because all three hanzi can in principle be separate words (t;,f; lin2 'wood';?\"$ yang2 'ocean'; ?t!; gang3 'harbor').",
+                    "sid": 391,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In many cases these failures in recall would be fixed by having better estimates of the actual prob\u00ad abilities of single-hanzi words, since our estimates are often inflated.",
+                    "sid": 392,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A totally non\u00ad stochastic rule-based system such as Wang, Li, and Chang's will generally succeed in such cases, but of course runs the risk of overgeneration wherever the single-hanzi word is really intended.",
+                    "sid": 393,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation of Morphological Analysis.",
+                    "sid": 394,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Table 5 we present results from small test cor\u00ad pora for the productive affixes handled by the current version of the system; as with names, the segmentation of morphologically derived words is generally either right or wrong.",
+                    "sid": 395,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first four affixes are so-called resultative affixes: they denote some prop\u00ad erty of the resultant state of a verb, as in E7 wang4bu4-liao3 (forget-not-attain) 'cannot forget.'",
+                    "sid": 396,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last affix in the list is the nominal plural f, men0.20 In the table are the (typical) classes of words to which the affix attaches, the number found in the test corpus by the method, the number correct (with a precision measure), and the number missed (with a recall measure).",
+                    "sid": 397,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "In this paper we have argued that Chinese word segmentation can be modeled ef\u00ad fectively using weighted finite-state transducers.",
+                    "sid": 398,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This architecture provides a uniform framework in which it is easy to incorporate not only listed dictionary entries but also morphological derivatives, and models for personal names and foreign names in transliteration.",
+                    "sid": 399,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other kinds of productive word classes, such as company names, abbreviations (termed fijsuolxie3 in Mandarin), and place names can easily be 20 Note that 7 in E 7 is normally pronounced as leO, but as part of a resultative it is liao3..",
+                    "sid": 400,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "handled given appropriate models.",
+                    "sid": 401,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(For some recent corpus-based work on Chinese abbreviations, see Huang, Ahrens, and Chen [1993].)",
+                    "sid": 402,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have argued that the proposed method performs well.",
+                    "sid": 403,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, some caveats are in order in comparing this method (or any method) with other approaches to seg\u00ad mentation reported in the literature.",
+                    "sid": 404,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First of all, most previous articles report perfor\u00ad mance in terms of a single percent-correct score, or else in terms of the paired measures of precision and recall.",
+                    "sid": 405,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What both of these approaches presume is that there is a sin\u00ad gle correct segmentation for a sentence, against which an automatic algorithm can be compared.",
+                    "sid": 406,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have shown that, at least given independent human judgments, this is not the case, and that therefore such simplistic measures should be mistrusted.",
+                    "sid": 407,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is not to say that a set of standards by which a particular segmentation would count as correct and another incorrect could not be devised; indeed, such standards have been proposed and include the published PRCNSC (1994) and ROCLING (1993), as well as the unpublished Linguistic Data Consortium standards (ca.",
+                    "sid": 408,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "May 1995).",
+                    "sid": 409,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, until such standards are universally adopted in evaluating Chinese segmenters, claims about performance in terms of simple measures like percent correct should be taken with a grain of salt; see, again, Wu and Fung (1994) for further arguments supporting this conclusion.",
+                    "sid": 410,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, comparisons of different methods are not meaningful unless one can eval\u00ad uate them on the same corpus.",
+                    "sid": 411,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, there is no standard corpus of Chinese texts, tagged with either single or multiple human judgments, with which one can compare performance of various methods.",
+                    "sid": 412,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One hopes that such a corpus will be forth\u00ad coming.",
+                    "sid": 413,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we wish to reiterate an important point.",
+                    "sid": 414,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The major problem for our seg\u00ad menter, as for all segmenters, remains the problem of unknown words (see Fung and Wu [1994]).",
+                    "sid": 415,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have provided methods for handling certain classes of unknown words, and models for other classes could be provided, as we have noted.",
+                    "sid": 416,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there will remain a large number of words that are not readily adduced to any produc\u00ad tive pattern and that would simply have to be added to the dictionary.",
+                    "sid": 417,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This implies, therefore, that a major factor in the performance of a Chinese segmenter is the quality of the base dictionary, and this is probably a more important factor-from the point of view of performance alone-than the particular computational methods used.",
+                    "sid": 418,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method reported in this paper makes use solely of unigram probabilities, and is therefore a zeroeth-order model: the cost of a particular segmentation is estimated as the sum of the costs of the individual words in the segmentation.",
+                    "sid": 419,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, as we have noted, nothing inherent in the approach precludes incorporating higher-order constraints, provided they can be effectively modeled within a finite-state framework.",
+                    "sid": 420,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, as Gan (1994) has noted, one can construct examples where the segmen\u00ad tation is locally ambiguous but can be determined on the basis of sentential or even discourse context.",
+                    "sid": 421,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two sets of examples from Gan are given in (1) and (2) (:::::: Gan's Appendix B, exx.",
+                    "sid": 422,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "lla/llb and 14a/14b respectively).",
+                    "sid": 423,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (1) the sequencema3lu4 cannot be resolved locally, but depends instead upon broader context; similarly in (2), the sequence :::tcai2neng2 cannot be resolved locally: 1.",
+                    "sid": 424,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) 1 \u00a7 . ;m t 7 leO z h e 4 pil m a 3 lu 4 sh an g4 bi ng 4 t h i s CL (assi fier) horse w ay on sic k A SP (ec t) 'This horse got sick on the way' (b) 1\u00a7: . til y zhe4 tiao2 ma3lu4 hen3 shao3 this CL road very few 'Very few cars pass by this road' :$ chel jinglguo4 car pass by 2.",
+                    "sid": 425,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) I f f fi * fi :1 }'l ij 1\u00a7: {1M m m s h e n 3 m e 0 shi2 ho u4 wo 3 cai2 ne ng 2 ke4 fu 2 zh e4 ge 4 ku n4 w h a t ti m e I just be abl e ov er co m e thi s C L dif fic 'When will I be able to overcome this difficulty?'",
+                    "sid": 426,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(b) 89 :1 t& tal de cai2neng2 hen3 he DE talent very 'He has great talent' f.b ga ol hig h While the current algorithm correctly handles the (b) sentences, it fails to handle the (a) sentences, since it does not have enough information to know not to group the sequences.ma3lu4 and?]cai2neng2 respectively.",
+                    "sid": 427,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gan's solution depends upon a fairly sophisticated language model that attempts to find valid syntactic, semantic, and lexical relations between objects of various linguistic types (hanzi, words, phrases).",
+                    "sid": 428,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of a fairly low-level relation is the affix relation, which holds between a stem morpheme and an affix morpheme, such as f1 -menD (PL).",
+                    "sid": 429,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A high-level relation is agent, which relates an animate nominal to a predicate.",
+                    "sid": 430,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Particular instances of relations are associated with goodness scores.",
+                    "sid": 431,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Particular relations are also consistent with particular hypotheses about the segmentation of a given sentence, and the scores for particular relations can be incremented or decremented depending upon whether the segmentations with which they are consistent are \"popular\" or not.",
+                    "sid": 432,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Gan's system incorporates fairly sophisticated models of various linguistic information, it has the drawback that it has only been tested with a very small lexicon (a few hundred words) and on a very small test set (thirty sentences); there is therefore serious concern as to whether the methods that he discusses are scalable.",
+                    "sid": 433,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another question that remains unanswered is to what extent the linguistic information he considers can be handled-or at least approximated-by finite-state language models, and therefore could be directly interfaced with the segmentation model that we have presented in this paper.",
+                    "sid": 434,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the examples given in (1) and (2) this certainly seems possible.",
+                    "sid": 435,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider first the examples in (2).",
+                    "sid": 436,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmenter will give both analyses :1 cai2 neng2 'just be able,' and ?]cai2neng2 'talent,' but the latter analysis is preferred since splitting these two morphemes is generally more costly than grouping them.",
+                    "sid": 437,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (2a), we want to split the two morphemes since the correct analysis is that we have the adverb :1 cai2 'just,' the modal verb neng2 'be able' and the main verb R: Hke4fu2 'overcome'; the competing analysis is, of course, that we have the noun :1 cai2neng2 'talent,' followed by }'lijke4fu2 'overcome.'",
+                    "sid": 438,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly it is possible to write a rule that states that if an analysis Modal+ Verb is available, then that is to be preferred over Noun+ Verb: such a rule could be stated in terms of (finite-state) local grammars in the sense of Mohri (1993).",
+                    "sid": 439,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Turning now to (1), we have the similar problem that splitting.into.ma3 'horse' andlu4 'way' is more costly than retaining this as one word .ma3lu4 'road.'",
+                    "sid": 440,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there is again local grammatical information that should favor the split in the case of (1a): both .ma3 'horse' and .ma3 lu4 are nouns, but only .ma3 is consistent with the classifier pil, the classifier for horses.21 By a similar argument, the preference for not splitting , lm could be strengthened in (lb) by the observation that the classifier 1'1* tiao2 is consistent with long or winding objects like , lm ma3lu4 'road' but not with,ma3 'horse.'",
+                    "sid": 441,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the sets of possible classifiers for a given noun can easily be encoded on that noun by grammatical features, which can be referred to by finite-state grammatical rules.",
+                    "sid": 442,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, we feel fairly confident that for the examples we have considered from Gan's study a solution can be incorporated, or at least approximated, within a finite-state framework.",
+                    "sid": 443,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With regard to purely morphological phenomena, certain processes are not han\u00ad dled elegantly within the current framework Any process involving reduplication, for instance, does not lend itself to modeling by finite-state techniques, since there is no way that finite-state networks can directly implement the copying operations required.",
+                    "sid": 444,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mandarin exhibits several such processes, including A-not-A question formation, il\u00ad lustrated in (3a), and adverbial reduplication, illustrated in (3b): 3.",
+                    "sid": 445,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) ;IE shi4 'be' => ;IE;IE shi4bu2-shi4 (be-not-be) 'is it?'",
+                    "sid": 446,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "JI!",
+                    "sid": 447,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "gaolxing4 'happy' => F.i'JF.i'J Jl!",
+                    "sid": 448,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "gaolbu4-gaolxing4 (hap-not-happy) 'happy?'",
+                    "sid": 449,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(b) F.i'JJI!",
+                    "sid": 450,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "gaolxing4 'happy'=> F.i'JF.i'JJI!JI!",
+                    "sid": 451,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "gaolgaolxing4xing4 'happily' In the particular form of A-not-A reduplication illustrated in (3a), the first syllable of the verb is copied, and the negative markerbu4 'not' is inserted between the copy and the full verb.",
+                    "sid": 452,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case of adverbial reduplication illustrated in (3b) an adjective of the form AB is reduplicated as AABB.",
+                    "sid": 453,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only way to handle such phenomena within the framework described here is simply to expand out the reduplicated forms beforehand, and incorporate the expanded forms into the lexical transducer.",
+                    "sid": 454,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "Despite these limitations, a purely finite-state approach to Chinese word segmentation enjoys a number of strong advantages.",
+                    "sid": 455,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model we use provides a simple framework in which to incorporate a wide variety of lexical information in a uniform way.",
+                    "sid": 456,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of weighted transducers in particular has the attractive property that the model, as it stands, can be straightforwardly interfaced to other modules of a larger speech or natural language system: presumably one does not want to segment Chinese text for its own sake but instead with a larger purpose in mind.",
+                    "sid": 457,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As described in Sproat (1995), the Chinese segmenter presented here fits directly into the context of a broader finite-state model of text analysis for speech synthesis.",
+                    "sid": 458,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, by inverting the transducer so that it maps from phonemic transcriptions to hanzi sequences, one can apply the segmenter to other problems, such as speech recognition (Pereira, Riley, and Sproat 1994).",
+                    "sid": 459,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the transducers are built from human-readable descriptions using a lexical toolkit (Sproat 1995), the system is easily maintained and extended.",
+                    "sid": 460,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While size of the resulting transducers may seem daunting-the segmenter described here, as it is used in the Bell Labs Mandarin TTS system has about 32,000 states and 209,000 arcs-recent work on minimization of weighted machines and transducers (cf.",
+                    "sid": 461,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "21 In Chinese, numerals and demonstratives cannot modify nouns directly, and must be accompanied by.",
+                    "sid": 462,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a classifier.",
+                    "sid": 463,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The particular classifier used depends upon the noun.",
+                    "sid": 464,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mohri [1995]) shows promise for improving this situation.",
+                    "sid": 465,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model described here thus demonstrates great potential for use in widespread applications.",
+                    "sid": 466,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This flexibility, along with the simplicity of implementation and expansion, makes this framework an attractive base for continued research.",
+                    "sid": 467,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We thank United Informatics for providing us with our corpus of Chinese text, and BDC for the 'Behavior ChineseEnglish Electronic Dictionary.'",
+                    "sid": 468,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further thank Dr. J.-S.",
+                    "sid": 469,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chang of Tsinghua University, Taiwan, R.O.C., for kindly providing us with the name corpora.",
+                    "sid": 470,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also thank ChaoHuang Chang, reviewers for the 1994 ACL conference, and four anonymous reviewers for Computational Linguistics for useful comments.",
+                    "sid": 471,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

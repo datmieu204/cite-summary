@@ -1,0 +1,1193 @@
+{
+    "ID": "N06-1017",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We address the problem of unknown word sense detection: the identification of corpus occurrences that are not covered by a given sense inventory.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We model this as an instance of outlier detection, using a simple nearest neighbor-based approach to measuring the resemblance of a new item to a training set.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In combination with a method that alleviates data sparseness by sharing training data across lemmas, the approach achieves a precision of 0.77 and recall of 0.82.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "If a system has seen only positive examples, how does it recognize a negative example?",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the problem addressed by outlier detection, also called novelty detection1 (Markou and Singh, 2003a; Markou and Singh, 2003b; Marsland, 2003): to detect novel or unknown items that differ from all the seen training data.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Outlier detection approaches typically derive some model of \u201cnormal\u201d objects from the training set and use a distance measure and a threshold to detect abnormal items.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we apply outlier detection techniques to the task of unknown sense detection: the identification of corpus occurrences that are not covered by a given sense inventory.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training set 1 The term novelty detection is also used for the distinction of novel and repeated information in information retrieval, a different if related topic.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1: Wrong assignment due to missing sense: from the Hound of the Baskervilles, Ch.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14 against which new occurrences are compared will consist of sense-annotated text.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unknown sense detection is related to word sense disambiguation (WSD) and to word sense discrimination (Schu\u00a8 tze, 1998), but differs from both.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In WSD all senses are assumed known, and the task is to select one of them, while in unknown sense detection the task is to decide whether a given occurrence matches any of the known senses or none of them, and all training instances, regardless of the sense to which they belong, are modeled as one group of known data.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unknown sense detection also differs from word sense discrimination, where no sense inventory is given and the task is to group occurrences into senses.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In unknown sense detection the model respects the given word senses.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main motivation for this study comes from shallow semantic parsing, by which we mean a combination of WSD and the automatic assignment of semantic roles to free text.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In cases where a sense is missing from the inventory, WSD will wrongly assign one of the existing senses.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows an example, a sentence from the Hound of the Baskervilles, analyzed by the SH A L M A N E S E R (Erk and Pado, 2006) shallow semantic parser.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The analysis is based on FrameNet (Baker et al., 1998), a resource that lists senses and semantic roles for English expressions.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "FrameNet is lacking a sense of \u201cexpectation\u201d or \u201cbeing mentally prepared\u201d for the verb prepare, so prepared has been assigned the sense CO O K I N G C R E AT I O N, a possible but improbable analysis2.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such erroneous labels can be fatal when further processing builds on the results of shallow semantic parsing, e.g. for drawing inferences.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unknown sense detection can prevent such mistakes.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All sense inventories face the problem of missing senses, either because of their small overall size (as is the case for some non-English WordNets) or when they encounter domain-specific senses.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our study will be evaluated on FrameNet because of our main aim of improving shallow semantic parsing, but the method we propose is applicable to any sense inventory that has annotated data; in particular, it is also applicable to WordNet.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we model unknown sense detection as outlier detection, using a simple Nearest Neighbor-based method (Tax and Duin, 2000) that compares the local probability density at each test item with that of its nearest training item.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To our knowledge, there exists no other approach to date to the problem of detecting unknown senses.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are, however, approaches to the complementary problem of determining the closest known sense for unknown words (Widdows, 2003; Curran, 2005; Burchardt et al., 2005), which can be viewed as the logical next step after unknown sense detection.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Plan of the paper.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After a brief sketch of FrameNet in Section 2, we describe the experimental setup used throughout this paper in Section 3.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 tests whether a very simple model suffices for detecting unknown senses: a threshold on confidence scores returned by the SH A L M A N E S E R WSD 2 Unfortunately, the semantic roles have been mis-assigned by the system.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word I should fill the FO O D role, while for a hound could be assigned the optional RE C E I V E R role.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "system.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The result is that recall is much too low.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5 introduces the NN-based outlier detection approach that we use in section 6 for unknown sense detection, with better results than in the first experiment but still low recall.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 7 repeats the experiment of section 6 with added training data, making use of the fact that one semantic class in FrameNet typically pertains to several lemmas and achieving a marked improvement in results.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "framenet. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Frame Semantics (Fillmore, 1982) models the meanings of a word or expression by reference to frames which describe the background and situational knowledge necessary for understanding what the predicate is \u201cabout\u201d.",
+                    "sid": 35,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each frame provides its specific set of semantic roles.",
+                    "sid": 36,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Berkeley FrameNet project (Baker et al., 1998) is building a semantic lexicon for English describing the frames and linking them to the words and expressions that can evoke them.",
+                    "sid": 37,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These can be verbs as well as nouns, adjectives, prepositions, adverbs, and multiword expressions.",
+                    "sid": 38,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Frames are linked by IS-A and other relations.",
+                    "sid": 39,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Currently, FrameNet contains 609 frames with 8,755 lemma- frame pairs, of which 5,308 are exemplified in annotated sentences from the British National Corpus.",
+                    "sid": 40,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The annotation comprises 133,846 sentences.",
+                    "sid": 41,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As FrameNet is a growing resource, many lemmas are still lacking senses, and many senses are still lacking annotation.",
+                    "sid": 42,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is problematic for the use of FrameNet analyses as a basis for inferences over text, as e.g. in Tatu and Moldovan (2005).",
+                    "sid": 43,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the verb prepare from Figure 1 is associated with the frames CO O K I N G C R E AT I O N: prepare food AC T I V I T Y P R E PA R E: get ready for an activity AC T I V I T Y R E A DY S TAT E: be ready for an activity WI L L I N G N E S S: be willing of which only the CO O K I N G C R E AT I O N sense has been annotated.",
+                    "sid": 44,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sense in Figure 1 is not covered yet: AC T I V I T Y R E A DY S TAT E would be more appropriate than CO O K I N G C R E AT I O N, but still not optimal, since the sentence refers to a mental state rather than the preparation of an activity.",
+                    "sid": 45,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experimental setup and data. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "wave s subj obj mod Experimental setup.",
+                    "sid": 46,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To evaluate an unknown sense detection system, we need occurrences that are guaranteed not to belong to any of the seen senses.",
+                    "sid": 47,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "She She hand outwards To that end we use sense-annotated data, in our case the FrameNet annotated sentences, simulating unknown senses by designating one sense of each ambiguous lemma as unknown.",
+                    "sid": 48,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All occurrences of that sense are placed in the test set, while occurrences of all other senses are split randomly between training and test set, using 5-fold cross-validation.",
+                    "sid": 49,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We repeat the experiment with each of the senses of an ambiguous lemma playing the part of the unknown sense once.",
+                    "sid": 50,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Viewing each cross-validation run for each unknown sense as a separate experiment, we then report precision and recall averaged over unknown senses and cross-validation runs.",
+                    "sid": 51,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may seem questionable that in this experimental setup, the unknown sense occurrences of each lemma all belong to the same sense.",
+                    "sid": 52,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this does not bias the experiment since none of the models we study take advantage of the shape of the test set in any way.",
+                    "sid": 53,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather, each test item is classified individually, without recourse to the other test items.",
+                    "sid": 54,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data.",
+                    "sid": 55,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All experiments in this paper were performed on the FrameNet 1.2 annotated data pertaining to ambiguous lemmas.",
+                    "sid": 56,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After removal of instances that were annotated with more than one sense, we obtain 26,496 annotated sentences for the 1,031 ambiguous lemmas.",
+                    "sid": 57,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They were parsed with Minipar (Lin, 1993); named entities were computed using Heart of Gold (Callmeier et al., 2004).",
+                    "sid": 58,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiment 1: wsd confidence scores. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "for unknown sense detection In this section we test a very simple model of unknown sense detection: Classifiers often return a confidence score along with the assigned label.",
+                    "sid": 59,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will try to detect unknown senses by a threshold on confidence scores, declaring anything below the threshold as unknown.",
+                    "sid": 60,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that this method can only be applied to lemmas that have more than one sense, since for single-sense lemmas the system will always return the maximum confidence score.",
+                    "sid": 61,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data.",
+                    "sid": 62,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the approach that we follow in this section is applicable to all lemmas with at least two (1): subj, obj, mod (since s and subj corefer, we use only one of them) (2): she, hand, outwards (3): subj-she, obj-hand, mod-outwards (4): mod-obj-subj Figure 2: Sample Minipar parse and extracted grammatical function features senses, we need lemmas with at least three senses to evaluate it: One of the senses of each lemma is treated as unknown, which for lemmas with three or more senses leaves at least two senses for the training set.",
+                    "sid": 63,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This reduces our data set to 125 lemmas with 7,435 annotated sentences.",
+                    "sid": 64,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Modeling.",
+                    "sid": 65,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We test whether the WSD system built into SH A L M A N E S E R (Erk, 2005) can distinguish known sense items from unknown sense items reliably by its confidence scores.",
+                    "sid": 66,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system extracts a rich feature set, which forms the basis of all three experiments in this paper: \u2022 a bag-of-words context, with a window size of one sentence; \u2022 bi- and trigrams centered on the target word; \u2022 grammatical function information: for each dependent of the target, (1) its function label, (2) its headword, and (3) a combination of both are used as features.",
+                    "sid": 67,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) The concatenation of all function labels constitutes another feature.",
+                    "sid": 68,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For PPs, function labels are extended by the preposition.",
+                    "sid": 69,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an example, Figure 2 shows a BNC sentence and its grammatical function features.",
+                    "sid": 70,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 for verb targets, the target voice.",
+                    "sid": 71,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature set is based on Florian et al.",
+                    "sid": 72,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2002) but contains additional syntax-related features.",
+                    "sid": 73,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each word-related feature is represented as four features for word, lemma, part of speech, and named entity.",
+                    "sid": 74,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SH A L M A N E S E R trains one Naive Bayes classifier per lemma to be disambiguated.",
+                    "sid": 75,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this experiment, dxt x dtt\u00b4 t\u2018 t Table 1: Experiment 1: Results for label unknown sense, WSD confidence level approach.",
+                    "sid": 76,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03b8: confidence threshold.",
+                    "sid": 77,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03c3: std.",
+                    "sid": 78,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "dev.",
+                    "sid": 79,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "all system parameters were set to their default settings.",
+                    "sid": 80,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To detect unknown senses building on this WSD system, we use a fixed confidence threshold and label all items below the threshold as unknown.",
+                    "sid": 81,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results and discussion.",
+                    "sid": 82,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows precision and recall for labeling instances as unknown using different confidence thresholds \u03b8, averaged over unknown senses and 5-fold cross-validation3.",
+                    "sid": 83,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see that while the precision of this method is acceptable at 0.74 to 0.765, recall is extremely low, i.e. almost no items were labeled unknown, even at a threshold of 0.98.",
+                    "sid": 84,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, SH A L M A N E S E R has very high confidence values overall: Only 14.5% of all instances in this study had a confidence value of 0.98 or below (7,697 of 53,206).",
+                    "sid": 85,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude that with the given WSD system and (rather standard) features, this simple method cannot detect items with an unknown sense reliably.",
+                    "sid": 86,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may be due to the indiscriminately high confidence scores; or it could indicate that classifiers, which are geared at distinguishing between known classes rather than detecting objects that differ from all seen data, are not optimally suited to the task.",
+                    "sid": 87,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, one further disadvantage of this approach is that, as mentioned above, it can only be applied to lemmas with more than one annotated sense.",
+                    "sid": 88,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For FrameNet 1.2, this comprises only 19% of the lemmas.",
+                    "sid": 89,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "a nearest neighbor-based method for ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "outlier detection In the previous section we have tested a simple approach to unknown sense detection using WSD confidence scores.",
+                    "sid": 90,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our conclusion was that it was not a viable approach, given its low recall and given that 3 Note that the minimum confidence score is 0.5 if 2 senses are present in the training set, 0.33 for 3 present senses etc. Figure 3: Outlier detection by comparing distances between nearest neighbors it is only applicable to lemmas with more than one known sense.",
+                    "sid": 91,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section we introduce an alternative approach, which uses distances to nearest neighbors to detect outliers.",
+                    "sid": 92,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, the task of outlier detection is to decide whether a new object belongs to a given training set or not.",
+                    "sid": 93,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typically, outlier detection approaches derive some boundary around the training set, or they derive from the set some model of \u201cnormality\u201d to which new objects are compared (Markou and Singh, 2003a; Markou and Singh, 2003b; Mars- land, 2003).",
+                    "sid": 94,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Applications of outlier detection include fault detection (Hickinbotham and Austin, 2000), hand writing deciphering (Tax and Duin, 1998; Scho\u00a8 lkopf et al., 2000), and network intrusion detection (Yeung and Chow, 2002; Dasgupta and Forrest, 1999).",
+                    "sid": 95,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One standard approach to out- lier detection estimates the probability density of the training set, such that a test object can be classified as an outlier or non-outlier according to its probability of belonging to the set.",
+                    "sid": 96,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than estimating the complete density function, Tax and Duin (2000) approximate local density at the test object by comparing distances between nearest neighbors.",
+                    "sid": 97,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a test object x, the approach considers the training object t nearest to x and compares the distance dxt between x and t to the distance dttl between t and its own nearest trainingdata neighbor tl.",
+                    "sid": 98,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then the quotient between the dis tances is used as an indicator of the (ab-)normality of the test object x: p (x) = dxt N N dtt When the distance dxt is much larger than dttl , x is considered an outlier.",
+                    "sid": 99,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 illustrates the idea.",
+                    "sid": 100,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The normality or abnormality of test objects is decided by a fixed threshold \u03b8 on pN N . The lowest threshold that makes sense is 1.0, which rejects any x that is further apart from its nearest training neighbor t than t is from its neighbor.",
+                    "sid": 101,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tax and Duin use Euclidean distance, i.e. Fe atu res P r e c i s i o n R e c a l l A l l C x S y n Syn hw 0.7 07 2 (\u03c3 0.0088) 0.7 01 6 (\u03c3 0.0041) 0.8 33 3 (\u03c3 0.0085) 0.7 78 4 (\u03c3 0.0029) 0.2 68 3 (\u03c3 0.0043) 0.3 51 1 (\u03c3 0.0035) 0.2 09 9 (\u03c3 0.0042) 0.2 36 8 (\u03c3 0.0022) Table 2: Experiment 2: Results for label unknown dxt = (xi \u2212 ti)2 i sense, NN-based outlier detection, \u03b8 = 1.0.",
+                    "sid": 102,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03c3: standard deviation Applied to feature vectors with entries either 0 or 1, this corresponds to the size of the symmetric difference of the two feature sets.",
+                    "sid": 103,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiment 2: nn-based outlier. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "detection In this section we use the NN-based outlier detection approach of the previous section for an experiment in unknown sense detection.",
+                    "sid": 104,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental setup and data are as described in Section 3.",
+                    "sid": 105,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Modeling.",
+                    "sid": 106,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We model unknown sense detection as an outlier detection task, using Tax and Duin\u2019s out- lier detection approach that we have outlined in the previous section.",
+                    "sid": 107,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nearest neighbors (by Euclidean distance) were computed using the ANN tool (Mount and Arya, 2005).",
+                    "sid": 108,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compute one out- lier detection model per lemma.",
+                    "sid": 109,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With training and test sets constructed as described in Section 3, the average training set comprises 22.5 sentences.",
+                    "sid": 110,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the same features as in Section 4, with feature vector entries of 1 for present and 0 for absent features.",
+                    "sid": 111,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a more detailed analysis of the contribution of different feature types, we test on reduced as well as full feature vectors: All: full feature vectors Cx: only bag-of-word context features (words, lemmas, POS, NE) Syn: function labels of dependents Synhw: Syn plus headwords of dependents We compare the NN-based model to that of Experiment 1, but not to any simpler baseline.",
+                    "sid": 112,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While for WSD it is possible to formulate simple frequency-based methods that can serve as a baseline, this is not so in unknown sense detection because the frequency of unknown senses is, by definition, unknown.",
+                    "sid": 113,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the number of annotated sentences per sense in FrameNet depends Fe atu res P r e c i s i o n all \u2265 10 \u2265 20 R e c a l l all \u2265 10 \u2265 20 Al l Cx Sy n Syn hw 0.7 1 0.70 0.67 0.7 0 0.70 0.67 0.8 3 0.81 0.77 0.7 8 0.76 0.73 0.2",
+                    "sid": 114,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "0.35\t0.45",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "0.3 5 0.47 0.58 0.2 1 0.22 0.21 0.2 4 0.28 0.31 Table 3: Experiment 2: Results by training set size, \u03b8 = 1.0 on the number of subcategorization frames of the lemma rather than the frequency of the sense, which makes frequency calculations meaningless.",
+                    "sid": 115,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results.",
+                    "sid": 116,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows precision and recall for labeling instances as unknown using a distance quotient threshold of \u03b8=1.0, averaged over unknown senses and over 5-fold cross-validation.",
+                    "sid": 117,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see that recall is markedly higher than in Experiment 1, especially for the two conditions that include context words, All and Cx.",
+                    "sid": 118,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The syntax-based conditions Syn and Synhw show a higher precision, with a less pronounced increase in recall.",
+                    "sid": 119,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Raising the distance quotient threshold results in little change in precision, but a large drop in recall.",
+                    "sid": 120,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, All vectors with a threshold of \u03b8 = 1.1 achieve a recall of 0.14 in comparison to 0.27 for \u03b8 = 1.0 . Training set size is an important factor in system results.",
+                    "sid": 121,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 lists precision and recall for all training sets, for training sets of size \u2265 10, and for training sets of size \u2265 20.",
+                    "sid": 122,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Especially in conditions All and Cx, recall rises steeply when we only consider cases with larger training sets.",
+                    "sid": 123,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However note that precision does not rise with larger training sets, rather it shows a slight decline.",
+                    "sid": 124,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another important factor is the number of senses that a lemma has, as the upper part of Table 7 shows.",
+                    "sid": 125,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For lemmas with a higher number of senses, preci Figure 4: \u201cAcceptance radius\u201d of an outlier within the training set (left) and a more \u201cnormal\u201d training set object (right) sion is much lower, while recall is much higher.",
+                    "sid": 126,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discussion.",
+                    "sid": 127,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While results in this experiment are better than in Experiment 1 \u2013 in particular recall has risen by 19 points for Cx \u2013, system performance is still not high enough to be usable in practice.",
+                    "sid": 128,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The uniformity of the training set has a large influence on performance, as Table 7 shows.",
+                    "sid": 129,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The more senses a lemma has, the harder it seems to be for the model to identify known sense occurrences.",
+                    "sid": 130,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision for the assignment of the unknown label drops, while recall rises.",
+                    "sid": 131,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see a tradeoff between precision and recall, in this table as well as in Table 3.",
+                    "sid": 132,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There, we see that many more unknown test objects are identified when training sets are larger, but a larger training set does not translate into universally higher results.",
+                    "sid": 133,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible explanation for this lies in a property of Tax and Duin\u2019s approach.",
+                    "sid": 134,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a training item t is situated at distance d from its nearest neighbor in the training set, then any test item within a radius of d around t will be considered known.",
+                    "sid": 135,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we could term d the \u201cacceptance radius\u201d of t. Now if t is an outlier within the training set, then d will be large, as illustrated in Figure 4.",
+                    "sid": 136,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sparser the training set is, the more training outliers we are likely to find, with large acceptance radii that assign a label of known even to more distanced test items.",
+                    "sid": 137,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus a sparse training set could lead to lower recall of unknown sense assignment and at the same time higher precision, as the items labeled unknown would be the ones at great distance from any items on the training set \u2013 conforming to the pattern in Tables 3 and 7.",
+                    "sid": 138,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 Experiment 3: NN-based outlier.",
+                    "sid": 139,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "detection with added training data While the NN-based outlier detection model we used in the previous experiment showed better re Table 4: Extending training sets: an example Fe atu res P r e c i s i o n R e c a l l A l l C x S y n Syn hw 0.7 70 9 (\u03c3 0.001) 0.7 72 7 (\u03c3 0.0027) 0.8 57 1 (\u03c3 0.0045) 0.8 02 5 (\u03c3 0.0041) 0.7 24 3 (\u03c3 0.0018) 0.8 17 2 (\u03c3 0.0035) 0.1 69 4 (\u03c3 0.0012) 0.3 38 3 (\u03c3 0.0025) Sy n Syn hw 0.8 58 7 (\u03c3 0.0081) 0.8 05 5 (\u03c3 0.0056) 0.1 74 8 (\u03c3 0.0015) 0.3 51 6 (\u03c3 0.0015) Table 5: Experiment 3: Results for label unknown sense, NN-based outlier detection, \u03b8 = 1.0.",
+                    "sid": 140,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03c3: standard deviation sults than the WSD confidence model, its recall is still low.",
+                    "sid": 141,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have suggested that data sparseness may be responsible for the low performance.",
+                    "sid": 142,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, we repeat the experiment of the previous section with more, but less specific, training data.",
+                    "sid": 143,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like WordNet synsets, FrameNet frames are semantic classes that typically comprise several lemmas or expressions.",
+                    "sid": 144,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So, assuming that words with similar meaning occur in similar contexts, the context features for lemmas in the same frame should be similar.",
+                    "sid": 145,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following this idea, we supplement the training data for a lemma by all the other annotated data for the senses that are present in the training set, where by \u201cother data\u201d we mean data with other target lemmas.",
+                    "sid": 146,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows an example4.",
+                    "sid": 147,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Modeling.",
+                    "sid": 148,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, we use Tax and Duin\u2019s outlier detection approach for unknown sense detection.",
+                    "sid": 149,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experimental design and evaluation are the same as in Experiment 2, the only difference being the training set extension.",
+                    "sid": 150,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training set extension raises the average training set size from 22.5 to 374.",
+                    "sid": 151,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results.",
+                    "sid": 152,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 shows precision and recall for labeling instances as unknown, with a distance quotient threshold of 1.0, averaged over unknown senses 4 Conditions Syn and Synhw were also tested using only other target lemmas with the same part of speech.",
+                    "sid": 153,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results were virtually unchanged.",
+                    "sid": 154,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6: Experiment 3: Results by training set size, \u03b8 = 1.0 Number of senses 2 3 4 5 Ex p. 2 Prec..",
+                    "sid": 155,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "R e c . 0.7 8 0.2 1 0.6 8 0.3 8 0.5 9 0.4 7 0.5 5 0.5 9 Ex p. 3 Prec..",
+                    "sid": 156,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "R e c . 0.8 3 0.6 8 0.7 1 0.8 1 0.6 3 0.8 9 0.5 6 0.8 8 Table 7: Experiments 2 and 3: Results by the number of senses of a lemma, condition All, \u03b8 = 1.0 and 5-fold cross-validation.",
+                    "sid": 157,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In comparison to Experiment 2, precision has risen slightly, and for conditions All, Cx and Synhw, recall has risen steeply; the maximum recall is achieved by Cx at 0.82.As before, increasing the distance quotient thresh old leads to little change in precision but a sharp drop in recall.",
+                    "sid": 158,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For All vectors, recall is 0.72 for threshold 1.0, 0.56 for \u03b8 = 1.1, and 0.41 for \u03b8 = 1.2.",
+                    "sid": 159,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 shows system performance by training set size.",
+                    "sid": 160,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the average training set in this experiment is much larger than in Experiment 2, we are now inspecting sets of minimum size 50 and 200 rather than 10 and 20.",
+                    "sid": 161,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find the same effect as in Experiment 2, with noticeably higher recall for lemmas with larger training sets, but slightly lower precision.",
+                    "sid": 162,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 7 breaks down system performance by the degree of ambiguity of a lemma.",
+                    "sid": 163,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, too, we see the same effect as in Experiment 2: the more senses a lemma has, the lower the precision and the higher the recall of unknown label assignment.",
+                    "sid": 164,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discussion.",
+                    "sid": 165,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In comparison to Experiment 2, Experiment 3 shows a dramatic increase in recall, and even some increase in precision.",
+                    "sid": 166,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision and recall for conditions All and Cx are good enough for the system to be usable in practice.",
+                    "sid": 167,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the four conditions, the three that involve context words, All, Cx and Synhw, show consid erably higher recall than Syn.",
+                    "sid": 168,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the two conditions that do not involve syntactic features, All and Cx, have markedly higher results than Synhw.",
+                    "sid": 169,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This could mean that syntactic features are not as helpful as context features in detecting unknown senses; however in Experiment 2 the performance difference between Syn and the other conditions was not by far as large as in this experiment.",
+                    "sid": 170,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It could also mean that frames are not as uniform in their syntactic structure as they are in their context words.",
+                    "sid": 171,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This seems plausible as FrameNet frames are constructed mostly on semantic grounds, without recourse to similarity in syntactic structure.",
+                    "sid": 172,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 points to a sparse data problem, even with training sets extended by additional items.",
+                    "sid": 173,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It also shows that the more a test condition relies on context word information, the more it profits from additional data.",
+                    "sid": 174,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So it may be worthwhile to explore methods for a further alleviation of data sparseness, e.g. by generalizing over context words.",
+                    "sid": 175,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 7 underscores the large influence of training set uniformity: the more senses a lemma has, the more likely the model is to classify a test instance as unknown.",
+                    "sid": 176,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the case even for extended training sets.",
+                    "sid": 177,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible way of addressing this problem would be to take into account more than a single nearest neighbor in NN-based outlier detection in order to compute more precise boundaries between known and unknown instances.",
+                    "sid": 178,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion and outlook. ",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "We have defined and addressed the problem of unknown word sense detection: the identification of corpus occurrences that are not covered by a given sense inventory, using a training set of sense- annotated data as a basis.",
+                    "sid": 179,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have modeled this problem as an instance of outlier detection, using the simple nearest neighbor-based approach of Tax and Duin to measure the resemblance of a new occurrence to the training data.",
+                    "sid": 180,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In combination with a method that alleviates data sparseness by sharing training data across lemmas, the approach achieves good results that make it usable in practice: With items represented as vectors of context words (including lemma, POS and NE), the system achieves 0.77 precision and 0.82 recall in an evaluation on FrameNet 1.2.",
+                    "sid": 181,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training set extension method, which proved crucial to our approach, relies solely on a grouping of annotated data by semantic similarity.",
+                    "sid": 182,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As such, the method is applicable to any resource that groups words into semantic classes, for example WordNet.",
+                    "sid": 183,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this first study on unknown sense detection, we have chosen a maximally simple outlier detection method; many extensions are possible.",
+                    "sid": 184,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One obvious possibility is the extension of Tax and Duin\u2019s method to more than one nearest training neighbor for a more accurate estimate of local density.",
+                    "sid": 185,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, more sophisticated feature vectors can be employed to generalize over context words, and other outlier detection approaches (Markou and Singh, 2003a; Markou and Singh, 2003b; Marsland, 2003) can be tested on this task.",
+                    "sid": 186,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our immediate goal is to use unknown sense detection in combination with WSD, to filter out items that the WSD system cannot handle due to missing senses.",
+                    "sid": 187,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once items have been identified as unknown, they are available for further processing: If possible one would like to assign some measure of sense information even to these items.",
+                    "sid": 188,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Possibilities include associating items with similar existing senses (Widdows, 2003; Curran, 2005; Burchardt et al., 2005) or clustering them into approximate senses.",
+                    "sid": 189,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,689 @@
+{
+    "ID": "P08-2062",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Underspecification-based algorithms for processing partially disambiguated discourse structure must cope with extremely high numbers of readings.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on previous work on dominance graphs and weighted tree grammars, we provide the first possibility for computing an underspecified discourse description and a best discourse representation efficiently enough to process even the longest discourses in the RST Discourse Treebank.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Discourse processing has emerged as a highly relevant source of information for applications such as information extraction and automatic summarisation (Taboada and Mann (2006) outline this and further applications).",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But discourse structures cannot always be described completely, either due to genuine ambiguity (Stede, 2004) or to the limitations of a discourse parser.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In either case, only partial information on discourse structure is available.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To handle such information, underspecification formalisms can be used.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Underspecification was originally introduced in computational semantics to model structural ambiguity without disjunctively enumerating the readings, and later applied to discourse parsing (Gardent and Webber, 1998; Schilder, 2002).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, while the existing algorithms for underspecification processing work well for semantic structures, they were not designed for discourse structures, which can be much larger.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Indeed, it has never been shown that underspecified discourse reprentations (UDRs) can be processed efficiently, since the general-purpose implementations are too slow for that task.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present a new way to implement and process discourse underspecification in terms of regular tree grammars (RTGs).",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RTGs are used as an underspecification formalism in semantics (Koller et al., 2008).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show how to compute RTGs for discourse from dominance-based under- specified representations more efficiently (by a typical factor of 100) than before.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we show how weighted RTGs can be used to represent constraints and preferences on the discourse structure.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Taking all these results together, we show for the first time how the globally optimal discourse representation based on some preference model can be computed efficiently from an UDR.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "underspecified discourse representation. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Following annotation schemes like the one of Stede (2004), we model discourse structures by binary trees.",
+                    "sid": 15,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fig.",
+                    "sid": 16,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1b-f) represent the potential structures of (1).",
+                    "sid": 17,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We write each elementary discourse unit (EDU) in square brackets.",
+                    "sid": 18,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) [C1 I try to read a novel] [C2 if I feel bored] [C3 because the TV programs disappoint me] [C4 but I can\u2019t concentrate on anything.]",
+                    "sid": 19,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Underspecification formalisms such as dominance graphs (Althaus et al., 2003) can model partial information about such trees; see Fig.",
+                    "sid": 20,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1a) for the underspecified discourse representation (UDR) of (1).",
+                    "sid": 21,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These graphs consist of labelled roots and unlabelled holes; the solid edges indicate that a node must be the parent of another, and the dashed edges indicate (transitive) dominance requirements.",
+                    "sid": 22,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A configuration of a dominance graph is an arrangement of the (labelled) graph nodes into a tree that satisfies all (immediate and transitive) dominance requirements.",
+                    "sid": 23,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subgraphs that are connected by solid edges are called fragments and must be tree-shaped.",
+                    "sid": 24,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using UDRs, discourse parsing can be modularised into three separate steps.",
+                    "sid": 25,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, a discourse parser segments the text and generates an UDR from it.",
+                    "sid": 26,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The node labels in the UDR aren\u2019t necessarily fully specified (Egg and Redeker, 2007; Schilder, 245 Proceedings of ACL08: HLT, Short Papers (Companion Volume), pages 245\u2013248, Columbus, Ohio, USA, June 2008.",
+                    "sid": 27,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2008 Association for Computational Linguistics (a) Cause(2) Contrast (b) (c) (d) (e) Condition( 1) (f) Condition(1) Contrast Contrast Cause(2) Condition(1) 2 4 6 Cause(2) Contrast C1 1 C2 3 C3 5 Conditio n(1) C4 7 C4 C ondition(1 ) C3 C1 C4 Cause(2) Condition(1) Contrast C1 Cause(2) C4 C1 Ca use(2) C2 Contrast C1 C2 C2 C3 C1 C2 C3 C4 C2 C3 C3 C4 Figure 1: An underspecified discourse structure and its five configurations 2002); here we pretend that they are to simplify the presentation, as nothing in this paper hinges on it.",
+                    "sid": 28,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then weights are added to the UDR that incorporate preferences for discourse structures based on linguistic cues.",
+                    "sid": 29,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the weighted UDR can either be processed directly by other applications, or, if a tree structure is required, we can compute the best configuration.",
+                    "sid": 30,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we show how an UDR dominance graph can be converted into a regular tree grammar efficiently.",
+                    "sid": 31,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This simplifies the specification of weights in Step 2; we also show how to efficiently compute a best tree from a weighted RTG (Step 3).",
+                    "sid": 32,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not discuss Step 1 in this paper.",
+                    "sid": 33,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dominance graphs used in discourse under- specification are constrained chains.",
+                    "sid": 34,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A constrained chain of length n consists of n upper fragments with two holes each and n + 1 lower fragments with no holes.",
+                    "sid": 35,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There must also be a numbering 1, . . .",
+                    "sid": 36,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", 2n + 1 of the fragments such that for every 1 \u2264 i \u2264 n, fragment 2i is an upper fragment, fragments 2i \u2212 1 and 2i + 1 are lower fragments, and there are dominance edges from the left hole of 2i to the root of 2i \u2212 1 and from the right hole of 2i to the root of 2i + 1 (and possibly further dominance edges).",
+                    "sid": 37,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These numbers are shown in circles in Fig.",
+                    "sid": 38,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1a).",
+                    "sid": 39,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In discourse dominance graphs, upper fragments correspond to discourse relations, and lower fragments correspond to EDUs; the EDUs are ordered according to their appearance in the text, and the upper fragments connect the two text spans to which they are adjacent.",
+                    "sid": 40,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "underspecified processing for discourses. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Recently, Koller et al.",
+                    "sid": 41,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) showed how to process dominance graphs with regular tree grammars (Comon et al., 2007, RTGs).",
+                    "sid": 42,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RTGs are a grammar formalism that describes sets of trees using production rules which rewrite non-terminal symbols (NTs) into terms consisting of tree constructors and possibly further NTs.",
+                    "sid": 43,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A tree (without NTs) is accepted by the grammar if it can be derived by a sequence of rule applications from a given start symbol.",
+                    "sid": 44,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example RTG is shown in Fig.",
+                    "sid": 45,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2; its start symbol is {1; 7}, and it describes exactly the five trees in {1; 7} \u2192 Cond({1}, {3; 7}) [1] {5; 7} \u2192 Contr({5}, {7}) [1] {3; 7} \u2192 Contr({3; 5}, {7}) [1] {3; 5} \u2192 Cause({3}, {5}) [1] {1; 7} \u2192 Contr({1; 5}, {7}) [1] {1; 3} \u2192 Cond({1}, {3}) [5] {1; 7} \u2192 Cause({1; 3}, {5; 7}) [1] {1; 5} \u2192 Cond({1}, {3; 5}) [3] {1; 5} \u2192 Cause({1; 3}, {5}) [1] {3; 7} \u2192 Cause({3}, {5; 7}) [1] {1} \u2192 C1 [1] {3} \u2192 C2 [1] {5} \u2192 C3 [1] {7} \u2192 C4 [1] Figure 2: A wRTG modelling Fig.",
+                    "sid": 46,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 Fig.",
+                    "sid": 47,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1b-f).",
+                    "sid": 48,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Fig.",
+                    "sid": 49,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1e) is derived by expanding the start symbol with the first rule in Fig.",
+                    "sid": 50,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 51,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This determines that the tree root is labelled with Condition; we then derive the left subtree from the NT {1} and the right subtree from the NT {3; 7}.",
+                    "sid": 52,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The NTs in the grammar correspond to subgraphs in the dominance graph: The NT {1; 7} represents the subgraph {1, 2, 3, 4, 5, 6, 7} (i.e. the whole graph); the NT {1} represents the subgraph contain ing only the fragment 1; and so forth.",
+                    "sid": 53,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The trees that can be derived from each nonterminal correspond exactly to the configurations of the subgraph.",
+                    "sid": 54,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Koller and Thater (2005b) presented an algorithm for generating, from a very general class of dominance graphs, an RTG that describes exactly the same trees.",
+                    "sid": 55,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each subgraph S that is to be the LHS of a rule, the algorithm determines the free fragments of S, i.e. the fragments that may serve as the root of one of its configurations, by a certain graph algorithm.",
+                    "sid": 56,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every free fragment in S with n holes and a root label f , the algorithm generates a new rule of the form S \u2192 f (S1, . . .",
+                    "sid": 57,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", Sn), where each Si corresponds to the remaining subgraph under the i-th hole.",
+                    "sid": 58,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The procedure calls itself recursively on the subgraphs until it reaches singleton subgraphs.",
+                    "sid": 59,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While this algorithm works well with underspecified semantic representations in semantics, it is too slow for the larger discourse graphs, as we will see in Section 5.",
+                    "sid": 60,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we will now optimise it for the special case of constrained chains.",
+                    "sid": 61,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we observe that all subgraphs ever visited by the algorithm are connected subchains.",
+                    "sid": 62,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A subchain is uniquely identifiable by the positions of the first and last fragment in the left-to-right order of the chain; we can thusread the nonterminal {i; j} simply as a pair of inte gers that identifies the subchain from the i-th to the Algorithm 1: GenerateRules({i; j},G,C) 1 if G contains rules for {i; j} then return 2 if i=j then G.add({ {i; j} \u2192 Label(i) } ) else /* Loop over upper fragments */ 60000.00 3833.66 3 for k = i+1 to j-1 step 2 do 4 if \u2203 edge=(s,t) \u2208 C s.t.",
+                    "sid": 63,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(i \u2264 s < k \u2264 t \u2264 j) \u2228 (i \u2264 t \u2264 k < s \u2264 j) then 5 lSub \u2190 {i; k-1}, rSub \u2190 {k+1; j} 6 G.add({i; j} \u2192 Label(i)(lSub, rSub)) 7 GenerateRules(lSub, G, C).",
+                    "sid": 64,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 GenerateRules(rSub, G, C).",
+                    "sid": 65,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "244.95 15.65 new total utool total j-th fragment (rather than an abbreviation for a set of fragments).",
+                    "sid": 66,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i and j will generally represent lower 1.00 0 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200 210 220 230 Figure 3: Runtime Comparison fragments.",
+                    "sid": 67,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the grammar in Fig.",
+                    "sid": 68,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2, {i} is an abbreviation of {i; i}.",
+                    "sid": 69,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can now rephrase the Koller & Thater algorithm in our terms (Algorithm 1).",
+                    "sid": 70,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most important change is that we can now test whether an up per fragment k in a subgraph {i; j} is free simply by checking whether there is no dominance edge from some upper fragment l to some upper fragment r such that i \u2264 l < k \u2264 r \u2264 j, and no dominance edge from r to l such that i \u2264 l \u2264 k < r \u2264 j. For instance, if there was a dominance edge from the right hole of 2 to the root of 6 in Fig.",
+                    "sid": 71,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1a), then 4 and 6 would not be free, but 2 would be; and indeed, all configurations of this graph would have to have 2 as their roots.",
+                    "sid": 72,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence we can replace the graph algorithm for freeness by a simple comparison of integers.",
+                    "sid": 73,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The general structure of the algorithm remains the same as in (Koller and Thater, 2005b): It takes a dominance graph C as its input, and recursively calls itself on pairs {i; j} representing subgraphs while adding rules and NTs to an RTG G.",
+                    "sid": 74,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "soft discourse constraints. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "RTGs can be extended to weighted regular tree grammars (Knight and Graehl, 2005, wRTGs) by adding numeric weights to the rules.",
+                    "sid": 75,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WRTG derivations assign weights to each tree: The weight of a tree is the product of the weights of all rules that were used in its derivation.",
+                    "sid": 76,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Egg and Regneri (2008) motivate the use of wRTGs in discourse processing.",
+                    "sid": 77,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They assign rule weights based on corpus-extracted constraints which express the interdependencies between discourse relations and their surrounding tree structure.",
+                    "sid": 78,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One such constraint states that the right subtree of a Con dition node should be of minimal size, which ranks the readings of Fig.",
+                    "sid": 79,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 (a): (b), (d) > (c) > (e), (f).",
+                    "sid": 80,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to state this constraint in a wRTG, we annotate the grammar in Fig.",
+                    "sid": 81,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 with the weights shown in brackets.",
+                    "sid": 82,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Condition rules get higher weights if the second NT on the RHS represents a smaller subgraph.",
+                    "sid": 83,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The grammar assigns the maximum weight of 5 to (b) and (d) (fragment 2 has a leaf as right child), the medium weight 3 to (c) (the right subgraph of fragment 2 contains two EDUs), and the minimum weight 1 to (e) and (f).",
+                    "sid": 84,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i.e. it ranks the readings as intended.",
+                    "sid": 85,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on our implementation of nonterminals as integer pairs, we can efficiently compute a configuration with maximal weight using a version of Knight and Graehl\u2019s (2005) algorithm for computing the best derivation of a wRTG that is specialised to the grammars we use.",
+                    "sid": 86,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "evaluation. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We compare our runtimes with those of Utool (Koller and Thater, 2005a), the fasted known solver for general dominance graphs; it implements the Koller & Thater algorithm.",
+                    "sid": 87,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Utool runs very fast for underspecified representations in semantics, but the representations for discourse parsing are considerably larger: The largest underspecified semantic representation found in the Rondane treebank analysed with the English Resource Grammar (Copestake and Flickinger, 2000, ERG) has 4.5 \u00d7 1012 structural scope readings, but for 59% of the discourses in the RST Discourse Treebank (Carlson et al., 2002, RSTDT), there are more ways of configuring all EDUs into a binary tree than that.",
+                    "sid": 88,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate the efficiency of our algorithm on 364 texts from the RSTDT, by converting each discourse into a chain with one lower fragment for each EDU and one upper fragment labelled with each annotated discourse relation.",
+                    "sid": 89,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use our algorithm and Utool to generate the RTG from the chain, assign all soft constraints of Egg and Regneri (2008) to the grammar, and finally compute the best configuration according to this model.",
+                    "sid": 90,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The evaluation results are shown in Fig.",
+                    "sid": 91,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 92,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The horizontal axis shows the chain length (= number of EDUs minus 1), rounded down to multiples of ten; the (logarithmic) vertical axis shows the average runtime in milliseconds for discourses of that length.",
+                    "sid": 93,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both algorithms spend a bit over half the runtime on computing the RTGs.",
+                    "sid": 94,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the diagram shows, our algorithm is up to 100 times faster than Utool for the same discourses.",
+                    "sid": 95,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is capable of computing the best configuration for every tested discourse \u2013 in less than one second for 86% of the texts.",
+                    "sid": 96,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Utool exceeded the OS memory limit on 77 discourses, and generally couldn\u2019t process any text with more than 100 EDUs.",
+                    "sid": 97,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The longest text in the RSTDT has 304 EDUs, so the UDR hasabout 2.8 \u00d7 10178 different configurations.",
+                    "sid": 98,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algo rithm computes the best configuration for this UDR in about three minutes.",
+                    "sid": 99,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We presented the first solver for underspecified discourse representations that is efficient enough to compute the globally best configurations of every discourse in the RST discourse treebank, by exploiting the fact that UDRs are very large but obey very strong structural restrictions.",
+                    "sid": 100,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our solver converts a dominance graph into an RTG, adds weights to the RTG to represent discourse constraints, and then computes the globally optimal configuration.",
+                    "sid": 101,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It takes about three minutes to compute a best configuration with a given probability model for the longest discourse in the treebank, out of 10178 possible configurations.",
+                    "sid": 102,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison, an algorithm that enumerates a billion configurations per second to find the best one could have inspected only about 1026 within the estimated age of the universe.",
+                    "sid": 103,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So our algorithm is useful and necessary to process real- world underspecified discourse representations.",
+                    "sid": 104,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have thus demonstrated that discourse processing based on underspecification is computationally feasible.",
+                    "sid": 105,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nothing in our algorithm hinges on using RST in particular; it is compatible with any approach that uses binary trees.",
+                    "sid": 106,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future research, it would be interesting to complete our system into a full-blown discourse parser by adding a module that computes an UDR for a given text, and evaluate whether its ability to delay decisions about discourse structure would improve accuracy.",
+                    "sid": 107,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

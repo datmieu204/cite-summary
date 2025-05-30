@@ -1,0 +1,1445 @@
+{
+    "ID": "P13-1102",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Probabilistic context-free grammars havethe unusual property of not always defining tight distributions (i.e., the sum of the\u201cprobabilities\u201d of the trees the grammargenerates can be less than one).",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paperreviews how this non-tightness can ariseand discusses its impact on Bayesian estimation of PCFGs.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We begin by presenting the notion of \u201calmost everywhere tightgrammars\u201d and show that linear CFGs follow it.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then propose three differentways of reinterpreting non-tight PCFGs tomake them tight, show that the Bayesianestimators in Johnson et al.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) arecorrect under one of them, and provideMCMC samplers for the other two.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weconclude with a discussion of the impactof tightness empirically.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Probabilistic Context-Free Grammars (PCFGs)play a special role in computational linguistics because they are perhaps the simplest probabilisticmodels of hierarchical structures.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their simplicityenables us to mathematically analyze their properties to a detail that would be difficult with linguistically more accurate models.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such analysisis useful because it is reasonable to expect morecomplex models to exhibit similar properties aswell.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem of inferring PCFG rule probabilities from training data consisting of yields orstrings alone is interesting from both cognitive andengineering perspectives.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cognitively it is implausible that children can perceive the parse trees ofthe language they are learning, but it is more reasonable to assume that they can obtain the terminalstrings or yield of these trees.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised methods for learning a grammar from terminal stringsalone is also interesting from an engineering perspective because such training data is cheap and plentiful, while the manually parsed data requiredby supervised methods are expensive to produceand relatively rare.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cohen and Smith (2012) show that inferringPCFG rule probabilities from strings alone is computationally intractable, so we should not expectto find an efficient, general-purpose algorithm forthe unsupervised problem.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, approximation algorithms are standardly used.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the Inside-Outside (IO) algorithm efficientlyimplements the Expectation-Maximization (EM)procedure for approximating a Maximum Likelihood estimator (Lari and Young, 1990).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bayesianestimators for PCFG rule probabilities have alsobeen attracting attention because they provide atheoretically-principled way of incorporating priorinformation.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kurihara and Sato (2006) proposeda Variational Bayes estimator based on a mean-field approximation, and Johnson et al.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) proposed MCMC samplers for the posterior distribution over rule probabilities and the parse trees ofthe training data strings.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PCFGs have the interesting property (which weexpect most linguistically more realistic models toalso possess) that the distributions they define arenot always properly normalized or \u201ctight\u201d.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In anon-tight PCFG the partition function (i.e., sumof the \u201cprobabilities\u201d of all the trees generated bythe PCFG) is less than one.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Booth and Thompson, 1973, called such non-tight PCFGs \u201cinconsistent\u201d, but we follow Chi and Geman (1998)in calling them \u201cnon-tight\u201d to avoid confusionwith the consistency of statistical estimators).",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chi(1999) showed that renormalized non-tight PCFGs(which he called \u201cGibbs CFGs\u201d) define the sameclass of distributions over trees as do tight PCFGswith the same rules, and provided an algorithm formapping any PCFG to a tight PCFG with the samerules that defines the same distribution over trees.An obvious question is then: how does tightnessaffect the inference of PCFGs?",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chi and Geman(1998) studied the question for Maximum Likelihood (ML) estimation, and showed that ML es 1033 timates are always tight for both the supervisedcase (where the input consists of parse trees) andthe unsupervised case (where the input consists ofyields or terminal strings).",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that MLestimators can simply ignore issues of tightness,and rest assured that the PCFGs they estimate arein fact tight.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The situation is more subtle with Bayesian estimators.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that for the special case oflinear PCFGs (which include HMMs) with non-degenerate priors the posterior puts zero mass onnon-tight PCFGs, so tightness is not an issue withBayesian estimation of such grammars.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However,because all of the commonly used priors (such asthe Dirichlet or the logistic normal) assign nonzero probability across the whole probability simplex, in general the posterior may assign nonzeroprobability to non-tight PCFGs.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discuss threedifferent possible approaches to this in this paper: 1.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the only-tight approach, where we modify theprior so it only assigns nonzero probabilityto tight PCFGs, 2.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the renormalization approach, where werenormalize non-tight PCFGs so they definea probability distribution over trees, and 3.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the sink-element approach, where we reinterpret non-tight PCFGs as assigning nonzeroprobability to a \u201csink element\u201d, so both tightand non-tight PCFGs are properly normalized.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show how to modify the Gibbs sampler described by Johnson et al.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) so it producessamples from the posterior distributions definedby the only-tight and renormalization approaches.Perhaps surprisingly, we show that Gibbs sampleras defined by Johnson et al. actually producessamples from the posterior distributions defined bythe sink-element approach.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude by studying the effect of requiring tightness on the estimation of some simplePCFGs.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the Bayesian posterior convergesaround the (tight) ML estimate as the size ofthe data grows, requiring tightness only seems tomake a difference with highly biased priors or withvery small training corpora.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "pcfgs and tightness. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "LetG = (T,N, S,R) be a Context-Free Grammarin Chomsky normal form with no useless productions, where T is a finite set of terminal symbols, N is a finite set of nonterminal symbols (disjointfrom T ), S ? N is a distinguished nonterminalcalled the start symbol, andR is a finite set of productions of the form A ? BC or A ? w, whereA,B,C ? N and w ? T . In what follows we use\u00df as a variable ranging over (N \u00d7N) ? T . A Probabilistic Context-Free Grammar (G,T)is a pair consisting of a context-free grammar Gand a real-valued vector T of length |R| indexedby productions, where ?A?\u00df is the productionprobability associated with the production A ?\u00df ? R. We require that ?A?\u00df = 0 and that forall nonterminals A ? N , ?A?\u00df?RA ?A?\u00df = 1,where RA is the subset of rules R expanding thenonterminal A. A PCFG (G,T) defines a measure \u00b5T overtrees t as follows: \u00b5T(t) =?r?R ?fr(t)r where fr(t) is the number of times the productionr = A?",
+                    "sid": 36,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00df ? R is used in the derivation of t. The partition function Z or measure of all possible trees is: Z(T) =?t'?T ?r?R ?fr(t') r where T is the set of all (finite) trees generatedby G. A PCFG is tight iff the partition functionZ(T) = 1.",
+                    "sid": 37,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we use T?",
+                    "sid": 38,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "to denote theset of rule probability vectors T for which G isnon-tight.",
+                    "sid": 39,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nederhof and Satta (2008) survey several algorithms for computing Z(T), and hencefor determining whether a PCFG is tight.1 Non-tightness can arise in very simple PCFGs,such as the \u201cCatalan\u201d PCFG S ? S S | a. Thisgrammar produces binary trees where all internalnodes are labeled as S and the yield of these treesis a sequence of as.",
+                    "sid": 40,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the probability of the ruleS ? S S is greater than 0.5 then this PCFG isnon-tight.",
+                    "sid": 41,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps the most straightforward way to understand this non-tightness is to view this grammar asdefining a branching process where an S can either\u201creproduce\u201d with probability ?S?S S or \u201cdie out\u201d 1We found out that finding whether a PCFG is tight bydirectly inspecting the partition function value is less stablethan using the method in Wetherell (1980).",
+                    "sid": 42,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason,we used Wetherell\u2019s approach, which is based on finding theprincipal eigenvalue of the matrix M . 1034 with probability ?S?a. When ?S?S S > ?S?a theS nodes reproduce at a faster rate than they dieout, so the derivation has a nonzero probability ofendlessly rewriting (Atherya and Ney, 1972).",
+                    "sid": 43,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "bayesian inference for pcfgs. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The goal of Bayesian inference for PCFGs is to infer a posterior distribution over the rule probability vectors T given observed data D. This posterior distribution is obtained by combining the likelihood P(D | T) with a prior distribution P(T)over T using Bayes Rule.",
+                    "sid": 44,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(T | D) ? P(D | T) P(T) We now formally define the three approaches tohandling non-tightness mentioned earlier: the only-tight approach: we only permit priorswhere P(T?) = 0, i.e., we insist that theprior assign zero mass to non-tight rule probability vectors, so Z = 1.",
+                    "sid": 45,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means we candefine: P(t | T) = \u00b5T(t) the renormalization approach: we renormalizenon-tight PCFGs by dividing by the partitionfunction: P(t | T) = 1Z(T) \u00b5T(t) (1) the sink-element approach: we redefine ourprobability distribution so its domain is a setT ' = T ? {?}, where T is the set of (finite)trees generated by G and ? 6?",
+                    "sid": 46,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T is a newelement that serves as a \u201csink state\u201d to whichthe \u201cmissing mass\u201d 1 - Z(T) is assigned.Then we define:2 P(t | T) ={\u00b5T(t) if t ? T1- Z(T) if t = ? 2This definition of a distribution over trees can be inducedby a tight PCFG with a special ? symbol in its vocabulary.Given G, the first step is to create a tight grammar G0 usingthe renormalization approach.",
+                    "sid": 47,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, a new start symbol isadded to G0, S0, and also rules S0 ? S (where S is theold start symbol in G0) and S0 ? ?.",
+                    "sid": 48,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first rule is givenprobability Z(T) and the second rule is given probability 1-Z(T).",
+                    "sid": 49,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It can be then readily shown that the new tight PCFGG0 induces a distribution over trees just like in Eq. 3, onlywith additional S0 on top of all trees.",
+                    "sid": 50,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this in hand, we can now define the likelihood term.",
+                    "sid": 51,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider two types of data D here.In the supervised setting the data D consists of acorpus of parse trees D = (t1, . . .",
+                    "sid": 52,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", tn) where eachtree ti is generated by the PCFG G, so P(D | T) =n?i=1 P(ti | T) In the unsupervised setting the data D consistsof a corpus of strings D = (w1, . . .",
+                    "sid": 53,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", wn) whereeach string wi is the yield of one or more treesgenerated by G. In this setting P(D | T) =n?i=1 P(wi | T),where: P(w | T) =?",
+                    "sid": 54,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "t?T :yield(t)=wP(t | T)",
+                    "sid": 55,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the special case of linear pcfgs. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "One way to handle the issue of tightness is to identify a family of CFGs for which practically any parameter setting will yield a tight PCFG.",
+                    "sid": 56,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is thefocus of this section, in which we identify a subset of CFGs, which are \u201calmost everywhere\u201d tight.This family of CFGs includes many of the CFGsused in NLP applications.",
+                    "sid": 57,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We cannot expect that a CFG will yield a tightPCFG for any assignment to the rule probabilities(i.e. that T?",
+                    "sid": 58,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= \u00d8).",
+                    "sid": 59,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even in simple cases, such asthe grammar S ? S|a, the assignment of probability 1 to S ? S and 0 to the other rule rendersthe S nonterminal useless, and places all of theprobability mass on infinite structures of the formS ? S ? S ? .",
+                    "sid": 60,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we can weaken our requirement sothat the cases in which parameter assignmentyields a non-tight PCFG are rare, or have measurezero.",
+                    "sid": 61,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To put it more formally, we say that a priorP(T) is \u201ctight almost everywhere for G\u201d if P(T?) =?",
+                    "sid": 62,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T?T?P(T) dT = 0.",
+                    "sid": 63,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now provide a sufficient condition (linear-ity) for CFGs under which they are tight almosteverywhere with any continuous prior.",
+                    "sid": 64,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a nonterminal A ? N and \u00df ?",
+                    "sid": 65,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(N ? T )*,we use A?k \u00df to denote that A can be re-writtenusing a sequence of rules from R to the sententialform \u00df in k derivation steps.",
+                    "sid": 66,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use A ?+ \u00df todenote that there exists a k > 0 such thatA?k \u00df. 1035 Definition 1 A context-free grammarG is linear ifthere are no A ? N such that A?+ . . .",
+                    "sid": 67,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . .",
+                    "sid": 68,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . .",
+                    "sid": 69,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".Definition 2 A nonterminal A ? N in a probabilistic context-free grammar G with parametersT is nonterminating if PG(A?+ . . .",
+                    "sid": 70,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . .",
+                    "sid": 71,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "|T) = 1.Here P(A?+ . . .",
+                    "sid": 72,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . .",
+                    "sid": 73,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "|T) is defined as:?",
+                    "sid": 74,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00df:\u00df=...A...",
+                    "sid": 75,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PG(A?+ \u00df|T).",
+                    "sid": 76,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lemma 1 A linear PCFG G with parameters Twhich does not have any nonterminating nonterminals is tight.",
+                    "sid": 77,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proof: Our proof relies on the properties of a certain |N | \u00d7 |N | matrix M where: MAB =?",
+                    "sid": 78,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A?\u00df?RAn(\u00df,B) ?A?\u00df where n(\u00df,B) is the number of appearances of thenonterminal B in the sequence \u00df. MAB is the expected number of B nonterminals generated froman A nonterminal in one single derivational step,so [Mk]AB is the expected number ofB nonterminals generated from an A nonterminal in a k-stepderivation (Wetherell, 1980).",
+                    "sid": 79,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since M is a non-negative matrix, under someregularity conditions, the FrobeniusPerron theorem states that the largest eigenvalue of this matrix (in absolute value) is a real number.",
+                    "sid": 80,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let thiseigenvalue be denoted by ?.",
+                    "sid": 81,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A PCFG is called \u201csubcritical\u201d if ? < 1 andsupercritical if ? > 1.",
+                    "sid": 82,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, in turn, a PCFG istight if it is subcritical.",
+                    "sid": 83,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not tight if it is supercritical.",
+                    "sid": 84,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The case of ? = 1 is a borderline casethat does not give sufficient information to knowwhether the PCFG is tight or not.",
+                    "sid": 85,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the Bayesiancase, for a continuous prior such as the Dirichletprior, this borderline case will have measure zerounder the prior.",
+                    "sid": 86,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now let A ? N . Since the grammar is linear, there is no derivation A ?+ . . .",
+                    "sid": 87,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . .",
+                    "sid": 88,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . ..Therefore, any derivation of the form A ?+.",
+                    "sid": 89,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . .",
+                    "sid": 90,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "includes A on the right hand-side exactlyonce.",
+                    "sid": 91,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the grammar has no useless non-terminals, the probability of such a derivation isstrictly smaller than 1.",
+                    "sid": 92,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each A ? N , define: pA =?",
+                    "sid": 93,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00df=...A...",
+                    "sid": 94,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(A?|N | \u00df|T).",
+                    "sid": 95,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since A is not useless, then pA < 1.",
+                    "sid": 96,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thereforeq = maxA pA < 1.",
+                    "sid": 97,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since any derivation of lengthk of the formA?",
+                    "sid": 98,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A . . .",
+                    "sid": 99,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "can be decomposed toat least k 2|N | cycles that start at a terminal B ? Nand end in the same nonterminal B ? N , it holdsthat: [Mk]AA = qk 2|N| k?8?",
+                    "sid": 100,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0. This means that trace(Mk) k?8?",
+                    "sid": 101,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0. This meansthat the eigenvalue of M is strictly smaller than 1(linear algebra), and therefore the PCFG is tight.?Proposition 1 Any continuous prior P(T) on alinear grammar G is tight almost everywhere forG.",
+                    "sid": 102,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proof: Let G be a linear grammar.",
+                    "sid": 103,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With a continuous prior, the probability ofG getting parametersfrom the prior which yield a useless non-terminalis 0 \u2013 it would require setting at least one rule inthe grammar with rule probability which is exactly1.",
+                    "sid": 104,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, with probability 1, the parameterstaken from the prior yield a PCFG which is linearand does not have nonterminating nonterminals.According to Lemma 1, this means the PCFG istight.",
+                    "sid": 105,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Deciding whether a grammar G is linear canbe done in polynomial time using the constructionfrom Bar-Hillel et al.",
+                    "sid": 106,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1964).",
+                    "sid": 107,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can first eliminate the differences between nonterminals and terminal symbols by adding a rule A ? cA for eachnonterminal A ? N , after extending the set ofterminal symbols A with {cA|A ? N}.",
+                    "sid": 108,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let GAbe the grammar G with the start symbol being replaced with A. We can then intersect the grammarGA with the regular language T *cAT *cAT * (foreach nonterminal A ? N ).",
+                    "sid": 109,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If for any nonterminal A the intersection is not the empty set (withrespect to the language that the intersection generates), then the grammar is not linear.",
+                    "sid": 110,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Checkingwhether the intersection is the empty set or not canbe done in polynomial time.",
+                    "sid": 111,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude this section by remarking thatmany of the models used in computational linguistics are in fact equivalent to linear PCFGs, socontinuous Bayesian priors are almost everywheretight.",
+                    "sid": 112,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, HMMs and many kinds of\u201cstacked\u201d finite-state machines are equivalent to 1036 linear PCFGs, as are the example PCFGs given inJohnson et al.",
+                    "sid": 113,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) to motivate the MCMC estimation procedures.",
+                    "sid": 114,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "dirichlet priors. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The first step in Bayesian inference is to specify aprior on T. In the rest of this paper we take P(T)to be a product of Dirichlet distributions, with onedistribution for each non-terminal A ? N , as thisturns out to simplify the computations considerably.",
+                    "sid": 115,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The prior is parameterized by a positive realvalued vector a indexed by productionsR, so eachproduction probability ?A?\u00df has a correspondingDirichlet parameter aA?\u00df . As before, let RA bethe set of productions in R with left-hand side A,and let ?A and aA refer to the component subvec-tors of ? and a respectively indexed by productions in RA.",
+                    "sid": 116,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Dirichlet prior P(T | a) is: P(T | a) =?A?N PD(TA | aA), where PD(TA | aA) = 1C(aA) ?r?RA ?ar1r and C(aA) = ?r?RA G(ar) G(?",
+                    "sid": 117,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "r?RA ar) where G is the generalized factorial function andC(a) is a normalization constant that does not depend on TA.",
+                    "sid": 118,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dirichlet priors are useful because they are conjugate to the multinomial distribution, which isthe building block of PCFGs.",
+                    "sid": 119,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ignoring issues oftightness for the moment and setting P(t | T) =\u00b5T(t), this means that in the supervised setting theposterior distribution P(T | t, a) given a set ofparse trees t = (t1, . . .",
+                    "sid": 120,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", tn) is also a product ofDirichlets distribution.",
+                    "sid": 121,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(T | t, a) ? P(t | T) P(T | a) ?(?r?R ?fr(t)r )(?r?R ?ar1r )=?r?R ?fr(t)+ar1r which is a product of Dirichlet distributions withparameters f(t) + a, where f(t) is the vector ofrule counts in t indexed by r ? R. We can thuswrite: P(T | t, a) = P(T | f(t) + a) Input: Grammar G, vector of trees t, vector ofhyperparameters a, previous parameters T0.",
+                    "sid": 122,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Result: A vector of parameters Trepeat draw ? from products of Dirichlet withhyperparameters a+ f(t) until T is tight for G;return T Algorithm 1: An algorithm for generating samples from P(T | t, a) for the only-tight approach.",
+                    "sid": 123,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Input: Grammar G, vector of trees t, vector ofhyperparameters a, previous rule parametersT0.",
+                    "sid": 124,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Result: A vector of parameters Tdraw a proposal T* from a product of Dirichlets withparameters a+ f(t).draw a uniform number u from [0, 1].",
+                    "sid": 125,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "if u < min{1,(Z(T(i-1))/Z(T*) )n} return T*.",
+                    "sid": 126,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "return T0.",
+                    "sid": 127,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 2: One step of Metropolis-Hastingsalgorithm for generating samples from P(T |t, a) for the renormalization approach.",
+                    "sid": 128,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "which makes it clear that the rule counts are directly added to the parameters of the prior to produce the parameters of the posterior.",
+                    "sid": 129,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "inference in the supervised setting. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We first discuss Bayesian inference in the supervised setting, as inference in the unsupervised setting is based on inference for the supervised setting.",
+                    "sid": 130,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each of the three approaches to non-tightness we provide an algorithm that characterizes the posterior P(T | t), where t = (t1, . . .",
+                    "sid": 131,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", tn)is a sequence of trees, by generating samples fromthat posterior.",
+                    "sid": 132,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our MCMC algorithms for the unsupervised setting build on these samplers for thesupervised setting.",
+                    "sid": 133,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.1 The only-tight approachThe \u201conly-tight\u201d approach requires that the priorassign zero mass to non-tight rule probability vectors T?.",
+                    "sid": 134,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way to define such a distribution isto restrict the domain of an existing prior distribution with the set of tight T and renormalize.",
+                    "sid": 135,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inmore detail, if P(T) is a prior over rule probabilities, then its renormalization is the prior P' definedas:.",
+                    "sid": 136,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P'(T) =P(T)I(T /?",
+                    "sid": 137,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T?) Z(T?).",
+                    "sid": 138,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) where Z(T?) =?",
+                    "sid": 139,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T P(T)I(T /?",
+                    "sid": 140,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T?)dT.",
+                    "sid": 141,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1037 Input: Grammar G, vector of trees t, vector ofhyperparameters a, previous parameters T0.",
+                    "sid": 142,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Result: A vector of parameters Tdraw T from products of Dirichlet withhyperparameters a+ f(t)return T Algorithm 3: An algorithm for generating samples from P(T | t, a) for the sink-state approach.",
+                    "sid": 143,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps surprisingly, it turns out that if P(T)belongs to a family of conjugate priors, then P'(T)also belongs to a (different) family of conjugatepriors as well.",
+                    "sid": 144,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proposition 2 Let P(T|a) be a prior with hyper-parameters a over the parameters of G such thatP is conjugate to the grammar likelihood.",
+                    "sid": 145,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ThenP', defined in Eq. 2, is conjugate to the grammarlikelihood as well.",
+                    "sid": 146,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proof: Assume that trees t are observed, and theprior over the grammar parameters is the prior defined in Eq. 2.",
+                    "sid": 147,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, the posterior is: P(T|t, a) ? P'(T|a)p(t|T) =P(T|a)p(t|T)I(T /?",
+                    "sid": 148,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T?) Z(T?) ? P(T|t, a)I(T /?",
+                    "sid": 149,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T?) Z(T?).",
+                    "sid": 150,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since P(T|a) is a conjugate prior to the PCFGlikelihood, then there exists a' = a'(t) such thatP(T|t, a) = P'(T|a').",
+                    "sid": 151,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore: P(T|t, a) ? P(T|a')I(T /?",
+                    "sid": 152,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T?)Z(T?) .which exactly equals P'(T|a').",
+                    "sid": 153,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?Sampling from the posterior over the parame ters given a set of trees t is therefore quite simple when assuming the base prior being renormalized is a product of Dirichlets.",
+                    "sid": 154,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 1 samples from a product of Dirichlets distribution withhyperparameters a + f(t) repeatedly, each timechecking and rejecting the sample until we obtaina tight PCFG.",
+                    "sid": 155,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The more mass the Dirichlet distribution withhyperparameters a + f(t) puts on non-tightPCFGs, the more rejections will happen.",
+                    "sid": 156,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, if the probability mass on non-tight PCFGs isq?, then it would require, on average 1/(1 - q?)samples from this distribution in order to obtain atight PCFG.",
+                    "sid": 157,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.2 The renormalization approachThe renormalization approach modifies the likelihood function instead of the prior.",
+                    "sid": 158,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we use aproduct of Dirichlets prior P(T | a) on rule probability vectors T, but the presence of the partitionfunctionZ(T) in Eq. 1 means that the likelihood isno longer conjugate to the prior.",
+                    "sid": 159,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead we have:.",
+                    "sid": 160,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(T | t) =n?i=1 \u00b5T(ti) Z(T)P(T | a) ? 1Z(T)n P(T | a+ f(t)).",
+                    "sid": 161,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) Note that the factor Z(T) depends on T, andtherefore cannot be absorbed into the constant.",
+                    "sid": 162,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 2 describes a Metropolis-Hastings sampler for sampling from the posterior in Eq. 3that uses a product of Dirichlets with parametersa+ f(t) as a proposal distribution.",
+                    "sid": 163,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we use the algorithm fromNederhof and Satta (2008) to compute the partition function which is needed in Algorithm 2.",
+                    "sid": 164,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.3 The \u201csink element\u201d approachThe \u201csink element\u201d approach does not affect thelikelihood (since the probability of a tree t is justthe product of the probabilities of the rules usedto generate it), nor does it require a change to theprior.",
+                    "sid": 165,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(The sink element ? is not a member of theset of trees T , so it cannot appear in the data t)..",
+                    "sid": 166,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that the conjugacy argument givenat the bottom of section 5 holds in this approach,so the posterior P(T | t, a) is a product of Dirich-lets with parameters f(t) + a. Algorithm 3 givesa sampler for P(T | t, a) for the sink element approach.",
+                    "sid": 167,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "inference in the unsupervised setting. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "Johnson et al.",
+                    "sid": 168,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) provide two Markov chainMonte Carlo algorithms for Bayesian inference forPCFG rule probabilities in the unsupervised setting (i.e., where the data consists of a corpus ofstrings w = (w1, . . .",
+                    "sid": 169,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", wn) alone).",
+                    "sid": 170,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithmswe give here are based on their Gibbs sampler,which in each iteration first samples parse treest = (t1, . . .",
+                    "sid": 171,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", tn), where each ti is a parse forwi, from P(t | w,T), and then samples T fromP(T | t, a).",
+                    "sid": 172,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that the conditional distribution P(t |w,T) is unaffected in each of our three approaches (the partition functions cancel in the 1038 Input: Grammar G, vector of hyperparameters a,vector of strings w = (w1, . . .",
+                    "sid": 173,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", wn), previousrule parameters T0.",
+                    "sid": 174,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Result: A vector of parameters Tfor i?",
+                    "sid": 175,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 to n do draw ti from P(ti|wi,T0)enduse Algorithm 2 to sample T given G, t, a and T0return T Algorithm 4: One step of the Metropolis-within-Gibbs sampler for the renormalization approach.",
+                    "sid": 176,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "renormalization approach), so the algorithm forsampling from P(t | w,T) given by Johnson etal.",
+                    "sid": 177,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "applies in each of our three approaches as well.",
+                    "sid": 178,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Johnson et al. ignored tightness and assumedthat P(T | t, a) is a product of Dirichlets withparameters f(t) + a. As we noted in section 6.3,this assumption holds for the sink-state approachto non-tightness, so their sampler is in fact correctfor the sink-state approach.",
+                    "sid": 179,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, we obtain samplers for the unsupervisedsetting for each of our approaches by \u201cpluggingin\u201d the corresponding sampling algorithm (Eq. 1\u20133) for P(T | t, a) into the generic Gibbs samplerframework of Johnson et al. The one complication is that because we use aMetropolisHastings procedure to generate samples from P(T | t, a) in the renormalization approach, we use the Metropolis-within-Gibbs procedure given in Algorithm 4 (Robert and Casella,2004).",
+                    "sid": 180,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the expressive power of the threeapproaches. ",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "Probably the most important question to ask withrespect to the three different approaches to non-tightness is whether they differ in terms of expressive power.",
+                    "sid": 181,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly the three approaches differ interms of the grammars they admit (the only-tightapproach requires the prior to only assign nonzeroprobability to tight PCFGs, while the other two approaches permit the prior to assign nonzero probability to non-tight PCFGs as well).",
+                    "sid": 182,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, ifwe regard a grammar as merely a device for defining a distribution over trees and a prior as defininga distribution over distributions over trees, it is reasonable to ask whether the class of distributionsover distributions of trees that each of these approaches define are the same or differ.",
+                    "sid": 183,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe,but have not proved, that all three approaches define the same class of distributions over distribu tions of trees in the following sense: any prior usedwith one of the approaches can be transformedinto a different prior that can be used with one ofthe other approaches, and yield the same posteriorover trees conditioned on a string, marginalizingout the parameters.",
+                    "sid": 184,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This does not mean that the three approachesare equivalent, however.",
+                    "sid": 185,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section we provide a grammar such that with a uniform prior overrule probabilities, the conditional distribution overtrees given a fixed string varies under each of thethree different approaches.",
+                    "sid": 186,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The grammar we consider has three rules S ?S S S|S S|a with probabilities ?1, ?2 and 1- ?1-?2, respectively.",
+                    "sid": 187,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The T parameters are required tosatisfy ?1 + ?2 = 1 and ?i = 0 for i = 1, 2.",
+                    "sid": 188,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compute the posterior distribution overparse trees for the string w = a a a. The grammar generates three parse trees for w1, namely: t1 = S S a S a S a t2 = S S a S S a S a t3 = S S S a S a S a The partition function Z for this grammar is thesmallest positive root of the cubic equation: Z = ?1Z3 + ?2Z 2 + (1- ?1 - ?2)We used Mathematica to find an analytic solutionfor Z in this equation, obtaining not only an expression for the partition function Z(T) but alsoidentifying the non-tight region T?.",
+                    "sid": 189,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to compute P(t1|w), we used Mathematica to first compute the following quantities: qsinkElement(ti) = ?T\u00b5T(ti) dT qtightOnly(ti) = ?T\u00b5T(ti) I(T /?",
+                    "sid": 190,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T?) dT qrenormalization(ti) = ?T\u00b5T(ti)/Z(T) dT where i ? {1, 2, 3}.",
+                    "sid": 191,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used Mathematica to analytically compute q(ti) for each approach and eachi ? {1, 2, 3}.",
+                    "sid": 192,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then it\u2019s easy to show that: P(ti | w) = q(ti)?3i'=1 q(ti') where the q used is based on the approach totightness desired.",
+                    "sid": 193,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the sink-element approach, 1039 0 10 20 30 0.35 0.40 0.45 0.50 0.55Average f-score Den sity Inferenceonly-tight sink-state renormalise Figure 1: The density of the F1-scores with thethree approaches.",
+                    "sid": 194,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The prior used is a symmetricDirichlet with a = 0.1.",
+                    "sid": 195,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(t1|w) = 711 \u02dc 0.636364.",
+                    "sid": 196,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the only-tightapproach P(t1|w) = 1117917221 \u02dc 0.649149.",
+                    "sid": 197,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Forthe renormalization approach the analytic expression is too complex to include in this paper,but it approximately equals 0.619893.",
+                    "sid": 198,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A logof our Mathematica calculations is availableat http://www.cs.columbia.edu/\u02dcscohen/acl13tightnessmathematica.pdf, and weconfirmed these results to three decimal places using the samplers described above (which required107 samples per approach).",
+                    "sid": 199,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the differences between these conditionalprobabilities are not great, the conditional probabilities are clearly different, so the three approaches do in fact define different distributionsover trees under a uniform prior on rule probabilities.",
+                    "sid": 200,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "empirical effects of the threeapproaches in unsupervised grammarinduction. ",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "In this section we present experiments using thethree samplers just described in an unsupervisedgrammar induction problem.",
+                    "sid": 201,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal here isnot to improve the state-of-the-art in unsupervisedgrammar induction, but to try to measure empirical differences in the estimates produced by thethree different approaches to tightness just described.",
+                    "sid": 202,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bottom line of our experiments is thatwe could not detect any significant difference inthe estimates produced by samplers for these threedifferent approaches.In our experiments we used the English Penntreebank (Marcus et al., 1993).",
+                    "sid": 203,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the part of-speech tag sequences of sentences shorter than11 words in sections 2\u201321.",
+                    "sid": 204,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The grammar we use isthe PCFG version of the dependency model withvalence (Klein and Manning, 2004), as it appearsin Smith (2006).",
+                    "sid": 205,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a symmetric Dirichlet prior with hyperparameter a = 0.1.",
+                    "sid": 206,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each of the three approaches for handling tightness, we ran 100 timesthe samplers in \u00a77, each for 1,000 iterations.",
+                    "sid": 207,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wediscarded the first 900 sweeps of each run, and calculated the F1-scores of the sampled trees every10th sweep from the last 100 sweeps.",
+                    "sid": 208,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For eachrun we calculated the average F1-score over the10 sweeps we evaluated.",
+                    "sid": 209,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus have 100 average F1-scores for each of the samplers.",
+                    "sid": 210,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 plots the density of F1 scores (compared to the gold standard) resulting from theGibbs sampler, using all three approaches.",
+                    "sid": 211,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Themean value for each of the approaches is 0.41with standard deviation 0.06 (only-tight), 0.41with standard deviation 0.05 (renormalization)and 0.42 with standard deviation 0.06 (sink element).",
+                    "sid": 212,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the only-tight approach resultsin an average of 437 (s.d., 142) rejected proposals in 1,000 samples, while the renormalizationapproach results in an average of 232 (s.d., 114)rejected proposals in 1,000 samples.",
+                    "sid": 213,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(It\u2019s not surprising that the only-tight approach results in morerejections as it keeps proposing new T until a tightproposal is found, while the renormalization approach simply uses the old T).",
+                    "sid": 214,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We performed two-sample KolmogorovSmirnov tests (which are non-parametric testsdesigned to determine if two distributions aredifferent; see DeGroot, 1991) on each of the threepairs of 100 F1-scores.",
+                    "sid": 215,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "None of the tests wereclose to significant; the p-values were all above0.5.",
+                    "sid": 216,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus our experiments provided no evidencethat the samplers produced different distributionsover trees, although it\u2019s reasonable to expect thatthese distributions do indeed differ.",
+                    "sid": 217,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In terms of running time, our implementationof the renormalization approach was several timesslower than our implementations of the other twoapproaches because we used the naive fixed-pointalgorithm to compute the partition function: perhaps this could be improved using one of themore sophisticated partition function algorithmsdescribed in Nederhof and Satta (2008).",
+                    "sid": 218,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1040",
+                    "sid": 219,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "10",
+            "sents": [
+                {
+                    "text": "In this paper we characterized the notion of an almost everywhere tight grammar in the Bayesiansetting and showed it holds for linear CFGs.",
+                    "sid": 220,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fornon-linear CFGs, we described three different approaches to handle non-tightness.",
+                    "sid": 221,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \u201conly-tight\u201d approach restricts attention to tight PCFGs,and perhaps surprisingly, we showed that conjugacy still obtains when the domain of a productof Dirichlets prior is restricted to the subset oftight grammars.",
+                    "sid": 222,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The renormalization approach involves renormalizing the PCFG measure \u00b5 overtrees when the grammar is non-tight, which destroys conjugacy with a product of Dirichlets prior.Perhaps most surprisingly of all, the sink-elementapproach, which assigns the missing mass in non-tight PCFG to a sink element ?, turns out to beequivalent to existing practice where tightness isignored.",
+                    "sid": 223,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We studied the posterior distributions over treesinduced by the three approaches under a uniformprior for a simple grammar and showed that theydiffer.",
+                    "sid": 224,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave for future work the importantquestion of whether the classes of distributionsover distributions over trees that the three approaches define are the same or different.",
+                    "sid": 225,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We described samplers for the supervisedand unsupervised settings for each of these approaches, and applied them to an unsupervisedgrammar induction problem.",
+                    "sid": 226,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(The code for theunsupervised samplers is available from http://web.science.mq.edu.au/\u02dcmjohnson).",
+                    "sid": 227,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We could not detect any difference in the posterior distributions over trees produced by thesesamplers, despite devoting considerable computational resources to the problem.",
+                    "sid": 228,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests thatfor these kinds of problems at least, tightness isnot of practical concern for Bayesian inference ofPCFGs.",
+                    "sid": 229,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

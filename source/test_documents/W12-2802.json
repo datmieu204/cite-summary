@@ -1,0 +1,1253 @@
+{
+    "ID": "W12-2802",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Toward Learning Perceptually Grounded Word Meanings from Unaligned Parallel Data",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order for robots to effectively understand natural language commands, they must be ableto acquire a large vocabulary of meaning rep resentations that can be mapped to perceptualfeatures in the external world.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous ap proaches to learning these grounded meaning representations require detailed annotations at training time.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present an approach which is capable of jointly learninga policy for following natural language com mands such as ?Pick up the tire pallet,?",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "as well as a mapping between specific phrases in the language and aspects of the external world; for example the mapping between the words ?the tire pallet?",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and a specific object in the environment.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume the action policy takes a parametric form that factors based on the structure of the language, based on the G3 framework and use stochastic gradient ascentto optimize policy parameters.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our prelimi nary evaluation demonstrates the effectivenessof the model on a corpus of ?pick up?",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "com mands given to a robotic forklift by untrained users.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "In order for robots to robustly understand humanlanguage, they must have access to meaning rep resentations capable of mapping between symbols in the language and aspects of the external worldwhich are accessible via the robot?s perception sys tem.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous approaches have represented word meanings as symbols in some specific symbolic language, either programmed by hand [Winograd, 1971, MacMahon et al, 2006] or learned [Matuszek et al, 2010, Chen and Mooney, 2011, Liang et al,2011, Branavan et al, 2009].",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because word meanings are represented as symbols, rather than percep tually grounded features, the mapping between thesesymbols and the external world must still be de fined.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the uncertainty of the mapping between constituents in the language and aspects of the external world cannot be explicitly represented by the model.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Language grounding approaches, in contrast, map words in the language to groundings in the external world [Mavridis and Roy, 2006, Hsiao et al, 2008, Kollar et al, 2010, Tellex et al, 2011].",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Groundings are the specific physical concept that is referred to by the language and can be objects (e.g., a truck or a door), places (e.g., a particular location in theworld), paths (e.g., a trajectory through the environment), or events (e.g., a sequence of robot ac tions).",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This symbol grounding approach [Harnad, 1990] represents word meanings as functions whichtake as input a perceptual representation of a grounding and return whether it matches words in the lan guage.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent work has demonstrated how to learn grounded word meanings from a parallel corpus of natural language commands paired with groundingsin the external world [Tellex et al, 2011].",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "How ever, learning model parameters required that theparallel corpus be augmented with additional an notations specifying the alignment between specificphrases in the language and corresponding groundings in the external world.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows an ex ample command from the training set paired with these alignment annotations, represented as arrows 7pointing from each linguistic constituent to a corre sponding grounding.Our approach in this paper relaxes these annota tion requirements and learns perceptually grounded word meanings from an unaligned parallel corpusthat only provides supervision for the top-level action that corresponds to a natural language com mand.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system takes as input a state/action space for the robot defining a space of possible groundingsand available actions in the external world.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition it requires a corpus of natural language com mands paired with the correct action executed inthe environment.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, an entry in the cor pus consists of a natural language command such as ?Pick up the tire pallet?",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "given to a robotic forklift, paired with an action sequence of the robot as drives to the tire pallet, inserts its forks, and raises it off the ground, drives to the truck, and sets it down.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To learn from an unaligned corpus, we derivea new training algorithm that combines the Generalized Grounding Graph (G3) framework introduced by Tellex et al [2011] with the policy gra dient method described by Branavan et al [2009].",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume a specific parametric form for the action policy that is defined by the linguistic structure of the natural language command.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system learns a policy parameters that maximize expected reward using stochastic gradient ascent.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By factoring the policy according to the structure of language, we can propagate the error signal to each term, allowing thesystem to infer groundings for each linguistic constituent even without direct supervision.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We eval uate our model using a corpus of natural languagecommands collected from untrained users on the in ternet, commanding the robot to pick up objects ordrive to locations in the environment.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The evalua tion demonstrates that the model is able to predict both robot actions and noun phrase groundings with high accuracy, despite having no direct supervision for noun phrase groundings.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "background. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We briefly review the G3 framework, introduced byTellex et al [2011].",
+                    "sid": 29,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order for a robot to un derstand natural language, it must be able to map between words in the language and corresponding groundings in the external world.",
+                    "sid": 30,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The aim is to find Figure 1: Sample entry from an aligned corpus, where mappings between phrases in the language and groundings in the external world are explicitly specified as arrows.",
+                    "sid": 31,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning the meaning of ?thetruck?",
+                    "sid": 32,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and ?the pallet?",
+                    "sid": 33,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is challenging when align ment annotations are not known.",
+                    "sid": 34,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?r1 ?Pick up?",
+                    "sid": 35,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?1 = ?1 ?f2 ?the pallet.?",
+                    "sid": 36,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?2 ?2 =Figure 2: Grounding graph for ?Pick up the tire pal let.",
+                    "sid": 37,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 the most probable groundings ?1 . . .",
+                    "sid": 38,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N given thelanguage ? and the robot?s model of the environ ment M : argmax ?1...?N p(?1 . . .",
+                    "sid": 39,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N |?,M) (1)M consists of the robot?s location, the loca tions, geometries, and perceptual tags of objects, and available actions the robot can take.",
+                    "sid": 40,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For brevity, we omit M from future equations in this section.",
+                    "sid": 41,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To learn this distribution, one standard approachis to factor it based on certain independence assump tions, then train models for each factor.",
+                    "sid": 42,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Naturallanguage has a well-known compositional, hierar chical argument structure [Jackendoff, 1983], and apromising approach is to exploit this structure in order to factor the model.",
+                    "sid": 43,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, if we define a di rected model over these variables, we must assumea possibly arbitrary order to the conditional ?i factors.",
+                    "sid": 44,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, for a phrase such as ?the tire pal let near the other skid,?",
+                    "sid": 45,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "we could factorize in either of the following ways: p(?tires, ?skid|?)",
+                    "sid": 46,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= p(?skid|?tires,?)?",
+                    "sid": 47,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p(?tires|?)",
+                    "sid": 48,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) p(?tires, ?skid|?)",
+                    "sid": 49,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= p(?tires|?skid,?)?",
+                    "sid": 50,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p(?skid|?)",
+                    "sid": 51,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) Depending on the order of factorization, we willneed different conditional probability tables that cor respond to the meanings of words in the language.",
+                    "sid": 52,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To resolve this issue, another approach is to use Bayes?",
+                    "sid": 53,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rule to estimate the p(?|?1 . . .",
+                    "sid": 54,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ), but thisapproach would require normalizing over all possi ble words in the language ?.",
+                    "sid": 55,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another alternative is to use an undirected model, but this approach is intractable because it requires normalizing over allpossible values of all ?i variables in the model, in cluding continuous attributes such as location and size.To address these problems, the G3 framework in troduced a correspondence vector ? to capture the dependency between ?1 . . .",
+                    "sid": 56,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N and ?.",
+                    "sid": 57,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each entryin ?i ? ?",
+                    "sid": 58,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "corresponds to whether linguistic con stituent ?i ? ?",
+                    "sid": 59,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "corresponds to grounding ?i. We assume that ?1 . . .",
+                    "sid": 60,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N are independent of ? unless?",
+                    "sid": 61,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is known.",
+                    "sid": 62,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Introducing ? enables factorization according to the structure of language with local nor malization at each factor over a space of just the two possible values for ?i. 2.1 Inference.",
+                    "sid": 63,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to use the G3 framework for inference, wewant to infer the groundings ?1 . . .",
+                    "sid": 64,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N that maxi mize the distribution argmax ?1...?N p(?1 . . .",
+                    "sid": 65,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N |?,?)",
+                    "sid": 66,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4)which is equivalent to maximizing the joint distribu tion of all groundings ?1 . . .",
+                    "sid": 67,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N , ? and ?, argmax ?1...?N p(?1 . . .",
+                    "sid": 68,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ,?,?).",
+                    "sid": 69,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) We assume that ? and ?1 . . .",
+                    "sid": 70,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N are independent when ? is not known, yielding: argmax ?1...?N p(?|?, ?1 . . .",
+                    "sid": 71,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N )p(?)p(?1 . . .",
+                    "sid": 72,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ) (6)This independence assumption may seem unintu itive, but it is justified because the correspondence variable ? breaks the dependency between ? and?1 . . .",
+                    "sid": 73,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N . If we do not know whether ?1 . . .",
+                    "sid": 74,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N cor respond to ?, we assume that the language does not tell us anything about the groundings.",
+                    "sid": 75,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, for simplicity, we assume that any object in the environment is equally likely to be referenced by the language, which amounts to a constant prior on ?1 . . .",
+                    "sid": 76,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N . In the future, we plan to incorporate models of attention and salience into this prior.",
+                    "sid": 77,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We ignore p(?)",
+                    "sid": 78,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "since it does not depend on ?1 . . .",
+                    "sid": 79,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N , leading to: argmax ?1...?N p(?|?, ?1 . . .",
+                    "sid": 80,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ) (7) To compute the maximum value of the objective in Equation 7, the system performs beam search over ?1 . . .",
+                    "sid": 81,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N , computing the probability of each assignment from Equation 7 to find the maximum probability assignment.",
+                    "sid": 82,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although we are using p(?|?, ?1 . . .",
+                    "sid": 83,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ) as the objective function, ? is fixed, and the ?1 . . .",
+                    "sid": 84,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N are unknown.",
+                    "sid": 85,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approachis valid because, given our independence assumptions, p(?|?, ?1 . . .",
+                    "sid": 86,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ) corresponds to the joint dis tribution over all the variables given in Equation 5.",
+                    "sid": 87,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to perform beam search, we factor the model according to the hierarchical, compositional linguistic structure of the command: p(?|?, ?1 . . .",
+                    "sid": 88,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ) = ? i p(?i|?i, ?i1 . . .",
+                    "sid": 89,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?ik) (8) 9 This factorization can be represented graphically; we call the resulting graphical model the grounding graph for a natural language command.",
+                    "sid": 90,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The directed model for the command ?Pick up the pallet?",
+                    "sid": 91,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "appears in Figure 2.",
+                    "sid": 92,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ? variables correspond to language;the ? variables correspond to groundings in the ex ternal world, and the ? variables are True if the groundings correspond to the language, and False otherwise.In the fully supervised case, we fit model param eters ? using an aligned parallel corpus of labeled positive and negative examples for each linguistic constituent.",
+                    "sid": 93,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The G3 framework assumes a log-linearparametrization with feature functions fj and fea ture weights ?j : p(?|?, ?1 . . .",
+                    "sid": 94,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?N ) = (9) ? i 1 Z exp( ? j ?jfj(?i,?i, ?i1 . . .",
+                    "sid": 95,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?ik)) (10) This function is convex and can be optimized with gradient-based methods [McCallum, 2002].",
+                    "sid": 96,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features correspond to the degree to which each ? correctly grounds ?i. For a relation such as ?on,?a natural feature is whether the grounding corre sponding to the head noun phrase is supported by the grounding corresponding to the argument noun phrases.",
+                    "sid": 97,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the feature supports(?i, ?j) alone is not enough to enable the model to learn that ?on?",
+                    "sid": 98,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "corresponds to supports(?i, ?j).",
+                    "sid": 99,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead we need a feature that also takes into account the word ?on:?",
+                    "sid": 100,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "supports(?i, ?j) ?",
+                    "sid": 101,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(?on?",
+                    "sid": 102,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?i) (11)",
+                    "sid": 103,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "approach. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Our goal is to learn model parameters for the G3framework from an unaligned corpus of natural language commands paired with robot actions.",
+                    "sid": 104,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previ ously, the system learned model parameters ? usingan aligned corpus in which values for all grounding variables are known at training time, and anno tators provided both positive and negative examples for each factor.",
+                    "sid": 105,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we describe how to relax this annotation requirement so that only the top-level action needs to be observed in order to train the model.",
+                    "sid": 106,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is easy and fast to collect datawith these annotations, whereas annotating the val ues of all the variables, including negative examples is time-consuming and error prone.",
+                    "sid": 107,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once we know the model parameters we can use existing inference to find groundings corresponding to word meanings, as in Equation 4.",
+                    "sid": 108,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are given a corpus of D training examples.Each example d consists of a natural language com mand ?d with an associated grounding graph with grounding variables ?d. Values for the grounding variables are not known, except for an observed value gda for the top-level action random variable, ? d a . Finally, an example has an associated environmental context or semantic map Md. Each environmentalcontext will have a different set of objects and avail able actions for the robot.",
+                    "sid": 109,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, one trainingexample might contain a command given in an environment with a single tire pallet; another might con tain a command given in an environment with two box pallets and a truck.We define a sampling distribution to choose val ues for the ? variables in the model using the G3 framework with parameters ?: p(?d|?d,?d,Md,?)",
+                    "sid": 110,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(12) Next, we define a reward function for choosing the correct grounding ga for a training example: r(?d, gda) = ? 1 if ?da = g d a ?1 otherwise (13)Here ?a is a grounding variable for the top-level ac tion corresponding to the command; it is one of the variables in the vector ?.",
+                    "sid": 111,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our aim is to find model parameters that maximize expected reward when drawing values for ?d from p(?d|?d,?d,Md,?)",
+                    "sid": 112,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "over the training set: argmax ? ?",
+                    "sid": 113,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "d Ep(?d|?d,?d,Md,?)r(?",
+                    "sid": 114,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "d, gda) (14) Expanding the expectation we have: argmax ? ?",
+                    "sid": 115,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "d d?",
+                    "sid": 116,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "r(?d, gda)p(?",
+                    "sid": 117,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "d|?d,?d,Md,?)",
+                    "sid": 118,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(15)We use stochastic gradient descent to find model pa rameters that maximize reward.",
+                    "sid": 119,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we take the 10 derivative of the expectation with respect to ?.",
+                    "sid": 120,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(We drop the d subscripts for brevity.)",
+                    "sid": 121,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "??k Ep(?|?,?,M,?)r(?, ga) = ? ?",
+                    "sid": 122,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "r(?, ga) ? ??k p(?|?,?,M,?)",
+                    "sid": 123,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(16) Focusing on the inner term, we expand it with Bayes?",
+                    "sid": 124,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "rule: ? ??k p(?|?,?,M,?)",
+                    "sid": 125,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= ? ??k p(?|?,?,M,?)p(?|?,M,?)",
+                    "sid": 126,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p(?|?,M,?)",
+                    "sid": 127,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(17) We assume the priors do not depend on ?: p(?|M) p(?|?)",
+                    "sid": 128,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "??k p(?|?,?,M,?)",
+                    "sid": 129,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(18)For brevity, we compress ?, ?, and M in the vari able X . Next, we take the partial derivative of thelikelihood of ?.",
+                    "sid": 130,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First we assume each factor is inde pendent.",
+                    "sid": 131,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "??k p(?|X,?)",
+                    "sid": 132,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= ? ??k ? i p(?i|X,?)",
+                    "sid": 133,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(19) = ? i p(?i|X,?)?",
+                    "sid": 134,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "j ? ??k p(?j |X,?)",
+                    "sid": 135,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p(?j |X,?)",
+                    "sid": 136,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(20) Finally, we assume the distribution over ?j takes alog-linear form with feature functions fk and param eters ?k, as in the G3 framework.",
+                    "sid": 137,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "??k p(?j |X,?)",
+                    "sid": 138,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= (21) p(?|X,?)?",
+                    "sid": 139,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "fk(?, X)?",
+                    "sid": 140,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ep(??|X,?)",
+                    "sid": 141,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "fk(?",
+                    "sid": 142,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?, X) ? ?",
+                    "sid": 143,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We substitute back into the overall expression for the partial derivative of the expectation: ? ??k Ep(?|X,?)r(?, ga) = Ep(?|X,?)r(?, ga)??",
+                    "sid": 144,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "j fk(?j , X)?",
+                    "sid": 145,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ep(??|X,?)",
+                    "sid": 146,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "fk(?",
+                    "sid": 147,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?, X) ? ?",
+                    "sid": 148,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(22) Input: 1: Initial values for parameters, ?0.",
+                    "sid": 149,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2: Training dataset, D. 3: Number of iterations, T . 4: Step size, ?.",
+                    "sid": 150,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5: 6: ??",
+                    "sid": 151,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?0 7: for t ? T do 8: for d ? D do 9: ??",
+                    "sid": 152,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "???kEp(?d|?d,?d,Md,?)r(?",
+                    "sid": 153,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "d, gda) 10: end for 11: ??",
+                    "sid": 154,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12: end for Output: Estimate of parameters ? Figure 3: Training algorithm.",
+                    "sid": 155,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We approximate the expectation over ? with highly probable bindings for the ? and update thegradient incrementally for each example.",
+                    "sid": 156,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The train ing algorithm is given in Figure 3.",
+                    "sid": 157,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "results. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We present preliminary results for the learning algo rithm using a corpus of natural language commands given to a robotic forklift.",
+                    "sid": 158,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We collected a corpusof natural language commands paired with robot actions by showing annotators on Amazon Mechani cal Turk a video of the robot executing an action and asking them to describe in words they would use to command an expert human operator to carry out the commands in the video.",
+                    "sid": 159,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Frames from a video in ourcorpus, together with commands for that video ap pear in Figure 4.",
+                    "sid": 160,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since commands often spannedmultiple parts of the video, we annotated the align ment between each top-level clause in the commandand the robot?s motion in the video.",
+                    "sid": 161,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our initial eval uation uses only commands from the corpus that contain the words ?pick up?",
+                    "sid": 162,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "due to scaling issues when running on the entire corpus.",
+                    "sid": 163,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report results using a random cost function as a baseline as well as the learned parameters on a training set and a held-out test set.",
+                    "sid": 164,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 showsperformance on a training set using small environ ments (with one or two other objects) and a test set of small and large environments (with up to six other objects).",
+                    "sid": 165,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 (a) t=0 (b) t=20 (c) t=30 Pick up pallet with refridgerator [sic] and place on truck to the left.",
+                    "sid": 166,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A distance away you should see a rectangular box.",
+                    "sid": 167,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Approach it slowly and load it up onto your forklift.",
+                    "sid": 168,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Slowly proceed to back out and then make a sharp turn and approach the truck.",
+                    "sid": 169,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Raise your forklift and drop the rectangular box on the back of the truck.",
+                    "sid": 170,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Go to the pallet with the refrigerator on it and pick it up.",
+                    "sid": 171,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Move the pallet to the truck trailer.",
+                    "sid": 172,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Place the pallet on the trailer.",
+                    "sid": 173,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pick up the pallet with the refrigerator and place it on the trailer.",
+                    "sid": 174,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(d) Commands Figure 4: Frames from a video in our dataset, paired with natural language commands.",
+                    "sid": 175,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As expected, on the training set the system learnsa good policy, since it is directly rewarded for act ing correctly.",
+                    "sid": 176,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the environments are small, the chance of correctly grounding concrete nounphrases with a random cost function is high.",
+                    "sid": 177,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "How ever after training performance at grounding noun phrases increases to 92% even though the system had no access to alignment annotations for noun phrases at training time; it only observes reward based on whether it has acted correctly.",
+                    "sid": 178,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we report performance on a test set to assessgeneralization to novel commands given in novel environments.",
+                    "sid": 179,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the test set includes larger environments with up to six objects, baseline perfor mance is lower.",
+                    "sid": 180,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However the trained system is ableto achieve high performance at both inferring correct actions as well as correct object groundings, de spite having no access to a reward signal of any kind during inference.",
+                    "sid": 181,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result shows the system has learned general word meanings that apply in novel contexts not seen at training time.",
+                    "sid": 182,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Beginning with SHRDLU [Winograd, 1971], many systems have exploited the compositional structureof language to statically generate a plan correspond % Correct Actions Concrete Noun Phrases Before Training 31% 61% After Training 100% 92% (a) Training (small environments) % Correct Actions Concrete Noun Phrases Before Training 3% 26% After Training 84% 77% (b) Testing (small and large environments) Table 1: Results on the training set and test set.",
+                    "sid": 183,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ing to a natural language command [Hsiao et al, 2008, MacMahon et al, 2006, Skubic et al, 2004, Dzifcak et al, 2009].",
+                    "sid": 184,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our work moves beyond this framework by defining a probabilistic graphicalmodel according to the structure of the natural lan guage command, inducing a distribution over plans and groundings.",
+                    "sid": 185,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Models that learned word meanings [Tellex et al,2011, Kollar et al, 2010] require detailed alignment annotations between constituents in the language and objects, places, paths, or events in the external world.",
+                    "sid": 186,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous approaches capable of learn ing from unaligned data [Vogel and Jurafsky, 2010, Branavan et al, 2009] used sequential models thatcould not capture the hierarchical structure of lan guage.",
+                    "sid": 187,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Matuszek et al [2010], Liang et al [2011] and Chen and Mooney [2011] describe models that learn compositional semantics, but word meaningsare symbolic structures rather than patterns of fea tures in the external world.",
+                    "sid": 188,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been a variety of work in transferringaction policies between a human and a robot.",
+                    "sid": 189,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In imi tation learning, the goal is to create a system that canwatch a teacher perform an action, and then repro duce that action [Kruger et al, 2007, Chernova and Veloso, 2009, Schaal et al, 2003, Ekvall and Kragic, 2008].",
+                    "sid": 190,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rybski et al [2007] developed an imitation learning system that learns from a combination of imitation of the human teacher, as well as natural language input.",
+                    "sid": 191,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our work differs in that the systemmust infer an action from the natural language commands, rather than from watching the teacher per 12 form an action.",
+                    "sid": 192,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system is trained off-line, andthe task of the robot is to respond on-line to the nat ural language command.",
+                    "sid": 193,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "In this paper we described an approach for learningperceptually grounded word meanings from an un aligned parallel corpus of language paired with robotactions.",
+                    "sid": 194,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training algorithm jointly infers poli cies that correspond to natural language commands as well as alignments between noun phrases in the command and groundings in the external world.",
+                    "sid": 195,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inaddition, our approach learns grounded word mean ings or distributions corresponding to words in the language, that the system can use to follow novelcommands that it may have never encountered dur ing training.",
+                    "sid": 196,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We presented a preliminary evaluation on a small corpus, demonstrating that the system isable to infer meanings for concrete noun phrases de spite having no direct supervision for these values.",
+                    "sid": 197,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are many directions for improvement.",
+                    "sid": 198,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weplan to train our system using a large dataset of language paired with robot actions in more complex en vironments, and on more than one robotic platform.",
+                    "sid": 199,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach points the way towards a framework that can learn a large vocabulary of general groundedword meanings, enabling systems that flexibly respond to a wide variety of natural language com mands given by untrained users.",
+                    "sid": 200,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

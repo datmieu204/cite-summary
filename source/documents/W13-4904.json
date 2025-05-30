@@ -1,0 +1,1679 @@
+{
+    "ID": "W13-4904",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper describes cross-task flexible transition models (CTFTMs) and demonstrates their effectiveness for Arabic natural language processing (NLP).",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NLP pipelines often suffer from error propagation, as errors committed in lower-level tasks cascade through the remainder of the processing pipeline.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By allowing a flexible order of operations across and within multiple NLP tasks, a CTFTM can mitigate both cross-task and within-task error propagation.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our Arabic CTFTM models to- kenization, affix detection, affix labeling, part- of-speech tagging, and dependency parsing, achieving state-of-the-art results.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present the details of our general framework, our Arabic CTFTM, and the setup and results of our experiments.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Natural Language Processing (NLP) systems often consist of a series of NLP components, each trained to perform a specific task such as parsing.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These pipelines tend to suffer from error propagation\u2014 errors introduced by early components cascade through the remainder of the pipeline causing subsequent components to commit additional errors.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Partial solutions from higher-level tasks (e.g., parsing) can aid in resolving the difficult decisions that must be made in solving lower-level tasks, as with part- of-speech tagging the classic \u201cgarden path\u201d sentence example \u201cThe horse raced past the barn fell.\u201d To this end, this paper presents cross-task flexible transition models (CTFTMs), which model multiple tasks and solve these tasks in a more flexible order than pipeline approaches.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We implement and experiment with a CTFTM for Arabic1 language processing and report experimental results for it on Arabic tokenization (i.e., clitic separation), affix detection, affix labeling, part-of-speech tagging, and dependency parsing.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to error propagation between modules within a parsing pipeline, errors may propagate within the parsing process itself due to the fixed order of operations of the parser.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is common for standard transition-based dependency parsing models (McDonald and Nivre, 2007), such as shift-reduce parsers, which incrementally construct a parse by processing the input in a fixed left-to-right or right-to-left fashion.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, using a transition model that allows a more flexible order of operations, such as Goldberg and Elhadad\u2019s (2010) parser, allows difficult decisions to be postponed until later, when more of the solution has been constructed.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CTFTMs extend this approach by modeling multiple tasks and providing this flexibility across tasks so that no one task needs to be complete before another can be partially solved.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a morphologically rich language, Arabic requires a significant number of processing steps.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Arabic uses a variety of affixes to inflect for case, gender, number (including dual), and mood, has clitics that attach to other words, permits both VSO and SVO constructions, and rarely includes short vowels in written form.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The presence of clitics and the absence of written short vowels are particularly significant sources of ambiguity.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As Tsarfaty (2006) argues for Modern Hebrew, a Semitic language that shares these characteristics, we contend that mor 1 This paper focuses on Modern Standard Arabic rather than any of the dialects.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "34 Proceedings of the Fourth Workshop on Statistical Parsing of Morphologically Rich Languages, pages 34\u201345, Seattle, Washington, USA, 18 October 2013.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2013 Association for Computational Linguistics phological analysis and parsing should be done in a unified framework, such as a CTFTM, rather than by separate components.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we describe CTFTMs, which can roots using the same templates and, thus, look similar.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A single Arabic token may permit a variety of different analyses, as the example in Table 1 illustrates.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "be used for a wide variety of NLP tasks, and present our Arabic CTFTM for Arabic tokenization, affix detection, affix labeling, part-of-speech tagging, and dependency parsing as well as the results obtained in applying it to our dependency conversion of the Penn Arabic Treebank (ATB) (Maamouri et al., 2004; Maamouri and Bies, 2004).",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that our Arabic CTFTM for tokenization, affix detection, affix labeling, POS tagging, and parsing achieves slightly better results than a similar CTFTM that performs all the tasks except parsing.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The CTFTM that supports parsing appears to be more accurate at distinguishing between passive and active verbs as well as between nouns and adjectives\u2014 cases where the context is crucial for proper interpretation due to Arabic\u2019s ambiguities.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system achieves tokenization accuracy similar to Kulick\u2019s (2011) state-of-the-art system for a standard split of the ATB part 3, and, in our experiments using ATB parts 1\u20133, our system achieves the highest labeled attachment, unlabeled attachment, and clitic separation figures (including pronomial clitics) for Arabic yet reported (although no other work can be compared directly).",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "relevant arabic linguistics. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Arabic has rich morphology, with a wide array of affixes and clitics and inflecting for case, number, gender, and, occasionally, mood.",
+                    "sid": 26,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Coordinating conjunctions, pronouns, and most true prepositions, along with some other particles and the definite article, usually occur as clitics in Arabic.",
+                    "sid": 27,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, a space- delimited2 sequence of Arabic characters may consist of multiple words, and identifying the boundaries between these must be done in order to produce syntactic parses.",
+                    "sid": 28,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These boundaries can\u2019t be detected perfectly using simple deterministic rules.",
+                    "sid": 29,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Significantly, short vowels, which are expressed using diacritics, are not typically written in Arabic, resulting in pervasive ambiguity.",
+                    "sid": 30,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, active and passive forms of verbs vary only in their diacritics, and nouns and adjectives are both derived from Arabic 2 Technically, space-and-punctuation-deliminated..",
+                    "sid": 31,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "_,JI_ wAlY \u2018ruler\u2019 ..s- + _,JI+_ w+AlY+y \u2018and to me\u2019 _,J +_ w+<ly \u2018and I follow\u2019 ..s- + +_ w+|l+y \u2018and my clan\u2019 + Table 1: Possible interpretations for the text wAlY (Habash and Rambow, 2005).",
+                    "sid": 32,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "ctf-tm framework. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Error propagation is not simply a problem that occurs between components in a pipeline but one that often occurs within a single component\u2019s processing.",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since transition systems can use the partially built solution for feature generation, incorrect actions taken early on result not only in an invalid final solution, but the invalid partial solution may dissuade the system from making correct decisions with respect to other parts of the solution.",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a transition system can postpone decisions it is not confident of until later, the partial solution created by performing other actions may provide more or better information that enables the system to properly resolve more difficult decisions.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This \u201ceasy- first\u201d strategy is adopted by Goldberg and Elhadad\u2019s (2010) parsing system, which starts with an ordered list of unattached words and, in each iteration, creates a new arc between any of the adjacent pairs of words in the list and removes the daughter node (word) from the list.",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This strategy is much more flexible than shift- reduce style parsing because the system has more options available to it at any one step for building up the solution.",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, simply having flexibility within a single component does not reduce error propagation to or from other components in a pipeline and, to mitigate the potential for this, one may use a cross-task flexible transition model (CTFTM) that does not have to wait for lower level tasks to be 100% complete before starting work on higher level tasks.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McDonald and Nivre (2007) define a transition system as follows: 1.",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a set C of parse configurations, each of which defines a (partially built) dependency graph G 2.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a set T of transitions, each a function t : C \u2192 C 3.",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "for every sentence x = w0, w1, ..., wn (a) a unique initial configuration cx (b) a set Cx of terminal configurations These systems start at the initial configuration and use a scoring function s : C \u00d7 T \u2192 R to repeatedly select and follow the locally optimal transition, stopping when a terminal configuration is reached.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make a few changes to McDonald and Nivre\u2019s transition system definition in order to explain our framework.",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, to support modeling of multiple tasks, instead of referring to parse configurations, we simply use the term configuration, defining it to represent a partially built solution rather than a dependency graph.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we specify that there exists a routine for enumerating a set of anchors for any given configuration.",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Anchors are an organizational concept for dealing with arbitrary data structures; each anchor acts as a hook into some portion of the configuration that may be changed.",
+                    "sid": 46,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, there exist routines for enumerating legal actions that can be performed in relation to any anchor and, for training, a routine for verifying that performing a given action will lead to a configuration consistent with the final solution.",
+                    "sid": 47,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of an action constitutes a transition between configurations.3 It is quite straightfoward to adapt Goldberg and Elhadad\u2019s (2010) parsing approach to any configuration that is indexable by anchors, and in so doing we are able to create cross-task flexible transition models.",
+                    "sid": 48,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 For example, in a fixed order, one-word-at-a-time POS tagging system, there would be only one anchor\u2014the word currently being labeled\u2014but, for a one-at-a-time POS tagger capable of tagging words in any order, the anchor set would contain the entire list of still-unlabeled words.",
+                    "sid": 49,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The POS labeling actions for the anchors in each of these cases constitute transitions to new configurations.",
+                    "sid": 50,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "our arabic ctf-tm. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1 Tasks.",
+                    "sid": 51,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our Arabic CTFTM system performs the following tasks: split a series of space-delimited Arabic tokens into words (tokenization), identify the bounds of affixes within the words (affix detection), label the affixes (affix labeling), label the words with their parts of speech (POS tagging), and construct a labeled dependency tree (dependency parsing).",
+                    "sid": 52,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tokenization, part-of-speech tagging, and dependency parsing are frequent topics in NLP literature.",
+                    "sid": 53,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Affix identification and labeling are parts of morphological analysis that are sometimes completely ignored or are performed using an external morphological analyzer.",
+                    "sid": 54,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Identifying affixes and labeling them can help the overall system contend with lexical sparsity issues as well as utilize the information encoded by the affixes (e.g., person).",
+                    "sid": 55,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Anchors and Actions.",
+                    "sid": 56,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The configurations that the system deals with have anchors of two types, token anchors and affix anchors.",
+                    "sid": 57,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The initial configuration consists of an ordered list of neighboring token anchors (neighborhood), each of which corresponds to one of the original space-delimited tokens.",
+                    "sid": 58,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As processing continues, new token anchors may be created by splitting off clitics, new affix anchors may be created by identifying substrings of tokens as affixes, and token anchors will be removed from the ordered list to become daughter nodes of their neighbors, attached via labeled dependency arcs.",
+                    "sid": 59,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complete list of actions that can be performed on the anchors, which, as described earlier, constitute the transitions between configurations, are as follows: Tokenization 1.",
+                    "sid": 60,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Separate a proclitic of length l from a token anchor, cre-.",
+                    "sid": 61,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ating a new token anchor for the clitic and reducing the width of the original token 2.",
+                    "sid": 62,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Separate an enclitic of length l from a token anchor, cre-.",
+                    "sid": 63,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ating a new token anchor for the clitic and reducing the width of the original token Affix Detection 3.",
+                    "sid": 64,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Create an affix (prefix) anchor from the first l characters.",
+                    "sid": 65,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of a token anchor that are not labeled as part of an affix (If the affix is the definite determiner Al, which we treat as an affix for consistency with the ATB\u2019s tokenization scheme, it is automatically labeled as DET and removed from further processing for the sake of efficiency.)",
+                    "sid": 66,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 67,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Create an affix (suffix) anchor from the last l characters.",
+                    "sid": 68,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of a token anchor that are not labeled as part of an affix POS and affix labeling",
+                    "sid": 69,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "assign a label l to the anchor (affixes are automatically. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "removed from further processing after labeling) Dependency parsing chor and the preceding unattached neighbor token anchor and remove the attached anchor from the neighborhood 7.",
+                    "sid": 70,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Create a dependency arc with label d between a token.",
+                    "sid": 71,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "anchor and the following unattached neighbor token anchor with label l and remove the attached anchor from the neighborhood 8.",
+                    "sid": 72,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Swap the position of two neighboring token anchors (this.",
+                    "sid": 73,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "adds Nivre-style (2009) non-projectivity support as described by Tratz and Hovy (2011)) General 9.",
+                    "sid": 74,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mark an anchor as fully processed and remove it from.",
+                    "sid": 75,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "further processing The dependency labels, POS labels, clitic lengths, and affix lengths used to define the actions are all collected automatically from the training data.",
+                    "sid": 76,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 The actions are subject to the following constraints/preconditions: 1.",
+                    "sid": 77,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Labeling is only valid if the anchor has not been labeled.",
+                    "sid": 78,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 79,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tokens may only be labeled with token labels, prefixes.",
+                    "sid": 80,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "with prefix labels, and suffixes with suffix labels (as determined by the training data) 3.",
+                    "sid": 81,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Affix strings observed in the training data may not be la-.",
+                    "sid": 82,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "beled with any label not used with them in the training data 4.",
+                    "sid": 83,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Token anchors may not be assigned labels that do not co-.",
+                    "sid": 84,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "occur with the labels of any already-labeled affixes and vice versa 5.",
+                    "sid": 85,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A prefix creation action may only be applied to a token anchor that doesn\u2019t yet have a prefix already has a prefix, and enclitics are similarly restricted by the presence of a suffix 7.",
+                    "sid": 86,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clitics may not be detached from a token that has already.",
+                    "sid": 87,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "been attached to another token via a dependency arc 8.",
+                    "sid": 88,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A dependency arc with label x may not be created between token anchors T1 and T2 if 1) one or both are labeled and 2) no arc between similarly POS tagged anchors exists in the training data 9.",
+                    "sid": 89,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Swap actions may not undo previous swaps.",
+                    "sid": 90,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10.",
+                    "sid": 91,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Marking a token anchor as fully processed may only oc-.",
+                    "sid": 92,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "cur if it has already been labeled, and it must either be 1) the last unattached token or 2) already attached 4 Training examples with clitics that are invalid (i.e., too long) are discarded at the beginning of training.",
+                    "sid": 93,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Scoring Function.",
+                    "sid": 94,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our scoring function, like Goldberg and Elhadad, we use the structured perceptron algorithm (Collins, 2002) with parameter averaging.",
+                    "sid": 95,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has previously been shown to produce strong results when modeling multiple NLP tasks (Zhang and Clark, 2008).",
+                    "sid": 96,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.4 Features.",
+                    "sid": 97,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given anchor5, the system extracts features from the partially built solution (e.g., the text, affixes, POS tags, and syntactic dependencies of the anchor and nearby anchors).",
+                    "sid": 98,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same feature templates are used for all action types except the affix labeling actions\u2014affix labeling is applied to affix anchors instead of word-level anchors, and, since all templates are defined relative to an anchor, the templates must be different.",
+                    "sid": 99,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system uses no external resources (e.g., lexicons, morphological analyzers).",
+                    "sid": 100,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave out a more exhaustive listing and description of the features due to space limitations6, the fact that the focus of this paper is not on the value of any particular feature template but rather on our overall approach and experimental results, and because we plan to release our code, which will be more helpful for reproducibility efforts.",
+                    "sid": 101,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.5 Data Preparation.",
+                    "sid": 102,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our experiments, we use the original written form of the data from the latest versions of the first three parts of the Penn Arabic Treebank (ATB) (Maamouri et al., 2004; Maamouri and Bies, 2004) as well as the new broadcast news collection (Maamouri et al., 2012).7 We convert the constituent trees into dependency trees and adjust the part-of- speech tags.",
+                    "sid": 103,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 \u2018A given action\u2019 may be more correct technically, but our implementation is set up to share the same set of string-based features across all actions associated with a given anchor.",
+                    "sid": 104,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "with minimal (insufficient) explanation would require well over a page.",
+                    "sid": 105,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of feature templates is based upon the templates used by Tratz and Hovy\u2019s (2011) English parser, which are given in Tratz\u2019s (2011) thesis.",
+                    "sid": 106,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 We use version 4.1 of ATB part 1, 3.1 of part 2, 3.2 of part.",
+                    "sid": 107,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3, and 1.0 of the broadcast news transcriptions.",
+                    "sid": 108,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.5.1 Dependency Conversion The two main Modern Standard Arabic dependency treebanks currently available are the Columbia Arabic Treebank (CATiB) (Habash and Roth, 2009) and the Prague Arabic Dependency Treebank (PADT) (Hajic\u02c7 et al., 2004).",
+                    "sid": 109,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CATiB has over 228,000 manually annotated words as well as an automatic ATB conversion.",
+                    "sid": 110,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It uses only 8 dependency relations (subject, object, predicate, topic, idafa, tamyiz, modifier, and flat) and 6 part-of- speech tags, and it has not yet been publicly released by the LDC.",
+                    "sid": 111,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The PADT, which was used in the CoNLL 2006 and 2007 shared tasks (Buchholz and Marsi, 2006; Nivre et al., 2007), is much smaller, with only about 148,000 annotated tokens.",
+                    "sid": 112,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we want a large annotated corpus with fine-grained labels, we create our own ATB conversion.",
+                    "sid": 113,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.5.2 Transformations In addition to converting the ATB\u2019s constituent parses to dependency trees, we make a handful of other changes.",
+                    "sid": 114,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Green and Manning (2010) and others, sentences headed by X nodes are deleted because the treebank annotators considered them unbracketable or somehow erroneous.",
+                    "sid": 115,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Rambow et al.",
+                    "sid": 116,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005), Treebank sentences headed by TOP elements containing multiple S daughters are split into separate sentences.8 Additionally, if the dependency converter concludes that an S node without treebank functional tags is dependent upon another S node and is separated from it via sentence-final punctuation (e.g., an exclamation point), these S nodes are separated into distinct sentences as well.",
+                    "sid": 117,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the broadcast news data, we remove all subtrees headed by EDITED tags to make it more closely resemble newswire text.9 Since we adhere to the tokenization scheme used by the ATB, and we do not split off the determiner Al as its own tree token.",
+                    "sid": 118,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we treat it as a prefix.",
+                    "sid": 119,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The words referred to as inna and her sisters are annotated using two different part-of-speech categories and syntactic structures in the ATB.",
+                    "sid": 120,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our conversion, both ATB structures are converted to 8 The ATB often has multiple sentences, or even entire paragraphs, annotated under a single TOP element.",
+                    "sid": 121,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 The EDITED tag \u201cis used to show the repetition and restart-.",
+                    "sid": 122,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ing of constituents that are repaired by subsequent speech\u201d (Maamouri et al., 2012).",
+                    "sid": 123,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the same dependency structure headed by the INNA word, similar to CATiB (Habash and Roth, 2009).",
+                    "sid": 124,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We treat the focus particle AmmA like a preposition in our dependency structure, following CATiB.",
+                    "sid": 125,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.5.3 Dependency Label Scheme Our dependency scheme consists of a total of 35 labels.",
+                    "sid": 126,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of these are similar to those of Stanford\u2019s basic dependency scheme for English (de Marneffe and Manning, 2008), although they are somewhat closer to a similar scheme used by (Tratz and Hovy, 2011).",
+                    "sid": 127,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The list of relations is presented in Table 2.",
+                    "sid": 128,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the relations are self-explanatory or correspond to similar labels in either Tratz and Hovy\u2019s (2011) scheme for English or CATiB\u2019s (Habash and Roth, 2009) scheme for Arabic.",
+                    "sid": 129,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A few are new or significantly different from their similarly named counterparts in other schemes and are described in greater detail below.",
+                    "sid": 130,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 adjnom \u2014 connects the head of an NP to that of a sister NP (occurs with apposition and preposition-like nouns) \u2022 advcl \u2014 connects verbal nouns to their syntactic governor in what resemble English\u2019s adverbial participle clauses \u2022 advnp \u2014 connects NPs with treebank adverbial function tags (e.g., -LOC, -TMP, -DIR), which are often headed by preposition-like nouns, to what they modify \u2022 fidafa \u2014 for false idafa (idafa-like structures that are headed by adjectives instead of nouns) \u2022 kccmp \u2014 connects a clausal complement that is part of a past progressive or habitual construction to the head verb kana \u2022 lakinna \u2014 similar to cc but used with the sister of inna lakinna instead of coordinating conjunctions \u2022 part \u2014 particle modifier; connects particles (other than FOCUS PART) to their governors \u2022 rcmod \u2014 connects a bare relative clause to its head \u2022 reladv \u2014 connects an adverbial WH- clause to its governor \u2022 relmod \u2014 connects the head of a WH- node to the relativized word \u2022 ripcmp \u2014 connects a clause to the relative or interrogative pronoun that heads it 4.5.4 Part-of-Speech Tag Scheme The Penn Arabic Treebank uses complex part of speech tags for the entire tree token such as DET+NOUN+NSUFF FEM SG+CASE DEF GEN. Across the treebank data used in our experiments, there are a total of 579 such tags, which are composed of 179 different parts separated by plus signs.",
+                    "sid": 131,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each part corresponds to a substring of the adj no m ad vcl adv mo d ad vn p cc c ci ni t cc o m p co m b o c o nj c o p d e p d e t adju nct nom inal a d v e r b i a l c l a u s e a d v e r b i a l m o d i f i e r a d v e r b i a l n o u n p h r a s e c o o r d i n a t i n g c o n j u n c t i o n init ial co or din ati ng co nju nct ion cla us al co m pl e m en t co mb ina tio n ter m conj unct ion c o p u l a c o m p l e m e n t u n s p e c i f i e d d e p e n d e n c y d e t e r m i n e r intj io bj id af a fi d af a fla t kc c m p la ki nn a ne g obj obj co mp pa rt pc om p inter jecti on i n d i r e c t o b j e c t i d a f a f a l s e i d a f a f l a t s t r u c t u r e kana clau sal com ple men t s e e t e x t n e g a t i o n o b j e c t o bj e ct c o m pl e m e nt p ar ti cl e m o di fi e r pr e p o si ti o n c o m pl e m e nt pre p pu nct rc mo d rel ad v rel mo d rip cm p sc s u b j t m z t p c v o c prep ositi on mod ifier punc tuati on mod ifier ( b a r e ) r e l a t i v e c l a u s e m o d i f i e r r e l a t i v e p r o n o u n a d v e r b i a l r e l a t i v e p r o n o u n m o d i f i e r rel ativ e/i nte rro gati ve pro no un co mp le me nt su bor din ati ng co nju nct ion mo difi er s u b j e c t t a m y i z t o p i c a l i z e d e l e m e n t v o c a t i v e Table 2: Syntactic dependency scheme used in this work.",
+                    "sid": 132,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Labels that aren\u2019t self-explanatory or similar to the labels used by Tratz and Hovy (2011) for English or CATiB for Arabic (Habash and Roth, 2009) are in bold (for completely new relations) or italics (for similarly named but semantically different relations) vowelized version of the word.10 Due at least in part to the enormity of this label set, simpler schemes are often preferred, such as the \u201cBies\u201d labels (Bikel, 2004; Kulick et al., 2006), Diab\u2019s (2007) labels, Kulick\u2019s (2011) labels, and CATiB\u2019s labels (Habash and Roth, 2009).",
+                    "sid": 133,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Marton et al.",
+                    "sid": 134,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) find that using simpler schemes allow them to get better parsing results when using predicted POS tags due to the relatively poor performance of taggers trained using the full ATB scheme.",
+                    "sid": 135,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The part-of-speech tag scheme we use is quite similar to that of the original ATB but has several simplifications.",
+                    "sid": 136,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These changes are listed below.",
+                    "sid": 137,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 138,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Possessive and direct object pronoun clitics are all given.",
+                    "sid": 139,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the same label (PRON OPP) (50 fewer tags; mapping back to the originals is trival in almost all cases) 2.",
+                    "sid": 140,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".VN forms of NOUN and ADJ are merged with their respective more generic categories 3.",
+                    "sid": 141,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interrogative and relative adverbial and pronoun labels.",
+                    "sid": 142,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "are merged together into RI ADV and RI PRON 4.",
+                    "sid": 143,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Noun suffix labels (e.g., NSUFF MASC PL GEN,.",
+                    "sid": 144,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NSUFF MASC PL ACC) with genitive or accusative case distinctions are merged because there is no distinction in unvowelized form 5.",
+                    "sid": 145,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Labels for dual masculine noun suffixes are merged with.",
+                    "sid": 146,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "their plural counterparts (no distinction in the unvowelized forms)",
+                    "sid": 147,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "demonstrative pronoun labels are collapsed to. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "DEM PRON (person and number information is easily recovered)",
+                    "sid": 148,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the words called inna and her sisters are labeled inna. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "instead of PSEUDO VERB or SUB CONJ 10 Since we use the original written form of the data and the internal segmentation of the words are only provided for the vowelized versions, we project the segmentation into the original written forms, discarding any parts that weren\u2019t actually Since our system splits off clitics and identifies the affixes, the tagging is performed at the individual morpheme level instead of producing a single all- encompassing tag for the entire token.",
+                    "sid": 149,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of the part-of-speech tags (mostly instances of DIALECT, TYPO, TRANSERR, and NOT IN LEXICON tags) are automatically corrected/improved during the dependency conversion based upon the original constituent parse.",
+                    "sid": 150,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.6 Filtering.",
+                    "sid": 151,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentences containing invalid clitics are not used in training both because they are erroneous and because including them would require allowing the system to perform actions that should not occur (i.e., splitting off a clitic of length 8); similarly, training examples with more than 20% of their tokens tagged as DIALECT, TRANSERR, LATIN, PARTIAL, GRAMMAR PROBLEM, and/or TYPO are ignored on the assumption that including them would harm the model.",
+                    "sid": 152,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This filtering process is not applied in testing.",
+                    "sid": 153,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.7 Data Split.",
+                    "sid": 154,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train and test models using three different splits of the data.",
+                    "sid": 155,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first split is based upon the split used by Zitouni et al.",
+                    "sid": 156,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) in their diacritization work and is the same as that used by Marton et al.",
+                    "sid": 157,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2013) in their parsing work and by Kulick (2011) in his to- kenization and part-of-speech tagging work, in order to facilitate better comparison.",
+                    "sid": 158,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, Marton et al. use the CATiB conversion of a slightly earlier version of the data (3.1, not 3.2), and, thus, the re Table 3: Counts of the number of files, sentences (Sent), original space-delimited tokens (Tok), ATB tree tokens (Tree Toks), and affixes in the experimental data.",
+                    "sid": 159,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the first (in name and chronological order) 85% of the documents in ATB part 3 in training, the next 7.5% in development, and the final 7.5% in test.",
+                    "sid": 160,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second split, we use data from the first three parts of the ATB, each of which consists of documents coming from a different newswire source.",
+                    "sid": 161,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parts 1 and 2 are split 70%/15%/15% training/dev/test, and we reuse the split of part 3 just mentioned.",
+                    "sid": 162,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under this setup, we train two different CTFTMs, one that performs all of the tasks and one that performs all of the tasks except parsing.",
+                    "sid": 163,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This enables us to test whether modeling parsing task improves performance on the lower level tasks.",
+                    "sid": 164,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the final split, we use the splits for parts 1\u20133 plus the data in LDC\u2019s annotated broadcast news transcripts (Maamouri et al., 2012).",
+                    "sid": 165,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike parts 1\u20133, the broadcast news data are drawn from a variety of sources.",
+                    "sid": 166,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Files from sources with three or more files are split across training, development, and test, with the latest documents being placed in test.",
+                    "sid": 167,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 This experiment illustrates how the system per-.",
+                    "sid": 168,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "forms when additional, out-of-domain data are included.",
+                    "sid": 169,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistics for the data are given in Table 3.",
+                    "sid": 170,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.8 Evaluation Measures.",
+                    "sid": 171,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dependency parsing quality is measured in terms of labeled and unlabeled attachment scores (LAS and UAS), which indicate the percentage of words attached to their correct parent and, in the case of dependency.",
+                    "sid": 172,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since a given space-delimited token may not be tokenized into words correctly, the dependency arcs are only counted as correct if they occur between the correct words (spans of character indices).",
+                    "sid": 173,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We measure part-of-speech tagging in terms of F-score (F1) and require that the tree token have the correct bounds (was tokenized correctly) and have the correct label.",
+                    "sid": 174,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Normally, we would choose LAS on the development set as the measure for determining the version of the model to keep for testing because it measures performance on the highest-level task (labeled dependency parsing).",
+                    "sid": 175,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, since one of the CTFTMs does not perform parsing, we instead use POS tagging F1.",
+                    "sid": 176,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, we observe that the scores are highly correlated, making the point moot.",
+                    "sid": 177,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the ATB part 3 experiment, POS tagging F1 peaks on iteration 437.12 For the second experiment, POS tagging F1 peaks at iteration 301 for the CTFTM with parsing and iteration 278 for the one without.",
+                    "sid": 178,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the third experiment, the highest score occurs on iteration 431.",
+                    "sid": 179,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.9 Results and Discussion.",
+                    "sid": 180,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results for the various experimental setups are presented in Table 4.",
+                    "sid": 181,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ATB 3 Experiment When using the same split of ATB part 3 as Kulick (2011) and Marton et al.",
+                    "sid": 182,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2013), the system correctly tokenizes 99.3% of the space-delimited tokens, similar to Kulick\u2019s (2011) accuracy (99.3%) and slightly higher than the 99.0% figure Kulick calculates for MADA.",
+                    "sid": 183,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Though these results are obtained using our dependency conversion of the ATB rather than the original, we use the same tokenization scheme.",
+                    "sid": 184,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The POS labeling F1 score of 95.8 can\u2019t be compared well with any other work due to differences in tag schemes, which vary greatly, as well as use of gold tokenization and other differences.",
+                    "sid": 185,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system obtains 84.9 UAS and 82.0 LAS, which are higher than Marton et al.\u2019s best results of 84.0 UAS and 81.0 LAS, but they were using a different conversion (CATiB) of a different version of the data (3.1, not 3.2) as well as gold tokenization, so the results are not directly comparable.",
+                    "sid": 186,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Framework Internal Experiment The CTFTM LAS, whose attachment is labeled with the correct 12 We run 500 iterations for each experiment, which can take.",
+                    "sid": 187,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 We will make the exact list of files used in the training, development, and test sets available.",
+                    "sid": 188,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "as long as a week using a quad-core machine.",
+                    "sid": 189,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, little improvement is seen after the first 100 iterations.",
+                    "sid": 190,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tra in Eva l Dat a Tok Ac c PO S F1 Affi x Bou nds F1 Affi x Lab el F1 UA S LA S 3 3 De v 9 9 . 5 9 6 . 6 98.",
+                    "sid": 191,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 9 8 . 4 86.",
+                    "sid": 192,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 83.",
+                    "sid": 193,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 3 3 Tes t 9 9 . 3 9 5 . 8 98.",
+                    "sid": 194,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 9 7 . 9 84.",
+                    "sid": 195,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 82.",
+                    "sid": 196,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1,2 ,3 1,2, 3 De v 9 9 . 6 9 7 . 1 99.",
+                    "sid": 197,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 9 8 . 9 88.",
+                    "sid": 198,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 86.",
+                    "sid": 199,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1,2 ,3 1,2, 3 Tes t 9 9 . 6 9 6 . 8 99.",
+                    "sid": 200,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 9 8 . 7 87.",
+                    "sid": 201,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 84.",
+                    "sid": 202,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 1,2 ,3, BN 1,2, 3 De v 9 9 . 6 9 7 . 1 99.",
+                    "sid": 203,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 9 8 . 9 88.",
+                    "sid": 204,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 86.",
+                    "sid": 205,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 1,2 ,3, BN 1,2, 3 Tes t 9 9 . 6 9 6 . 8 99.",
+                    "sid": 206,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 9 8 . 8 87.",
+                    "sid": 207,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 85.",
+                    "sid": 208,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1,2 ,3, BN 1,2, 3,B N De v 9 9 . 5 9 6 . 0 98.",
+                    "sid": 209,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 9 8 . 5 87.",
+                    "sid": 210,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 84.",
+                    "sid": 211,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 1,2 ,3, BN 1,2, 3,B N Tes t 9 9 . 3 9 5 . 7 98.",
+                    "sid": 212,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 9 8 . 4 86.",
+                    "sid": 213,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 83.",
+                    "sid": 214,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 Without Parsing 1,2 ,3 1,2, 3 De v 9 9 . 6 9 6 . 9 99.",
+                    "sid": 215,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 9 8 . 9 N A N A 1,2 ,3 1,2, 3 Tes t 9 9 . 5 9 6 . 5 98.",
+                    "sid": 216,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 9 8 . 6 N A N A Table 4: Results for the various experiments (Exp) for both the development and test portions of the data, including per- token clitic separation (tokenization) accuracy, part-of-speech tagging F1, affix boundary detection F1, affix labeling F1, and both unlabeled and labeled attachment scores.",
+                    "sid": 217,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "that does parsing and the CTFTM that doesn\u2019t achieve similar overall results for the different tasks (other than parsing, of course).",
+                    "sid": 218,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when looking deeper at the individual POS tagging mistakes that one system made more often by one system than the other, (see Tables 5 and 6), we observe that the parsing CTFTM does a better job with labeling some parts-of-speech.",
+                    "sid": 219,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the non-parsing system mismarks passive verbs as active more than 29% more often than the other.",
+                    "sid": 220,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Arabic, passive and active forms of verbs are only distinguished by their short vowels, which are typically unwritten, and, thus, the context is of particular importance in distinguishing between the two.",
+                    "sid": 221,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The non-parsing system also has more trouble with the distinction between nouns and adjectives, which is likely because adjectives are derived using the same templatic structures as nouns (Attia et al., 2010) and, thus, context is, once again, of great importance.",
+                    "sid": 222,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Broadcast News Experiment The scores obtained in the experiment with the broadcast news data are slightly lower than in the second experiment.",
+                    "sid": 223,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this appears to be because the broadcast news portions of the development and test sections are more difficult to parse than the remainder.",
+                    "sid": 224,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we apply the model to the development and test sections of parts 1, 2, and 3, we observe that the results, which are given in Table 4, are higher than those of the model trained without the broadcast news data.",
+                    "sid": 225,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gold Prediction Errors Diff Table 5: Top 10 POS mistakes made more often by either the CTFTM with parsing or the CTFTM without on the ATB part 1, 2, and 3 development set.",
+                    "sid": 226,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ta g #G old Ta g #G old NO UN 26 19 5 IN NA 14 56 AD J 74 91 SU B CO NJ 6 4 1 NO UN PR OP 59 13 VB PV PA SS 2 3 1 VB PV 34 78 VB IV PA SS 2 0 7 VB IV 26 82 Table 6: Counts for the POS tags mentioned in Table 5.",
+                    "sid": 227,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Related Work.",
+                    "sid": 228,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Semitic Language Parsing.",
+                    "sid": 229,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Much of the Arabic parsing research to date uses the pipeline approach, either running a tokenizer prior to parsing or simply assuming the existence of gold to- kenization (Bikel, 2004; Buchholz and Marsi, 2006; Kulick et al., 2006; Nivre et al., 2007; Marton et al., 2010; Marton et al., 2011; Marton et al., 2013).",
+                    "sid": 230,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, using gold tokenization results in optimistic evaluation figures.13 Other methods exist however.",
+                    "sid": 231,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, to parse Modern Hebrew, Cohen and Smith (2007) combine a morphological model with a syntactic model using a product of experts.",
+                    "sid": 232,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another alternative is lattice parsing, which can be used to jointly model both tokenization and parsing (Chappelier et al., 1999).",
+                    "sid": 233,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Curiously, while researchers of Modern Hebrew parsing find lattice parsers outperforming their pipeline systems (Goldberg and Tsarfaty, 2008; Goldberg and Elhadad, 2011; Goldberg and Elhadad, 2013), Green and Manning (2010) obtain the opposite result in their Arabic parsing experiments, with the lattice parser underperforming the pipeline system by over 3 points (76.01 F1 vs 79.17 F1).",
+                    "sid": 234,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Why lattice parsing may help in some cases but not others is not clear.",
+                    "sid": 235,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some Arabic parsing work focuses on the usefulness of various features and part-of-speech tagsets.",
+                    "sid": 236,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Marton et al.",
+                    "sid": 237,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2013) examine various morphological features and part-of-speech tagsets, employing MADA (Habash and Rambow, 2005; Habash et al., 2009) to predict form-based morphological features and an in-house system (Alkuhlani and Habash, 2012) to predict functional morphological features.",
+                    "sid": 238,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dehdari et al.",
+                    "sid": 239,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) investigate the best set of features for Arabic constituent parsing and try several approaches for selecting an optimal feature set, finding that the best-first with backtracking algorithm is the most effective in their experiments.",
+                    "sid": 240,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Other Languages.",
+                    "sid": 241,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been a flurry of recent research involving the joint modeling of dependency parsing and lower-level tasks14 for a variety of languages, with most of the attention focused on Chinese.",
+                    "sid": 242,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While lacking Arabic\u2019s morphological richness, Chinese has its own challenges, such as word segmentation and part-of-speech ambiguities, which have led researchers to develop new unified approaches for processing it.",
+                    "sid": 243,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qian and Liu (2012) train independent models for word segmentation, POS tagging, and 13 Green and Manning (2010) find that using automatic tokenization provided by MADA (Habash et al., 2009) instead of gold tokenization results in a 1.92% F score drop in their constituent parsing work.",
+                    "sid": 244,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14 Systems that jointly model POS tagging and constituent.",
+                    "sid": 245,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "parsing have existed for some time.",
+                    "sid": 246,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "parsing but then incorporate them together during decoding.",
+                    "sid": 247,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Li et al.",
+                    "sid": 248,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011), Li and Zhou (2012), Ha- tori et al.",
+                    "sid": 249,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011), and Ma et al.",
+                    "sid": 250,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012) present systems that jointly model Chinese POS tagging and dependency parsing.",
+                    "sid": 251,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Li et al.",
+                    "sid": 252,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) use a dynamic programming approach similar to Koo and Collins (2010), Li and Zhou (2012) present a shift- reduce style system that uses structured perceptron and beam search, Hatori et al.",
+                    "sid": 253,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) implement a shift-reduce style algorithm that utilizes dynamic programming and beam search in the manner of Huang and Sagae (2010), and Ma et al.",
+                    "sid": 254,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012) extend Goldberg and Elhadad\u2019s (2010) easy-first approach to support both dependency parsing and POS tagging and is thus similar to our work.",
+                    "sid": 255,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hatori et al.",
+                    "sid": 256,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012) extend their previous system to tackle word segmentation, and Ma et al.",
+                    "sid": 257,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2013) build upon earlier work by implementing beam search to get better results.",
+                    "sid": 258,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Li and Zhou (2012) side step some of the issues of Chinese word segmentation by parsing structures of words, phrases, and sentences in a unified framework using a structured perceptron and beam search.",
+                    "sid": 259,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some researchers focus their work on other languages.",
+                    "sid": 260,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lee et al.",
+                    "sid": 261,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) present a graphical model for morphological disambiguation and dependency parsing that they apply to Latin, Ancient Greek, Hungarian, and Czech.",
+                    "sid": 262,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bohnet and Nivre (2012) present a shift-reduce style system similar to Li and Zhou\u2019s (2012) system that jointly models POS tagging and labeled dependency parsing, achieving state-of-the-art accuracy on Czech, German, Chinese, and English.",
+                    "sid": 263,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 Conclusion.",
+                    "sid": 264,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we described cross-task flexible transition models (CTFTMs) and demonstrated their viability for Arabic tokenization, affix detection, affix labeling, part-of-speech labeling, and dependency parsing, obtaining very strong results in each tasks.",
+                    "sid": 265,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to release our software in the near future, including the software for converting the ATB to dependency parses, and would like to release our dependency conversion of the Penn Arabic Treebank via the LDC.",
+                    "sid": 266,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 Future Work.",
+                    "sid": 267,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the future, we plan to integrate beam search into the training and decoding.",
+                    "sid": 268,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We want to add support for the recovery of diacritics, roots, and derivation templates, and we would like to apply modified versions of our system to other languages.",
+                    "sid": 269,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our choice of anchors, operations, and constraints represent one possible design for an Arabic CTFTM.",
+                    "sid": 270,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other options, such as creating unlabeled dependencies and adding labels in subsequent operations, restricting clitic separation to a handcrafted list of clitics, utilizing information from a dictionary or morphological analyzer, or following some sort of coarse-to-fine labeling scheme, are also possible, and we hope to investigate more of these options.",
+                    "sid": 271,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

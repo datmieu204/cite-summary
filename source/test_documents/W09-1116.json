@@ -1,0 +1,1337 @@
+{
+    "ID": "W09-1116",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Glen Glenda or Glendale: Unsupervised and Semi-supervised Learning of English Noun Gender",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "pronouns like reflect the gender and number of the entities to which they refer.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pronoun resolution systems can use this fact to filter noun candidates that do not agree with the pronoun gender.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Indeed, broad-coverage models of noun gender have proved to be the most important source of world knowledge in automatic pronoun resolution systems.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous approaches predict gender by counting the co-occurrence of nouns with pronouns of each gender class.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While this provides useful statistics for frequent nouns, many infrequent nouns cannot be classified using this method.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than using co-occurrence information directly, we use it to automatically annotate training examples for a large-scale discriminative gender model.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model collectively classifies all occurrences of a noun in a document using a wide variety of contextual, morphological, and categorical gender features.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By leveraging large volumes of unlabeled data, our full semi-supervised system reduces error by 50% over the existing stateof-the-art in gender classification.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Pronoun resolution is the process of determining which preceding nouns are referred to by a particular pronoun in text.",
+                    "sid": 9,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the sentence: (1) Glen told Glenda that she was wrong about Glendale.",
+                    "sid": 10,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A pronoun resolution system should determine that the pronoun she refers to the noun Glenda.",
+                    "sid": 11,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pronoun resolution is challenging because it requires a lot of world knowledge (general knowledge of word types).",
+                    "sid": 12,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If she is replaced with the pronoun he in (1), Glen becomes the antecedent.",
+                    "sid": 13,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pronoun resolution systems need the knowledge of noun gender that advises that Glen is usually masculine (and thus referred to by he) while Glenda is feminine.",
+                    "sid": 14,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "English third-person pronouns are grouped in four gender/number categories: masculine (he, his, him, himself), feminine (she, her, herself), neutral (it, its, itself), and plural (they, their, them, themselves).",
+                    "sid": 15,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We broadly refer to these gender and number classes simply as gender.",
+                    "sid": 16,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The objective of our work is to correctly assign gender to English noun tokens, in context; to determine which class of pronoun will refer to a given noun.",
+                    "sid": 17,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One successful approach to this problem is to build a statistical gender model from a noun\u2019s association with pronouns in text.",
+                    "sid": 18,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Ge et al. (1998) learn Ford has a 94% chance of being neutral, based on its frequent co-occurrence with neutral pronouns in text.",
+                    "sid": 19,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such estimates are noisy but useful.",
+                    "sid": 20,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both Ge et al. (1998) and Bergsma and Lin (2006) show that learned gender is the most important feature in their pronoun resolution systems.",
+                    "sid": 21,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "English differs from other languages like French and German in that gender is not an inherent grammatical property of an English noun, but rather a property of a real-world entity that is being referred to.",
+                    "sid": 22,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A common noun like lawyer can be (semantically) masculine in one document and feminine in another.",
+                    "sid": 23,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While previous statistical gender models learn gender for noun types only, we use document context to correctly determine the current gender class of noun tokens, making dynamic decisions on common nouns like lawyer and ambiguous names like Ford.",
+                    "sid": 24,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, if a noun type has not yet been observed (an unknown word), previous approaches cannot estimate the gender.",
+                    "sid": 25,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system, on the other hand, is able to correctly determine that unknown words corroborators and propeller-heads are plural, while Pope Formosus is masculine, using learned contextual and morphological cues.",
+                    "sid": 26,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is based on the key observation that while gender information from noun-pronoun cooccurrence provides imperfect noun coverage, it can nevertheless provide rich and accurate training data for a large-scale discriminative classifier.",
+                    "sid": 27,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The classifier leverages a wide variety of noun properties to generalize from the automatically-labeled examples.",
+                    "sid": 28,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The steps in our approach are: This algorithm achieves significantly better performance than the existing state-of-the-art statistical gender classifier, while requiring no manuallylabeled examples to train.",
+                    "sid": 29,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, by training on a small number of manually-labeled examples, we can combine the predictions of this system with the counts from the original gender database.",
+                    "sid": 30,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This semi-supervised extension achieves 95.5% accuracy on final unseen test data, an impressive 50% reduction in error over previous work.",
+                    "sid": 31,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 path-based statistical noun gender",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Seed (noun,gender) examples can be extracted reliably and automatically from raw text, providing the training data for our discriminative classifier.",
+                    "sid": 32,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call these examples pseudo-seeds because they are created fully automatically, unlike the small set of manually-created seeds used to initialize other bootstrapping approaches (cf. the bootstrapping approaches discussed in Section 6).",
+                    "sid": 33,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopt a statistical approach to acquire the pseudo-seed (noun,gender) pairs.",
+                    "sid": 34,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All previous statistical approaches rely on a similar observation: if a noun like Glen is often referred to by masculine pronouns, like he or his, then Glen is likely a masculine noun.",
+                    "sid": 35,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But for most nouns we have no annotated data recording their coreference with pronouns, and thus no data from which we can extract the co-occurrence statistics.",
+                    "sid": 36,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus previous approaches rely on either hand-crafted coreferenceindicating patterns (Bergsma, 2005), or iteratively guess and improve gender models through expectation maximization of pronoun resolution (Cherry and Bergsma, 2005; Charniak and Elsner, 2009).",
+                    "sid": 37,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In statistical approaches, the more frequent the noun, the more accurate the assignment of gender.",
+                    "sid": 38,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the approach of Bergsma and Lin (2006), both because it achieves state-of-the-art gender classification performance, and because a database of the obtained noun genders is available online.1 Bergsma and Lin (2006) use an unsupervised algorithm to identify syntactic paths along which a noun and pronoun are highly likely to corefer.",
+                    "sid": 39,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To extract gender information, they processed a large corpus of news text, and obtained co-occurrence counts for nouns and pronouns connected with these paths in the corpus.",
+                    "sid": 40,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In their database, each noun is listed with its corresponding masculine, feminine, neutral, and plural pronoun co-occurrence counts, e.g.",
+                    "sid": 41,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": glen 555 42 32 34 glenda 8 102 0 11 glendale 24 2 167 18 glendalians 0 0 0 1 glenn 3182 207 95 54 glenna 0 6 0 0 This sample of the gender data shows that the noun glenda, for example, occurs 8 times with masculine pronouns, 102 times with feminine pronouns, 0 times with neutral pronouns, and 11 times with plural pronouns; 84% of the time glenda co-occurs with a feminine pronoun.",
+                    "sid": 42,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that all nouns in the data have been converted to lower-case.2 There are gender counts for 3.1 million English nouns in the online database.",
+                    "sid": 43,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These counts form the basis for the state-of-the-art gender classifier.",
+                    "sid": 44,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can either take the most-frequent pronoun-gender (MFPG) as the class (e.g. feminine for glenda), or we can supply the logarithm of the counts as features in a 4-way multi-class classifier.",
+                    "sid": 45,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We implement the latter approach as a comparison system and refer to it as PATHGENDER in our experiments.",
+                    "sid": 46,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our approach, rather than using these counts directly, we process the database to automatically extract a high-coverage but also high-quality set of pseudo-seed (noun,gender) pairs.",
+                    "sid": 47,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we filter nouns that occur less than fifty times and whose MFPG accounts for less than 85% of counts.",
+                    "sid": 48,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we note that the most reliable nouns should occur relatively often in a coreferent path.",
+                    "sid": 49,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, note that importance occurs twice as often on the web as Clinton, but has twenty-four times less counts in the gender database.",
+                    "sid": 50,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because importance is unlikely to be a pronoun\u2019s antecedent.",
+                    "sid": 51,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to investigate this idea further in future work as a possible filter on antecedent candidates for pronoun resolution.",
+                    "sid": 52,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the present work, simply note that a high ratio of database-count to webcount provides a good indication of the reliability of a noun\u2019s gender counts, and thus we filter nouns that have such ratios below a threshold.3 After this filtering, we have about 45 thousand nouns to which we automatically assign gender according to their MFPG.",
+                    "sid": 53,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These (noun,gender) pairs provide the seed examples for the training process described in the 2Statistical approaches can adapt to the idiosyncrasies of the particular text domain.",
+                    "sid": 54,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the news text from which this data was generated, for example, both the word ships and specific instances of ships (the USS Cole, the Titanic, etc.) are neutral.",
+                    "sid": 55,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Wikipedia, on the other hand, feminine pronouns are often used for ships.",
+                    "sid": 56,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such differences can be learned automatically.",
+                    "sid": 57,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3We roughly tuned all the thresholds to obtain the highest number of seeds such that almost all of them looked correct (e.g.",
+                    "sid": 58,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1).",
+                    "sid": 59,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further work is needed to determine whether a different precision/recall tradeoff can improve performance.",
+                    "sid": 60,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".",
+                    "sid": 61,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".",
+                    "sid": 62,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ". stefanie steffi graf steinem stella mccartney stellar jayne stepdaughter stephanie stephanie herseth stephanie white stepmother stewardess following section.",
+                    "sid": 63,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 provides a portion of the ordered feminine seed nouns that we extracted.",
+                    "sid": 64,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 discriminative learning of gender",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Once we have extracted a number of pseudo-seed (noun,gender) pairs, we use them to automaticallylabel nouns (in context) in raw text.",
+                    "sid": 65,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The autolabeled examples provide training data for discriminative learning of noun gender.",
+                    "sid": 66,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the training pairs are acquired from a sparse and imperfect model of gender, what can we gain by training over them?",
+                    "sid": 67,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can regard the Bergsma and Lin (2006) approach and our discriminative system as two orthogonal views of gender, in a co-training sense (Blum and Mitchell, 1998).",
+                    "sid": 68,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some nouns can be accurately labeled by nounpronoun co-occurrence (a view based on pronoun co-occurrence), and these examples can be used to deduce other gender-indicating regularities (a view based on other features, described below).",
+                    "sid": 69,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We presently explain how examples are extracted using our pseudo-seed pairs, turned into autolabeled feature vectors, and then used to train a supervised classifier.",
+                    "sid": 70,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our example-extraction module processes a large collection of documents (roughly a million documents in our experiments).",
+                    "sid": 71,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each document, we extract all the nouns, including context words within \u00b15 tokens of each noun.",
+                    "sid": 72,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then group the nouns by their (lower-case) string.",
+                    "sid": 73,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a group\u2019s noun-string is in our set of seed (noun,gender) pairs, we assign the corresponding gender to be the class of the group.",
+                    "sid": 74,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, we discard the group.",
+                    "sid": 75,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To prevent frequent nouns from dominating our training data, we only keep the first 200 groups corresponding to each noun string.",
+                    "sid": 76,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 gives an example training noun group with some (selected) context sentences.",
+                    "sid": 77,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At test time, all nouns in the test documents are converted to this format for further processing.",
+                    "sid": 78,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We group nouns because there is a strong tendency for nouns to have only one sense (and hence gender) per discourse.",
+                    "sid": 79,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extract contexts because nearby words provide good clues about which gender is being used.",
+                    "sid": 80,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The notion that nouns have only one sense per discourse/collocation was also exploited by Yarowsky (1995) in his seminal work on bootstrapping for word sense disambiguation.",
+                    "sid": 81,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the training instances are extracted, they are converted to labeled feature vectors for supervised learning.",
+                    "sid": 82,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The automatically-determined gender provides the class label (e.g., masculine for the group in Figure 2).",
+                    "sid": 83,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features identify properties of the noun and its context that potentially correlate with a particular gender category.",
+                    "sid": 84,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We divide the features into two sets: those that depend on the contexts within the document (Context features: features of the tokens in the document), and those that depend on the noun string only (Type features).",
+                    "sid": 85,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both cases we induce the feature space from the training examples, keeping only those features that occur more than 5 times.",
+                    "sid": 86,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first set of features represent the contexts of the word, using all the contexts in the noun group.",
+                    "sid": 87,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To illustrate the potential utility of the context information, consider the context sentences for the masculine noun in Figure 2.",
+                    "sid": 88,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even if these snippets were all the information we were given, it would be easy to guess the gender of the noun.",
+                    "sid": 89,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use binary attribute-value features to flag, for any of the contexts, the presence of all words at context positions \u00b11, \u00b12, etc.",
+                    "sid": 90,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(sometimes called collocation features (Golding and Roth, 1999)).",
+                    "sid": 91,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, feature 255920 flags that the word two-tothe-right of the noun is he.",
+                    "sid": 92,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also provide features for the presence of all words anywhere within \u00b15 tokens of the noun (sometimes called context words).",
+                    "sid": 93,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also parse the sentence and provide a feature for the noun\u2019s parent (and relationship with the parent) in the parse tree.",
+                    "sid": 94,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the instance in Figure 2 has features downloaded(subject), says(subject), etc.",
+                    "sid": 95,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since plural nouns should be governed by plural verbs, this feature is likely to be especially helpful for number classification.",
+                    "sid": 96,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next group of features represent morphological properties of the noun.",
+                    "sid": 97,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Binary features flag the presence of all prefixes and suffixes of one-to-four characters.",
+                    "sid": 98,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For multi-token nouns, we have features for the first and last token in the noun.",
+                    "sid": 99,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we hope to learn that Bob begins masculine nouns while inc. ends neutral ones.",
+                    "sid": 100,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we have features that indicate if the noun or parts of the noun occur on various lists.",
+                    "sid": 101,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Indicator features specify if any token occurs on in-house lists of given names, family names, cities, provinces, countries, corporations, languages, etc.",
+                    "sid": 102,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A feature also indicates if a token is a corporate designation (like inc. or ltd.) or a human one (like Mr. or Sheik).",
+                    "sid": 103,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also made use of the person-name/instance pairs automatically extracted by Fleischman et al. (2003).4 This data provides counts for pairs such as (Zhang Qiyue, spokeswoman) and (Thorvald Stoltenberg, mediator).",
+                    "sid": 104,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have features for all concepts (like spokeswoman and mediator) and therefore learn their association with each gender.",
+                    "sid": 105,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once all the feature vectors have been extracted, they are passed to a supervised machine learning algorithm.",
+                    "sid": 106,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train and classify using a multi-class linear-kernel Support Vector Machine (SVM) (Crammer and Singer, 2001).",
+                    "sid": 107,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SVMs are maximum-margin classifiers that achieve good performance on a range of tasks.",
+                    "sid": 108,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At test time, nouns in test documents are processed exactly as the training instances described above, converting them to feature vectors.",
+                    "sid": 109,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test vectors are classified by the SVM, providing gender classes for all the nouns in the test document.",
+                    "sid": 110,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since all training examples are labeled automatically (auto-trained), we denote systems using this approach as -AUTO.",
+                    "sid": 111,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although a good gender classifier can be learned from the automatically-labeled examples alone, we can also use a small quantity of gold-standard labeled examples to achieve better performance.",
+                    "sid": 112,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combining information from our two sets of labeled data is akin to a domain adaptation problem.",
+                    "sid": 113,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gold-standard data can be regarded as high-quality in-domain data, and the automaticallylabeled examples can be regarded as the weaker, but larger, out-of-domain evidence.",
+                    "sid": 114,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is a simple but effective method for combining information from two domains using predictions as features.",
+                    "sid": 115,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train a classifier on the full set of automatically-labeled data (as described in Section 3.3), and then use this classifier\u2019s predictions as features in a separate classifier, which is trained on the gold-standard data.",
+                    "sid": 116,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is like the competitive Feats domain-adaptation system in Daum\u00b4e III and Marcu (2006).",
+                    "sid": 117,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our particular SVM classifier (Section 4.1), predictions take the form of four numerical scores corresponding to the four different genders.",
+                    "sid": 118,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our gold-standard classifier has features for these four predictions plus features for the original path-based gender counts (Section 2).5 Since this approach uses both automatically-labeled and gold-standard data in a semi-supervised learning framework, we denote systems using this approach as -SEMI.",
+                    "sid": 119,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We parsed the 3 GB AQUAINT corpus (Vorhees, 2002) using Minipar (Lin, 1998) to create our unlabeled data.",
+                    "sid": 120,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We process this data as described in Section 3, making feature vectors from the first 4 million noun groups.",
+                    "sid": 121,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train from these examples using a linear-kernel SVM via the the efficient SVMmulticlass instance of the SVM struct software package (Tsochantaridis et al., 2004).",
+                    "sid": 122,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To create our gold-standard gender data, we follow Bergsma (2005) in extracting gender information from the anaphora-annotated portion6 of the American National Corpus (ANC) (Ide and Suderman, 2004).",
+                    "sid": 123,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each document, we first group all nouns with a common lower-case string (exactly as done for our example extraction (Section 3.1)).",
+                    "sid": 124,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, for each group we determine if a third-person pronoun refers to any noun in that group.",
+                    "sid": 125,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If so, we label all nouns in the group with the gender of the referring pronoun.",
+                    "sid": 126,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if the pronoun he refers to a noun Brown, then all instances of Brown in the document are labeled as masculine.",
+                    "sid": 127,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extract the genders for 2794 nouns in the ANC training set (in 798 noun groups) and 2596 nouns in the ANC test set (in 642 groups).",
+                    "sid": 128,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply this method to other annotated corpora (including MUC corpora) to create a development set.",
+                    "sid": 129,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gold standard ANC training set is used to set the weights on the counts in the PATHGENDER classifiers, and to train the semi-supervised approaches.",
+                    "sid": 130,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also use an SVM to learn these weights.",
+                    "sid": 131,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the development set to tune the SVM\u2019s regularization parameter, both for systems trained on automatically-generated data, and for systems trained on gold-standard data.",
+                    "sid": 132,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also optimize each automatically-trained system on the development set when we include this system\u2019s predictions as features in the semi-supervised extension.",
+                    "sid": 133,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate and state performance for all approaches on the final unseen ANC test set.",
+                    "sid": 134,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The primary purpose of our experiments is to determine if we can improve on the existing state-ofthe-art in gender classification (path-based gender counts).",
+                    "sid": 135,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We test systems both trained purely on automatically-labeled data (Section 3.3), and those that leverage some gold-standard annotations in a semi-supervised setting (Section 3.4).",
+                    "sid": 136,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another purpose of our experiments is to investigate the relative value of our context-based features and type-based features.",
+                    "sid": 137,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We accomplish these objectives by implementing and evaluating the following systems: A classifier with the four path-based gender counts as features (Section 2).",
+                    "sid": 138,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2.",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "A method of back-off to help classify unseen nouns: For multi-token nouns (like Bob Johnson), we also include the four gender counts aggregated over all nouns sharing the first token (Bob .",
+                    "sid": 139,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "*), and the four gender counts over all nouns sharing the last token (.",
+                    "sid": 140,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "* Johnson).",
+                    "sid": 141,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Semi-sup. combination of the PATHGENDER+ features and the TYPE-AUTO predictions.",
+                    "sid": 142,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8.",
+                    "sid": 143,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "FULL-SEMI: Semi-sup. combination of the PATHGENDER+ features and the FULL-AUTO predictions.",
+                    "sid": 144,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate using accuracy: the percentage of labeled nouns that are correctly assigned a gender class.",
+                    "sid": 145,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a baseline, note that always choosing neutral achieves 38.1% accuracy on our test data.",
+                    "sid": 146,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 results and discussion",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Table 1 provides our experimental results.",
+                    "sid": 147,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The original gender counts already do an excellent job classifying the nouns; PATHGENDER achieves 91.0% accuracy by looking for exact noun matches.",
+                    "sid": 148,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our simple method of using back-off counts for the first and last token, PATHGENDER+, achieves 92.1%.",
+                    "sid": 149,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While PATHGENDER+ uses gold standard data to determine optimum weights on the twelve counts, FULL-AUTO achieves 92.6% accuracy using no gold standard training data.",
+                    "sid": 150,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This confirms that our algorithm, using no manually-labeled training data, can produce a competitive gender classifier.",
+                    "sid": 151,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both PATHGENDER and PATHGENDER+ do poorly on the noun types that have low counts in the gender database, achieving only 63% and 66% on nouns with less than ten counts.",
+                    "sid": 152,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On these same nouns, FULL-AUTO achieves 88% performance, demonstrating the robustness of the learned classifier on the most difficult examples for previous approaches (FULL-SEMI achieves 94% on these nouns).",
+                    "sid": 153,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we break down the contribution of the two feature types in FULL-AUTO, we find that we achieve 89.1% accuracy by only using type features, while we achieve 79.1% with only context features.",
+                    "sid": 154,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While not as high as the type-based accuracy, it is impressive that almost four out of five nouns can be classified correctly based purely on the document context, using no information about the noun itself.",
+                    "sid": 155,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is information that has not previously been systematically exploited in gender classification models.",
+                    "sid": 156,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We examine the relationship between training data size and accuracy by plotting a (logarithmicscale) learning curve for FULL-AUTO (Figure 3).",
+                    "sid": 157,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although using four million noun groups originally seemed sufficient, performance appears to still be increasing.",
+                    "sid": 158,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since more training data can be generated automatically, it appears we have not yet reached the full power of the FULL-AUTO system.",
+                    "sid": 159,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, even with orders of magnitude more data, the system does not appear destined to reach the performance obtained through other means described below.",
+                    "sid": 160,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieve even higher accuracy when the output of the -AUTO systems are combined with the original gender counts (the semi-supervised extension).",
+                    "sid": 161,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relative value of the context and type-based features is now reversed: using only context-based features (CONTEXT-SEMI) achieves 92.4%, while using only type-based features (TYPE-SEMI) achieves 91.3%.",
+                    "sid": 162,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because much of the type information is already implicit in the PATHGENDER counts.",
+                    "sid": 163,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The TYPE-AUTO predictions contribute little information, only fragmenting the data and leading to over-training and lower accuracy.",
+                    "sid": 164,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the CONTEXT-AUTO predictions improve accuracy, as these scores provide orthogonal and hence helpful information for the semi-supervised classifier.",
+                    "sid": 165,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combining FULL-AUTO with our enhanced path gender counts, PATHGENDER+, results in the overall best performance, 95.5% for FULL-SEMI, significantly better than PATHGENDER+ alone.7 This is a 50% error reduction over the PATHGENDER system, strongly confirming the benefit of our semisupervised approach.",
+                    "sid": 166,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To illustrate the importance of the unlabeled data, we created a system that uses all features, including the PATHGENDER+ counts, and trained this system using only the gold standard training data.",
+                    "sid": 167,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This system was unable to leverage the extra features to improve performance; its accuracy was 92.0%, roughly equal to PATHGENDER+ alone.",
+                    "sid": 168,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While SVMs work well with high-dimensional data, they simply cannot exploit features that do not occur in the training set.",
+                    "sid": 169,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can improve performance further by doing some simple coreference before assigning gender.",
+                    "sid": 170,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Currently, we only group nouns with the same string, and then decide gender collectively for the group.",
+                    "sid": 171,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are a few cases, however, where an ambiguous surname, such as Willey, can only be classified correctly if we link the surname to an earlier instance of the full name, e.g.",
+                    "sid": 172,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Katherine Willey.",
+                    "sid": 173,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus added the following simple post-processing rule: If a noun is classified as masculine or feminine (like the ambiguous Willey), and it was observed earlier as the last part of a larger noun, then re-assign the gender to masculine or feminine if one of these is the most common path-gender count for the larger noun.",
+                    "sid": 174,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We back off to counts for the first name (e.g.",
+                    "sid": 175,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kathleen .",
+                    "sid": 176,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "*) if the full name is unobserved.",
+                    "sid": 177,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This enhancement improved the PATHGENDER and PATHGENDER+ systems to 93.3% and 94.3%, respectively, while raising the accuracy of our FULL-SEMI system to 96.7%.",
+                    "sid": 178,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This demonstrates that the surname-matching post-processor is a simple but worthwhile extension to a gender predictor.8 The remaining errors represent a number of challenging cases: United States, group, and public labeled as plural but classified as neutral; spectator classified as neutral, etc.",
+                    "sid": 179,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of these may yield to more sophisticated joint classification of coreference and gender, perhaps along the lines of work in named-entity classification (Bunescu and Mooney, 2004) or anaphoricity (Denis and Baldridge, 2007).",
+                    "sid": 180,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While gender has been shown to be the key feature for statistical pronoun resolution (Ge et al., 1998; Bergsma and Lin, 2006), it remains to be seen whether the exceptional accuracy obtained here will translate into improvements in resolution performance.",
+                    "sid": 181,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, given the clear utility of gender in coreference, substantial error reductions in gender assignment will likely be a helpful contribution.",
+                    "sid": 182,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 related work",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "Most coreference and pronoun resolution papers mention that they use gender information, but few explain how it is acquired.",
+                    "sid": 183,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kennedy and Boguraev (1996) use gender information produced by their enhanced part-of-speech tagger.",
+                    "sid": 184,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gender mistakes account for 35% of their system\u2019s errors.",
+                    "sid": 185,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gender is less crucial in some genres, like computer manuals; most nouns are either neutral or plural and gender can be determined accurately based solely on morphological information (Lappin and Leass, 1994).",
+                    "sid": 186,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A number of researchers (Evans and Or\u02d8asan, 2000; Soon et al., 2001; Harabagiu et al., 2001) use WordNet classes to infer gender knowledge.",
+                    "sid": 187,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, manually-constructed databases like WordNet suffer from both low coverage and rare senses.",
+                    "sid": 188,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pantel and Ravichandran (2004) note that the nouns computer and company both have a WordNet sense that is a hyponym of person, falsely indicating these nouns would be compatible with pronouns like he or she.",
+                    "sid": 189,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to using WordNet classes, Soon et al. (2001) assign gender if the noun has a gendered designator (like Mr. or Mrs.) or if the first token is present on a list of common human first names.",
+                    "sid": 190,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that we incorporate such contextual and categorical information (among many other information sources) automatically in our discriminative classifier, while they manually specify a few high-precision rules for particular gender cues.",
+                    "sid": 191,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ge et al. (1998) pioneered the statistical approach to gender determination.",
+                    "sid": 192,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like others, they consider gender and number separately, only learning statistical gender for the masculine, feminine, and neutral classes.",
+                    "sid": 193,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While gender and number can be handled together for pronoun resolution, it might be useful to learn them separately for other applications.",
+                    "sid": 194,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other statistical approaches to English noun gender are discussed in Section 2.",
+                    "sid": 195,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In languages with \u2018grammatical\u2019 gender and plentiful gold standard data, gender can be tagged along with other word properties using standard supervised tagging techniques (Haji\u02c7c and Hladk\u00b4a, 1997).",
+                    "sid": 196,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While our approach is the first to exploit a dual or orthogonal representation of English noun gender, a bootstrapping approach has been applied to determining grammatical gender in other languages by Cucerzan and Yarowsky (2003).",
+                    "sid": 197,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In their work, the two orthogonal views are: 1) the context of the noun, and 2) the noun\u2019s morphological properties.",
+                    "sid": 198,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bootstrapping with these views is possible in other languages where context is highly predictive of gender class, since contextual words like adjectives and determiners inflect to agree with the grammatical noun gender.",
+                    "sid": 199,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We initially attempted a similar system for English noun gender but found context alone to be insufficiently predictive.",
+                    "sid": 200,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bootstrapping is also used in general information extraction.",
+                    "sid": 201,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Brin (1998) shows how to alternate between extracting instances of a class and inducing new instance-extracting patterns.",
+                    "sid": 202,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins and Singer (1999) and Cucerzan and Yarowsky (1999) apply bootstrapping to the related task of named-entity recognition.",
+                    "sid": 203,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach was directly influenced by the hypernym-extractor of Snow et al. (2005) and we provided an analogous summary in Section 1.",
+                    "sid": 204,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While their approach uses WordNet to label hypernyms in raw text, our initial labels are generated automatically.",
+                    "sid": 205,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Etzioni et al. (2005) also require no labeled data or hand-labeled seeds for their namedentity extractor, but by comparison their classifier only uses a very small number of both features and automatically-generated training examples.",
+                    "sid": 206,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusion",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "We have shown how noun-pronoun co-occurrence counts can be used to automatically annotate the gender of millions of nouns in unlabeled text.",
+                    "sid": 207,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training from these examples produced a classifier that clearly exceeds the state-of-the-art in gender classification.",
+                    "sid": 208,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We incorporated thousands of useful but previously unexplored indicators of noun gender as features in our classifier.",
+                    "sid": 209,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By combining the predictions of this classifier with the original gender counts, we were able to produce a gender predictor that achieves 95.5% classification accuracy on 2596 test nouns, a 50% reduction in error over the current state-of-the-art.",
+                    "sid": 210,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A further name-matching post-processor reduced error even further, resulting in 96.7% accuracy on the test data.",
+                    "sid": 211,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our final system is the broadest and most accurate gender model yet created, and should be of value to many pronoun and coreference resolution systems.",
+                    "sid": 212,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

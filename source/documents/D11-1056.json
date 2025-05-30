@@ -1,0 +1,2099 @@
+{
+    "ID": "D11-1056",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "A key factor of high quality word segmentation for Japanese is a high-coverage dictionary, but it is costly to manually build such a lexical resource.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although external lexical resources for human readers are potentially good knowledge sources, they have not been utilized due to differences in segmentation criteria.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To supplement a morphological dictionary with these resources, we propose a new task of Japanese noun phrase segmentation.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply non-parametric Bayesian language models to segment each noun phrase in these resources according to the statistical behavior of its supposed constituents in text.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For inference, we propose a novel block sampling procedure named hybrid type-based sampling, which has the ability to directly escape a local optimum that is not too distant from the global optimum.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that the proposed method efficiently corrects the initial segmentation given by a morphological analyzer.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Word segmentation is the first step of natural language processing for Japanese, Chinese and Thai because they do not delimit words by white-space.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Segmentation for Japanese is a successful field of research, achieving the F-score of nearly 99% (Kudo et al., 2004).",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This success rests on a high-coverage dictionary.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unknown words, or words not covered by the dictionary, are often misidentified.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Historically, researchers have devoted extensive human resources to build and maintain high coverage dictionaries (Yokoi, 1995).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the orthography of Japanese does not specify a standard for segmentation, researchers define their own criteria before constructing lexical resources.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, it is difficult to exploit existing external resources, such as dictionaries and encyclopedias for human readers, where entry words are not segmented according to the criteria.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Among them, encyclopedias are especially important in that they contain a lot of terms that a morphological dictionary fails to cover.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of these terms are noun phrases and consist of more than one word (morpheme).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, an encyclopedia has an en try \u201c\u5e38\u5c71\u57ce\u201d (tsuneyamajou, \u201cTsuneyama Castle\u201d).",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to our segmentation criteria, it consists of two words \u201c\u5e38\u5c71\u201d (tsuneyama) and \u201c\u57ce\u201d (jou).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the morphological analyzer wrongly segments it into \u201c\u5e38\u201d (tsune) and \u201c\u5c71\u57ce\u201d (yamashiro) because \u201c\u5e38\u5c71\u201d (tsuneyama) is an unknown word.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present the first attempt to utilize encyclopedias for word segmentation.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We segment each entry noun phrase into words.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this, we examine the main text of the entry, on the assumption that if the noun phrase in question consists of more than one word, its constituents appear in the main text either freely or as part of other noun phrases.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For \u201c\u5e38\u5c71\u57ce\u201d (tsuneyamajou), its constituent \u201c\u5e38\u5c71\u201d (tsune) appears by itself and as constituents of other nouns phrases such as \u201c\u5e38\u5c71\u5c71 \u9802\u201d (peak of Tsuneyama) and \u201c\u5e38\u5c71\u99c5\u201d (Tsuneyama Station) while \u201c\u5c71\u57ce\u201d (yamashiro) does not.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To segment each noun phrase, we use non- parametric Bayesian language models (Goldwater et al., 2009; Mochihashi et al., 2009).",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach 605 Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing, pages 605\u2013615, Edinburgh, Scotland, UK, July 27\u201331, 2011.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2011 Association for Computational Linguistics is based on two key factors: the bigram model and type-based block sampling.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bigram model alleviates a problem of the unigram model, that is, a tendency to misidentify a sequence of words in common collocations as a single word.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Type-based sampling (Liang et al., 2010) has the ability to directly escape a local optimum, making inference very efficient.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, type-based sampling is not easily applicable to the bigram model owing to sparsity and its dependence on latent assignments.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose a hybrid type-based sampling procedure, which combines the Metropolis-Hastings algorithm with Gibbs sampling.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We circumvent the sparsity problem by joint sampling of unigram-level type.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, instead of calculating the probability of every possible state of the jointly sampled random variables, we only compare the current state with a proposed state.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This greatly eases the sampling procedure while retaining the efficiency of type- based sampling.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that the proposed method quickly corrects the initial segmentation given by a morphological analyzer.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Japanese Morphological Analysis and Lexical Acquisition Word segmentation for Japanese is usually solved as the joint task of segmentation and part-of-speech tagging, which is called morphological analysis (Kurohashi et al., 1994; Asahara and Matsumoto, 2000; Kudo et al., 2004).",
+                    "sid": 34,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The standard approach in Japanese morphological analysis is lattice-based path selection instead of character- based IOB tagging.",
+                    "sid": 35,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a sentence, an analyzer first builds a lattice of words with dictionary look-up and then selects an optimal path using predefined parameters.",
+                    "sid": 36,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach enables fast decoding and achieves accuracy high enough for practical use.",
+                    "sid": 37,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This success, however, depends on a high- coverage dictionary, and unknown words are often misidentified.",
+                    "sid": 38,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although a line of research attempts to identify unknown words on the fly (Uchimoto et al., 2001; Asahara and Matsumoto, 2004), it by no means provides a definitive solution because it suffers from locality of contextual information available for identification (Nakagawa and Matsumoto, 2006).",
+                    "sid": 39,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore we like to perform separate lexical acquisition processes in which wider context can be examined.",
+                    "sid": 40,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach in this paper has a complementary relationship with unknown word acquisition from text, which we previously proposed (Murawaki and Kurohashi, 2008).",
+                    "sid": 41,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since, unlike Chinese and Thai, Japanese is rich in morphology, morphological regularity can be used to determine if an unknown word candidate in text is indeed the word to be acquired.",
+                    "sid": 42,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, this method works pretty well, but one exception is noun phrases.",
+                    "sid": 43,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Noun phrases can hardly be distinguished from single nouns because in Japanese, no morphological marker is attached to join nouns to form a noun phrase.",
+                    "sid": 44,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We previously resort to a heuristic measure to segment noun phrases.",
+                    "sid": 45,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new statistical method provides a straightforward solution to this problem.",
+                    "sid": 46,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Meanwhile, our language models have their own problem.",
+                    "sid": 47,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The assumption that language is a sequence of invariant words fails to capture rich morphology, as our segmentation criteria specify that each verb or adjective consists of an invariant stem and an ending that changes its form according to its grammatical roles.",
+                    "sid": 48,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, we limit our scope to noun phrases in this paper.",
+                    "sid": 49,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Use of Noun Phrases Named entity recognition (NER) is a field where encyclopedic knowledge plays an important role.",
+                    "sid": 50,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Kazama and Torisawa (2008) encode information extracted from a gazetteer (e.g. Wikipedia) as features of a CRF- based Japanese NE tagger.",
+                    "sid": 51,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They formalize the NER task as the character-based labeling of IOB tags.",
+                    "sid": 52,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Noun phrases extracted from a gazetteer are also straightforwardly represented as IOB tags.",
+                    "sid": 53,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this does not fully solve the knowledge bottleneck problem.",
+                    "sid": 54,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also used the output of a morphological analyzer, which does not utilize encyclopedic knowledge.",
+                    "sid": 55,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NER performance may be affected by segmentation errors in morphological analysis involving unknown words.",
+                    "sid": 56,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chinese word segmentation is often formalized as a character tagging problem (Xue, 2003).",
+                    "sid": 57,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this setting, it is easy to incorporate external resources into the model.",
+                    "sid": 58,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Low et al.",
+                    "sid": 59,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) introduce an external dictionary as features of a discriminative model.",
+                    "sid": 60,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they only use words up to 4 characters in length.",
+                    "sid": 61,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conjecture that words in their dictionary are not noun phrases.",
+                    "sid": 62,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "External resources used by Peng et al.",
+                    "sid": 63,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) are also lists of short words and characters.",
+                    "sid": 64,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-parametric Language Models Non- parametric Bayesian statistics offers an elegant solution to the task of unsupervised word segmentation, in which the vocabulary size is not known in advance (Goldwater et al., 2009; Mochihashi et al., 2009).",
+                    "sid": 65,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It does not compete with supervised segmentation, however.",
+                    "sid": 66,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised word segmentation is used elsewhere, for example, with theoretical interest in children\u2019s language acquisition (Johnson, 2008; Johnson and Demuth, 2010) and with the application to statistical machine translation, in which segmented text is merely an intermediate representation (Xu et al., 2008; Nguyen et al., 2010).",
+                    "sid": 67,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we demonstrate that non-parametric models can complement supervised segmentation.",
+                    "sid": 68,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "japanese noun phrase segmentation. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Our goal is to overcome the unknown word problem in morphological analysis by utilizing existing resources such as dictionaries and encyclopedias for human readers.",
+                    "sid": 69,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our settings, we are given a list of entries from external resources.",
+                    "sid": 70,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Almost all of them are noun phrases and each entry consists of one or more words.",
+                    "sid": 71,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A na\u00a8\u0131ve implementation would be to use noun phrases as they are.",
+                    "sid": 72,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, ipadic1 regards as single words a large number of long proper nouns like \u201c\u95a2\u897f\u56fd\u969b\u7a7a\u6e2f\u4f1a\u793e\u9023\u7d61\u6a4b\u201d (literally, Kansai Interna tional Airport Company Connecting Bridge).",
+                    "sid": 73,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this approach has various drawbacks.",
+                    "sid": 74,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in information retrieval, the query \u201cKansai International Airport\u201d does not match the \u201csingle\u201d word for the bridge.",
+                    "sid": 75,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So we apply segmentation.",
+                    "sid": 76,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each entry is associated with text, which is usually the main text of the entry.2 We assume the text as the key to segmenting the noun phrase.",
+                    "sid": 77,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the noun phrase in question consists of more than one word, its constituents would appear in the text either freely or as part of other noun phrases.",
+                    "sid": 78,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We obtain the segmentation of an entry noun phrase by considering the segmentation of the whole 1 http://sourceforge.jp/projects/ipadic/ 2 We may augment the text with related documents if the main text is not large enough.",
+                    "sid": 79,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "text.",
+                    "sid": 80,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One may instead consider a pipeline approach in which we first extract noun phrases in text and then identify boundaries within these noun phrases.",
+                    "sid": 81,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, noun phrases in text are not trivially identifiable in the case that they contain unknown words as their constituents.",
+                    "sid": 82,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the analyzer erroneously segments the word \u201c\u3061\u3093 \u3059\u3053\u3046\u201d (chiNsukou) into \u201c\u3061\u3093\u201d (chiN) and \u201c\u3059\u3053 \u3046\u201d (sukou), and since the latter is misidentified as a verb, the incorrect noun phrase \u201c\u3061\u3093\u201d (chiN) is extracted.",
+                    "sid": 83,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have a morphological analyzer with a dictionary that covers frequent words.",
+                    "sid": 84,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although it often misidentifies unknown words, the overall accuracy is reasonably high.",
+                    "sid": 85,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, we like to use the segmentation given by the analyzer as the initial state and to make small changes to them to get a desired output.",
+                    "sid": 86,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also use an annotated corpus, which was used to build the analyzer.",
+                    "sid": 87,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the annotated corpus encodes our segmentation criteria, it can be used to force the models to stick with our segmentation criteria.",
+                    "sid": 88,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We concentrate on segmentation in this paper, but we also need to assign a POS tag to each constituent word and to incorporate segmented noun phrases into the dictionary of the morphological analyzer.",
+                    "sid": 89,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave them for future work.3",
+                    "sid": 90,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "non-parametric bayesian language. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Models To correct the initial segmentation given by the analyzer, we use non-parametric Bayesian language models that have been applied to unsupervised word segmentation (Goldwater et al., 2009).",
+                    "sid": 91,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we adopt unigram and bigram models.",
+                    "sid": 92,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose a small modification to these models in order to exploit an annotated corpus when it is much larger than raw text.",
+                    "sid": 93,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Unigram Model.",
+                    "sid": 94,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the unigram model, a word in the corpus wi is generated as follows: G|\u03b10, P0 \u223c DP(\u03b10, P0) wi|G \u223c G 3 Fortunately, the morphological analyzer JUMAN is capa-.",
+                    "sid": 95,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ble of handling phrases, each of which consists of more than one word.",
+                    "sid": 96,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All we need to do is POS tagging.",
+                    "sid": 97,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where G is a distribution over a countably infinite set of words, and DP(\u03b10, P0) is a Dirichlet process (Ferguson, 1973) with the concentration parameter \u03b10 and the base distribution P0, for which we use a zerogram model described in Section 4.3.",
+                    "sid": 98,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Marginalizing out G, we can interpret the model as a Chinese restaurant process.",
+                    "sid": 99,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose that we have observed i \u2212 1 words w\u2212i = w1, \u00b7 \u00b7 \u00b7 , wi\u22121, 4.3 Zerogram Model.",
+                    "sid": 100,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Nagata (1996) and Mochihashi et al.",
+                    "sid": 101,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009), we model the zerogram distribution P0 with the word length k and the character sequence w =c1, \u00b7 \u00b7 \u00b7 , ck . Specifically, we define P0 as the combi nation of a Poisson distribution with mean \u03bb and a bigram distribution over characters.",
+                    "sid": 102,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P (c1, \u00b7 \u00b7 \u00b7 , ck , k|\u0398) the probability of wi is given by w + \u03b10P0 (1) P0(w) = P (k; \u03bb) \u03bbk P (k|\u0398) P1(wi = w|w\u2212i) = , i \u2212 1 + \u03b10 P (k; \u03bb) = e\u2212\u03bb k ! where nw\u2212i is the number of word label w observed in w\u2212i. The unigram model is known for its tendency to P (c1, \u00b7 \u00b7 \u00b7 , ck , k|\u0398) = k+1 \u220f i=1 P (ci|ci\u22121) misidentify a sequence of words in common collocations as a single word (Goldwater et al., 2009).",
+                    "sid": 103,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In preliminary experiments, we found that the unigram model often interpreted a noun phrase as a single word, even in the case that its constituents frequently appeared in text.",
+                    "sid": 104,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Bigram Model.",
+                    "sid": 105,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem of the unigram model can be alleviated by the bigram model based on a hierarchical Dirichlet process (Goldwater et al., 2009).",
+                    "sid": 106,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the bigram model, word wi is generated as follows: G|\u03b10, P0 \u223c DP(\u03b10, P0) Hl |\u03b11, G \u223c DP(\u03b11, G) wi|wi\u22121 = l, Hl \u223c Hl Marginalizing out G and Hl , we can again explainthe model with the Chinese restaurant process.",
+                    "sid": 107,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Un like the unigram model, however, the bigram model depends on the latent table assignments z\u2212i.",
+                    "sid": 108,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(wi\u22121 ,wi ) + \u03b11P1(wi|h\u2212i) \u0398 is the zerogram model, and c0 and ck+1 are a wordboundary marker.",
+                    "sid": 109,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P (k|\u0398) can be estimated by ran domly generating words from the model.",
+                    "sid": 110,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use different \u03bb for different scripts.",
+                    "sid": 111,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Japanese writing system uses several scripts, and each word can be classified by script such as hiragana, katakana, kanji, the mixture of hiragana and kanji, etc. The optimal value for \u03bb depends on scripts.",
+                    "sid": 112,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, katakana, which predominantly denotes loan words, is longer on average than hiragana, which is often used for short function words.",
+                    "sid": 113,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We obtain the parameters and counts from an annotated corpus and fix them during noun phrase segmentation.",
+                    "sid": 114,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This greatly simplifies inference but may make the model fragile with unknown words.",
+                    "sid": 115,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, we set a hierarchical PitmanYor process prior (Teh, 2006; Goldwater et al., 2006) for the bigram probability P (ci|ci\u22121) with the base distribu tion of character unigrams.",
+                    "sid": 116,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that even character bigrams are sparse because thousands of characters are used in Japanese.",
+                    "sid": 117,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P2(wi|h\u2212i) = th\u2212i (wi\u22121 ,\u2217) + \u03b11 (2) 4.4 Mixing an.",
+                    "sid": 118,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Annotated Corpus An annotated corpus can be used to force the mod P1(wi|h\u2212i) = wi + \u03b10P0(wi) \u2217 + \u03b10 h\u2212i (3) els to stick with our segmentation criteria.",
+                    "sid": 119,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A straightforward way to do this is to mix it with raw text while fixing the segmentation during infer where h\u2212i = (w\u2212i, z\u2212i), twi is the number of tables labeled with wi and th\u2212i is the total number of tables.",
+                    "sid": 120,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thanks to exchangeability, we do not need to track the exact seating assignments.",
+                    "sid": 121,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Still, we need to maintain a histogram for each w that consists of frequencies of table customers (Blunsom et al., 2009).",
+                    "sid": 122,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ence (Mochihashi et al., 2009).",
+                    "sid": 123,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A word found in the annotated corpus is generally preferred because it has fixed counts obtained from the annotated corpus.",
+                    "sid": 124,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call this method direct mixing.",
+                    "sid": 125,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Direct mixing is problematic when raw text is much smaller than the annotated corpus.",
+                    "sid": 126,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this situation, the role of raw text associated with the noun phrase in question is marginalized by the annotated corpus.",
+                    "sid": 127,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a solution to this problem, we propose another mixing method called back-off mixing.",
+                    "sid": 128,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In back-off mixing, the annotated corpus is used as part of the base distribution.",
+                    "sid": 129,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the unigram model, P0 in (1) is replaced by a local optimum although it is not too distant from the global optimum.",
+                    "sid": 130,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The collapsed Gibbs sampler is easily entrapped by this local optimum.",
+                    "sid": 131,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, the initial segmentation is usually chosen at random (Goldwater et al., 2009).",
+                    "sid": 132,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentence-based block sampling is also susceptible to consistent initialization (Liang et al., 2010).",
+                    "sid": 133,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P BM REF 0 = \u03bbIPP0 + (1 \u2212 \u03bbIP)P1 , where \u03bbIP is a parameter for linear interpolation and 1 is the unigram probability obtained from the annotated text.",
+                    "sid": 134,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The loose coupling makes the models robust to an imbalanced pair of texts.",
+                    "sid": 135,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, the back-off mixing bigram model replaces P1 in (2) withTo achieve fast convergence, we adopt a block sam pling algorithm named type-based sampling (Liang et al., 2010).",
+                    "sid": 136,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the unigram model, a type-based sampler jointly samples multiple positions that share the same type.",
+                    "sid": 137,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two positions have the same type if the corresponding areas are both of the form w1 or w2w3.",
+                    "sid": 138,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Type-based sampling takes advantage of the exchangeability of multiple positions with the P BM REF same type.",
+                    "sid": 139,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given n positions with the same type, 1 = \u03bbIPP1 + (1 \u2212 \u03bbIP)P2 .",
+                    "sid": 140,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "inference. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Collapsed Gibbs sampling is widely used to find an optimal segmentation (Goldwater et al., 2009).",
+                    "sid": 141,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we first show that simple collapsed sampling can hardly escape the initial segmentation.",
+                    "sid": 142,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this problem, we apply a block sampling algorithm named type-based sampling (Liang et al., 2010) to the unigram model.",
+                    "sid": 143,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since type-based sampling is not applicable to the bigram model, we propose a novel sampling procedure for the bigram model, which we call hybrid type-based sampling.",
+                    "sid": 144,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Collapsed Sampling.",
+                    "sid": 145,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In collapsed Gibbs sampling, the sampler repeatedly samples every possible boundary position, conditioned on the current state of the rest of the corpus.",
+                    "sid": 146,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It stochastically decides whether the corresponding local area consists of a single word w1 or two words w2w3 (w1 = w2.w3).",
+                    "sid": 147,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The conditional probabilities can be derived from (1).",
+                    "sid": 148,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collapsed sampling is known for slow convergence.",
+                    "sid": 149,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This property is especially problematic in our settings where the initial segmentation is given by a morphological analyzer.",
+                    "sid": 150,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the analyzer deterministically segments text using predefined parameters, the resultant segmentation is fairly consistent.",
+                    "sid": 151,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Segmentation errors involving unknown words also occur in a regular way.",
+                    "sid": 152,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuitively, we start withthe sampler first samples the number of new bound aries m\u2032 (0 \u2264 m\u2032 \u2264 n), and then uniformly arranges m\u2032 boundaries out of n positions.",
+                    "sid": 153,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Type-based sampling has the ability to jump from a local optimum (e.g. consistently segmented) to another stable state (consistently unsegmented).",
+                    "sid": 154,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Liang et al.",
+                    "sid": 155,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) used random initialization, we take particular note of the possibility of efficiently correcting the consistent segmentation by the analyzer.",
+                    "sid": 156,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Type-based sampling is, however, not applicable to the bigram model for two reasons.",
+                    "sid": 157,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first problem is sparsity.",
+                    "sid": 158,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the bigram model, we need to consider adjacent words, wl on the left and wr on the right.",
+                    "sid": 159,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that each type consists of three or four words, wl w1wr or wl w2w3wr . Consequently, few positions share the same type and we fail to change closely-related areas wl\u2032 w1wr\u2032 and wl\u2032 w2w3wr\u2032 , making inference inefficient.",
+                    "sid": 160,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second and more fundamental problem arises from the hierarchical settings.",
+                    "sid": 161,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the bigram model depends on latent table assignments, the joint distribution of multiple positions is no longer a closed-form function of counts.",
+                    "sid": 162,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Strictly speaking, we need to update the model counts even when sampling one position because the observation of the bigram \u27e8wl w1\u27e9, for example, may affect the probability P2(w2|h\u2212, \u27e8wl w1\u27e9).",
+                    "sid": 163,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goldwater et al.",
+                    "sid": 164,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) approximate the probability by not updating the model counts in collapsed Gibbs sampling (i.e. P2(w2|h\u2212, \u27e8wl w1\u27e9) \u2248 P2(w2|h\u2212)).",
+                    "sid": 165,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They rely on the assumption that repeated bigrams are rare.",
+                    "sid": 166,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Obviously this does not hold true for type- based sampling.",
+                    "sid": 167,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence for type-based sampling, we have to update the model counts whenever we observe a new word.",
+                    "sid": 168,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way to obtain the joint probability is to explicitly simulate the updates of histograms and other model counts.",
+                    "sid": 169,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is very cumbersome as we need to simulate n + 1 ways of model updates.",
+                    "sid": 170,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Hybrid Type-based Sampling.",
+                    "sid": 171,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0.4 0.3 0.2 0.1 0 0 2 4 6 8 10 m\u2019 0.4 0.3 0.2 0.1 0 To address these problems, we propose a hybrid sampler which incorporates the Metropolis-Hastings algorithm into blocked Gibbs sampling.",
+                    "sid": 172,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Metropolis- Hastings is another technique for sampling from a Figure 1: Probability of # of boundaries f10 (m\u2032 ; 3).",
+                    "sid": 173,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is defined as follows: Markov chain.",
+                    "sid": 174,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It first draws a proposed next state h\u2032 based on the current state h according to some fn(m\u2032; m) Q(h\u2032; h) = nCm\u2032 \u2212 In(m, m\u2032) , (5) proposal distribution Q(h\u2032; h).",
+                    "sid": 175,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then it accepts the proposal with the probability of where In(m, m\u2032) is 1 if m \u2208/ {0, n} and m\u2032 = m; otherwise 0.",
+                    "sid": 176,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "min { P (h\u2032)Q(h; h\u2032) } , 1 P (h)Q(h\u2032; h) .",
+                    "sid": 177,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) We construct fn(m\u2032; m) by discretizing a beta distribution (\u03b1 = \u03b2 < 1) and a normal distribution with mean m, as shown in Figure 1.",
+                    "sid": 178,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The former.",
+                    "sid": 179,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "fa If the proposal is not accepted, the current state is used as the next state.",
+                    "sid": 180,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Metropolis-Hastings is useful when it is difficult to directly sample from P . We use the Metropolis-Hastings algorithm within Gibbs sampling.",
+                    "sid": 181,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of calculating the n + 1 probabilities of the number of boundaries, we only compare the current state with a proposed boundary arrangement.",
+                    "sid": 182,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, the set of positions sampled jointly is chosen at unigram-level type instead of bigram-level type.",
+                    "sid": 183,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The positions are no longer exchangeable.",
+                    "sid": 184,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore we calculate the conditional probability of one specific boundary arrangement.When n = 1, the only choice is to flip the current state (i.e.",
+                    "sid": 185,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(m, m\u2032) \u2208 {(0, 1), (1, 0)}).",
+                    "sid": 186,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This re duces to simple collapsed sampling.",
+                    "sid": 187,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise we draw a proposed state in two steps.",
+                    "sid": 188,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the n positions and the number of current boundaries m, we first draw the number of proposed boundaries m\u2032 from a probability distribution fn(m\u2032; m).",
+                    "sid": 189,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then randomly arrange m\u2032 boundaries.",
+                    "sid": 190,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability mass is uniformly divided by nCm\u2032 arrangements.",
+                    "sid": 191,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "vors extreme values while the latter prefers smaller moves.",
+                    "sid": 192,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sampling of each type is done in the following steps.",
+                    "sid": 193,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 194,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collect n positions that share a unigram-level.",
+                    "sid": 195,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "type.",
+                    "sid": 196,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 197,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Propose a new boundary arrangement.",
+                    "sid": 198,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In what.",
+                    "sid": 199,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "follows, we only focus on flipped boundaries because the rest does not change the likelihood ratio of the current and proposed states.",
+                    "sid": 200,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 201,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Calculate the current conditional probability..",
+                    "sid": 202,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be done by repeatedly applying (2) while removing words one-by-one and updating the model counts accordingly.",
+                    "sid": 203,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 204,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Calculate the proposed conditional probability.",
+                    "sid": 205,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "while adding words one-by-one.",
+                    "sid": 206,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.",
+                    "sid": 207,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Decide whether to accept the proposal accord-.",
+                    "sid": 208,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ing to (4).",
+                    "sid": 209,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the proposal is accepted, we finalize the arrangement; otherwise we revert to the current state.",
+                    "sid": 210,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One exception is the case when m \u2208/ {0, n} and We implement skip approximation (Liang et al., m\u2032 = m. In this case we perform permutation to obtain h\u2032 \u0338= h. To sum up, the proposal distribution 2010) and sample each type once per iteration.",
+                    "sid": 211,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is motivated by the observation that although the joint sampling of a large number of positions is computationally expensive, the proposal is accepted very infrequently.",
+                    "sid": 212,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Additional Constraints.",
+                    "sid": 213,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Partial annotations (Tsuboi et al., 2008; Neubig and Mori, 2010) can be used for inference.",
+                    "sid": 214,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we know in advance that a certain position is a boundary or non- boundary, we simply keep it unaltered.",
+                    "sid": 215,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As partially- annotated text, we can use markup.",
+                    "sid": 216,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose that the original text is written with wiki markup as follows: *JR[[\u5b87\u91ce\u7dda]][[\u5e38\u5c71\u99c5]] [gloss] JR Ube Line Tsuneyama Station It is clear that the position between \u201c\u7dda\u201d (line) and \u201c\u5e38\u201d (tsune) is a boundary.",
+                    "sid": 217,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, we can impose our trivial rules of segmentation on the model.",
+                    "sid": 218,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we can keep punctuation markers (Li and Sun, 2009) separate from others.",
+                    "sid": 219,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "6.1 Settings.",
+                    "sid": 220,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data Set We evaluated our approach on Japanese Wikipedia.",
+                    "sid": 221,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each entry of Wikipedia, we regarded the title as a noun phrase and used both the title and main text for segmentation.",
+                    "sid": 222,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We separately applied our segmentation procedure to each entry.",
+                    "sid": 223,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We constructed the data set as follows.",
+                    "sid": 224,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extracted each entry from an XML dump of Japanese Wikipedia.4 We normalized the title by dropping trailing parentheses that disambiguate entries with similar names (e.g. \u201c\u8d64\u57ce (\u7a7a\u6bcd)\u201d for Akagi (aircraft carrier)).",
+                    "sid": 225,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extracted the main text from wikitext and used wiki markup as boundary markers.",
+                    "sid": 226,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We applied both the title and main text to the morphological analyzer JUMAN5 to get an initial segmentation.",
+                    "sid": 227,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the resultant segmentation conflicted with markup information, we overrode the former.",
+                    "sid": 228,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The initial segmentation was also used as the baseline.",
+                    "sid": 229,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We only used entries that satisfied all of the following conditions.",
+                    "sid": 230,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 231,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The (normalized) title is longer than one char-.",
+                    "sid": 232,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "acter and contains hiragana, katakana and/or kanji.",
+                    "sid": 233,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 http://download.wikimedia.org/jawiki/ 5 http://nlp.ist.i.kyoto-u.ac.jp/EN/ index.php?JUMAN 2.",
+                    "sid": 234,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main text is longer than 1,000 characters..",
+                    "sid": 235,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 236,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The title appears at least 5 times in the main.",
+                    "sid": 237,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "text.",
+                    "sid": 238,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first condition ensures that there are segmentation ambiguities.",
+                    "sid": 239,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second and third conditions exclude entries unsuitable for statistical methods.",
+                    "sid": 240,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14% of the entries satisfied these conditions.",
+                    "sid": 241,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We randomly selected 500 entries and manually segmented their titles for evaluation.",
+                    "sid": 242,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 2-person inter-annotator Kappa score was 0.95.",
+                    "sid": 243,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an annotated corpus, we used Kyoto Text Corpus.6 It contained 1,675,188 characters.",
+                    "sid": 244,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Models We compared the unigram and bigram models.",
+                    "sid": 245,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for inference procedures, we used collapsed Gibbs sampling (CL) for both models, type- based sampling (TB) for the unigram model and hybrid type-based sampling (HTB) for the bigram model.",
+                    "sid": 246,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tested two mixing methods of the annotated corpus, direct mixing (DM) and back-off mixing (BM).",
+                    "sid": 247,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To investigate the effect of initialization, we also tried randomly segmented text as the initial state (RAND).",
+                    "sid": 248,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For random initialization, we placed a boundary with probability 0.5 on each position unless it was a fixed boundary.",
+                    "sid": 249,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The unigram model has one Dirichlet process concentration hyperparameter \u03b10 and the bigram model has \u03b10 and \u03b11.",
+                    "sid": 250,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each model, we experimented with the following values.",
+                    "sid": 251,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03b10 : 0.1, 0.5, 1 5 10, 50, 100, 500, 1,000 and 5,000 \u03b11 : 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 50, 100 and 500 For comparison, we also performed hyperparameter sampling.",
+                    "sid": 252,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Escobar and West (1995), we set a gamma prior and introduced auxiliary variables to infer concentration parameters from data.",
+                    "sid": 253,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For back-off mixing, we used the linear interpolation parameter \u03bbIP = 0.5.",
+                    "sid": 254,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The zerogram model was trained on the annotated corpus.",
+                    "sid": 255,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each run, we performed 10 burn-in iterations.",
+                    "sid": 256,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then performed another 10 iterations to collect samples.",
+                    "sid": 257,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 http://nlp.ist.i.kyoto-u.ac.jp/EN/ index.php?Kyoto%20University%20Text% 20Corpus Table 1: Results of segmentation of entry titles (F-score (precision/recall)).",
+                    "sid": 258,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "m o d e l b e s t m e d i a n i n f e r r e d uni gr am + CL u n i g r a m + T B b i g r a m + C L b i g r a m + H T B 81 .3 5 (77.78/85.27)** 55 .8 7 (66.71/48.06) 80 .6 5 (76.73/84.99) 83 .2 3 (85.25/81.30)** 80 .0 9 (75.80/84.89) 51 .0 4 (62.64/43.06) 79 .9 6 (75.50/84.99) 74 .5 2 (71.33/78.00) 80 .8 6 (76.81/85.36) 42 .6 3 (54.91/34.84) 80 .5 4 (76.84/84.61) 34 .5 2 (46.69/27.38) uni gr am + CL + D M u n i g r a m + T B + D M b i g r a m + C L + D M b i g r a m + H T B + D M 85 .2 9 (83.14/87.54)** 35 .2 6 (47.74/29.95) 80 .3 7 (76.01/85.27) 69 .6 6 (67.68/71.77) 81 .6 2 (77.93/85.70)** 33 .8 1 (46.20/26.66) 79 .8 8 (75.42/84.89) 67 .3 9 (64.35/70.73) 80 .9 1 (82.87/79.04) 31 .9 0 (44.30/24.93) 73 .7 7 (78.49/69.59) 31 .5 4 (43.79/24.64) uni gr am + CL + B M u n i g r a m + T B + B M b i g r a m + C L + B M b i g r a m + H T B + B M 81 .2 8 (77.48/85.46) 57 .2 2 (68.01/49.39) 81 .3 3 (77.34/85.74) 86 .3 2 (85.67/86.97)** 80 .2 3 (76.06/84.89) 52 .9 8 (64.50/44.95) 80 .0 7 (75.69/84.99) 76 .3 5 (71.89/81.40) 81 .4 2 (77.75/85.46) 42 .4 3 (54.69/34.66) 81 .4 6 (77.82/85.46)** 40 .8 1 (53.35/33.05) uni gr am + TB + R A N D bi gr a m + H T B + R A N D u ni gr a m + T B + B M + R A N D bi gr a m + H T B + B M + R A N D 56 .0 1 (66.93/48.16) 79 .6 8 (80.13/79.23) 57 .4 4 (67.91/49.76) 84 .0 3 (83.10/84.99) 50 .8 9 (62.21/43.06) 68 .1 6 (63.64/73.37) 50 .8 6 (61.92/43.15) 70 .4 6 (65.25/76.58) 42 .6 8 (54.81/34.94) 34 .9 9 (47.05/27.86) 42 .3 1 (54.55/34.56) 40 .1 6 (52.60/32.48) ba sel ine (J U M A N) 80 .0 9 (75.80/84.89) ** Statistically significant improvement with p < 0.01.",
+                    "sid": 259,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation Metrics We evaluated the segmentation accuracy of 500 entry titles.",
+                    "sid": 260,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically we evaluated the performance of a model with precision, recall and the F-score, all of which were based on tokens.",
+                    "sid": 261,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report the score of the most frequent segmentation among 10 samples.",
+                    "sid": 262,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Lee et al.",
+                    "sid": 263,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010), we report the best and median settings of hyperparameters based on the F- score, in addition to inferred values.",
+                    "sid": 264,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to evaluate the degree of difference between a pair of segmentations, we employed character-based evaluation.",
+                    "sid": 265,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Kudo et al.",
+                    "sid": 266,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004), we converted a word sequence into character-based BI labels and examined labeling disagreements.",
+                    "sid": 267,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McNemar\u2019s test of significance was based on this metric.",
+                    "sid": 268,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.2 Results.",
+                    "sid": 269,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows segmentation accuracy of various models.",
+                    "sid": 270,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One would notice that the baseline score is much lower than the score previously reported regarding newspaper articles (Kudo et al., 2004).",
+                    "sid": 271,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is because unlike newspaper articles, the titles of Wikipedia entries contain an unusually high proportion of unknown words.",
+                    "sid": 272,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As suggested by relatively low precision, unknown words tend to be over-segmented by the morphological analyzer.",
+                    "sid": 273,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the best hyperparameter settings, the back-off mixing bigram model with hybrid type-based sam pling (bigram + HTB + BM) significantly outperformed the baseline and achieved the best F-score.",
+                    "sid": 274,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It did not performed well in the median setting as it was sensitive to the value of \u03b11.",
+                    "sid": 275,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hyperparameter estimation led to catastrophic decreases in bigram models as it made the hyperparameters much larger than those in the best settings.",
+                    "sid": 276,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collapsed sampling (+CL) returned scores comparable to that of the baseline.",
+                    "sid": 277,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is simply because it did not change the initial segmentation a lot.",
+                    "sid": 278,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, type-based sampling (+TB) brought large moves to the unigram model and significantly hurt accuracy.",
+                    "sid": 279,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As suggested by relatively low recall, the unigram model prefers under-segmentation.",
+                    "sid": 280,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When combined with (hybrid) type-based sampling (+TB/+HTB), back-off mixing (+BM) increased accuracy from the corresponding non- mixing models.",
+                    "sid": 281,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, direct mixing (+DM) drastically decreased accuracy from the non-mixing models.",
+                    "sid": 282,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can confirm that when the main text is orders of magnitude smaller than the annotated text, the role of constituent words in the main text is underestimated.",
+                    "sid": 283,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To our surprise, collapsed sampling with mixing models (+CL, +DM/+BM) outperformed the baseline.",
+                    "sid": 284,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the scores of type- based sampling (+TB) suggest that with much more iterations, the models would converge to undesired states.",
+                    "sid": 285,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The unigram model with random initialization was indifferent from that with default initialization.",
+                    "sid": 286,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, the performance of the bigram model slightly degenerated with random initialization.",
+                    "sid": 287,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.3 Convergence.",
+                    "sid": 288,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows how segmentations differed from the initial state in the course of inference.7 A diff is defined as the number of character-based disagreements between the baseline segmentation and a model output.",
+                    "sid": 289,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hyperparameters used were those of the best model with (hybrid) type-based sampling.",
+                    "sid": 290,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "900 800 700 600 500 400 300 200 100 0 unigram + CL unigram + TB bigram + CL bigram + HTB unigram + TB + RAND bigram + HTB + RAND 0 5 10 15 20 iteration We can see that collapsed sampling was almost unable to escape the initial state.",
+                    "sid": 291,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With type-based sampling (+TB), the unigram model went further Figure 2: Diffs in the course of iteration.",
+                    "sid": 292,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All models were with back-off mixing (+BM).",
+                    "sid": 293,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "than the bigram model, but to an undesired direction.",
+                    "sid": 294,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bigram model with hybrid type-based sampling (bigram + HTB) converged in few iterations.",
+                    "sid": 295,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the model with random initialization (+RAND) converged to a nearby point, the initial segmentation by the morphological analyzer realized a bit faster convergence and better accuracy.",
+                    "sid": 296,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows how acceptance rates changed during inference.",
+                    "sid": 297,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison, a sample by a type-based Gibbs sampler was treated as \u201caccepted\u201d if the number of new boundaries was different from 0.14 0.12 0.1 0.08 0.06 0.04 0.02 0 unigram + TB bigram + HTB unigram + TB + RAND bigram + HTB + RAND 0 5 10 15 20 iteration that of the current boundaries (i.e. m\u2032 \u0338= m).",
+                    "sid": 298,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The acceptance rates were low and samplers seemingly stayed around modes.",
+                    "sid": 299,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.4 Approximation.",
+                    "sid": 300,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Up to this point, we consider every possible boundary position.",
+                    "sid": 301,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this seems wasteful, given that a large portion of text has only marginal influence on the segmentation of the noun phrase in question.",
+                    "sid": 302,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, we implemented approximation named matching skip.",
+                    "sid": 303,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We sampled a boundary only if the corresponding local area contained a sub- string of the noun phrase in question.",
+                    "sid": 304,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows the result of approximation.",
+                    "sid": 305,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hyperparameters used were those of the best models with full sampling.",
+                    "sid": 306,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Matching skip steadily worsened performance although not to a large extent.",
+                    "sid": 307,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mean 7 For a fair comparison, we might need to report changes over time instead of iterations.",
+                    "sid": 308,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the difference of convergence speed is obvious in the iteration-based comparison although (hybrid) type-based sampling takes several times longer than collapsed sampling in the current na\u00a8\u0131ve implementation.",
+                    "sid": 309,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3: Acceptance rates for a noun phrase in the course of iteration.",
+                    "sid": 310,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All models were with back-off mixing (+BM).",
+                    "sid": 311,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "while it drastically reduced the number of sampled positions.",
+                    "sid": 312,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The median skip rate was 90.87%, with a standard deviation of 8.5.",
+                    "sid": 313,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.5 Discussion.",
+                    "sid": 314,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 shows some segmentations corrected by the back-off mixing bigram model with hybrid type based sampling.",
+                    "sid": 315,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201c\u5e02\u6bd4\u91ce\u201d (ichihino) is a rare place name but can be identified by the model because it is frequently used in the article.",
+                    "sid": 316,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201c\u3053\u306a\u307f\u308b\u304f\u201d (konamiruku in hiragana) seems a pun on \u201c\u7c89\u30df\u30eb \u30af\u201d (kona miruku, \u201cpowdered milk\u201d) and \u201c\u30b3\u30ca\u30df\u201d (konami in katakana, a company).",
+                    "sid": 317,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider it as a single word because we cannot reconstruct the etymology solely based on the main text.",
+                    "sid": 318,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note the different scripts.",
+                    "sid": 319,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Japanese, people often change the script to derive a proper noun from a common noun, which a na\u00a8\u0131ve analyzer fails to recognize.",
+                    "sid": 320,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is Table 2: Effect of matching skip (F-score (precision/recall)).",
+                    "sid": 321,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "m o d e l f u l l m a t c h i n g s k i p big ra m + H TB big ra m + H TB + B M 83 .2 3 (85.25/81.30)** 86 .3 2 (85.67/86.97)** 82 .8 6 (84.27/81.49) 83 .8 7 (82.60/85.17)** big ra m + H TB + R A N D big ra m + H TB + B M + R A N D 79 .6 8 (80.13/79.23) 84 .0 3 (83.10/84.99) 78 .8 1 (78.64/75.07) 81 .0 8 (80.22/81.96) ba sel ine (J U M A N) 80 .0 9 (75.80/84.89) ** Statistically significant improvement with p < 0.01.",
+                    "sid": 322,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u6a0b + \u8107 + \u753a + \u5e02 + \u6bd4 + \u91ce \u21d2 \u6a0b\u8107 hiwaki + \u753a chou + \u5e02\u6bd4\u91ce ichihino tify the constituents.",
+                    "sid": 323,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the segmentation failed when our assumption about con (Ichihino, Hiwaki Town, an address) \u308a + \u305d\u306a + \u30ab\u30fc\u30c9 \u21d2 \u308a\u305d\u306a + \u30ab\u30fc\u30c9 stituents does not hold.",
+                    "sid": 324,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the person name \u201c\u83ca\u6c60\u4fca\u5409\u201d (kikuchi shuNkichi) is two words risona (Risona Card, a company) kaRdo but was erroneously combined into a single word by the model because unfortunately he was always referred to by the full name.",
+                    "sid": 325,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u3061\u308a + \u3068\u3066 + \u3061\u3093 \u21d2 \u3061\u308a\u3068\u3066\u3061\u3093 chiritotechiN (name of a play) \u3053\u306a + \u307f\u308b + \u304f \u21d2 \u3053\u306a\u307f\u308b\u304f konamiruku (a shop affiliated with Konami Corporation) \u306f\u3044 + \u3058\u3043 \u21d2 \u306f\u3044\u3058\u3043 haiziI (stage name of a comedian) \u3061\u3093 + \u3059\u3053\u3046 \u21d2 \u3061\u3093\u3059\u3053\u3046 chiNsukou (a traditional sweet) \u30b3\u30f3\u30c8\u30e9\u30a2\u30eb\u30c8\u30af\u30e9\u30ea\u30cd\u30c3\u30c8 \u21d2 \u30b3\u30f3\u30c8\u30e9 + \u30a2\u30eb\u30c8 7 Conclusions In this paper, we proposed a new task of Japanese noun phrase segmentation.",
+                    "sid": 326,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopted non- parametric Bayesian language models and proposed hybrid type-based sampling that can efficiently correct segmentation given by the morphological analyzer.",
+                    "sid": 327,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although supervised segmentation is very competitive, we showed that it can be supplemented + \u30af\u30e9\u30ea\u30cd\u30c3\u30c8 koNtora aruto with our unsupervised approach.",
+                    "sid": 328,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We applied the proposed method to encyclopedic kurarineQto (Contra-alto clarinet) Figure 4: Examples of improved segmentations.",
+                    "sid": 329,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "very important to identify hiragana words correctly.",
+                    "sid": 330,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As hiragana is mainly used to write function words and other basic words, segmentation errors concerning hiragana often bring disastrous effects on applications of morphological analysis.",
+                    "sid": 331,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example,the analyzer over-segments \u201c\u3061\u308a\u3068\u3066\u3061\u3093\u201d (chiri totechiN) into three shorter words among which the second word \u201c\u3068\u3066\u201d (tote) is a particle, and this se quence of words is transformed into a terrible parse tree.",
+                    "sid": 332,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most improvements come from correction of over-segmentation because the initial segmentation by the analyzer shows a tendency of over- segmentation.",
+                    "sid": 333,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of corrected under- segmentation is \u201ccontra-alto clarinet.\u201d The presence of \u201cclarinet,\u201d \u201calto\u201d and \u201ccontrabass\u201d and others in the main text allowed the model to iden text to segment noun phrases in it.",
+                    "sid": 334,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposed method can be applied to other tasks.",
+                    "sid": 335,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in unknown word acquisition (Murawaki and Kurohashi, 2008), noun phrases are often acquired from text as single words.",
+                    "sid": 336,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can now segment them into words in a more sophisticated way.",
+                    "sid": 337,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the future we will assign a POS tag to each word in order to use segmented noun phrases in morphological analysis.",
+                    "sid": 338,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume that the meaning of constituents in a noun phrase rarely depends on outer context.",
+                    "sid": 339,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So it would be helpful to augment them with rich semantic information in advance instead of disambiguating their meaning every time we analyze given text.",
+                    "sid": 340,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "This work was partly supported by JST CREST.",
+                    "sid": 341,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

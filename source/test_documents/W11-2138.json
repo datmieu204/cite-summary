@@ -1,0 +1,929 @@
+{
+    "ID": "W11-2138",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Improving Translation Model by Monolingual Data",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use target-side monolingual data to extend the vocabulary of the translation model in statistical machine translation.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method called \u201creverse self-training\u201d improves the decoder\u2019s ability to produce grammatically correct translations into languages with morphology richer than the source language esp. in small-data setting.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We empirically evaluate the gains for several pairs of European languages and discuss some approaches of the underlying back-off techniques needed to translate unseen forms of known words.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also provide a description of the systems we",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Like any other statistical NLP task, SMT relies on sizable language data for training.",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However the parallel data required for MT are a very scarce resource, making it difficult to train MT systems of decent quality.",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, it is usually possible to obtain large amounts of monolingual data.",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we attempt to make use of the monolingual data to reduce the sparseness of surface forms, an issue typical for morphologically rich languages.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When MT systems translate into such languages, the limited size of parallel data often causes the situation where the output should include a word form never observed in the training data.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even though the parallel data do contain the desired word in other forms, a standard phrase-based decoder has no way of using it to generate the correct translation.",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Reverse self-training addresses this problem by incorporating the available monolingual data in the translation model.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper builds upon the idea outlined in Bojar and Tamchyna (2011), describing how this technique was incorporated in the WMT Shared Task and extending the experimental evaluation of reverse self-training in several directions \u2013 the examined language pairs (Section 4.2), data size (Section 4.3) and back-off techniques (Section 4.4).",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 related work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The idea of using monolingual data for improving the translation model has been explored in several previous works.",
+                    "sid": 13,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bertoldi and Federico (2009) used monolingual data for adapting existing translation models to translation of data from different domains.",
+                    "sid": 14,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In their experiments, the most effective approach was to train a new translation model from \u201cfake\u201d parallel data consisting of target-side monolingual data and their machine translation into the source language by a baseline system.",
+                    "sid": 15,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ueffing et al. (2007) used a boot-strapping technique to extend translation models using monolingual data.",
+                    "sid": 16,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They gradually translated additional source-side sentences and selectively incorporated them and their translations in the model.",
+                    "sid": 17,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our technique also bears a similarity to de Gispert et al. (2005), in that we try to use a back-off for surface forms to generalize our model and produce translations with word forms never seen in the original parallel data.",
+                    "sid": 18,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, instead of a rulebased approach, we take advantage of the available data and learn these forms statistically.",
+                    "sid": 19,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are therefore not limited to verbs, but our system is only able to generate surface forms observed in the target-side monolingual data.",
+                    "sid": 20,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 reverse self-training",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Figure 1 illustrates the core of the method.",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using available parallel data, we first train an MT system to translate from the target to the source language.",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we want to gather new word forms from the monolingual data, this reverse model needs the ability to translate them.",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For that purpose we use a factored translation model (Koehn and Hoang, 2007) with two alternative decoding paths: form\u2014form and back-off\u2014form.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented with several options for the back-off (simple stemming by truncation or full lemmatization), see Section 4.4.",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder can thus use a less sparse representation of words if their exact forms are not available in the parallel data.",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use this reverse model to translate (much larger) target-side monolingual data into the source language.",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We preserve the word alignments of the phrases as used in the decoding so we directly obtain the word alignment in the new \u201cparallel\u201d corpus.",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This gives us enough information to proceed with the standard MT system training \u2013 we extract and score the phrases consistent with the constructed word alignment and create the phrase table.",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We combine this enlarged translation model with a model trained on the true parallel data and use Minimum Error Rate Training (Och, 2003) to find the balance between the two models.",
+                    "sid": 30,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final model has four separate components \u2013 two language models (one trained on parallel and one on monolingual data) and the two translation models.",
+                    "sid": 31,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not expect the translation quality to improve simply because more data is included in training \u2013 by adding translations generated using known data, the model could gain only new combinations of known words.",
+                    "sid": 32,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, by using a back-off to less sparse units (e.g. lemmas) in the factored target\u2014source translation, we enable the decoder to produce previously unseen surface forms.",
+                    "sid": 33,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These translations are then included in the model, reducing the data sparseness of the target-side surface forms.",
+                    "sid": 34,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We used common tools for phrase-based translation \u2013 Moses (Koehn et al., 2007) decoder and tools, SRILM (Stolcke, 2002) and KenLM (Heafield, 2011) for language modelling and GIZA++ (Och and Ney, 2000) for word alignments.",
+                    "sid": 35,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For reverse self-training, we needed Moses to also output word alignments between source sentences and their translations.",
+                    "sid": 36,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we were not able to make the existing version of this feature work, we added a new option and re-implemented this funcionality.",
+                    "sid": 37,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We rely on automatic translation quality evaluation throughout our paper, namely the wellestablished BLEU metric (Papineni et al., 2002).",
+                    "sid": 38,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We estimate 95% confidence bounds for the scores as described in Koehn (2004).",
+                    "sid": 39,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated our translations on lower-cased sentences.",
+                    "sid": 40,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Aside from the WMT 2011 Translation Task data, we also used several additional data sources for the experiments aimed at evaluating various aspects of reverse self-training.",
+                    "sid": 41,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "JRC-Acquis We used the JRC-Acquis 3.0 corpus (Steinberger et al., 2006) mainly because of the number of available languages.",
+                    "sid": 42,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This corpus contains a large amount of legislative texts of the European Union.",
+                    "sid": 43,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fact that all data in the corpus come from a single, very narrow domain has two effects \u2013 models trained on this corpus perform mostly very well in that domain (as documented e.g.",
+                    "sid": 44,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in Koehn et al. (2009)), but fail when translating ordinary texts such as news or fiction.",
+                    "sid": 45,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentences in this corpus also tend to be rather long (e.g.",
+                    "sid": 46,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "30 words on average for English).",
+                    "sid": 47,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CzEng CzEng 0.9 (Bojar and \u02c7Zabokrtsk\u00b4y, 2009) is a parallel richly annotated Czech-English corpus.",
+                    "sid": 48,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It contains roughly 8 million parallel sentences from a variety of domains, including European regulations (about 34% of tokens), fiction (15%), news (3%), technical texts (10%) and unofficial movie subtitles (27%).",
+                    "sid": 49,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not make much use of the rich annotation in this paper, however we did experiment with using Czech lemmas (included in the annotation) as the back-off factor for reverse self-training.",
+                    "sid": 50,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to determine how successful our approach is across languages, we experimented with Czech, Finnish, German and Slovak as target languages.",
+                    "sid": 51,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of them have a rich morphology in some sense.",
+                    "sid": 52,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We limited our selection of source languages to English, French and German because our method focuses on the target language anyway.",
+                    "sid": 53,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did however combine the languages with respect to the richness of their vocabulary \u2013 the source language has less word forms in almost all cases.",
+                    "sid": 54,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Czech and Slovak are very close languages, sharing a large portion of vocabulary and having a very similar grammar.",
+                    "sid": 55,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are many inflectional rules for verbs, nouns, adjectives, pronouns and numerals.",
+                    "sid": 56,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentence structure is exhibited by various agreement rules which often apply over long distance.",
+                    "sid": 57,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the issues commonly associated with rich morphology are clearly observable in these languages.",
+                    "sid": 58,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "German also has some inflection, albeit much less complex.",
+                    "sid": 59,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main source of German vocabulary size are the compound words.",
+                    "sid": 60,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finnish serves as an example of agglutinative languages well-known for the abundance of word forms.",
+                    "sid": 61,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 contains the summary of our experimental results.",
+                    "sid": 62,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, only the JRC-Acquis corpus was used for training, development and evaluation.",
+                    "sid": 63,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every language pair, we extracted the first 10 percent of the parallel corpus and used them as the parallel data.",
+                    "sid": 64,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last 70 percent of the same corpus were our \u201cmonolingual\u201d data.",
+                    "sid": 65,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a separate set of 1000 sentences for the development and another 1000 for testing.",
+                    "sid": 66,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentence counts of the corpora are shown in the columns Corpus Size Para and Mono.",
+                    "sid": 67,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The table also shows the ratio between observed vocabulary size of the target and source language.",
+                    "sid": 68,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Except for the German-*Czech language pair, the ratios are higher than 1.",
+                    "sid": 69,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Baseline column contains the BLEU score of a system trained solely on the parallel data (i.e. the first 10 percent).",
+                    "sid": 70,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A 5-gram language model was used.",
+                    "sid": 71,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \u201c+Mono LM\u201d scores were achieved by adding a 5-gram language model trained on the monolingual data as a separate component (its weight was determined by MERT).",
+                    "sid": 72,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last column contains the scores after adding the translation model self-trained on target monolingual data.",
+                    "sid": 73,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This model was also added as another component and the weights associated with it were found by MERT.",
+                    "sid": 74,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the back-off in the reverse self-training, we used a simple suffix-trimming heuristic suitable for fusional languages: cut off the last three characters of each word always keeping at least the first three characters.",
+                    "sid": 75,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This heuristic reduces the vocabulary size to a half for Czech and Slovak but it is much less effective for Finish and German (Table 2), as can be expected from their linguistic properties.",
+                    "sid": 76,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did not use any linguistic tools, such as morphological analyzers, in this set of experiments.",
+                    "sid": 77,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see the main point of this section in illustrating the applicability of our technique on a wide range of languages, including languages for which such tools are not available.",
+                    "sid": 78,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We encountered problems when using MERT to balance the weights of the four model components.",
+                    "sid": 79,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model consisted of 14 features \u2013 one for each language model, five for each translation model (phrase probability and lexical weight for both directions and phrase penalty), word penalty and distortion penalty.",
+                    "sid": 80,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The extra 5 weights of the reversely trained translation model caused MERT to diverge in some cases.",
+                    "sid": 81,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we used the mert-moses.pl script for tuning and kept the default parameters, MERT ran for 25 iterations and stopped.",
+                    "sid": 82,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, even though our method seemed to improve translation performance in most language pairs, several experiments contradicted this observation.",
+                    "sid": 83,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We simply reran the final tuning procedure in these cases and were able to achieve an improvement in BLEU as well.",
+                    "sid": 84,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These language pairs are marked with a \u2019*\u2019 sign in Table 1.",
+                    "sid": 85,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A possible explanation for this behaviour of MERT is that the alternative decoding paths add a lot of possible derivations that generate the same string.",
+                    "sid": 86,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To validate our hypothesis we examined a diverging run of MERT for English--+Czech translation with two translation models.",
+                    "sid": 87,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our n-best lists contained the best 100 derivations for each trans0.8 1 1.2 1.4 1.6 1.8 2 2.2 2.4 2.6 2.8 3 Vocabulary size ratio lated sentence from the development data.",
+                    "sid": 88,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On average (over all 1000 sentences and over all runs), the n-best list only contained 6.13 different translations of a sentence.",
+                    "sid": 89,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The result of the same calculation applied on the baseline run of MERT (which converged in 9 iterations) was 34.85 hypotheses.",
+                    "sid": 90,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This clear disproportion shows that MERT had much less information when optimizing our model.",
+                    "sid": 91,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, reverse self-training seems helpful for translating into morphologically rich languages.",
+                    "sid": 92,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieved promising gains in BLEU, even over the baseline including a language model trained on the monolingual data.",
+                    "sid": 93,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvement ranges from roughly 0.3 (e.g.",
+                    "sid": 94,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "German-*Czech) to over 1 point (English-*German) absolute.",
+                    "sid": 95,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result also indicates that suffix trimming is a quite robust heuristic, useful for a variety of language types.",
+                    "sid": 96,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 illustrates the relationship between vocabulary size ratio of the language pair and the improvement in translation quality.",
+                    "sid": 97,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the points are distributed quite irregularly, a certain tendency towards higher gains with higher ratios is observable.",
+                    "sid": 98,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume that reverse self-training is most useful in cases where a single word form in the source language can be translated as several forms in the target language.",
+                    "sid": 99,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A higher ratio between vocabulary sizes suggests that these cases happen more often, thus providing more space for improvement using our method.",
+                    "sid": 100,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conducted a series of English-to-Czech experiments with fixed parallel data and a varying size of monolingual data.",
+                    "sid": 101,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the CzEng corpus, 500 thousand parallel sentences and from 500 thousand up to 5 million monolingual sentences.",
+                    "sid": 102,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used two separate sets of 1000 sentences from CzEng for development and evaluation.",
+                    "sid": 103,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results are summarized in Figure 3.",
+                    "sid": 104,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gains in BLEU become more significant as the size of included monolingual data increases.",
+                    "sid": 105,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The highest improvement can be observed when the data are largest \u2013 over 3 points absolute.",
+                    "sid": 106,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 shows an example of the impact on translation quality \u2013 the \u201cMono\u201d data are 5 million sentences.",
+                    "sid": 107,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When evaluated from this point of view, our method can also be seen as a way of considerably improving translation quality for languages with little available parallel data.",
+                    "sid": 108,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also experimented with varying size of parallel data (500 thousand to 5 million sentences) and its effect on reverse self-training contribution.",
+                    "sid": 109,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size of monolingual data was always 5 million sentences.",
+                    "sid": 110,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first measured the percentage of test data word forms covered by the training data.",
+                    "sid": 111,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We calculated the value for parallel data and for the combination of parallel and monolingual data.",
+                    "sid": 112,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For word forms that appeared only in the monolingual data, a different form of the word had to be contained in the parallel data (so that the model can learn it through the backoff heuristic) in order to be counted in.",
+                    "sid": 113,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between the first and second value can simply be thought of as the upper-bound estimation of reverse self-training contribution.",
+                    "sid": 114,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows the results along with BLEU scores achieved in translation experiments following this scenario.",
+                    "sid": 115,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our technique has much greater effect for small parallel data sizes; the amount of newly learned word forms declines rapidly as the size grows.",
+                    "sid": 116,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, improvement in BLEU score decreases quickly and becomes negligible around 2 million parallel sentences.",
+                    "sid": 117,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented with several options for the backoff factor in English\u2014*Czech translation.",
+                    "sid": 118,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data from training section of CzEng were used, 1 million parallel sentences and another 5 million sentences as target-side monolingual data.",
+                    "sid": 119,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in the previous section, the sizes of our development and evaluation sets were a thousand sentences.",
+                    "sid": 120,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CzEng annotation contains lexically disambiguated word lemmas, an appealing option for our purposes.",
+                    "sid": 121,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also tried trimming the last 3 characters of each word, keeping at least the first 3 characters intact.",
+                    "sid": 122,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stemming of each word to four characters was also evaluated (Stem-4).",
+                    "sid": 123,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 summarizes our results.",
+                    "sid": 124,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last column shows the vocabulary size compared to original vocabulary size, estimated on lower-cased words.",
+                    "sid": 125,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are not surprised by stemming performing the worst \u2013 the equivalence classes generated by this simple heuristic are too broad.",
+                    "sid": 126,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using lemmas seems optimal from the linguistic point of view, however suffix trimming outperformed this approach in our experiments.",
+                    "sid": 127,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We feel that finding well-performing back-off techniques for other languages merits further research.",
+                    "sid": 128,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We submitted systems that used reverse selftraining (cu-tamchyna) for English-*Czech and English-*German language pairs.",
+                    "sid": 129,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our parallel data for German were constrained to the provided set (1.9 million sentences).",
+                    "sid": 130,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Czech, we used the training sections of CzEng and the supplied WMT11 News Commentary data (7.3 million sentences in total).",
+                    "sid": 131,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In case of German, we only used the supplied monolingual data, for Czech we used a large collection of texts for language modelling (i.e. unconstrained).",
+                    "sid": 132,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reverse self-training used only the constrained data \u2013 2.3 million sentences in German and 2.2 in Czech.",
+                    "sid": 133,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In case of Czech, we only used the News monolingual data from 2010 and 2011 for reverse self-training \u2013 we expected that recent data from the same domain as the test set would improve translation performance the most.",
+                    "sid": 134,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieved mixed results with these systems \u2013 for translation into German, reverse self-training did not improve translation performance.",
+                    "sid": 135,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Czech, we were able to achieve a small gain, even though the reversely translated data contained less sentences than the parallel data.",
+                    "sid": 136,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our BLEU scores were also affected by submitting translation outputs without normalized punctuation and with a slightly different tokenization.",
+                    "sid": 137,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this scenario, a lot of parallel data were available and we did not manage to prepare a reversely trained model from larger monolingual data.",
+                    "sid": 138,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both of these factors contributed to the inconclusive results.",
+                    "sid": 139,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows case-insensitive BLEU scores as calculated in the official evaluation.",
+                    "sid": 140,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 conclusion",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We introduced a technique for exploiting monolingual data to improve the quality of translation into morphologically rich languages.",
+                    "sid": 141,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We carried out experiments showing improvements in BLEU when using our method for translating into Czech, Finnish, German and Slovak with small parallel data.",
+                    "sid": 142,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discussed the issues of including similar translation models as separate components in MERT.",
+                    "sid": 143,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We showed that gains in BLEU score increase with growing size of monolingual data.",
+                    "sid": 144,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, growing parallel data size diminishes the effect of our method quite rapidly.",
+                    "sid": 145,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also documented our experiments with several back-off techniques for English to Czech translation.",
+                    "sid": 146,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we described our primary submissions to the WMT 2011 Shared Translation Task.",
+                    "sid": 147,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,953 @@
+{
+    "ID": "W00-1207",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper presents a mechanism of new word identification in Chinese text where probabilities are used to filter candidate character strings and to assign POS to the selected strings in a ruled-based system.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This mechanism avoids the sparse data problem of pure statistical approaches and the over-generation problem of rule-based approaches.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It improves parser coverage and provides a tool for the lexical acquisition of new words.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "In this paper, new words refer to newly coined words, occasional words and other rarely used words that are neither found in the dictionary of a natural language processing system nor recognized by the derivational rules or proper name identification rules of the system.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typical examples of such words are shown in the following sentences, with the new words underlined in bold.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1f A MB9*iffi, -t:B::ff A B\":f:.!l:!&\"o oo A.R:trmm1Zrut 0 9='00,X\u00a3 1\u00a3 0 ft!?.1fliE:mt\u00a3-l_l!; r!J 1J.il!:Jf.;t;t ;t;tJt Uo Jf AB9ii!:m 'M .1Jo :1J 7f!J t U Hl1H1T JWU1flB9ffli;t.Jo i3: 00AB9BEM:llfT 11'1.mfl:ffl o ft!?..U:RP I!ftlfr-*.rul*T 0 UTllttlo :at1 1 H .[gJ.!",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "J}JittHB9fiiJ71< o Zixin Jiang Microsoft Research One Microsoft Way Redmond, WA 98052 jiangz@ microsoft.com JJ \u00a3-;f;t @BSI'fJ\" Wf\" 9=' l;!li \"f!fi:F.A:MUf JI'!o iffi i'flUJt, M -tB iU jio ft!?.11'1 --t--t- 4i!'!i!!Jj;;B9\" \" 0 Jz:=ft\u00a3 B3{ :t ..t't-il{fiio The automatic identification of such words by a machine is a trivial task in languages where words are separated by spaces in written texts.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In languages like Chinese, where no word boundary exists in written texts, this is by no means an easy job.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In many cases the machine will not even realize that there is an unfound word in the sentence since most single Chinese characters can be words by themselves.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Purely statistical methods of word segmentation (e.g. de Marcken 1996, Sproat et al 1996, Tung and Lee 1994, Lin et al (1993), Chiang et al (1992), Lua, Huang et al, etc.) often fail to identify those words because of the sparse data problem, as the likelihood for those words to appear in the training texts is extremely low.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are also hybrid approaches such as (Nie dt al 1995) where statistical approaches and heuristic rules are combined to identify new words.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They generally perform better than purely statistical segmenters, but the new words they are able to recognize are usually proper names and other relatively frequent words.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They require a reasonably big training corpus and the performance is often domain-specific depending on the training corpus used.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many word segmenters ignore low-frequency new words and treat their component characters as independent words, since they are often of little significance in applications where the structure of sentences is not taken into consideration.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For in-depth natural language understanding where full parsing is required, however, the identification of those words is critical, because a single unidentified word can cause a whole sentence to fail.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new word identification mechanism to be presented here is used in a wide coverage Chinese parser that does full sentence analysis.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It assumes the word segmentation process described in Wu and Jiang (1998).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this model, word segmentation, including unfound word identification, is not a stand-alone process, but an integral part of sentence analysis.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmentation component provides a word lattice of the sentence that contains all the possible words, and the final disambiguation is achieved in the parsing process.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In what follows, we will discuss two hypotheses and their implementation.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first one concerns the selection of candidate strings and the second one concerns the assignment of parts of speech (POS) to those strings.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "selection of candidate strings. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "2.1 Hypothesis.",
+                    "sid": 22,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chinese used to be a monosyllabic language, with one-to-one correspondences between syllables, characters and words, but most words in modem Chinese, especially new words, consist of two or more characters.",
+                    "sid": 23,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the 85,135 words in our system's dictionary, 9217 of them are monosyllabic, 47778 are disyllabic, 17094 are tri-syllabic, and the rest has four or more characters.",
+                    "sid": 24,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since hardly any new character is being added to the language, the unfound words we are trying to identify are almost always multiple character words.",
+                    "sid": 25,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, if we find a sequence of single characters (not subsumed by any words) after the completion of basic word segmentation, derivational morphology and proper name identification, this sequence is very likely to be a new word.",
+                    "sid": 26,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This basic intuition has been discussed in many papers, such as Tung and Lee (1994).",
+                    "sid": 27,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the following sentence.",
+                    "sid": 28,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This sentence contains two new words (not including the name mJ!",
+                    "sid": 29,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "which is recognized by the proper name identification mechanism) that are unknown to our system: 1EfJJ (probably the abbreviated name of a junior high school) M (a word used in sports only but not in our dictionary) Initial lexical processing based on dictionary lookup and proper name identification produces the following segmentation: where 1EfJJand ftM are segmented into single characters.",
+                    "sid": 30,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, both single character-strings are the new words we want to find.",
+                    "sid": 31,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, not every character sequence is a word in Chinese.",
+                    "sid": 32,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many such sequences are simply sequences of . single-character words.",
+                    "sid": 33,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here is an example: After dictionary look up, we get which is a sequence of I 0 single characters.",
+                    "sid": 34,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, every character here is an independent word and there is no new word in the sentence.",
+                    "sid": 35,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From this we see that, while most new words show up as a sequence of single characters, not every sequence of single characters forms a new word.",
+                    "sid": 36,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The existence of a single-character string is the necessary but not sufficient condition for a new word.",
+                    "sid": 37,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only those sequences of single characters where the characters are unlikely to be a sequence of independent words are good candidates for new words.",
+                    "sid": 38,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Implementation.",
+                    "sid": 39,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hypothesis in the previous section can be implemented with the use of the Independent Word Probability (IWP), which can be a property of a single character or a string of characters.",
+                    "sid": 40,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1.1 Defming IWP Most Chinese characters can be used either as independent words or component parts of multiple character words.",
+                    "sid": 41,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The IWP of a single character is the likelihood for this character to appear as an ind pendent word in texts: IWP(c) N(Word(c)) N(c) where N(Word(c)) is the number of occurrences of a character as an independent word in the sentences of a given text corpus and N(c) is the total number of occurrence of this character in the same corpus.",
+                    "sid": 42,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our implementation, we computed the probability from a parsed corpus where we went through all the leaves of the trees, counting the occurrences of each character and the occurrences of each character as an independent word.",
+                    "sid": 43,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parsed corpus we used contains about 5,000 sentences and was of course not big enough to contain every character in the Chinese language.",
+                    "sid": 44,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This did not tum out to be a major problem, though.",
+                    "sid": 45,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that, as long as all the frequently used single-character words are in the corpus, we can get good results, for what really matters is the JWP of this small set of frequent characters/words.",
+                    "sid": 46,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These characters/words are bound to appear in any reasonably large collection of texts.",
+                    "sid": 47,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once we have the JWP of individual characters (JWP(c)), we can compute the JWP of a character string (JWP(s)).",
+                    "sid": 48,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "JWP(s) is the probability of a sequence of two or more characters being a sequence of independent words.",
+                    "sid": 49,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is simply the joint probability of the JWP(c) of the component characters.",
+                    "sid": 50,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1.2 Using IWP With IWP(c) and JWP(s) defined , we then define a threshold T for IWP.",
+                    "sid": 51,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A sequence S of two or more characters is considered a candidate for a new word only if its IWP(s) < T. When JWP(s) reaches T, the likelihood for the characters to be a sequence of independent words is too high and the string will not be considered to be a possible new word.",
+                    "sid": 52,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our implementation, the value ofT is empirically determined.",
+                    "sid": 53,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A lower T results in higher precision and lower recall while a higher T improves recall at the expense of precision.",
+                    "sid": 54,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tried different values and weighed recall against precision until we got the best performance.",
+                    "sid": 55,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tl n and itM in Sentence (1) are identified as candidate dates because JWP(s)( tiW) = 8% and IWP(s)( itM) = 10% while the threshold is 15%.",
+                    "sid": 56,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our system, precision is not a big concern at this stage because the final filtering is done in the parsing process.",
+                    "sid": 57,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We put recall first to ensure that the parser will have every word it needs.",
+                    "sid": 58,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also tried to increase precision, but not at the expense of recall.",
+                    "sid": 59,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "pos assignment. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Once a character string is identified to be a candidate for new word, we must decide what syntactic category or POS to assign to this possible new word.",
+                    "sid": 60,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is required for sentence analysis where every word in the sentence must have at least one POS.",
+                    "sid": 61,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1.",
+                    "sid": 62,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hypothesis.",
+                    "sid": 63,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most multiple character words in Chinese have word internal syntactic structures, which is roughly the POS sequence of the component characters (assuming each character has a POS or potential POS).",
+                    "sid": 64,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A two-character verb, for example, can have a V-V, V-N, V-N or A(dv)-V internal structure.",
+                    "sid": 65,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a two-character string to be assigned the POS of verb, the POS/potential POS of its component characters must match one of those patterns.",
+                    "sid": 66,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this matching alone is not the sufficient condition for POS assignment Considering the fact that a single character can have more than one POS and a single POS sequence can correspond to the internal word structures of different parts of speech (V-N can be verb or a noun, for instance), simply assigning POS on the basis of word internal structure will result in massive over generation and introduce too much noise into the parsing process.",
+                    "sid": 67,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To prune away the unwanted guesses, we need more help from statistics.",
+                    "sid": 68,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we examine the word formation process in Chinese, we find that new words are often modeled on existing words.",
+                    "sid": 69,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Take the newly coined verb itM as an example.",
+                    "sid": 70,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scanning our dictionary, we find that it appears many times as the first character of a two-character verb, such as it.",
+                    "sid": 71,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it..it.",
+                    "sid": 72,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it.",
+                    "sid": 73,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it$.",
+                    "sid": 74,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "itft.",
+                    "sid": 75,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "etc. \u00b7 Meanwhile, M appears many times as the second .&M \u2022 .1JZM.1JTM.M.ilM.etc. This leads us to the fol1owing hypothesis: A candidate character string for a new word is likely to have a given POS if the component characters of this string have appeared in the corresponding positions of many existing words with this POS.",
+                    "sid": 76,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2.",
+                    "sid": 77,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Implementation.",
+                    "sid": 78,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To represent the 1ike1ihood for a character to appear in a given position of a word with a given POS and a given length, we assign probabi1ities of the fo11owing form to each character: P(Cat,Pos,Len) obtained by processing the 85,135 headwords in our dictionary.",
+                    "sid": 79,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each character in Chinese, we count the number of occurrences of this character in a given position of words with a given length and given category and then divide it by the total number of occurrences of this character in the headwords of the dictionary.",
+                    "sid": 80,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Pvl2(c)= N(vl2(c)) N(c) where N(v12(c)) is the number of occurrences of a character in the first position of a two-character verb while N(c) is the total number of occurrences of this character in the dictionary headwords.",
+                    "sid": 81,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here are some of the values we get for the characterM: where Cat is the category/POS of a word, Pos is the position of the character in the word, and Len is the length (number of characters) of the word.",
+                    "sid": 82,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabi1ity of a character appearing as the second character in a four-character verb, for Pn12(M)=7% Pv12(M)=3% Pv23<M> = 39% Pn22(M)=O% Pv22(M) =24% Pa22(M)=1% instance, is represented as P(Verb,2,4).",
+                    "sid": 83,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1.1.",
+                    "sid": 84,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computing P(Cat,Pos,Len) There are many instantiations of P(Cat,Pos,Len), depending on the values of the three variables.",
+                    "sid": 85,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our implementation, we limited the values of Cat to Noun, Verb and Adjective, since they are the main open class categories and therefore the POSes of most new words.",
+                    "sid": 86,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also assume that most new words will have between 2 to 4 characters, thereby 1imiting the values of Pos to 14 and the values of Len to 24.",
+                    "sid": 87,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently each character will have 27 different kinds of probability values associated with it.",
+                    "sid": 88,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assign to each of them a 4-character name where the first character is always \"P\", the second the value of Cat, the third the value of Pos, and the fourth the value of Len.",
+                    "sid": 89,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here are some examples: Pn12 (the probability of appearing as the first character of a two-character noun) Pv22 (the probability of appearing as the second character of a two-character verb) Pa34 (the probability of appearing as the third character of a four-character adjective) It is dear from those numbers that the character M tend to occur in the second position of two-character and three-character verbs.",
+                    "sid": 90,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1.2.Using P(Cat,Pos,Len) Once a character string is identified as a new word candidate, we will calculate the POS probabilities for the string.",
+                    "sid": 91,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each string, we will get P(noun), P(verb) and P(adj) which are respectively the probabilities of this string being a noun, a verb or an adjective.",
+                    "sid": 92,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are the joint probabilities of the P(Cat,Pos,Len) of the component characters of this string.",
+                    "sid": 93,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then measure the outcome against a threshold.",
+                    "sid": 94,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a new word string to be assigned the syntactic category Cat, its P( Cat) must reach the threshold.",
+                    "sid": 95,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The threshold for each P(Cat) is independently determined so that we do not favor a certain POS (e.g. Noun) simply because there are more nouns in the dictionary.",
+                    "sid": 96,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a character string reaches the threshold of more than one P(Cat), it wiU be assigned more than one syntactic category.",
+                    "sid": 97,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A string that has both P(noun) and P(verb) reaching the threshold, for example, will have both a noun and a verb added to the word lattice.",
+                    "sid": 98,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ambiguity is then resolved in the parsing process.",
+                    "sid": 99,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a string passes the IWP test but fails the P(Cat) test, it will receive noun as its syntactic category.",
+                    "sid": 100,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, the default POS for a new word candidate is noun.",
+                    "sid": 101,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is what happened to llJJin the Sentence (1).",
+                    "sid": 102,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "llJJpassed tlhe IWP test, but failed each of the P(Cat) tests.",
+                    "sid": 103,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, it is made a noun by default.",
+                    "sid": 104,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we can see, this assignment is the correct one (at least in this particular sentence).",
+                    "sid": 105,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "results and discussion. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1.",
+                    "sid": 106,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Increase in Parser Coverage.",
+                    "sid": 107,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new word identification mechanism discussed above has been part of our system for about 10 months.",
+                    "sid": 108,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To find out how much contribution it makes to our parser coverage, we took 176,863 sentences that had been parsed successfully with the new word mechanism turned on and parsed them again with the new word mechanism turned off.",
+                    "sid": 109,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we did this test at the beginning of these 10 months, 37640 of those sentences failed to get a parse when the mechanism was turned off.",
+                    "sid": 110,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, 21.3% of the sentences were \"saved\" by this mechanism.",
+                    "sid": 111,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the end of the 10 months, however, only 7749 of those sentences failed because of the removal of the mechanism.",
+                    "sid": 112,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At first sight, this seems to indicate that the new word mechanism is doing a much less satisfactory job than before.",
+                    "sid": 113,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What actually happened is that many of the words that were identified by the mechanism 10 months ago, especially those that occur frequently, have been added to our dictionary.",
+                    "sid": 114,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the past 10 months, we have been using this mechanism both as a component of robust parsing and as a method of lexical acquisition whereby new entries are discovered from text corpora.",
+                    "sid": 115,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This discovery procedure has helped us find many words that are found in none of the existing word lists we have access to.",
+                    "sid": 116,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2.",
+                    "sid": 117,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision of Identification.",
+                    "sid": 118,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Apart from its contribution to parser coverage, we can also evaluate the new word identification mechanism by looking at its precision.",
+                    "sid": 119,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our evaluation, we measured precision in two different ways.",
+                    "sid": 120,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first measurement, we compared the number of new words that are proposed by the guessing mechanism and the number of words that end up in successful parses.",
+                    "sid": 121,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we use NWA to stand for the number of new words that are added to the word lattice and NWU for the number of new words that appear in a parse tree, the precision rate will be NWU I NWA.",
+                    "sid": 122,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Actual testing shows that this rate is about 56%.",
+                    "sid": 123,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that the word guessing mechanism has over-guessed and added about twice as many words as we need.",
+                    "sid": 124,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is not a real problem in our system, however, because the final decision is made in the parsing process.",
+                    "sid": 125,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lexical component is only responsible for providing a word lattice of which one of the paths is correct.",
+                    "sid": 126,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second measurement, we had a native speaker of Chinese go over all the new words that end up in successful parses and see how many of them sound like real words to her.",
+                    "sid": 127,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a fairly subjective test but nonetheless meaningful one.",
+                    "sid": 128,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It turns out that about 85% of the new words that \"survived\" the parsing process are real words.",
+                    "sid": 129,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We would also like to run a large-scale recall test on the mechanism, but found it to be impossible.",
+                    "sid": 130,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To run such a test, we have to know how many unlisted new words actually exist in a corpus of texts.",
+                    "sid": 131,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since there is no automatic way of knowing it, we would have to let a human manually check the texts.",
+                    "sid": 132,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is too expensive to be feasible.",
+                    "sid": 133,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3.",
+                    "sid": 134,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Contributions of Other Components.",
+                    "sid": 135,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the results shown above do give us some idea about how much contribution the new word identification mechanism makes to our system, it is actually very difficult to say precisely how much credit goes to this mechanism and how much to other components of the system.",
+                    "sid": 136,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we can see, the performance of this mechanism also depends on the following two factors: (I) The word segmentation processes prior to the application of this mechanism.",
+                    "sid": 137,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They include dictionary lookup, derivational morphology, proper name identification and the assembly of other items such as time, dates, monetary units, address, phone numbers, etc. These processes also group characters into words.",
+                    "sid": 138,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any improvement in those components will also improve the performance of the new word mechanism.",
+                    "sid": 139,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If every word that \"should\" be found by the single-character sequences that remain after those processes will have a better chance of being real words.",
+                    "sid": 140,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) The parsing process that follows.",
+                    "sid": 141,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As mentioned earlier, the lexical component of our system does not make a final decision on \"wordhood\".",
+                    "sid": 142,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It provides a word lattice from which the syntactic parser is supposed to pick the correct path.",
+                    "sid": 143,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case of new word identification, the word lattice will contain both the new words that are identified and the all the words/characters that are subsumed by the new words.",
+                    "sid": 144,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A new word proposed in the word lattice will receive its official wordhood only when it becomes part of a successful parse.",
+                    "sid": 145,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To recognize a new word correctly, the parser has to be smart enough to accept the good guesses and reject the bad guesses.",
+                    "sid": 146,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This ability of the parser will imporve as the parser improves in general and a better parser will yield better final results in new word identification.",
+                    "sid": 147,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generally speaking, the mechanisms using IWP and P(Cat,Pos,Len) provide the internal criteria for wordhood while word segmentation and parsing provide the external criteria.",
+                    "sid": 148,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The internal criteria are statistical1y based whereas the external criteria are rule-based.",
+                    "sid": 149,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Neither can do a good job on its own without the\u00b7 other.",
+                    "sid": 150,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach we take here is not to be considered statistical natural language processing, but it does show that a rule-based system can be enhanced by some statistics.",
+                    "sid": 151,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The statistics we need can be extracted from a very small corpus and a dictionary and they are not domain dependent.",
+                    "sid": 152,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have benefited from the mechanism in the analysis of many different kinds of texts.",
+                    "sid": 153,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

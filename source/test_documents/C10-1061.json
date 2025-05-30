@@ -1,0 +1,1853 @@
+{
+    "ID": "C10-1061",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Data-Driven Parsing with Probabilistic Linear Context-Free Rewriting Systems",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper presents a first efficient imple mentation of a weighted deductive CYKparser for Probabilistic Linear ContextFree Rewriting Systems (PLCFRS), to gether with context-summary estimatesfor parse items used to speed up parsing.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LCFRS, an extension of CFG, can de scribe discontinuities both in constituencyand dependency structures in a straight forward way and is therefore a naturalcandidate to be used for data-driven parsing.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate our parser with a gram mar extracted from the German NeGratreebank.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments show that data driven LCFRS parsing is feasible with a reasonable speed and yields output of competitive quality.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Data-driven parsing has largely been dominated by Probabilistic Context-Free Grammar (PCFG).The use of PCFG is tied to the annotation principles of popular treebanks, such as the Penn Tree bank (PTB) (Marcus et al, 1994), which are usedas a data source for grammar extraction.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their annotation generally relies on the use of trees without crossing branches, augmented with a mech anism that accounts for non-local dependencies.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the PTB, e.g., labeling conventions and trace nodes are used which establish additional implicitedges in the tree beyond the overt phrase struc ture.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, some other treebanks, such as theGerman NeGra and TIGER treebanks allow anno tation with crossing branches (Skut et al, 1997).Non-local dependencies can then be expressed di rectly by grouping all dependent elements under a single node.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, given the expressivity restrictions of PCFG, work on data-driven parsing has mostlyexcluded non-local dependencies.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When using treebanks with PTB-like annotation, labeling conventions and trace nodes are often discarded, while in NeGra, resp.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TIGER, tree trans formations are applied which resolve the crossingbranches (Ku?bler, 2005; Boyd, 2007, e.g.).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Espe cially for these treebanks, such a transformation is questionable, since it is non-reversible and implies information loss.Some research has gone into incorporating non local information into data-driven parsing.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Levy and Manning (2004) distinguish three approaches: 1.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-local information can be incorporated di-.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "rectly into the PCFG model (Collins, 1999), orcan be reconstructed in a post-processing step after PCFG parsing (Johnson, 2002; Levy and Man ning, 2004).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-local information can be incorporated into complex labels (Hockenmaier,2003).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A formalism can be used which accommodates the direct encoding of non-local informa tion (Plaehn, 2004).",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper pursues the third approach.Our work is motivated by the following recent developments: Linear Context-Free Rewrit ing Systems (LCFRS) (Vijay-Shanker et al, 1987)have been established as a candidate for modeling both discontinuous constituents and nonprojective dependency trees as they occur in tree banks (Kuhlmann and Satta, 2009; Maier and Lichte, 2009).",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LCFRS extend CFG such thatnon-terminals can span tuples of possibly non 537 CFG: A ? LCFRS: ? A ? ?",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?1 ?2 ?3 Figure 1: Different domains of locality adjacent strings (see Fig.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1).",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PCFG techniques,such as Best-First Parsing (Charniak and Caraballo, 1998), Weighted Deductive Parsing (Neder hof, 2003) and A?",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "parsing (Klein and Manning, 2003a), can be transferred to LCFRS.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, German has attracted the interest of the parsing community due to the challenges arising from its frequent discontinuous constituents (Ku?bler and Penn, 2008).We bring together these developments by pre senting a parser for probabilistic LCFRS.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whileparsers for subclasses of PLCFRS have been presented before (Kato et al, 2006), to our knowl edge, our parser is the first for the entire class ofPLCFRS.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have already presented an applica tion of the parser on constituency and dependency treebanks together with an extensive evaluation (Maier, 2010; Maier and Kallmeyer, 2010).",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This article is mainly dedicated to the presentation of several methods for context summary estimation of parse items, and to an experimental evaluation of their usefulness.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The estimates either act as figures-of-merit in a best-first parsing context or as estimates for A?",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "parsing.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our evaluation shows that while our parser achieves a reasonable speed already without estimates, the estimates lead to a great reduction of the number of produced items, all while preserving the output quality.Sect.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 and 3 of the paper introduce probabilis tic LCFRS and the parsing algorithm.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sect.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 presents different context summary estimates.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Sect.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5, the implementation and evaluation of the work is discussed.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "probabilistic lcfrs. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "LCFRS are an extension of CFG where the nonterminals can span not only single strings but, in stead, tuples of strings.",
+                    "sid": 38,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will notate LCFRS with the syntax of simple Range Concatenation Grammars (SRCG) (Boullier, 1998), a formalism that is equivalent to LCFRS.A LCFRS (Vijay-Shanker et al, 1987) is a tu ple ?N,T, V, P, S?",
+                    "sid": 39,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where a) N is a finite set of non-terminals with a function dim: N ? N that determines the fan-out of each A ? N ; b) T and V are disjoint finite sets of terminals and variables; c) S ? N is the start symbol with dim(S) = 1; d) P is a finite set of rules A(?1, . . .",
+                    "sid": 40,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ?dim(A)) ? A1(X(1)1 , . . .",
+                    "sid": 41,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ",X(1)dim(A1)) ? ?",
+                    "sid": 42,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?Am(X(m)1 , . . .",
+                    "sid": 43,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ",X(m)dim(Am)) for m ? 0 where A,A1, . . .",
+                    "sid": 44,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", Am ? N , X(i)j ? V for 1 ? i ? m, 1 ? j ? dim(Ai) and ?i ?",
+                    "sid": 45,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(T ? V )?",
+                    "sid": 46,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "for 1 ? i ? dim(A).",
+                    "sid": 47,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all r ? P , it holds that every variable X occurring in r occurs exactly once in the left-hand side (LHS) and exactly once in the right-hand side (RHS).",
+                    "sid": 48,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A rewriting rule describes how the yield of the LHS non-terminal can be computed from the yields of the RHS non-terminals.",
+                    "sid": 49,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rules A(ab, cd) ? ?",
+                    "sid": 50,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and A(aXb, cY d) ? A(X,Y ) for instance specify that 1.",
+                    "sid": 51,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?ab, cd?",
+                    "sid": 52,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is in the yield of A and 2.",
+                    "sid": 53,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "one can compute a new tuple in theyield of A from an already existing one by wrap ping a and b around the first component and c and d around the second.",
+                    "sid": 54,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every A ? N in a LCFRS G, we define the yield of A, yield(A) as follows: a) For every A(~?)",
+                    "sid": 55,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "yield(A); b) For every rule A(?1, . . .",
+                    "sid": 56,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ?dim(A)) ? A1(X(1)1 , . . .",
+                    "sid": 57,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ",X(1)dim(A1)) ? ?",
+                    "sid": 58,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?Am(X(m)1 , . . .",
+                    "sid": 59,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ",X(m)dim(Am)) and all ~?i ? yield(Ai) for 1 ? i ? m, ?f(?1), . . .",
+                    "sid": 60,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", f(?dim(A))?",
+                    "sid": 61,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "yield(A) where f is defined as follows: (i) f(t) = t for all t ? T , (ii) f(X(i)j ) = ~?i(j) for all 1 ? i ? m, 1 ? j ? dim(Ai) and (iii) f(xy) = f(x)f(y) forall x, y ?",
+                    "sid": 62,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(T ?V )+.",
+                    "sid": 63,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "f is the composition func tion of the rule.",
+                    "sid": 64,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c) Nothing else is in yield(A).",
+                    "sid": 65,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The language is then {w | ?w? ? yield(S)}.The fan-out of an LCFRS G is the maximal fan out of all non-terminals in G. Furthermore, the RHS length of a rewriting rules r ? P is called the rank of r and the maximal rank of all rules in P is called the rank of G. We call a LCFRS ordered if for every r ? P and every RHS non-terminal A in r and each pair X1, X2 of arguments of A in 538 the RHS of r, X1 precedes X2 in the RHS iff X1 precedes X2 in the LHS.",
+                    "sid": 66,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A probabilistic LCFRS (PLCFRS) (Kato et al., 2006) is a tuple ?N,T, V, P, S, p?",
+                    "sid": 67,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "such that ?N,T, V, P, S?",
+                    "sid": 68,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is a LCFRS and p : P ? [0..1] a function such that for all A ? N : ?A(~x)?~??Pp(A(~x) ? ~?)",
+                    "sid": 69,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= 1.",
+                    "sid": 70,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the cyk parser. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We use a probabilistic version of the CYK parser from (Seki et al, 1991), applying techniques of weighted deductive parsing (Nederhof, 2003).",
+                    "sid": 71,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LCFRS can be binarized (Go?mez-Rodr??guez et al., 2009) and ?-components in the LHS of rulescan be removed (Boullier, 1998).",
+                    "sid": 72,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can there fore assume that all rules are of rank 2 and do not contain ? components in their LHS.",
+                    "sid": 73,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore,we assume POS tagging to be done before pars ing.",
+                    "sid": 74,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "POS tags are non-terminals of fan-out 1.",
+                    "sid": 75,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rules are then either of the form A(a) ? ?",
+                    "sid": 76,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "with A a POS tag and a ? T or of the form A(~?)",
+                    "sid": 77,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B(~x) or A(~?)",
+                    "sid": 78,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B(~x)C(~y) where ~?",
+                    "sid": 79,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(V +)dim(A), i.e., only the rules for POS tags contain terminals in their LHSs.",
+                    "sid": 80,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every w ? T ?, where w = w1 . . .",
+                    "sid": 81,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "wn with wi ? T for 1 ? i ? n, we define: Pos(w) := {0, . . .",
+                    "sid": 82,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", n}.",
+                    "sid": 83,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A pair ?l, r?",
+                    "sid": 84,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pos(w) ? Pos(w) with l ? r is a range in w. Its yield ?l, r?(w) isthe string wl+1 . . .",
+                    "sid": 85,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "wr.",
+                    "sid": 86,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The yield ~?(w) of a vec tor of ranges ~?",
+                    "sid": 87,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is the vector of the yields of the single ranges.",
+                    "sid": 88,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For two ranges ?1 = ?l1, r1?, ?2 =?l2, r2?: if r1 = l2, then ?1 ? ?2 = ?l1, r2?; other wise ?1 ? ?2 is undefined.",
+                    "sid": 89,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given rule p : A(?1, . . .",
+                    "sid": 90,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ?dim(A)) ? B(X1, . . .",
+                    "sid": 91,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ",Xdim(B))C(Y1, . . .",
+                    "sid": 92,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ",Xdim(C)) we now extend the composition function f to ranges, given an input w: for all range vectors ~?B and~?C of dimensions dim(B) and dim(C) respec tively, fr( ~?B , ~?C) = ?g(?1), . . .",
+                    "sid": 93,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", g(?dim(A))?",
+                    "sid": 94,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is defined as follows: g(Xi) = ~?B(i) for all 1 ? i ? dim(B), g(Yi) = ~?C(i) for all 1 ? i ? dim(C) and g(xy) = g(x) ? g(y) for all x, y ? V +.",
+                    "sid": 95,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p : A(fr( ~?B , ~?C)) ? B( ~?B)C( ~?C) is then called an instantiated rule.",
+                    "sid": 96,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given input w, our items have the form [A, ~?]",
+                    "sid": 97,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where A ? N , ~?",
+                    "sid": 98,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Pos(w) ? Pos(w))dim(A).",
+                    "sid": 99,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vector ~?",
+                    "sid": 100,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "characterizes the span of A. We specify the set of weighted parse Scan: 0 : [A, ??i, i + 1??]",
+                    "sid": 101,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A POS tag of wi+1 Unary: in : [B, ~?]in + |log(p)| : [A, ~?]",
+                    "sid": 102,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p : A(~?)",
+                    "sid": 103,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B(~?)",
+                    "sid": 104,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P Binary: inB : [B, ~?B], inC : [C, ~?C ]inB + inC + log(p) : [A, ~?A] where p : A( ~?A) ? B( ~?B)C( ~?C) is an instantiated rule.",
+                    "sid": 105,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goal: [S, ??0, n??]",
+                    "sid": 106,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2: Weighted CYK deduction system add SCAN results to A while A 6= ? remove best item x : I from A add x : I to C if I goal item then stop and output true else for all y : I ? deduced from x : I and items in C: if there is no z with z : I ? ?",
+                    "sid": 107,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C ? A then add y : I ? to A else if z : I ? ?",
+                    "sid": 108,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A for some z then update weight of I ? in A to max (y, z) Figure 3: Weighted deductive parsing items via the deduction rules in Fig.",
+                    "sid": 109,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 110,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our parser performs a weighted deductive parsing (Nederhof, 2003), based on this deduction system.",
+                    "sid": 111,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a chart C and an agenda A, both initially empty, and we proceed as in Fig.",
+                    "sid": 112,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 113,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "outside estimates. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In order to speed up parsing, we add an estimate of the log of the outside probabilities of the items totheir weights in the agenda.",
+                    "sid": 114,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All our outside esti mates are admissible (Klein and Manning, 2003a)which means that they never underestimate the ac tual outside probability of an item.",
+                    "sid": 115,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, most of them are not monotonic.",
+                    "sid": 116,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, it can happen that we deduce an item I2 from an item I1 where the weight of I2 is greater than the weight of I1.",
+                    "sid": 117,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser can therefore end up in a local maximum that is not the global maximum we are searching for.",
+                    "sid": 118,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, our outside weights are only figures of merit (FOM).",
+                    "sid": 119,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only for the full SX estimate, the monotonicity is guaranteed and we can do true A?",
+                    "sid": 120,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "parsing as described in (Klein and Manning, 2003a) that always finds the best parse.",
+                    "sid": 121,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All outside estimates are computed for a certain maximal sentence length lenmax.",
+                    "sid": 122,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "539 POS tags: 0 : [A, ?1?] A a POS tag Unary: in : [B, ~l] in + log(p) : [A,~l] p : A(~?)",
+                    "sid": 123,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B(~?)",
+                    "sid": 124,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P Binary: inB : [B, ~lB], inC : [C,~lC ] inB + inC + log(p) : [A,~lA]where p : A( ~?A) ? B( ~?B)C( ~?C) ? P and the follow ing holds: we define B(i) as {1 ? j ? dim(B) | ~?B(j) occurs in ~?A(i)} and C(i) as {1 ? j ? dim(C) | ~?C(j) occurs in ~?A(i)}.",
+                    "sid": 125,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then for all i, 1 ? i ? dim(A): ~lA(i) = ?j?B(i)~lB(j) + ?j?C(i)~lC(j).",
+                    "sid": 126,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4: Inside estimate 4.1 Full SX estimate.",
+                    "sid": 127,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The full SX estimate, for a given sentence lengthn, is supposed to give the minimal costs (maxi mal probability) of completing a category X with a span ? into an S with span ??0, n??.",
+                    "sid": 128,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the computation, we need an estimate of the inside probability of a category C with a span?, regardless of the actual terminals in our in put.",
+                    "sid": 129,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This inside estimate is computed as shown in Fig.",
+                    "sid": 130,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 131,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, we do not need to consider the number of terminals outside the span of C (tothe left or right or in the gaps), they are not rel evant for the inside probability.",
+                    "sid": 132,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore the items have the form [A, ?l1, . . .",
+                    "sid": 133,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ldim(A)?], where A is a non-terminal and li gives the length of its ith component.",
+                    "sid": 134,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It holds that ?1?i?dim(A)li ? lenmax ? dim(A) + 1.A straight-forward extension of the CFG algorithm from (Klein and Manning, 2003a) for com puting the SX estimate is given in Fig.",
+                    "sid": 135,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.",
+                    "sid": 136,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given range vector ? = ??l1, r1?, . . .",
+                    "sid": 137,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ?lk, rk??",
+                    "sid": 138,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and a sentence length n, we define its inside length vector lin(?)",
+                    "sid": 139,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "as ?r1 ? l1, . . .",
+                    "sid": 140,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", rk ? lk?",
+                    "sid": 141,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and its outside length vector lout(?)",
+                    "sid": 142,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "as ?l1, r1 ? l1, l2 ? r1, . . .",
+                    "sid": 143,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", lk ? rk?1, rk ? lk, n?",
+                    "sid": 144,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "rk?.",
+                    "sid": 145,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm has two major problems: Since it proceeds top-down, in the Binary rules, we must compute all splits of the antecedent X span into the spans of A and B which is very expensive.Furthermore, for a category A with a certain num ber of terminals in the components and the gaps, we compute the lower part of the outside estimate several times, namely for every combination of number of terminals to the left and to the right(first and last element in the outside length vec Axiom : 0 : [S, ?0, len, 0?]",
+                    "sid": 146,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 ? len ? lenmax Unary: w : [A, ~l] w + log(p) : [B,~l] p : A(~?)",
+                    "sid": 147,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B(~?)",
+                    "sid": 148,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P Binary-right: w : [X,~lX ] w + in(A,~l?A) + log(p) : [B,~lB] Binary-left: w : [X,~lX ] w + in(B,~l?B) + log(p) : [A,~lA] where, for both rules, there is an instantiated rule p : X(~?)",
+                    "sid": 149,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A( ~?A)B( ~?B) such that ~lX = lout(?), ~lA = lout(?A),~l?A = lin(?A), ~lB = lout(?B,~lB = lin(?B . Figure 5: Full SX estimate top-down tor).",
+                    "sid": 150,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to avoid these problems, we now abstract away from the lengths of the part to the left and the right, modifying our items such as to allow a bottom-up strategy.The idea is to compute the weights of items rep resenting the derivations from a certain lower C up to some A (C is a kind of ?gap?",
+                    "sid": 151,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in the yield of A) while summing up the inside costs of off-spinenodes and the log of the probabilities of the corre sponding rules.",
+                    "sid": 152,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use items [A,C, ?A, ?C , shift ] where A,C ? N and ?A, ?C are range vectors, both with a first component starting at position 0.The integer shift ? lenmax tells us how many po sitions to the right the C span is shifted, comparedto the starting position of the A. ?A and ?C repre sent the spans of C and A while disregarding the number of terminals to the left the right.",
+                    "sid": 153,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I.e., only the lengths of the components and of the gaps are encoded.",
+                    "sid": 154,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means in particular that the length n of the sentence does not play a role here.",
+                    "sid": 155,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The right boundary of the last range in the vectors is limited to lenmax.",
+                    "sid": 156,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For any i, 0 ? i ? lenmax, and any range vector ?, we define shift(?, i) as the range vector one obtains from adding i to all rangeboundaries in ? and shift(?,?i) as the range vector one obtains from subtracting i from all bound aries in ?.",
+                    "sid": 157,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weight of [A,C, ?A, ?C , i] estimates the costs for completing a C tree with yield ?C into an A tree with yield ?A such that, if the span of A starts at position j, the span of C starts at position i + j. Fig.",
+                    "sid": 158,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 gives the computation.",
+                    "sid": 159,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The value of in(A,~l) is the inside estimate of [A,~l].",
+                    "sid": 160,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SX-estimate for some predicate C with 540 POS tags: 0 : [C,C, ?0, 1?, ?0, 1?, 0] C a POS tag Unary: 0 : [B,B, ?B, ?B, 0]log(p) : [A,B, ?B, ?B, 0] p : A(~?)",
+                    "sid": 161,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B(~?)",
+                    "sid": 162,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P Binary-right: 0 : [A,A, ?A, ?A, 0], 0 : [B,B, ?B, ?B , 0] in(A, l(?A)) + log(p) : [X,B, ?X , ?B, i] Binary-left: 0 : [A,A, ?A, ?A, 0], 0 : [B,B, ?B, ?B, 0] in(B, l(?B)) + log(p) : [X,A, ?X , ?A, 0] where i is such that for shift(?B, i) = ??B p : X(?X) ? A(?A)B(??B) is an instantiated rule.",
+                    "sid": 163,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Starting sub-trees with larger gaps: w : [B,C, ?B, ?C , i] 0 : [B,B, ?B, ?B, 0] Transitive closure of sub-tree combination: w1 : [A,B, ?A, ?B, i], w2 : [B,C, ?B, ?C , j] w1 + w2 : [A,C, ?A, ?C , i + j] Figure 6: Full SX estimate bottom-up span ? where i is the left boundary of the first component of ? and with sentence length n is then given by the maximal weight of[S,C, ?0, n?, shift (?i, ?), i].",
+                    "sid": 164,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Among our esti mates, the full SX estimate is the only one that is monotonic and that allows for true A?",
+                    "sid": 165,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "parsing.",
+                    "sid": 166,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 SX with Left, Gaps, Right, Length.",
+                    "sid": 167,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A problem of the previous estimate is that with a large number of non-terminals the computationof the estimate requires too much space.",
+                    "sid": 168,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our ex periments have shown that for treebank parsingwhere we have, after binarization and markoviza tion, appr.",
+                    "sid": 169,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12,000 non-terminals, its computationis not feasible.",
+                    "sid": 170,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore turn to simpler es timates with only a single non-terminal per item.We now estimate the outside probability of a non terminal A with a span of a length length (the sum of the lengths of all the components of the span), with left terminals to the left of the first component, right terminals to the right of the last component and gaps terminals in between the components of the A span, i.e., filling the gaps.",
+                    "sid": 171,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our items have the form [X, len , left , right , gaps ] with X ? N , len+ left +right +gaps ? lenmax, len ? dim(X), gaps ? dim(X) ? 1.",
+                    "sid": 172,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us assume that, in the rule X(~?)",
+                    "sid": 173,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A( ~?A)B( ~?B), when looking at the vector ~?, we have leftA variables for A-components precedingthe first variable of a B component, rightA variables for A-components following the last vari Axiom : 0 : [S, len, 0, 0, 0] 1 ? len ? lenmax Unary: w : [X, len, l, r, g]w + log(p) : [A, len, l, r, g] where p : X(~?)",
+                    "sid": 174,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A(~?)",
+                    "sid": 175,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P . Binary-right: w : [X, len, l, r, g] w + in(A, len ? lenB) + log(p) : [B, lenB , lB, rB, gB] Binary-left: w : [X, len, l, r, g] w + in(B, len ? lenA) + log(p) : [A, lenA, lA, rA, gA] where, for both rules, p : X(~?)",
+                    "sid": 176,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A( ~?A)B( ~?B) ? P . Figure 7: SX with length, left, right, gaps POS tags: 0 : [A, 1] A a POS tag Unary: in : [B, l]in + log(p) : [A, l] p : A(~?)",
+                    "sid": 177,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "B(~?)",
+                    "sid": 178,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P Binary: inB : [B, lB], inC : [C, lC ]inB + inC + log(p) : [A, lB + lC ] where either p : A( ~?A) ? B( ~?B)C( ~?C) ? P or p : A( ~?A) ? C( ~?C)B( ~?B) ? P . Figure 8: Inside estimate with total span length able of a B component and rightB variables for B-components following the last variable of a Acomponent.",
+                    "sid": 179,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(In our grammars, the first LHS argu ment always starts with the first variable from A.)",
+                    "sid": 180,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, gapsA = dim(A)?leftA?rightA, gapsB = dim(B) ? rightB . Fig.",
+                    "sid": 181,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 gives the computation of the estimate.",
+                    "sid": 182,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following side conditions must hold: For Binary-right to apply, the following constraints must be satisfied: a) len + l + r + g = lenB + lB+rB+gB , b) lB ? l+ leftA, c) if rightA > 0, then rB ? r+rightA, else (rightA = 0), rB = r,d) gB ? gapsA.",
+                    "sid": 183,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, for Binary-left to ap ply, the following constraints must be satisfied: a) len + l+ r+ g = lenA + lA + rA + gA, b) lA = l, c) if rightB > 0, then rA ? r + rightB , else (rightB = 0), rA = r d) gA ? gapsB.",
+                    "sid": 184,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The value in(X, l) for a non-terminal X and a length l, 0 ? l ? lenmax is an estimate of the probability of an X category with a span of length l. Its computation is specified in Fig.",
+                    "sid": 185,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8.",
+                    "sid": 186,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SX-estimate for a sentence length n and for some predicate C with a range characterized by ~?",
+                    "sid": 187,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= ??l1, r1?, . . .",
+                    "sid": 188,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ?ldim(C), rdim(C)??",
+                    "sid": 189,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where len = ?dim(C)i=1 (ri ? li) and r = n ? rdim(C) is then given by the maximal weight of the item [C, len , l1, r, n ? len?",
+                    "sid": 190,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "l1 ? r].",
+                    "sid": 191,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "541 Axiom : 0 : [S, len, 0, 0] 1 ? len ? lenmax Unary: w : [X, len, lr , g]w + log(p) : [A, len, lr , g] where p : X(~?)",
+                    "sid": 192,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A(~?)",
+                    "sid": 193,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P . Binary-right: w : [X, len, lr , g] w + in(A, len ? lenB) + log(p) : [B, lenB, lrB, gB ] Binary-left: w : [X, len, lr , g] w + in(B, len ? lenA) + log(p) : [A, lenA, lrA, gA] where, for both rules, p : X(~?)",
+                    "sid": 194,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A( ~?A)B( ~?B) ? P . Figure 9: SX estimate with length, LR, gaps 4.3 SX with LR, Gaps, Length.",
+                    "sid": 195,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to further decrease the space complexity, we can simplify the previous estimate by subsuming the two lengths left and right in a sin gle length lr . I.e., the items now have the form [X, len , lr , gaps ] with X ? N , len + lr +gaps ? lenmax, len ? dim(X), gaps ? dim(X) ? 1.",
+                    "sid": 196,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The computation is given in Fig.",
+                    "sid": 197,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9.",
+                    "sid": 198,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, we define leftA, gapsA, rightA and gapsB , rightB for a rule X(~?)",
+                    "sid": 199,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A( ~?A)B( ~?B) as above.",
+                    "sid": 200,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The side conditions are as follows: For Binary-right to apply, the following constraints must be satisfied: a) len + lr + g = lenB + lrB + gB , b) lr < lrB, and c) gB ? gapsA.",
+                    "sid": 201,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Binary-left to apply, the following must hold: a) len + lr + g = lenA + lrA + gA, b) if rightB = 0 then lr = lrA, else lr < lrA and c) gA ? gapsB.",
+                    "sid": 202,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SX-estimate for a sentence length n and for some predicate C with a span ~?",
+                    "sid": 203,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= ??l1, r1?, . . .",
+                    "sid": 204,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ?ldim(C), rdim(C)??",
+                    "sid": 205,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where len = ?dim(C)i=1 (ri ? li) and r = n ? rdim(C) is then the maximal weight of [C, len , l1+r, n?len?l1?r].",
+                    "sid": 206,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "evaluation. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The goal of our evaluation of our parser is to show that, firstly, reasonable parser speed can be achieved and, secondly, the parser output is of promising quality.",
+                    "sid": 207,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Data.",
+                    "sid": 208,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our data source is the German NeGra treebank (Skut et al, 1997).",
+                    "sid": 209,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a preprocessing step, following common practice (Ku?bler and Penn, 2008), we attach punctuation (not included in theNeGra annotation) as follows: In a first pass, us ing heuristics, we attach punctuation as high as possible while avoiding to introduce new crossingbranches.",
+                    "sid": 210,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a second pass, parentheses and quo tation marks preferably attach to the same node.Grammatical function labels on the edges are dis carded.",
+                    "sid": 211,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We create data sets of different sizes in order to see how the size of the training set relates to the gain using context summary estimates and to the output quality of the parser.",
+                    "sid": 212,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first set uses the first 4000 sentences and the second one all sentences of NeGra.",
+                    "sid": 213,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to memory limitations, in both sets, we limit ourselves to sentences of a maximal length of 25 words.",
+                    "sid": 214,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the first 90% of both sets as training set and the remaining 10% as test set.",
+                    "sid": 215,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tab.",
+                    "sid": 216,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 shows the resulting sizes.",
+                    "sid": 217,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NeGra-small NeGra training test training test size 2839 316 14858 1651 Table 1: Test and training sets 5.2 Treebank Grammar Extraction.",
+                    "sid": 218,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S VP VP PROAV VMFIN VVPP VAINF daru?ber mu?",
+                    "sid": 219,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "nachgedacht werden about it must thought be ?It must be thought about it?",
+                    "sid": 220,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 10: A sample tree from NeGraAs already mentioned, in NeGra, discontinu ous phrases are annotated with crossing branches(see Fig.",
+                    "sid": 221,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 for an example with two discontinuous VPs).",
+                    "sid": 222,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such discontinuities can be straightforwardly modelled with LCFRS.",
+                    "sid": 223,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the al gorithm from Maier and S?gaard (2008) to extractLCFRS rules from NeGra and TIGER.",
+                    "sid": 224,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It first creates rules of the form P (a) ? ?",
+                    "sid": 225,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "for each pre terminal P dominating some terminal a. Then for all other nonterminals A0 with the childrenA1 ? ?",
+                    "sid": 226,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?Am, a clause A0 ? A1 ? ?",
+                    "sid": 227,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?Am is created.",
+                    "sid": 228,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The arguments of the A1 ? ?",
+                    "sid": 229,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?Am are sin gle variables where the number of arguments is the number of discontinuous parts in the yield ofa predicate.",
+                    "sid": 230,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The arguments of A0 are concate nations of these variables that describe how the 542discontinuous parts of the yield of A0 are obtained from the yields of its daughters.",
+                    "sid": 231,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Differ ent occurrences of the same non-terminal, onlywith different fan-outs, are distinguished by corresponding subscripts.",
+                    "sid": 232,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that this extraction al gorithm yields only monotone LCFRS (equivalent to ordered simple RCG).",
+                    "sid": 233,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "See Maier and S?gaard (2008) for further details.",
+                    "sid": 234,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Fig.",
+                    "sid": 235,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10, we obtain for instance the rules in Fig.",
+                    "sid": 236,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11.",
+                    "sid": 237,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROAV(Daru?ber) ? ?",
+                    "sid": 238,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "VMFIN(mu?)",
+                    "sid": 239,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "VVPP(nachgedacht) ? ?",
+                    "sid": 240,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "VAINF(werden) ? ?",
+                    "sid": 241,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S1(X1X2X3) ? VP2(X1, X3) VMFIN(X2) VP2(X1, X2X3) ? VP2(X1, X2) VAINF(X3) VP2(X1, X2) ? PROAV(X1) VVPP(X2) Figure 11: LCFRS rules for the tree in Fig.",
+                    "sid": 242,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 5.3 Binarization and Markovization.",
+                    "sid": 243,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before parsing, we binarize the extracted LCFRS.",
+                    "sid": 244,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this we first apply Collins-style head rules, based on the rules the Stanford parser (Klein and Manning, 2003b) uses for NeGra, to mark the resp.",
+                    "sid": 245,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "head daughters of all non-terminal nodes.",
+                    "sid": 246,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we reorder the RHSs such that the sequence ? of elements to the right of the head daughter is reversed and moved to the beginning of the RHS.",
+                    "sid": 247,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then perform a binarization that proceeds fromleft to right.",
+                    "sid": 248,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The binarization works like the trans formation into Chomsky Normal Form for CFGsin the sense that for RHSs longer than 2, we in troduce a new non-terminal that covers the RHS without the first element.",
+                    "sid": 249,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rightmost new rule, which covers the head daughter, is binarized to unary.",
+                    "sid": 250,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not use a unique new non-terminal for every new rule.",
+                    "sid": 251,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, to the new symbols introduced during the binarization (VPbin in the example), a variable number of symbols from the vertical and horizontal context of the original ruleis added in order to achieve markovization.",
+                    "sid": 252,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the literature, we call the respective quan tities v and h. For reasons of space we restrict ourselves here to the example in Fig.",
+                    "sid": 253,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12.",
+                    "sid": 254,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Refer toMaier and Kallmeyer (2010) for a detailed presen tation of the binarization and markovization.",
+                    "sid": 255,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabilities are then computed based on the rule frequencies in the transformed treebank, using a Maximum Likelihood estimator.",
+                    "sid": 256,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S VP PDS VMFIN PIS AD V VVINF das mu?",
+                    "sid": 257,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "man jetzt machen that must one now do ?One has to do that now?",
+                    "sid": 258,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tree after binarization: S Sbin VP VPbin Sbin VPbin PDS VMFIN PIS ADV VVINF Figure 12: Sample binarization 5.4 Evaluation of Parsing Results.",
+                    "sid": 259,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to assess the quality of the output of our parser, we choose an EVALB-style metric,i.e., we compare phrase boundaries.",
+                    "sid": 260,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the con text of LCFRS, we compare sets of items [A, ~?]",
+                    "sid": 261,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "that characterize the span of a non-terminal A in a derivation tree.",
+                    "sid": 262,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One set is obtained from the parser output, and one from the corresponding treebank trees.",
+                    "sid": 263,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using these item sets, we compute labeled and unlabeled recall (LR/UR), precision (LP/UP), and the F1 measure (LF1/UF1).",
+                    "sid": 264,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that if k = 1, our metric is identical to its PCFG equivalent.We are aware of the recent discussion about the shortcomings of EVALB.",
+                    "sid": 265,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A discussion of this issue is presented in Maier (2010).",
+                    "sid": 266,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.5 Experiments.",
+                    "sid": 267,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all experiments, we provide the parser withgold part-of-speech tags.",
+                    "sid": 268,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the experi ments with NeGra-small, the parser is given themarkovization settings v = 1 and h = 1.",
+                    "sid": 269,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We com pare the parser performance without estimates(OFF) with its performance with the estimates de scribed in 4.2 (SIMPLE) and 4.3 (LR).",
+                    "sid": 270,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tab.",
+                    "sid": 271,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 shows the results.",
+                    "sid": 272,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fig.",
+                    "sid": 273,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "13 shows the number of items produced by the parser, indicating that theestimates have the desired effect of preventing un necessary items from being produced.",
+                    "sid": 274,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that it is even the case that the parser produces less itemsfor the big set with LR than for the small set with out estimate.",
+                    "sid": 275,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can see that the estimates lead to a slightly 543 OFF SIMPLE LR UP/UR 72.29/72.40 70.49/71.81 72.10/72.60 UF1 72.35 71.14 72.35 LP/LR 68.31/68.41 64.93/66.14 67.35/66.14 LF1 68.36 65.53 65.53 Parsed 313 (99.05%) 313 (99.05%) 313 (99.05%) Table 2: Experiments with NeGra-small 50 100 150 200 250 300 350 400 450 500 16 18 20 22 24 N o. o f i te m s (in 10 00 ) Sentence length OFF (NeGra) LR (NeGra) OFF (NeGra-small) SIMPLE (NeGra-small) LR (NeGra-small) Figure 13: Items produced by the parser lower F-score.",
+                    "sid": 276,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, while the losses in termsof F1 are small, the gains in parsing time are sub stantial, as Fig.",
+                    "sid": 277,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "13 shows.",
+                    "sid": 278,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tab.",
+                    "sid": 279,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 shows the results of experiments with NeGra, with the markovization settings v = 2 and h = 1 which have proven to be successfulfor PCFG parsing of NeGra (Rafferty and Manning, 2008).",
+                    "sid": 280,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, due to memory re strictions, we were not able to compute SIMPLE for the large data set.1 Resp.",
+                    "sid": 281,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LR, the findings are comparable to the ones for NeGra-short.",
+                    "sid": 282,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The speedup is paid with a lower F1.",
+                    "sid": 283,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "OFF LR UP/UR 76.89/77.35 75.22/75.99 UF1 77.12 75.60 LP/LR 73.03/73.46 70.98/71.70 LF1 73.25 71.33 Parsed 1642 (99.45%) 1642 (99.45%) Table 3: Experiments with NeGra Our results are not directly comparable with PCFG parsing results, since LCFRS parsing is a 1SIMPLE also proved to be infeasible to compute for the small set for the markovization settings v = 2 and h = 1 due to the greatly increased label set with this settings.harder task.",
+                    "sid": 284,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, since the EVALB met ric coincides for constituents without crossingbranches, in order to place our results in the con text of previous work on parsing NeGra, we cite some of the results from the literature which were obtained using PCFG parsers2: Ku?bler (2005) (Tab.",
+                    "sid": 285,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1, plain PCFG) obtains 69.4, Dubey and Keller (2003) (Tab.",
+                    "sid": 286,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5, sister-head PCFG model)71.12, Rafferty and Manning (2008) (Tab.",
+                    "sid": 287,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2, Stan ford parser with markovization v = 2 and h = 1)77.2, and Petrov and Klein (2007) (Tab.",
+                    "sid": 288,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1, Berkeley parser) 80.1.",
+                    "sid": 289,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Plaehn (2004) obtains 73.16 La beled F1 using Probabilistic Discontinuous PhraseStructure Grammar (DPSG), albeit only on sen tences with a length of up to 15 words.",
+                    "sid": 290,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On those sentences, we obtain 81.27.The comparison shows that our system delivers competitive results.",
+                    "sid": 291,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, when com paring this to PCFG parsing results, one hasto keep in mind that LCFRS parse trees contain non-context-free information about discontinuities.",
+                    "sid": 292,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, a correct parse with our gram mar is actually better than a correct CFG parse,evaluated with respect to a transformation of Ne Gra into a context-free treebank where precisely this information gets lost.",
+                    "sid": 293,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We have presented the first parser for unrestrictedProbabilistic Linear Context-Free Rewriting Sys tems (PLCFRS), implemented as a CYK parser with weighted deductive parsing.",
+                    "sid": 294,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To speed up parsing, we use context summary estimates for parse items.",
+                    "sid": 295,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An evaluation on the NeGra treebank, both in terms of output quality and speed, showsthat data-driven parsing using PLCFRS is feasible.",
+                    "sid": 296,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Already in this first attempt with a straight forward binarization, we obtain results that are comparable to state-of-the-art PCFG results in terms of F1, while yielding parse trees that are richer than context-free trees since they describediscontinuities.",
+                    "sid": 297,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, our approach demon strates convincingly that PLCFRS is a natural and tractable alternative for data-driven parsing which takes non-local dependencies into consideration.",
+                    "sid": 298,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2Note that these results were obtained on sentences with a length of ? 40 words and that those parser possibly would deliver better results if tested on our test set.",
+                    "sid": 299,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "544",
+                    "sid": 300,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

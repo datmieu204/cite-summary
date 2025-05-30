@@ -1,0 +1,2513 @@
+{
+    "ID": "J00-3004",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Chinese is written without using spaces or other word delimiters.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although a text may be thought of as a corresponding sequence of words, there is considerable ambiguity in the placement of boundaries.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interpreting a text as a sequence of words is beneficial for some information retrieval and storage tasks: for example, full-text search,word-based compression,and keyphrase extraction.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe a scheme that infers appropriate positions for word boundaries using an adaptive language model that is standard in text compression.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is trained on a corpus ofpresegmented text, and when applied to new text, interpolates word boundaries so as to maximize the compression obtained.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This simple and general method performs well with respect to specialized schemes for Chinese language segmentation.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Languages such as Chinese and Japanese are written without using any spaces or other word delimiters (except for punctuation marks)-indeed, the Western notion of a word boundary is literally alien (Wu 1998).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nevertheless, words are present in these languages, and Chinese words often comprise several characters, typically two, three, or four-five-character words also exist, but they are rare.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many characters can stand alone as words in themselves, while on other occasions the same character is the first or second character of a two-character word, and on still others it participates as a component of a three- or four-character word.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This phenomenon causes obvious ambiguities in word segmentation.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Readers unfamiliar with Chinese can gain an appreciation of the problem of mul\u00ad tiple interpretations from Figure 1, which shows two alternative interpretations of the same Chinese character sequence.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The text is a joke that relies on the ambiguity of phrasing.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once upon a time, the story goes, a man set out on a long journey.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before he could return home the rainy season began, and he had to take shelter at a friend's house.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But he overstayed his welcome, and one day his friend wrote him a note: the first line in Figure 1.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The intended interpretation is shown in the second line, which means \"It is raining, the god would like the guest to stay.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the god wants you to stay, I do not!\"",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On seeing the note, the visitor took the hint and prepared to leave.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a joke he amended the note with the punctuation shown in the third line, which leaves three sentences whose meaning is totally different-\"The rainy day, the staying day.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Would you like me to stay?",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sure!\"",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "* School of Computing and Mathematical Sciences, The Robert Gordon University, Aberdeen, Scotland t Computer Science, University of Waikato, Hamilton, New Zealand \u00a9 2000 Association for Computational Linguistics A sentence in Chinese Interpretation l Interpretation 2 Figure 1 A Chinese sentence with ambiguity of phrasing.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A sentence in Chinese Interpretation l Interpretation 2 Figure 2 An example that can be segmented in two different ways.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "physics theory school physics evidence I products I / barber study / / / 1>JJ 1I - science =' credit 1>JJ1I:\u00a5 reason subject / image understand student ph\"y\"s'icist Figure 3 Example of treating each character in a query as a word.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This example relies on ambiguity of phrasing, but the same kind of problem can arise with word segmentation.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows a more prosaic example.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the or\u00ad dinary sentence of the first line, there are two different interpretations depending on the context of the sentence: \"I like New Zealand flowers\" and \"I like fresh broccoli\" respectively.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fact that machine-readable Chinese text is invariably stored in unsegmented form causes difficulty in applications that use the word as the basic unit.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, search engines index documents by storing a list of the words they contain, and allow the user to retrieve all documents that contain a specified combination of query terms.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This presupposes that the documents are segmented into words.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Failure to do so, and treating every character as a word in itself, greatly decreases the precision of retrieval since large numbers of extraneous documents are returned that contain characters, but not words, from the query.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 illustrates what happens when each character in a query is treated as a single-character word.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The intended query is \"physics\" or \"physicist.\"",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first charac\u00ad ter returns documents about such things as \"evidence,\" \"products,\" \"body,\" \"image,\" \"prices\"; while the second returns documents about \"theory,\" \"barber,\" and so on.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus many documents that are completely irrelevant to the query will be returned, causing the precision of information retrieval to decrease greatly.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar problems occur in word-based compression, speech recognition, and so on.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is true that most search engines allow the user to search for multiword phrases by enclosing them in quotation marks, and this facility could be used to search for multicharacter words in Chinese.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This, however, runs the risk of retrieving irrelevant documents in which the same characters occur in sequence but with a different in\u00ad tended segmentation.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More importantly, it imposes on the user an artificial requirement to perform manual segmentation on each full-text query.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word segmentation is an important prerequisite for such applications.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is a difficult and ill-defined task.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to Sproat et al. {1996) and Wu and Fung {1994), experiments show that only about 75% agreement between native speakers is to be expected on the \"correct\" segmentation, and the figure reduces as more people become involved.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper describes a general scheme for segmenting text by inferring the position of word boundaries, thus supplying a necessary preprocessing step for applications like those mentioned above.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike other approaches, which involve a dictionary of legal words and are therefore language-specific, it works by using a corpus of already\u00ad segmented text for training and thus can easily be retargeted for any language for which a suitable corpus of segmented material is available.",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To infer word boundaries, a general adaptive text compression technique is used that predicts upcoming characters on the basis of their preceding context.",
+                    "sid": 45,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Spaces are inserted into positions where their presence enables the text to be compressed more effectively.",
+                    "sid": 46,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach means that we can capitalize on existing research in text compression to create good models for word segmentation.",
+                    "sid": 47,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To build a segmenter for a new language, the only resource required is a corpus of segmented text to train the compression model.",
+                    "sid": 48,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The structure of this paper is as follows: The next section reviews previous work on the Chinese segmentation problem.",
+                    "sid": 49,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we explain the operation of the adaptive text compression technique that will be used to predict word boundaries.",
+                    "sid": 50,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next we show how space insertion can be viewed as a problem of hidden Markov modeling, and how higher-order models, such as the ones used in text compression, can be employed in this way.",
+                    "sid": 51,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following section describes several experiments designed to evaluate the success of the new word segmenter.",
+                    "sid": 52,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally we discuss the application of language segmentation in digital libraries.",
+                    "sid": 53,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system for segmenting Chinese text is available on the World Wide Web at http://www.nzdl.org/cgi-bin/congb.",
+                    "sid": 54,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It takes GB-encoded input text, which can be cut from a Chinese document and pasted into the input window.1 Once the segmenter has been invoked, the result is rewritten into the same window.",
+                    "sid": 55,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "previous methods for segmenting chinese. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The problem of segmenting Chinese text has been studied by researchers for many years; see Wu and Tseng {1993) for a detailed survey.",
+                    "sid": 56,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several different algorithms have been proposed, which, generally speaking, can be classified into dictionary-based and statistical-based methods, although other techniques that involve more linguistic information, such as syntactic and semantic knowledge, have been reported in the\u00b7 natural language processing literature.",
+                    "sid": 57,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cheng, Young, and Wong (1999) describe a dictionary-based method.",
+                    "sid": 58,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a dictionary of frequently used Chinese words, an input string is compared with words in the dictionary to find the one that matches the greatest number of characters of the 1 To enable proper viewing, and input, of GB-encoded characters, an appropriate version of Netscape.",
+                    "sid": 59,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Communicator or Internet Explorer must be used.",
+                    "sid": 60,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "input.",
+                    "sid": 61,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is called the maximum forward match heuristic.",
+                    "sid": 62,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An alternative is to work backwards through the text, resulting in the maximum backward match heuristic.",
+                    "sid": 63,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is easy to find situations where these fail.",
+                    "sid": 64,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To use an English example, forward matching fails on the input \"the red ...",
+                    "sid": 65,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\" (it is misinterpreted as \"there d ...",
+                    "sid": 66,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\"),while backward matching fails on text ending \"... his car\" (it is misinterpreted as \"... hi scar\").",
+                    "sid": 67,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Analogous failures occur with Chinese text.",
+                    "sid": 68,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dai, Khoo, and Loh (1999) use statistical methods to perform text segmentation.",
+                    "sid": 69,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They concentrate on two-character words, because two characters is the most com\u00ad mon word length in Chinese.",
+                    "sid": 70,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several different notions of frequency of characters and bigrams are explored: relative frequency, document frequency, weighted document frequency, and local frequency.",
+                    "sid": 71,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also look at both contextual and positional in\u00ad formation.",
+                    "sid": 72,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Contextual information is found to be the single most important factor that governs the probability that a bigram forms a word; incorporating the weighted document frequency can improve the model significantly.",
+                    "sid": 73,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the positional frequency is not found to be helpful in determining words.",
+                    "sid": 74,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ponte and Croft (1996) introduce two models for word segmentation: word-based and bigram models.",
+                    "sid": 75,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both utilize probabilistic automata.",
+                    "sid": 76,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the word-based method, a suffix tree of words in the lexicon is used to initialize the model.",
+                    "sid": 77,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each node is associated with a probability, which is estimated by segmenting training text using the longest match strategy.",
+                    "sid": 78,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This makes the segmenter easy to transplant to new languages.",
+                    "sid": 79,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bigram model uses the lexicon to initialize probability estimates for each bigram, and the probability with which each bigram occurs, and uses the Baum-Welch algorithm (Rabiner 1989) to update the probabilities as the training text is processed.",
+                    "sid": 80,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hockenmaier and Brew (1998) present an algorithm, based on Palmer's (1997) ex\u00ad periments, that applies a symbolic machine learning technique-transformation-based error-driven learning (Brill1995)-to the problem of Chinese word segmentation.",
+                    "sid": 81,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Us\u00ad ing a set of rule templates and four distinct initial-state annotators, Palmer concludes that the learning technique works well.",
+                    "sid": 82,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hockenmaier and Brew investigate how per\u00ad formance is influenced by different rule templates and corpus size.",
+                    "sid": 83,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use three rule templates: simple bigram rules, trigram rules, and more elaborate rules.",
+                    "sid": 84,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their experiments indicate that training data size has the most significant influence on per\u00ad formance.",
+                    "sid": 85,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Good performance can be acquired using simple rules only if the training corpus is large enough.",
+                    "sid": 86,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lee, Ng, and Lu (1999) have recently introduced a new segmentation method for a Chinese spell-checking application.",
+                    "sid": 87,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using a dictionary with single-character word occurrence frequencies, this scheme first divides text into sentences, then into phrases, and finally into words using a small number of word combinations that are conditioned on a heuristic to avoid delay during spell-checking.",
+                    "sid": 88,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When compared with forward maximum matching, the new method resolves more than 10% more ambiguities, but enjoys no obvious speed advantage.",
+                    "sid": 89,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The way in which Chinese characters are used in names differs greatly from the way they are used in ordinary text, and some researchers, notably Sproat et al.",
+                    "sid": 90,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996), have established special-purpose recognizers for Chinese names (and translated for\u00ad eign names), designed to improve the accuracy of automatic segmenters by treating names specially.2 Chinese names always take the form family name followed by given name.",
+                    "sid": 91,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whereas family names are limited to a small group of characters, given names can consist of any characters.",
+                    "sid": 92,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They normally comprise one or two characters, but 2 In English there are significant differences between the frequency distribution of letters in names and.",
+                    "sid": 93,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in words-for example, compare the size of the T section of a telephone directory with the size of the T section of a dictionary-but such differences are far more pronounced in Chinese.",
+                    "sid": 94,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "three-character names have arisen in recent years to ensure uniqueness when the fam\u00ad ily name is popular-such as Smith or Jones in English.",
+                    "sid": 95,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sproat et al.",
+                    "sid": 96,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1996) implement special recognizers not only for Chinese names and transliterated foreign names, but for components of morphologically obtained words as well.",
+                    "sid": 97,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach we present is not specially tailored for name recognition, but because it is fully adaptive it is likely that it would yield good performance on names if lists of names were provided as supplementary training text.",
+                    "sid": 98,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has not yet been tested.",
+                    "sid": 99,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "language modeling using ppm. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Statistical language models are well developed in the field of text compression.",
+                    "sid": 100,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Com\u00ad pression methods are usually divided into symbolwise and dictionary schemes (Bell, Cleary, and Witten, 1990).",
+                    "sid": 101,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Symbolwise methods, which generally make use of adap\u00ad tively generated statistics, give excellent compression-in fact, they include the best known methods.",
+                    "sid": 102,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although dictionary methods such as the ZivLempel schemes per\u00ad form less well, they are used in practical compression utilities like Unix compress and gzip because they are fast.",
+                    "sid": 103,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our work we use the prediction by partial matching (PPM) symbolwise com\u00ad pression scheme (Cleary and Witten 1984), which has become a benchmark in the compression community.",
+                    "sid": 104,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It generates \"predictions\" for each input symbol in turn.",
+                    "sid": 105,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each prediction takes the form of a probability distribution that is provided to an encoder.",
+                    "sid": 106,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The encoder is usually an arithmetic coder; the details of coding are of no relevance to this paper.",
+                    "sid": 107,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PPM is an n-gram approach that uses finite-context models of characters, where the previous few (say three) characters predict the upcoming one.",
+                    "sid": 108,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The conditional probability distribution of characters, conditioned on the preceding few characters, is maintained and updated as each character of input is processed.",
+                    "sid": 109,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This distribution, along with the actual value of the preceding few characters, is used to predict each up\u00ad coming symbol.",
+                    "sid": 110,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exactly the same distributions are maintained by the decoder, which updates the appropriate distribution as each character is received.",
+                    "sid": 111,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is what we call adaptive modeling: both encoder and decoder maintain the same models-not by communicating the models directly, but by updating them in precisely the same way.",
+                    "sid": 112,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than using a fixed context length (three was suggested above), the PPM method chooses a maximum context length and maintains statistics for this and all shorter contexts.",
+                    "sid": 113,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The maximum is five in most of the experiments below, and statistics are maintained for models of order 5, 4, 3, 2, 1, and 0.",
+                    "sid": 114,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are not stored separately; they are all kept in a single trie structure.",
+                    "sid": 115,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PPM incorporates a simple and highly effective method to combine the predictions of the models of different order-often called the problem of \"backoff.\"",
+                    "sid": 116,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To encode the next symbol, it starts with the maximum-order model (order 5).",
+                    "sid": 117,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If that model contains a prediction for the upcoming character, the character is transmitted according to the order 5 distribution.",
+                    "sid": 118,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, both encoder and decoder escape down to order 4.",
+                    "sid": 119,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two possible situations.",
+                    "sid": 120,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the order 5 context-that is, the preceding five-character sequence-has not been encountered before, then escape to order 4 is inevitable, and both encoder and decoder can deduce that fact without requiring any communication.",
+                    "sid": 121,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If not, that is, if the preceding five characters have been encountered in sequence before but not followed by the upcoming character, then only the encoder knows that an escape is necessary.",
+                    "sid": 122,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, therefore, it must signal this fact to the decoder by transmitting an escape event-and space must be reserved for this event in every probability distribution that the encoder and decoder maintain.",
+                    "sid": 123,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 PPM model after processing the string tobeornottobe; c = count, p = prediction probability.",
+                    "sid": 124,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Order 2 Order 1 Order 0 Prediction c p Prediction c p Prediction c p be -> 0 1 1/2 b -> e 2 3/4 -> b 2 3/26 -> esc 1 1/2 -> esc 1 1/4 -> e 2 3/26 eo -> r 1 1/2 e -> 0 1 1/2 -> n 1 1/26 -> esc 1 1/2 -> esc 1 1/2 -> 0 4 7/26 no -> t 1 1/2 n -> 0 1 1/2 -> r 1 1/26 -> esc 1 1/2 -> esc 1 1/2 -> t 3 5/26 ob -> e 2 3/4 0 -> b 2 3/8 -> esc 6 3/13 -> esc 1 1/4 -> r 1 1/8 or -> n 1 1/2 -> 1 1/8 Order -1 -> esc 1 1/2 -> esc 3 3/8 Prediction c p ot -> t 1 1/2 r -> n 1 1/2 A 1 1/IAI -> esc 1 1/2 -> esc1 1/2 > rn -> 0 -> esc to -> b -> esc -> esc -> 0 2 1/2 -> t 1 1/6 -> esc 2 1/3 Once any necessary escape event has been transmitted and received, both encoder and decoder agree that the upcoming character will be coded by the order 4 model.",
+                    "sid": 125,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, this may not be possible either, and further escapes may take place.",
+                    "sid": 126,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ultimately, the order 0 model may be reached; in this case the character can be transmitted if it is one that has occurred before.",
+                    "sid": 127,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, there is one further escape (to an order -1 model), and the standard ASCII representation of the character is sent.",
+                    "sid": 128,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only remaining question is how to calculate the probabilities from the counts\u00ad a simple matter once we have resolved how much space to allocate for the escape probability.",
+                    "sid": 129,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been much discussion of this question, and several different methods have been proposed.",
+                    "sid": 130,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments calculate the escape probability in a particular context as !a 1 n where n is the number of times that context has appeared and d is the number of different symbols that have directly followed it (Howard 1993).",
+                    "sid": 131,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability of a character that has occurred c times in that context is c-!",
+                    "sid": 132,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "n Since there are d such characters, and their counts sum to n, it is easy to confirm that the probabilities in the distribution (including the escape probability) sum to 1.",
+                    "sid": 133,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To illustrate the PPM modeling technique, Table 1 shows the model after the string tobeornottobe has been processed.",
+                    "sid": 134,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this illustration the maximum model order is 2 (not 5 as stated above), and each prediction has a count c and a prediction probability p. The probability is determined from the counts associated with the prediction using the formula that we discuss above.",
+                    "sid": 135,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IAI is the size of the alphabet, and it is this that determines the probability for each unseen character.",
+                    "sid": 136,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model in Table 1 is used as follows: Suppose the character following tobe\u00ad ornottobe is o. Since the order 2 context is be, and the upcoming symbol has already been seen once in this context, the order 2 model is used for encoding in this case, and the encoding probability is 1/2.",
+                    "sid": 137,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the symbol o would be encoded in 1 bit.",
+                    "sid": 138,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the next character, instead of o, were t, this has not been seen in the current order 2 context (which is still be).",
+                    "sid": 139,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently an order 2 escape event is coded (probability 1/2, again in the be context), and the context is truncated to e. Checking the order 1 model, the upcoming character t has not been seen in this context, so an order 1 escape event is coded (probability 1/2 in the e context) and the context is truncated to the null context, corresponding to the order 0 model.",
+                    "sid": 140,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The character t is finally encoded in this model, with probability 5/26.",
+                    "sid": 141,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus three encodings occur for this one character, with probabilities 1/2, 1/2, and 5/26 respectively, which together amount to just over 5 bits of information.",
+                    "sid": 142,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the upcoming character had been x instead of t, a final level of escape, this time to order 0, would have occurred (probability 3/13), and the x would be encoded with a probability of 1/256 (assuming that the alphabet has 256 characters) for a total of just over 10 bits.",
+                    "sid": 143,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is clear from Table 1 that, in the context tobeornottobe, if the next character is o it will be encoded by the order 2 model.",
+                    "sid": 144,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence if an escape occurs down to order 1, the next character cannot be o. This makes it unnecessary to reserve probability space for the occurrence of o in the order 1 (or order 0 or order -1) models.",
+                    "sid": 145,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This idea, which is called exclusion, can be exploited to improve compression.",
+                    "sid": 146,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A character that occurs at one level is excluded from all lower-order predictions, allowing a greater share of the probability space to be allocated to the other characters in these lower-order models (Bell, Cleary, and Witten 1990).",
+                    "sid": 147,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if the character b were to follow tobeornottobe it would be encoded with probabilities (1/2,1/2,3/26), without exclusion, leading to a coding requirement of 5.1 bits.",
+                    "sid": 148,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, if exclusion was exploited, both encoder and decoder will recognize that escape from order 1 to order 0 is inevitable because the order 1 model adds no characters that were not already predicted by the order 2 model.",
+                    "sid": 149,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the coding probabilities will be (1/2,1, 3/18) with exclusion, reducing the total code space forb to 3.6 bits.",
+                    "sid": 150,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An important special case of the exclusion policy occurs at the lowest-level model: for example, the x at the end of the previous paragraph would finally be encoded with a probability of 1/250 rather than 1/256 because characters that have already occurred can never be predicted in the order -1 context.",
+                    "sid": 151,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One slight further improvement to PPM is incorporated in the experiments: de\u00ad terministic scaling (Teahan 1998).",
+                    "sid": 152,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although it probably has negligible effect on our overall results, we record it here for completeness.",
+                    "sid": 153,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that in deter\u00ad ministic contexts, for which d = 1, the probability that the single character that has occurred before reappears is greater than the 11/(2n) implied by the above esti\u00ad mator.",
+                    "sid": 154,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, in this case the probability is increased in an ad hoc manner to 11/(6n).",
+                    "sid": 155,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "using a hidden markov model to insert spaces. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Inserting spaces into text can be viewed as a hidden Markov modeling problem.",
+                    "sid": 156,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Being entirely adaptive, the method works regardless of what language it is used with.",
+                    "sid": 157,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For pedagogical purposes, we will explain it with English text.",
+                    "sid": 158,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Between every pair of characters lies a potential space.",
+                    "sid": 159,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4(a) illustrates the model for the fragment tobeornottobe.",
+                    "sid": 160,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It contains one node for each letter in the text and one for each possible intercharacter space (represented as dots \u2022 in the figure).",
+                    "sid": 161,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any given assignment of word boundaries to this text fragment will correspond to (a) (b) Figure 4 Hidden Markov Model for Space Insertion.",
+                    "sid": 162,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) (b) Figure 5 Hidden Markov model for space insertion using an order 1 model.",
+                    "sid": 163,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a path through the model from beginning (at the left) to end (at the right).",
+                    "sid": 164,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of all possible paths, we seek the one that gives the best compression according to the PPM text compression method, suitably primed with English text.",
+                    "sid": 165,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This path is the correct path, corresponding to the text to be or not to be, shown in bold in Figure 4(b).",
+                    "sid": 166,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Markov Modeling with Context.",
+                    "sid": 167,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 can easily be converted into a Markov model for a given order of PPM.",
+                    "sid": 168,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose we use order 1: then we rewrite Figure 4(a) so that the states are bigrams, as shown in Figure S(a).",
+                    "sid": 169,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The interpretation of each state is that it corresponds to the last character of the string that labels the state.",
+                    "sid": 170,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The very first state, labeled t, has no prior context-in PPM terms, that character will be transmitted by escaping down to order 0 (or -1).",
+                    "sid": 171,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, the bold arrows in Figure S(b) shows the path corresponding to the string with spaces inserted correctly.",
+                    "sid": 172,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "t. / '\"'...",
+                    "sid": 173,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) (b) (c) Figure 6 Growing a tree for order 1 modeling of tobeornottobe.",
+                    "sid": 174,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar models could be written for higher-order versions of PPM.",
+                    "sid": 175,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, with an order 3 model, states would be labeled by strings of length four (except for the first few states, where the context would be truncated because they occur at the beginning of the string).",
+                    "sid": 176,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And each state would have variants corresponding to all different ways of inserting space into the four-character string.",
+                    "sid": 177,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the states corresponding to the sixth character of tobeornottobe would include bear and eeor, as well as \u2022ear, eo\u2022r and \u2022o\u2022r. It is not hard to see that the number of states corresponding to a particular character of the input string increases with model order according to the Fibonnacci series.",
+                    "sid": 178,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5(a) shows two states per symbol for order 1, there are three states per symbol for order 2, five for order 3, eight for order 4, thirteen for order 5, and so on.",
+                    "sid": 179,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 The Space Insertion Algorithm.",
+                    "sid": 180,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a hidden Markov model like the one in Figure 5(a), where probabilities are supplied for each edge according to an order 1 compression model, the space insertion problem is tantamount to finding the sequence of states through the model, from beginning to end, that maximizes the total probability-or, equivalently, that minimizes the number of bits required to represent the text according to that model.",
+                    "sid": 181,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following Viterbi-style algorithm can be used to solve this problem.",
+                    "sid": 182,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Beginning at the initial state, the procedure traces through the model, recording at each state the highest probability of reaching that state from the beginning.",
+                    "sid": 183,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the two descendants of the start node, nodes to and t\u2022, are assigned the probability of o and \u2022, conditioned in each case on t being the prior character, respectively.",
+                    "sid": 184,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As more arcs are traversed, the associated probabilities are multiplied: thus the node eo receives the product of the probability of \u2022 conditioned on t and of o conditioned on \u2022\u00b7 When the node ob is reached, it is assigned the greater of the probabilities associated with the two incoming transitions, and so on throughout the model.",
+                    "sid": 185,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the standard dynamic programming technique of storing with each state the result of the best way of reaching that state, and using this result to extend the calculation to the next state.",
+                    "sid": 186,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To find the optimal state sequence is simply a matter of recording with each state which incoming transition is associated with the greatest probability, and traversing that path in the reverse direction once the final node is reached.",
+                    "sid": 187,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These models can be generated dynamically by proceeding to predict each char\u00ad acter in turn.",
+                    "sid": 188,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6(a) shows the beginning of the tree that results.",
+                    "sid": 189,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the initial node t is expanded into its two children, t\u2022 and to.",
+                    "sid": 190,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, these are expanded in turn.",
+                    "sid": 191,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first has one child, eo, because a space cannot be followed by another space.",
+                    "sid": 192,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second has two, o\u2022 and ob.",
+                    "sid": 193,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6(b) shows the further expansion of the \u2022o node.",
+                    "sid": 194,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the two children that are created already exist in the tree, and so the existing versions of these nodes are used instead, as in Figure 6(c).",
+                    "sid": 195,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If this procedure is con Figure 7 _..",
+                    "sid": 196,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "n .--.",
+                    "sid": 197,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "o o-- \u2022 t t \u00b7-\u2022 t t \u2022-- \u2022 o o\u2022 b b ........... e no- ot tt ..to_..ob.---..be \"...\"......",
+                    "sid": 198,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The space insertion procedure as implemented.",
+                    "sid": 199,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tinued, the graph structure of Figure S(a) will be created.",
+                    "sid": 200,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During creation, probability values can be assigned to the nodes, and back pointers inserted to record the best path to each node.",
+                    "sid": 201,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The illustration in Figure 6 is for an order 1 model, but exactly the same procedure applies for higher-order PPM models.",
+                    "sid": 202,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Implementation of the Space Insertion Algorithm.",
+                    "sid": 203,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our implementation uses a slight variant of the above procedure for finding the opti\u00ad mal place to insert spaces.",
+                    "sid": 204,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At each stage, we consider the possibility of adding either the next character, or the next character followed by a space.",
+                    "sid": 205,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This generates the struc\u00ad ture shown in Figure 7.",
+                    "sid": 206,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Starting with the null string, both t and t\u2022 are generated as successor states.",
+                    "sid": 207,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From each of these states, either o or o\u2022 can be added, and these yield the next states shown.",
+                    "sid": 208,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The procedure continues, growing the trellis structure using an incremental strategy similar to that illustrated in Figure 6, but modified to take into account the new growth strategy of adding either the next character or the next character followed by a space.",
+                    "sid": 209,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The search strategy we use is a variant of the stack algorithm for sequential de\u00ad coding (Anderson and Mohan 1984).",
+                    "sid": 210,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As new nodes are generated, an ordered list is maintained of the best paths generated so far.",
+                    "sid": 211,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only the best path is extended.",
+                    "sid": 212,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The metric used to evaluate a path is the number of bits required for the segmentation sequence it represents, when compressed by the PPM model.",
+                    "sid": 213,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is necessary to delete paths from the list in order to make room for newly generated ones.",
+                    "sid": 214,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We remove all paths that were more than m nodes shorter than the best path so far, where m is the order of the PPM model (5 in our experiments).",
+                    "sid": 215,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We reasoned that it is extremely unlikely-at least for natural language sequences-that such a path would ever grow to outperform the current best path, because it already lags behind in code length despite the fact that m further letters must be encoded.",
+                    "sid": 216,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experimental evaluation. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Before describing experiments to assess the success of the new word segmentation method, we first discuss measures that are used to evaluate the accuracy of automatic segmentation.",
+                    "sid": 217,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then examine the application of the new segmentation method to English text, and show how it achieves results that significantly outperform the state of the art.",
+                    "sid": 218,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next we describe application to a manually segmented corpus of Chinese text; again, excellent results are achieved.",
+                    "sid": 219,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a further experiment where we apply a model generated from the corpus to a new, independent, test file, performance deteriorates considerably-as one might expect.",
+                    "sid": 220,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then apply the method to a different corpus, and investigate how well the model transfers from one corpus to another.",
+                    "sid": 221,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We end with a discussion of how the results vary with the order of the compression model used to drive the segmenter.",
+                    "sid": 222,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Measuring the Quality of Segmentation.",
+                    "sid": 223,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use three measures to evaluate the accuracy of automatic segmentation: recall, precision, and error rate.",
+                    "sid": 224,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All evaluations use hand-segmentation as the gold stan\u00ad dard, which the automatic method strives to attain.",
+                    "sid": 225,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To define them, we use the terms N Number of words occurring in the hand-segmentation e c n = c+e Nu mbe r of wor ds inco rrec tly iden tifie d by the auto mati c met hod Nu mbe r of wor ds corr ectly iden tifie d by the auto mati c met hod Nu mbe r of wor ds iden tifie d by the auto mati c met hod Recall and precision are standard information retrieval measures used to assess the quality of a retrieval system in terms of how many of the relevant documents are retrieved (recall) and how many of the retrieved documents are relevant (precision): c recall N' c precision n The overall error rate can be defined as e error rate = N. This in principle can give misleading results-an extreme condition is where the auto\u00ad matic method only identifies a single word, leading to a very small error rate of 1/N despite the fact that all words but one are misidentified.",
+                    "sid": 226,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in all our exper\u00ad iments extreme conditions do not occur because n is always close to N and we find that the error rate is a useful overall indicator of the quality of segmentation.",
+                    "sid": 227,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also used the F-measure to compare our results with others: 2 x Precision x Recall F-measure= . . .",
+                    "sid": 228,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PreCisiOn Recall If the automatic method produces the same number of words as the hand-segmentation, recall and precision both become equal to one minus the error rate.",
+                    "sid": 229,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A perfect segmenter will have an error rate of zero and recall and precision of 100%.",
+                    "sid": 230,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All these measures can be calculated automatically from a machine-segmented text, along with the hand-segmented gold standard.",
+                    "sid": 231,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both texts are identical except for the points where spaces are inserted: thus we record just the start and end positions of each word in both versions.",
+                    "sid": 232,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \"A BC AED F\" in the machine-segmented version is mapped to (1,1} (2,3} (4,6) (7,7), and \"A BC A ED F\" in the hand-segmented version becomes (1,1) (2,3} (4,4) (5,6) (7,7).",
+                    "sid": 233,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of correctly and incorrectly segmented words is counted by comparing these two sets of positions, indicated by matched and mismatched pairs, respectively-three correct and two incorrect, in this example.",
+                    "sid": 234,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Application to English Text.",
+                    "sid": 235,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may be helpful for non-Chinese readers to briefly illustrate the success of the space insertion method by showing its application to English text.",
+                    "sid": 236,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first part of Table 2 Table 2 Segmenting words in English text.",
+                    "sid": 237,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Original text the unit of New York-based Loews Corp that makes Kent cigarettes stopped using crocidolite in its Micronite cigarette filters in 1956.",
+                    "sid": 238,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without spaces TheunitofNewYorkbasedLoewsCorpthatmakesKentcigarettesstoppedusing\u00ad crocidoliteinitsMicronitecigarettefiltersin1956.",
+                    "sid": 239,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PPM method the unit of New York-based LoewsCorp that makes Kent cigarettes stopped using croc idolite in its Micronite cigarette filters in 1956.",
+                    "sid": 240,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "USeg method the unit of New York-based Loews Corp that makes Kent cigarettes stopped using c roc id o lite inits Micron it e cigarette filters in 1956.",
+                    "sid": 241,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "shows the original text, with spaces in the proper places.",
+                    "sid": 242,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second shows the text with spaces removed, used as input to the segmentation procedure.",
+                    "sid": 243,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The third shows the output of the PPM-based method described above, while the fourth shows, for comparison, the output of a word-based method for predicting the position of spaces, USeg (Ponte and Croft 1996).",
+                    "sid": 244,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this experiment (first reported by Teahan et al. [1998]), PPM was trained on the million-word Brown corpus (Kucera and Francis 1967).",
+                    "sid": 245,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "USeg was trained on a far larger corpus containing 1 Gb of data from the Tipster collection (Broglio, Callan, and Croft 1994).",
+                    "sid": 246,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both were tested on the same 500 Kb extract from the Wall Street Journal.",
+                    "sid": 247,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The recall and precision for PPM were both 99.52%, while the corresponding figures for Useg were 93.56% and 90.03%, respectively.",
+                    "sid": 248,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result is particularly noteworthy because PPM had been trained on only a small fraction of the amount of text needed for the word-based scheme.",
+                    "sid": 249,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same example was used by Ponte and Croft (1996), and the improved perfor\u00ad mance of the character-based method is evident even in this small example.",
+                    "sid": 250,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the word Micronite does not occur in the Brown Corpus, it was correctly segmented using PPM.",
+                    "sid": 251,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Likewise, inits was correctly split into in and its.",
+                    "sid": 252,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PPM makes just two mistakes.",
+                    "sid": 253,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, a space was not inserted into LoewsCorp because the single \"word\" requires only 54.3 bits to encode, whereas Loews Corp requires 55.0 bits.",
+                    "sid": 254,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, an extra space was added to crocidolite because that reduced the number of bits required from 58.7 to 55.3.",
+                    "sid": 255,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Application to a Corpus of Chinese Text.",
+                    "sid": 256,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our first series of experiments used part of Guo Jin's Mandarin Chinese PH corpus, containing one million words of newspaper stories from the Xinhua news agency of PR China written between January 1990 and March 1991.",
+                    "sid": 257,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is represented in the standard GB coding scheme.",
+                    "sid": 258,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows the distribution of word lengths in the corpus.",
+                    "sid": 259,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Single-character words are the most frequent; these and bigrams together constitute almost 94% of words.",
+                    "sid": 260,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nearly half the characters appear as constituents of two-character words.",
+                    "sid": 261,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some published figures for Chinese language statistics indicate that this corpus may overrepresent single-character words and underrepresent bigrams-for example, Liu (1987) gives figures for modern Chinese of 5%, 75%, 14%, and 6% for one-character, two-character, three-character, and longer words, respectively.",
+                    "sid": 262,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it has been ar\u00ad gued that considering the inherent uncertainty in Chinese word segmentation, general\u00ad purpose segmentation algorithms should segment aggressively rather than conserva\u00ad tively (Wu 1998); consequently this corpus seems appropriate for our use.",
+                    "sid": 263,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 Distribution of word length in the corpus.",
+                    "sid": 264,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Len gth Wo rds Ch ara cte rs 1 55.",
+                    "sid": 265,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6% 3 6 . 2 % 2 38.",
+                    "sid": 266,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2% 4 9 . 9 % 3 4.",
+                    "sid": 267,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 % 8 . 2 % 4 1.",
+                    "sid": 268,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 % 4 . 0 % 5 0.",
+                    "sid": 269,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 % 0 . 8 % Ove r 5 0.",
+                    "sid": 270,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 % 0 . 9 % Table 4 Results for five 500-word segments from the Chinese corpus (manually checked figures in parentheses).",
+                    "sid": 271,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "File Er ro r ra te R e c a l l P r e c i s i o n F m e a s u r e 1 1.2 % (1.",
+                    "sid": 272,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0% ) 98.",
+                    "sid": 273,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4% (98 .6 %) 98.",
+                    "sid": 274,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8% (99 .0 %) 98.",
+                    "sid": 275,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6% (98 .8 %) 2 3.6 % (3.",
+                    "sid": 276,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0% ) 96.",
+                    "sid": 277,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4% (96 .8 %) 96.",
+                    "sid": 278,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4% (97 .0 %) 96.",
+                    "sid": 279,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4% (96 .9 %) 3 4.2 % (4.",
+                    "sid": 280,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0% ) 95.",
+                    "sid": 281,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0% (95 .8 %) 95.",
+                    "sid": 282,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8% (96 .0 %) 95.",
+                    "sid": 283,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4% (95 .9 %) 4 6.4 % (5.",
+                    "sid": 284,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2% ) 91.",
+                    "sid": 285,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0% (92 .2 %) 93.",
+                    "sid": 286,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4% (94 .7 %) 92.",
+                    "sid": 287,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2% (93 .4 %) 5 6.6 % (5.",
+                    "sid": 288,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0% ) 86.",
+                    "sid": 289,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2% (90 .4 %) 92.",
+                    "sid": 290,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9% (94 .8 %) 89.",
+                    "sid": 291,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4% (92 .5 %) Table 4 shows the results for five 500-word test files from the corpus.",
+                    "sid": 292,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We took part of the corpus that was not used for training, divided it into 500-word segments, removed all spaces, and randomly chose five segments as test files.",
+                    "sid": 293,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results show an error rate varying from 1.2% to 6.6%.",
+                    "sid": 294,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting F-measures indicate that the new algorithm performs better than the one described in Hockenmaier and Brew (1998), who report an F-measure of 87.9 using trigram rules.",
+                    "sid": 295,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is particularly significant because the two algorithms use training and test data from the same source.",
+                    "sid": 296,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results were also verified by checking them manually.",
+                    "sid": 297,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This produces slightly different results, for two reasons.",
+                    "sid": 298,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, human judgment sometimes accepts a seg\u00ad mentation as correct even though it does not correspond exactly with the corpus version.",
+                    "sid": 299,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the last word in 1ft $8 !fa-If: is counted as correct even though in the corpus it is written 1t\u00a3' fiG -If:.",
+                    "sid": 300,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, improper segmentations such as 1jr rPand m 1'1'1rff occur in the corpus.",
+                    "sid": 301,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the program makes the same mistakes, it counts as correct in automatic checking, but incorrect in manual checking.",
+                    "sid": 302,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These two kinds of error virtually canceled each other: when checked manually, file 3, for example, has five fewer errors for the first reason and six more for the second rea\u00ad son, giving error counts of 21 and 20 for automatic and manual checking, respectively.",
+                    "sid": 303,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Application to Independent Chinese Text Files.",
+                    "sid": 304,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a second test, models from this corpus were evaluated on completely separate data provided by the Institute of Computational Linguistics of Peking University.",
+                    "sid": 305,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This contained 39 sentences (752 characters), some of which are compound sentences.",
+                    "sid": 306,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since no presegmented version was available, all checking was manual.",
+                    "sid": 307,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This test is interesting because it includes several sentences that are easily mis\u00ad understood, three of which are shown in Figure 8.",
+                    "sid": 308,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first, which reads \"I have learned a lot from it,\" the second and third characters combine into 'from it' and the Computational Linguistics Volume 26, Number 3 1ZJA ::\u00a2fiJ71 *[\u00a7 %J I!::\u00a2*400 xt %JI!:\u00a5: -!'l#:\u00a5:'------ Figure 8 Three examples of easily misunderstood sentences.",
+                    "sid": 309,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 Error rate (mean and sd) for 1,000-word files from PH and Rocling corpora.",
+                    "sid": 310,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Testing PH files Rocling files T r a i n i n g PH corpus Rocling corpus 4 2 \u00b1 1 0 . 2 3 1 6 9 . 2 \u00b1 1 9 . 7 0 1 3 3 . 4 \u00b1 1 9 . 5 8 4 4 . 8 \u00b1 1 0 . 8 3 fourth and fifth characters combine into 'have learned.'",
+                    "sid": 311,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the third and fourth characters taken together mean 'middle school,' which does not occur in the meaning of the sentence.",
+                    "sid": 312,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second and third sentences, the first three characters are the same.",
+                    "sid": 313,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second, \"physics is very hard to learn,\" the second and third characters should be separated by a space, so that the third character can combine with the fol\u00ad lowing two characters to mean 'to learn.'",
+                    "sid": 314,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in the third, \"physics is one kind of science,\" the first three characters make a single word meaning 'physics.'",
+                    "sid": 315,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The error rate, recall and precision for this test material are 10.8%, 93.4%, and 89.6%, respectively.",
+                    "sid": 316,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance is significantly worse than that of Table 4, because of the nature of the test file.",
+                    "sid": 317,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision is distinctly lower than recall-recall fares better because many relevant words are still retrieved, whereas precision suffers because the automatic segmenter placed too many word boundaries compared with the manual judgment.",
+                    "sid": 318,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two aspects of the training data have a profound influence on the model's accu\u00ad racy.",
+                    "sid": 319,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, some errors are obviously caused by deficiencies in the training data, such as improperly segmented common words and names.",
+                    "sid": 320,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, some errors stem from the topics covered by the corpus.",
+                    "sid": 321,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not surprising that the error rate increases when the training and testing text represent different topic areas-such as training on news text and testing on medical text.",
+                    "sid": 322,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.5 Application to the Rocling Corpus.",
+                    "sid": 323,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Rocling Standard Segmentation Corpus contains about two million presegmented words, represented in the BigS coding scheme.",
+                    "sid": 324,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We converted it to GB, used one million words for training, and compared the resulting model to that generated from the PH data, also trained on one million words.",
+                    "sid": 325,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both models were tested on 10 randomly chosen 1,000-word segments from each corpus (none of this material was used in training).",
+                    "sid": 326,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are shown in Table 5, in terms of the mean and standard deviation (sd) of the errors.",
+                    "sid": 327,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the training and testing files come from the same corpus, results are good, with around 42 (for PH) and 45 (for Rocling) errors per thousand words.",
+                    "sid": 328,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not surprisingly, performance deteriorates significantly when the PH model is used to segment the Rocling test files or vice versa.",
+                    "sid": 329,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several differences between the corpora influence performance.",
+                    "sid": 330,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many English words are included in Rocling, whereas in PH only a few letters are used to rep 100 80 60 40 20 0 Figure 9 0.5M 1M 1.5 M 2M Effect of the amount of training data on the performance for each test file.",
+                    "sid": 331,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 Error rate (mean and sd) for different amounts of training data.",
+                    "sid": 332,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "O.SM words 1M words l.SM words 2M words Error 63.3 \u00b1 13.69 44.8 \u00b1 10.83 38.8 \u00b1 8.60 35.1 \u00b1 6.74 resent certain items.",
+                    "sid": 333,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Percentages are represented as 90% or Jt+%in Rocling, instead of SJJ\\ZJt+in the PH corpus.",
+                    "sid": 334,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Quotation marks also differ: ll in Rocling but \" \" in PH.",
+                    "sid": 335,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, as is only to be expected in any large collection of natural language, typographical errors occur in both corpora.",
+                    "sid": 336,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The overall result indicates that our algorithm is robust.",
+                    "sid": 337,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It performs well so long as the training and testing data come from the same source.",
+                    "sid": 338,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.6 Effect of the Amount of Training Data.",
+                    "sid": 339,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the Rocling corpus, we experimented with different amounts of training data.",
+                    "sid": 340,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Four models were trained with successively larger amounts of data, 0.5M, 1M, 1.5M, and 2M words, each training file being an extension of the text in the preceding training file.",
+                    "sid": 341,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The four models were tested on the 10 randomly-chosen 1,000-word Rocling segments used before.",
+                    "sid": 342,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results for the individual test files, in terms of error rate per thousand words, are shown in Figure 9 and summarized in Table 6.",
+                    "sid": 343,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Larger training sets generally give smaller error, which is only to be expected-although the results for some individual test files flatten out and show no further improvement with larger training files, and in some cases more training data actually increases the number of errors.",
+                    "sid": 344,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, the error rate is reduced by about 25% for each doubling of the training data.",
+                    "sid": 345,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.7 Models of Different Order.",
+                    "sid": 346,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have experimented with compression models of different orders on the PH corpus.",
+                    "sid": 347,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generally speaking, compression of text improves as model order increases, up to a point determined by the logarithm of the size of the training text.",
+                    "sid": 348,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typically, little compression is gained by going beyond order 5 models.",
+                    "sid": 349,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For segmentation, we observe many errors when a model of order 1 is used.",
+                    "sid": 350,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For order 3 models, most words are segmented with the same error rate as for order 5 models, though some words are missed when order 2 models are used.",
+                    "sid": 351,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 10 shows some cases where the order 3 and order 5 models produce dif\u00ad ferent results.",
+                    "sid": 352,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some order 5 errors are corrected by the order 3 model, though others Order 3 model result Order 5 model result Figure 10 Results obtained when using order 3 and order 5 models.",
+                    "sid": 353,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "appear even with the lower-order model.",
+                    "sid": 354,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, both results in the first row are incorrect: no space should be inserted in this case, and the four characters should stand together.",
+                    "sid": 355,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the order 3 result is to be preferred to the order 5 result because both two-character words do at least make sense individually, whereas the initial three characters in the order 5 version do not represent a word at all.",
+                    "sid": 356,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second row, the order 5 result is incorrect because the second component does not represent a word.",
+                    "sid": 357,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the order 3 result, the first word, containing two characters, is a person's name.",
+                    "sid": 358,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second word could also be correct as it stands, though it would be equally correct if a space had been inserted between the two bigrams.",
+                    "sid": 359,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the whole, we find that the order 3 model gives the best results overall, although there is little difference between orders 3, 4, and 5.",
+                    "sid": 360,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "applications in a digital library. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Word segmentation forms a valuable component of any Chinese digital library sys\u00ad tem.",
+                    "sid": 361,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It improves full-text retrieval in two ways: higher-precision searching (that is, fewer false matches), and the ability to incorporate relevance ranking.",
+                    "sid": 362,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This increases the effectiveness of full-text search and helps to provide users with better feedback.",
+                    "sid": 363,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, one study concludes that the performance of an unsegmented character\u00ad based query is about 10% worse than that of the corresponding segmented query (Broglio, Callan, and Croft 1996).",
+                    "sid": 364,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many emerging digital library technologies also pre\u00ad suppose word segmentation-for example, text summarization, document clustering, and keyphrase extraction all rely on word frequencies.",
+                    "sid": 365,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These would not work well on unsegmented text because character frequencies do not generally reflect word fre\u00ad quencies.",
+                    "sid": 366,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the source text in a digital library exceeds a few megabytes, full-text in\u00ad dexes are needed to process queries in a reasonable time (Witten, Moffat, and Bell 1999).",
+                    "sid": 367,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Full-text indexing was developed using languages where word boundaries are notated (principally English), and the techniques that were developed rely on word\u00ad based processing.",
+                    "sid": 368,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although some techniques-for example stemming (Frakes 1992) and casefolding-are not applicable to Chinese information retrieval, many are.",
+                    "sid": 369,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ex\u00ad amples include heuristics for relevance ranking, and query expansion using a language thesaurus.",
+                    "sid": 370,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, full-text indexes can be built from individual characters rather than words.",
+                    "sid": 371,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these will suffer from the problem of low precision-searches will return many irrelevant documents, where the same characters are used in contexts different from that of the query.",
+                    "sid": 372,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce false matches to a reasonable level, auxiliary indexes (for example, sentence indexes) will have to be created.",
+                    "sid": 373,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These will be much larger than regular word-based indexes of paragraphs or documents, and will still not be as accurate.",
+                    "sid": 374,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Information retrieval systems often rank the results of each search, giving pref\u00ad erence to documents that are more relevant to the query by placing them nearer the beginning of the list.",
+                    "sid": 375,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Relevance metrics are based on the observation that infrequent words are more important than common ones and should therefore rate more highly.",
+                    "sid": 376,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word segmentation is essential for this purpose, because the relationship between the frequency of a word and the frequency of the characters that appear within it is often very weak.",
+                    "sid": 377,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without word segmentation, the precision of the result set will be reduced because relevant documents are less likely to be close to the top of the list.",
+                    "sid": 378,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the word tfj 00 (\"to go abroad\") is an infrequent word that appears only twenty times in the PH corpus.",
+                    "sid": 379,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But its two characters occur frequently: tfj (\"to go out\") 13,531 times; and 00 (\"country\") 45,010 times.",
+                    "sid": 380,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact 00 is the second most frequent character in the corpus, appearing in 443 separate words.",
+                    "sid": 381,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Character-based ranking would place little weight on these two characters, even though they are extremely important if the query is tfj 00.",
+                    "sid": 382,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word i:E.",
+                    "sid": 383,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(\"also\") is another frequent character, appearing 4,553 times in the PH corpus.",
+                    "sid": 384,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in 4,481 of those cases it appears by itself and contributes little to the meaning of the text.",
+                    "sid": 385,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a query contained both of these words, far more weight would be given to i:E, than to the individual characters in tfj 00.",
+                    "sid": 386,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word counts also give feedback on the effectiveness of a query.",
+                    "sid": 387,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They help users judge whether their query was too wide or too narrow, and provide information on which of the terms are most appropriate.",
+                    "sid": 388,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word-based processing is essential to a number of emergent new technologies in the digital library field.",
+                    "sid": 389,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical approaches are enjoying a resurgence in natural language analysis (Klavans and Resnik 1997): examples include text summarization, document clustering, and keyphrase extraction.",
+                    "sid": 390,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of these statistical approaches are based on words and word frequencies.",
+                    "sid": 391,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, keywords and keyphrases for a document can be determined automatically based on features such as the frequency of the phrase in the document relative to its frequency in an independent corpus of like material, and its position of occurrence in the document (Frank et al. 1999).",
+                    "sid": 392,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A decomposition of text into its constituent words is an essential prerequisite for the application of such techniques.",
+                    "sid": 393,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "The problem of word segmentation of Chinese text is important in a variety of con\u00ad texts, particularly with the burgeoning interest in digital libraries and other systems that store and process text on a massive scale.",
+                    "sid": 394,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Existing techniques are either linguisti\u00ad cally based, using a dictionary of words, or rely on handcrafted segmentation rules, or use adaptive models that have been specifically created for the purpose of Chinese word segmentation.",
+                    "sid": 395,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have developed an alternative based on a general-purpose character-level model of text-the kind of models used in the very best text compres\u00ad sion schemes.",
+                    "sid": 396,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These models are formed adaptively from training text.",
+                    "sid": 397,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The advantage of using character-level models is that they do not rely on a dic\u00ad tionary and therefore do not necessarily fail on unusual words.",
+                    "sid": 398,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In effect, they can fall back on general properties of language statistics to process novel text.",
+                    "sid": 399,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The advantage of basing models on a corpus of training text is that particular characteristics of the text are automatically taken into account in language statistics-as exemplified by the significant differences between the models formed for the PH and Rocling corpora.",
+                    "sid": 400,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Encouraging results have been obtained using the new scheme.",
+                    "sid": 401,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results com\u00ad pare very favorably with the results of Hockenmaier and Brew (1998) on the PH corpus; unfortunately no other researchers have published quantitative results on a standard corpus.",
+                    "sid": 402,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further work is needed to analyze the results of the Rocling corpus in more detail.",
+                    "sid": 403,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next step is to use automatically segmented text to investigate the digital li\u00ad brary applications we have described: information retrieval, text summarization, doc\u00ad ument clustering, and keyphrase extraction.",
+                    "sid": 404,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We are grateful to Stuart Inglis, Hong Chen, and John Cleary, who provided advice and assistance.",
+                    "sid": 405,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corrected version of Guo Jin's PH corpus and the Rocling corpus were provided by Julia Hockenmaier and Chris Brew at the University of Edinburgh and the Chinese Knowledge Information Processing Group of Academia Sinica, respectively.",
+                    "sid": 406,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Institute of Computational Linguistics of Peking University also provided some test material.",
+                    "sid": 407,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bill Teahan acknowledges the generous support of the Department of Information Technology, Lund University, Sweden.",
+                    "sid": 408,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thanks also to the anonymous referees who have helped us to improve the paper significantly.",
+                    "sid": 409,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

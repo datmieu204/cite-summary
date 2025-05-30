@@ -1,0 +1,1235 @@
+{
+    "ID": "C08-1014",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper studies three techniques that improve the quality of N-best hypotheses through additional regeneration process.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike the multi-system consensus approach where multiple translation systems are used, our improvement is achieved through the expansion of the N- best hypotheses from a single system.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We explore three different methods to implement the regeneration process: re- decoding, n-gram expansion, and confusion network-based regeneration.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on Chinese-to-English NIST and IWSLT tasks show that all three methods obtain consistent improvements.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, the combination of the three strategies achieves further improvements and outperforms the baseline by 0.81 BLEU-score on IWSLT\u201906, 0.57 on NIST\u201903, 0.61 on NIST\u201905 test set respectively.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "State-of-the-art Statistical Machine Translation (SMT) systems usually adopt a two-pass search strategy (Och, 2003; Koehn, et al., 2003) as shown in Figure 1.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first pass, a decoding algorithm is applied to generate an N-best list of translation hypotheses, while in the second pass, the final translation is selected by rescoring and re-ranking the N-best translations through additional feature functions.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fundamental assumption behind using a second pass is that the generated N-best list may contain better transla \u00a9 2008.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Licensed under the Creative Commons Attribution-Noncommercial-Share Alike 3.0 Unported license (http://creativecommons.org/licenses/by-nc- sa/3.0/).",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some rights reserved.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tions than the best choice found by the decoder.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, the performance of a two-pass SMT system can be improved from two aspects, i.e. scoring models and the quality of the N-best hypotheses.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rescoring pass improves the performance of machine translation by enhancing the scoring models with more global sophisticated and dis- criminative feature functions.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea for applying two passes instead of one is that some global feature functions cannot be easily decomposed into local scores and computed during decoding.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, rescoring allows some feature functions, such as word and n-gram posterior probabilities, to be estimated on the N-best list (Ueffing, 2003; Chen et al., 2005; Zens and Ney, 2006).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this two-pass method, translation performance hinges on the N-best hypotheses that are generated in the first pass (since rescoring occurs on these), so adding the translation candidates generated by other MT systems to these hypotheses could potentially improve the performance.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This technique is called system combination (Bangalore et al., 2001; Matusov et al., 2006; Sim et al., 2007; Rosti et al., 2007a; Rosti et al., 2007b).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have instead chosen to regenerate new hypotheses from the original N-best list, a technique which we call regeneration.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Regeneration is an intermediate pass between decoding and rescoring as depicted in Figure 2.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the original N-best list (N-best1) generated by the decoder, this regeneration pass creates new translation hypotheses from this list to form another N-best list (N-best2).",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These two N-best lists are then combined and given to the rescoring pass to derive the best translation.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We implement three methods to regenerate new hypotheses: re-decoding, n-gram expansion and confusion network.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Re-decoding (Rosti et al., 2007a) based regeneration re-decodes the source sentence using original LM as well as new trans 105 Proceedings of the 22nd International Conference on Computational Linguistics (Coling 2008), pages 105\u2013112 Manchester, August 2008 Figure 1: Structure of a typical two-pass machine translation system.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N-best translations are generated by the decoder and the 1-best translation is returned after rescored with additional feature functions.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "didates from the other MT systems.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "smt. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Process Phrase-based statistical machine translation systems are usually modeled through a log linear framework (Och and Ney, 2002).",
+                    "sid": 26,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By introducing the hidden word alignment variable a (Brown et al., 1993), the optimal translation can be searched for based on the following criterion: e * = arg max(\u2211 \u03bb h (e , f , a)) (1) e,a m =1 m mwhere e is a string of phrases in the target lan guage, f is the source language string of phrases, hm (e , f , a) are feature functions, Figure 2: Structure of a three-pass machine translation system with the new regeneration pass.",
+                    "sid": 27,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The original N-best translations list (N- best1) is expanded to generate a new N-best translations list (N-best2) before the rescoring pass.",
+                    "sid": 28,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "lation and reordering models that are trained on the source-to-target N-best translations generated in the first pass.",
+                    "sid": 29,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N-gram expansion (Chen et al., 2007) regenerates more hypotheses by continuously expanding the partial hypotheses through an n-gram language model trained on the original N-best translations.",
+                    "sid": 30,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And confusion network generates new hypotheses based on confusion network decoding (Matusov et al., 2006), where the confusion network is built on the original N-best translations.",
+                    "sid": 31,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Confusion network and re-decoding have been well studied in the combination of different MT systems (Bangalore et al., 2001; Matusov et al., 2006; Sim et al., 2007; Rosti et al., 2007a; Rosti et al., 2007b).",
+                    "sid": 32,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Researchers have used confusion network to compute consensus translations from the outputs of different MT systems and improve the performance over each single systems.",
+                    "sid": 33,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Rosti et al., 2007a) also used re-decoding to do system combination by extracting sentence-specific phrase translation tables from the outputs of different MT systems and running a phrase-based decoding with this new translation table.",
+                    "sid": 34,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, N-gram expansion method (Chen et al., 2007) collects sub-strings occurring in the N-best list to produce alternative translations.",
+                    "sid": 35,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work demonstrates that a state-of-the-art MT system can be further improved by means of regeneration which expands its own N-best weights \u03bbm are typically optimized to maximize the scoring function (Och, 2003).",
+                    "sid": 36,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our MT baseline system is based on Moses decoder (Koehn et al., 2007) with word alignment obtained from GIZA++ (Och et al., 2003).",
+                    "sid": 37,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation model (TM), lexicalized word reordering model (RM) are trained using the tools provided in the open source Moses package.",
+                    "sid": 38,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Language model (LM) is trained with SRILM toolkit (Stolcke, 2002) with modified KneserNey smoothing method (Chen and Goodman, 1998).",
+                    "sid": 39,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "regeneration methods. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Given the original N-best translations, regeneration pass is to generate M new target translations which are not seen in the original N-best choices.",
+                    "sid": 40,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Regeneration with Re-decoding.",
+                    "sid": 41,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way of regeneration is by running the decoding again to obtain new hypotheses through a re-decoding process (Rosti et al., 2007a).",
+                    "sid": 42,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, the same decoder (Moses) is used to produce the new M-best translations using a new translation model and reordering model trained over the word-aligned source input and original N-best target hypotheses.",
+                    "sid": 43,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the target-to- source phrase alignments are available in the original N-best hypotheses, to enlarge the difference between the new M-best translations and the original N-best translations, we realign the words using GIZA++.",
+                    "sid": 44,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weights of the decoder are re-optimized by the tool in the Moses package over the development set.",
+                    "sid": 45,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The process of such a re-decoding is summarized as follows: source input and target N-best translations; 2.",
+                    "sid": 46,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Train translation and reordering model;.",
+                    "sid": 47,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 48,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Optimize the weights of the decoder with.",
+                    "sid": 49,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the new models; ensure more than M new hypotheses are generated.",
+                    "sid": 50,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 51,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it's 5 minutes on foot .",
+                    "sid": 52,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "decode the source input by using new mod-. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "els and new weights to generate N+M distinct translations (\u201cdistinct\u201d here refers to the target language string only, not considering the phrase segmentation, etc.);",
+                    "sid": 53,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "output m-best translations which are not. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "seen in the original N-best translations.",
+                    "sid": 54,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Original hypotheses n-grams 2.",
+                    "sid": 55,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it is 5 minutes on foot . 3.",
+                    "sid": 56,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it\u2019s about 5 minutes\u2019 to walk . 4.",
+                    "sid": 57,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i walk 5 minutes . it's 5 minutes, 5 minutes on, \u2026\u2026 on foot ., about 5 minutes \u2026\u2026 5 minutes . Re-decoding on test set follows the same steps, but without the tuning step, step 3.",
+                    "sid": 58,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Regeneration with N-gram Expansion.",
+                    "sid": 59,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N-gram expansion (Chen et al., 2007) combines the sub-strings occurred in the original N-best translations to generate new hypotheses.",
+                    "sid": 60,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, all n-grams from the original N-best translations are collected.",
+                    "sid": 61,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then the partial hypotheses are continuously expanded by appending a word through the n-grams collected in the first step.",
+                    "sid": 62,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We explain this method in more detail using the Figure 3: Example of original hypotheses and 3- grams collected from them.",
+                    "sid": 63,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "partial hyp.",
+                    "sid": 64,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it\u2019s about 5 minutes n-gram + 5 minutes on new partial hyp.",
+                    "sid": 65,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it\u2019s about 5 minutes on Figure 4: Expanding a partial hypothesis via a matching n-gram.",
+                    "sid": 66,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it\u2019s about 5 minutes on foot . following example.",
+                    "sid": 67,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose we have four original hypotheses shown in Figure 3.",
+                    "sid": 68,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, we collect all the 3 New hypotheses it's 5 minutes . i walk 5 minutes on foot . \u2026\u2026 grams from the original hypotheses.",
+                    "sid": 69,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first n- grams of all original entries in the N-best list are set as the initial partial hypotheses.",
+                    "sid": 70,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are: it's 5 minutes, it is 5, it\u2019s about 5 and i walk 5.",
+                    "sid": 71,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then the expansion of a partial hypothesis starts by computing the set of n-grams matching its last n 1 words.",
+                    "sid": 72,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in Figure 4, the n-gram 5 minutes on matches the last two words of the partial hypothesis it\u2019s about 5 minutes.",
+                    "sid": 73,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So the hypothesis is expanded to it\u2019s about 5 minutes on.",
+                    "sid": 74,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The expansion continues until the partial hypothesis ends with a special end-of-sentence symbol that occurs at the end of all N-best strings.",
+                    "sid": 75,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows some new hypotheses that are generated from the example in Figure 3.",
+                    "sid": 76,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an example excerpted from our development data.",
+                    "sid": 77,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One reference is also given in Figure 5; the first new generated hypothesis is equal to this reference.",
+                    "sid": 78,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But unfortunately, there is no such hypothesis in the original N-best translations.",
+                    "sid": 79,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During the new hypotheses generation, the translation outputs of a given source sentence are computed through a beam-search algorithm with a log-linear combination of the feature functions.",
+                    "sid": 80,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to n-gram frequency and n-gram posterior probability which have been used in (Chen et al., 2007), we also used language model, direct/inverse IBM model 1, and word penalty in Reference it's about five minutes on foot . Figure 5: New generated hypotheses through n- gram expansion and one reference.",
+                    "sid": 81,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Regeneration with Confusion Network.",
+                    "sid": 82,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Confusion network based regeneration builds a confusion network over the original N-best hypotheses, and then extracts M-best hypotheses from it.",
+                    "sid": 83,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word order in the N-best translations could be very different, so we need to choose a hypothesis with the \u201cmost correct\u201d word order as the confusion network skeleton (alignment reference), then align and reorder other hypotheses in this word order.",
+                    "sid": 84,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some previous work compute the consensus translation under MT system combination, which differ from ours in the way of choosing the skeleton and aligning the words.",
+                    "sid": 85,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Matusov et al.",
+                    "sid": 86,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) let every hypothesis play the role of the skeleton once and used GIZA++ to get word alignment.",
+                    "sid": 87,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bangalore et al.",
+                    "sid": 88,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2001), Sim et al.",
+                    "sid": 89,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007), Rosti et al.",
+                    "sid": 90,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007a), and Rosti et al.",
+                    "sid": 91,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007b) chose the hypothesis that best agrees with other hypotheses on average as the skeleton.",
+                    "sid": 92,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bangalore et al.",
+                    "sid": 93,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2001) used a WER based alignment and Sim et al.",
+                    "sid": 94,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007), Rosti et al.",
+                    "sid": 95,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007a), and Rosti et al.",
+                    "sid": 96,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007b) used minimum Translation Error Rate (TER) based alignment to build the confusion network.",
+                    "sid": 97,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Choosing alignment reference: Since the N- best translations are ranked, choosing the first best hypothesis as the skeleton is straightforward in our work.",
+                    "sid": 98,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Aligning words: As a confusion network can be easily built from a one-to-one alignment, we develop our algorithm based on the one-to-one assumption and use competitive linking algorithm (Melamed, 2000) for our word alignment.",
+                    "sid": 99,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, an association score is computed for every possible word pair from the skeleton and sentence to be aligned.",
+                    "sid": 100,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then a greedy algorithm is applied to select the best word-alignment.",
+                    "sid": 101,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we use a linear combination of multiple association scores, as suggested in (Kraif and Chen, 2004).",
+                    "sid": 102,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the two sentences to be aligned are in the same language, the association scores are computed on the following four clues.",
+                    "sid": 103,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are cognate (S1), word class (S2), synonyms (S3), and position difference (S4).",
+                    "sid": 104,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The four scores are linearly combined with empirically determined weights as shown is Equation 2.",
+                    "sid": 105,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Original hypotheses 1.",
+                    "sid": 106,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it\u2019s 5 minutes on foot . 2.",
+                    "sid": 107,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it is 5 minutes on foot . 3.",
+                    "sid": 108,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it\u2019s about 5 minutes\u2019 to walk . 4.",
+                    "sid": 109,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i walk 5 minutes . Alignments it\u2019s 5 minutes on foot . \u03b5 it 5 minutes on foot . is it\u2019s 5 minutes\u2019 to walk . about i 5 minutes \u03b5 walk . Confusion network it\u2019s \u03b5 5 minutes on foot . it is 5 minutes on foot . it\u2019s about 5 minutes\u2019 to walk . i \u03b5 5 minutes \u03b5 walk . New hypotheses 1.",
+                    "sid": 110,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it's about five minutes on foot . 2.",
+                    "sid": 111,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it about five minutes on foot . 3.",
+                    "sid": 112,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "it's about five minutes on walk . 4.",
+                    "sid": 113,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i about 5 minutes to work . Figure 6: Example of creating a confusion network from the word alignments, and new hypotheses generated through the confusion network.",
+                    "sid": 114,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sentence in bold is the alignment reference.",
+                    "sid": 115,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Rescoring.",
+                    "sid": 116,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "model S ( f j , e i ) = \u2211 \u03bbk \u00d7 Sk k =1 (2) Since the final N+M-best hypotheses are produced either from different methods or same de Reordering words: After word alignment, the words in all other hypotheses are reordered to match the word order of the skeleton.",
+                    "sid": 117,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The aligned words are reordered according to their alignment indices.",
+                    "sid": 118,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The unaligned words are reordered in two strategies: moved with its previousword or next word.",
+                    "sid": 119,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, additional ex periments suggested that moving the unaligned word with its previous word achieve better performance.",
+                    "sid": 120,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case that the first word is un- aligned, it will be moved with its next word.",
+                    "sid": 121,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each word is assigned a score based on a simple voting scheme.",
+                    "sid": 122,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 shows an example of creating a confusion network.",
+                    "sid": 123,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Extracting M-best translations: New translations are extracted from the confusion network.",
+                    "sid": 124,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We again use beam-search algorithm to derive new hypotheses.",
+                    "sid": 125,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same feature functions proposed in Section 3.2 are used to score the partial hypotheses.",
+                    "sid": 126,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, we also use position based word probability (i.e. in Figure 6, the words in position 5, \u201con\u201d scored a probability of 0.5, and \u201c \u03b5 \u201d scored a probability of 0.25) as a feature function.",
+                    "sid": 127,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 shows some examples of new hypotheses generated through confusion network regeneration.",
+                    "sid": 128,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "coder with different models, local feature functions of each hypothesis are not directly comparable, and thus inadequate for rescoring.",
+                    "sid": 129,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hence exploit rich global feature functions in the rescoring models to compensate the loss of local feature functions.",
+                    "sid": 130,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply the following 10 feature functions and optimize the weight of each feature function using the tool in Moses package.",
+                    "sid": 131,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 direct and inverse IBM model 1 and 3 \u2022 association score, i.e. hyper-geometric distribution probabilities and mutual information \u2022 lexicalized word/block reordering rules (Chen et al., 2006) \u2022 6-gram target LM \u2022 8-gram target word-class based LM, word- classes are clustered by GIZA++ \u2022 length ratio between source and target sentence \u2022 question feature (Chen et al., 2005) \u2022 linear sum of n-grams relative frequencies within N-best translations (Chen et al., 2005) \u2022 n-gram posterior probabilities within the N- best translations (Zens and Ney, 2006) \u2022 sentence length posterior probabilities (Zens and Ney, 2006) 5 Experiments.",
+                    "sid": 132,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Tasks.",
+                    "sid": 133,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We carried out two sets of experiments on two different datasets.",
+                    "sid": 134,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One is in spoken language domain while the other is on newswire corpus.",
+                    "sid": 135,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both experiments are on Chinese-to-English translation.",
+                    "sid": 136,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on spoken language domain were carried out on the Basic Traveling Expression Corpus (BTEC) (Takezawa et al., 2002) Chinese- to-English data augmented with HIT- corpus 1 . BTEC is a multilingual speech corpus which contains sentences spoken by tourists.",
+                    "sid": 137,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "40K sentence-pairs are used in our experiment.",
+                    "sid": 138,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "HIT- corpus is a balanced corpus and has 500K sentence-pairs in total.",
+                    "sid": 139,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We selected 360K sentence- pairs that are more similar to BTEC data according to its sub-topic.",
+                    "sid": 140,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, the English sentences of Tanaka corpus2 were also used to train our LM.",
+                    "sid": 141,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We ran experiments on an IWSLT 3 challenge track which uses IWSLT 20064 DEV clean text set as development set and IWSLT2006 TEST clean text as test set.",
+                    "sid": 142,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 summarizes the statistics of the training, dev and test data for IWSLT task.",
+                    "sid": 143,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on newswire domain were carried out on the FBIS 5 corpus.",
+                    "sid": 144,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used NIST 6 2002 MT evaluation test set as our development.",
+                    "sid": 145,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "set, and the NIST 2003, 2005 test sets as our test sets.",
+                    "sid": 146,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 summarizes the statistics of the training, dev and test data for NIST task.",
+                    "sid": 147,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "data Chinese English Train Sentences 406,122 Words 4,443K 4,591K Vocabulary 69,989 61,087 Dev.",
+                    "sid": 148,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sentences 489 489 \u00d7 7 Words 5,896 45,449 Test Sentences 500 500 \u00d7 7 Words 6,296 51,227 Additional target data Sentences 155K Words 1.7M Table 1: Statistics of training, development and test data for IWSLT task.",
+                    "sid": 149,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 http://mitlab.hit.edu.cn/ 2 http://www.csse.monash.edu.au/~jwb/tanakacorpus.html 3 International Workshop for Spoken Language Trans-.",
+                    "sid": 150,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "lation 4 http:// www.slc.atr.jp/IWSLT2006/ 5 LDC2003E14.",
+                    "sid": 151,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 http://www.nist.gov/speech/tests/mt/ data Chinese English Train Sentences 238,761 Words 7.0M 8.9M Vocabulary 56,223 63,941 NIST 02 (dev) Sentences 878 878 \u00d7 4 Words 23,248 108,616 NIST 03 (test) Sentences 919 919 \u00d7 4 Words 25,820 116,547 NIST 05 (test) Sentences 1,082 1,082 \u00d7 4 Words 30,544 141,915 Additional target data Sentences 2.2M Words 61.5M Table 2: Statistics of training, development and test data for NIST task.",
+                    "sid": 152,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "System #hypo Dev set Test set BLEU NIST BLEU NIST 1-best 29.98 7.468 29.10 7.103 RESC1 1,200 31.60 7.657 30.42 7.165 RD 1,200 32.46 7.664 30.95 7.175 NE 1,200 32.58 7.660 31.02 7.178 CN 1,200 32.33 7.671 30.82 7.200 RESC2 2,000 31.72 7.659 30.55 7.166 COMB 2,000 32.98 7.673 31.36 7.202 Table 3: Translation performances (BLEU% and NIST scores) of IWSLT task: decoder (1-best), rescoring on original 1,200 N-best (RESC1) and 2,000 N-best hypotheses (RESC2), re-decoding (RD), n-gram expansion (NE), confusion network (CN) and combination of all hypotheses (COMB).",
+                    "sid": 153,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Results.",
+                    "sid": 154,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set N = 800 and M = 400 for IWSLT task, i.e. 800 distinct translations for each source input are extracted from the decoder and used for regeneration; and 400 new hypotheses are generated for each regeneration system: re-decoding (RD), n-gram expansion (NE) and confusion network (CN).",
+                    "sid": 155,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "System COMB combines the original N- best and the three regenerated M-best hypotheses lists (totally, 2,000 distinct hypotheses: 800 + 3 \u00d7 400).",
+                    "sid": 156,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then each system computes the 1-best translation through rescoring and re-ranking its hypotheses list.",
+                    "sid": 157,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison purpose, the performance of rescoring on two sets of original N- best translations are also computed and they are applied based on 1,200 (RESC1) and 2,000 (RESC2) distinct hypotheses extracted from the decoder.",
+                    "sid": 158,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For NIST task, we set N = 1,600, andM = 800, thus, RESC2 and COMB compute 1 System #hypo NIST\u201902 (dev) NIST\u201903 (test) NIST\u201905 (test) BLEU NIST BLEU NIST BLEU NIST 1-best 1 27.67 8.498 26.68 8.271 24.82 7.856 RESC1 2,400 28.13 8.519 27.09 8.312 25.29 7.868 RD 2,400 28.46 8.518 27.34 8.320 25.54 7.897 NE 2,400 28.52 8.539 27.47 8.329 25.65 7.907 CN 2,400 28.40 8.545 27.30 8.332 25.54 7.913 RESC2 4,000 28.27 8.522 27.21 8.320 25.43 7.875 COMB 4,000 28.92 8.602 27.78 8.401 26.04 7.994 Table 4: Translation performances (BLEU% and NIST scores) of NIST task: decoder (1-best), rescoring on original 2,400 N-best (RESC1) and 4,000 N-best hypotheses (RESC2), re-decoding (RD), n-gram expansion (NE), confusion network (CN) and combination of all hypotheses (COMB).",
+                    "sid": 159,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 Reference No tax is needed for this item . Thank you . RESC2 you don't have to do not need to pay duty on this . thank you . COMB (RD) not need to pay duty on this . thank you . 2 Reference Certainly . The fitting room is over there . Please come with me . RESC2 the fitting room is over there . can you come with me . COMB (NE) yes , you can . the fitting room is over there . please come with me . 3 Reference OK . I will bring it to you in five minutes . RESC2 a good five minutes , we will give you . COMB (CN) ok . after five minutes , i will give it to you . Table 5: Translations output by system RESC2 and COMB on IWSLT task (case-insensitive).",
+                    "sid": 160,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "best from 4,000 (1,600 + 3 \u00d7 800) distinct hypotheses.",
+                    "sid": 161,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our evaluation metrics are BLEU (Papineni et al., 2002) and NIST, which are to perform case insensitive matching of n-grams up to n = 4.",
+                    "sid": 162,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation performance of IWSLT task and NIST task is reported in Tables 3 and 4 respectively.",
+                    "sid": 163,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The row \u201c1-best\u201d reports the scores of the translations produced by the decoder.",
+                    "sid": 164,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The column \u201c#hypo\u201d means the size of the N-best hy potheses involved in rescoring.",
+                    "sid": 165,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that on top of the same global feature functions as mentioned in Section 4, the local feature functions used during decoding were also involved in res- coring RESC1 and RESC2.",
+                    "sid": 166,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First of all, we note that both BLEU and NIST scores of the first decoding step were improved through rescoring.",
+                    "sid": 167,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If rescoring was applied after regeneration on the N+M best lists, additional improvements were gained for all the development and test sets on all three regeneration systems.",
+                    "sid": 168,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Absolute improvement on BLEU score of 0.40.6 on IWSLT\u201906 test set and 0.250.35 on NIST test sets were obtained when compared with system RESC1.",
+                    "sid": 169,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing the performance of three regeneration methods, we can see that re-decoding and confusion network based method achieved very similar improvement; while n-gram expansion based regeneration obtained slightly better improvement than the other two methods.",
+                    "sid": 170,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combining all regenerated hypotheses with the original hypotheses further increased the scores on both tasks.",
+                    "sid": 171,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared with RESC2, system COMB obtained absolute improvement of 0.81 (31.36 \u2013 30.55) BLEU score on IWSLT\u201906 test set, 0.57 (27.28 \u2013 27.21) BLEU score on NIST\u201903 and 0.61 (26.04 \u2013 25.43) BLEU score on NIST\u201905 respectively.",
+                    "sid": 172,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further illustrate the effectiveness of the regeneration mechanism using some translation examples obtained from system RESC2 and COMB as shown in Table 5.",
+                    "sid": 173,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "To better interpret the performance improvement; first let us check if the regeneration pass has produced better hypotheses.",
+                    "sid": 174,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We computed the oracle scores on all four 1,200-best lists in IWSLT task.",
+                    "sid": 175,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The oracle chooses the translation with the lowest word error rate (WER) with respect to the references in all cases.",
+                    "sid": 176,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are reported in Table 6.",
+                    "sid": 177,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is worth noticing that the first 800- best (original N-best) hypotheses are the same in all four lists, with differences found only in the remaining 400 hypotheses (M-best).",
+                    "sid": 178,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The consistent improvement of oracle scores shows that the translation candidates have been really improved.",
+                    "sid": 179,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From another viewpoint, Table 7 shows the number of translations generated by each method in the final translation output (translations of COMB).",
+                    "sid": 180,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After re-ranking N+3M entries, it is observed that more than 25% (e.g. for IWSLT\u201906 test set, (50+74+39)/500=32.6%; NIST\u201903 test set, (77+85+68)/919=25.1%; NIST\u201905 test set, (95+110+82)/1082=26.5%) of best scored outputs were generated by the regeneration pass, showing that new generated translations are quite often the rescoring winner.",
+                    "sid": 181,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This also proved that the new-generated hypotheses contain better ones than the original ones.",
+                    "sid": 182,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "List BLEU NIST WER PER Dev.",
+                    "sid": 183,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moses 46.10 8.765 36.29 30.94 RD 46.91 8.764 35.29 30.62 NE 46.95 8.811 36.05 30.72 CN 46.85 8.769 36.17 30.83 Test Moses 45.09 8.403 37.07 32.04 RD 45.67 8.418 36.50 31.82 NE 45.82 8.481 36.44 31.70 CN 45.68 8.471 36.55 31.81 Table 6: Oracle scores (BLEU%, NIST, WER% and PER%) on IWSLT task 1,200-best lists of four systems: decoder (Moses), re-decoding (RD), n-gram expansion (NE) and confusion network (CN).",
+                    "sid": 184,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tion model thus generate better hypotheses.",
+                    "sid": 185,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N- gram expansion can (almost) fully exploit the search space of target strings, which can be generated by an n-gram LM.",
+                    "sid": 186,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, it can produce alternative translations which contain word re-orderings and phrase structures not considered by the search algorithm of the decoder (Chen, et al., 2007).",
+                    "sid": 187,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Confusion network based regeneration reinforces the word choice by considering the posterior probabilities of words occur in the N- best translations.",
+                    "sid": 188,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "In this paper, we proposed a novel three-pass SMT framework against the typical two-pass system.",
+                    "sid": 189,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This framework enhanced the quality of the translation candidates generated by our proposed regeneration pass and improved the final translation performance.",
+                    "sid": 190,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Three regeneration methods were introduced, namely, re-decoding, word-based n-gram expansion, and confusion network based regeneration.",
+                    "sid": 191,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments were based on the state-of-the-art phrase-based decoder and carried out on the IWSLT and NIST Chinese-to-English task.",
+                    "sid": 192,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We showed that all three methods improved the performance with the n-gram expansion method achieving the greatest improvement.",
+                    "sid": 193,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, the combination of the three methods further improves the performance.",
+                    "sid": 194,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude that translation performance can be improved by increasing the potential of translation candidates to contain better translations.",
+                    "sid": 195,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have presented an alternative solution to ameliorate the quality of translation candidates in a way that differs from system combination which takes translations from other MT systems.",
+                    "sid": 196,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We demonstrated that the translation performance could be self-boosted by expanding the N- best list through hypotheses regeneration.",
+                    "sid": 197,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

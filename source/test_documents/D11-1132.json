@@ -1,0 +1,1625 @@
+{
+    "ID": "D11-1132",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Relation Extraction with Relation Topics",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper describes a novel approach to the semantic relation detection problem.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of relying only on the training instances for a new relation, we leverage the knowledge learned from previously trained relation detectors.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we detect a new semantic relation by projecting the new relation\u2019s training instances onto a lower dimension topic space constructed from existing relation detectors through a three step process.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we construct a large relation repository of more than 7,000 relations from Wikipedia.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we construct a set of non-redundant relation topics defined at multiple scales from the relation repository to characterize the existing relations.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar to the topics defined over words, each relation topic is an interpretable multinomial distribution over the existing relations.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Third, we integrate the relation topics in a kernel function, and use it together with SVM to construct detectors for new relations.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experimental results on Wikipedia and ACE data have confirmed that backgroundknowledge-based topics generated from the Wikipedia relation repository can significantly improve the performance over the state-of-theart relation detection approaches.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Detecting semantic relations in text is very useful in both information retrieval and question answering because it enables knowledge bases to be leveraged to score passages and retrieve candidate answers.",
+                    "sid": 9,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To extract semantic relations from text, three types of approaches have been applied.",
+                    "sid": 10,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rule-based methods (Miller et al., 2000) employ a number of linguistic rules to capture relation patterns.",
+                    "sid": 11,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Featurebased methods (Kambhatla, 2004; Zhao and Grishman, 2005) transform relation instances into a large amount of linguistic features like lexical, syntactic and semantic features, and capture the similarity between these feature vectors.",
+                    "sid": 12,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent results mainly rely on kernel-based approaches.",
+                    "sid": 13,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of them focus on using tree kernels to learn parse tree structure related features (Collins and Duffy, 2001; Culotta and Sorensen, 2004; Bunescu and Mooney, 2005).",
+                    "sid": 14,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other researchers study how different approaches can be combined to improve the extraction performance.",
+                    "sid": 15,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, by combining tree kernels and convolution string kernels, (Zhang et al., 2006) achieved the state of the art performance on ACE (ACE, 2004), which is a benchmark dataset for relation extraction.",
+                    "sid": 16,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although a large set of relations have been identified, adapting the knowledge extracted from these relations for new semantic relations is still a challenging task.",
+                    "sid": 17,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the work on domain adaptation of relation detection has focused on how to create detectors from ground up with as little training data as possible through techniques such as bootstrapping (Etzioni et al., 2005).",
+                    "sid": 18,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take a different approach, focusing on how the knowledge extracted from the existing relations can be reused to help build detectors for new relations.",
+                    "sid": 19,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe by reusing knowledge one can build a more cost effective relation detector, but there are several challenges associated with reusing knowledge.",
+                    "sid": 20,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first challenge to address in this approach is how to construct a relation repository that has sufficient coverage.",
+                    "sid": 21,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we introduce a method that automatically extracts the knowledge characterizing more than 7,000 relations from Wikipedia.",
+                    "sid": 22,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wikipedia is comprehensive, containing a diverse body of content with significant depth and grows rapidly.",
+                    "sid": 23,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wikipedia\u2019s infoboxes are particularly interesting for relation extraction.",
+                    "sid": 24,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are short, manually-created, and often have a relational summary of an article: a set of attribute/value pairs describing the article\u2019s subject.",
+                    "sid": 25,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another challenge is how to deal with overlap of relations in the repository.",
+                    "sid": 26,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Wikipedia authors may make up a name when a new relation is needed without checking if a similar relation has already been created.",
+                    "sid": 27,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This leads to relation duplication.",
+                    "sid": 28,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refine the relation repository based on an unsupervised multiscale analysis of the correlations between existing relations.",
+                    "sid": 29,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method is parameter free, and able to produce a set of non-redundant relation topics defined at multiple scales.",
+                    "sid": 30,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar to the topics defined over words (Blei et al., 2003), we define relation topics as multinomial distributions over the existing relations.",
+                    "sid": 31,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relation topics extracted in our approach are interpretable, orthonormal to each other, and can be used as basis relations to re-represent the new relation instances.",
+                    "sid": 32,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The third challenge is how to use the relation topics for a relation detector.",
+                    "sid": 33,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We map relation instances in the new domains to the relation topic space, resulting in a set of new features characterizing the relationship between the relation instances and existing relations.",
+                    "sid": 34,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By doing so, background knowledge from the existing relations can be introduced into the new relations, which overcomes the limitations of the existing approaches when the training data is not sufficient.",
+                    "sid": 35,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our work fits in to a class of relation extraction research based on \u201cdistant supervision\u201d, which studies how knowledge and resources external to the target domain can be used to improve relation extraction.",
+                    "sid": 36,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Mintz et al., 2009; Jiang, 2009; Chan and Roth, 2010).",
+                    "sid": 37,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One distinction between our approach and other existing approaches is that we represent the knowledge from distant supervision using automatically constructed topics.",
+                    "sid": 38,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we test on new instances, we do not need to search against the knowledge base.",
+                    "sid": 39,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, our topics also model the indirect relationship between relations.",
+                    "sid": 40,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such information cannot be directly found from the knowledge base.",
+                    "sid": 41,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contributions of this paper are three-fold.",
+                    "sid": 42,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, we extract a large amount of training data for more than 7,000 semantic relations from Wikipedia (Wikipedia, 2011) and DBpedia (Auer et al., 2007).",
+                    "sid": 43,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A key part of this step is how we handle noisy data with little human effort.",
+                    "sid": 44,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, we present an unsupervised way to construct a set of relation topics at multiple scales.",
+                    "sid": 45,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This step is parameter free, and results in a nonredundant, multiscale relation topic space.",
+                    "sid": 46,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thirdly, we design a new kernel for relation detection by integrating the relation topics into the relation detector construction.",
+                    "sid": 47,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experimental results on Wikipedia and ACE data (ACE, 2004) have confirmed that background-knowledge-based features generated from the Wikipedia relation repository can significantly improve the performance over the state-of-the-art relation detection approaches.",
+                    "sid": 48,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 extracting relations from wikipedia",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Our training data is from two parts: relation instances from DBpedia (extracted from Wikipedia infoboxes), and sentences describing the relations from the corresponding Wikipedia pages.",
+                    "sid": 49,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our relations correspond to Wikipedia infobox properties, we use an approach similar to that described in (Hoffmann et al., 2010) to collect positive training data instances.",
+                    "sid": 50,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume that a Wikipedia page containing a particular infobox property is likely to express the same relation in the text of the page.",
+                    "sid": 51,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further assume that the relation is most likely expressed in the first sentence on the page which mentions the arguments of the relation.",
+                    "sid": 52,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the Wikipedia page for \u201cAlbert Einstein\u201d contains an infobox property \u201calma mater\u201d with value \u201cUniversity of Zurich\u201d, and the first sentence mentioning the arguments is the following: \u201cEinstein was awarded a PhD by the University of Zurich\u201d, which expresses the relation.",
+                    "sid": 53,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When looking for relation arguments on the page, we go beyond (sub)string matching, and use link information to match entities which may have different surface forms.",
+                    "sid": 54,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using this technique, we are able to collect a large amount of positive training instances of DBpedia relations.",
+                    "sid": 55,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To get precise type information for the arguments of a DBpedia relation, we use the DBpedia knowledge base (Auer et al., 2007) and the associated YAGO type system (Suchanek et al., 2007).",
+                    "sid": 56,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that for every Wikipedia page, there is a corresponding DBpedia entry which has captured the infobox-properties as RDF triples.",
+                    "sid": 57,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of the triples include type information, where the subject of the triple is a Wikipedia entity, and the object is a YAGO type for the entity.",
+                    "sid": 58,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the DBpedia entry for the entity \u201cAlbert Einstein\u201d includes YAGO types such as Scientist, Philosopher, Violinist etc.",
+                    "sid": 59,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These YAGO types are also linked to appropriate WordNet concepts, providing for accurate sense disambiguation.",
+                    "sid": 60,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, for any entity argument of a relation we are learning, we obtain sense-disambiguated type information (including super-types, sub-types, siblings etc.",
+                    "sid": 61,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "), which become useful generalization features in the relation detection model.",
+                    "sid": 62,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a common noun, we can also retrieve its type information by checking against WordNet (Fellbaum, 1998).",
+                    "sid": 63,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a set of rules together with their popularities (occurrence count) to characterize a relation.",
+                    "sid": 64,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A rule representing the relations between two arguments has five components (ordered): arguments type, argument2 type, noun, preposition and verb.",
+                    "sid": 65,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A rule example of ActiveYearsEndDate relation (about the year that a person retired) is: person100007846|year115203791|-|in|retire.",
+                    "sid": 66,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this example, arguments type is person100007846, argument2 type is year115203791, both of which are from YAGO type system.",
+                    "sid": 67,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key words connecting these two arguments are in (preposition) and retire (verb).",
+                    "sid": 68,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This rule does not have a noun, so we use a \u2018-\u2019 to take the position of noun.",
+                    "sid": 69,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same relation can be represented in many different ways.",
+                    "sid": 70,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another rule example characterizing the same relation is person100007846|year115203791|retirement|-|announce.",
+                    "sid": 71,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper only considers three types of words: noun, verb and preposition.",
+                    "sid": 72,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is straightforward to expand or simplify the rules by including more or removing some word types.",
+                    "sid": 73,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The keywords are extracted from the shortest path on the dependency tree between the two arguments.",
+                    "sid": 74,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A dependency tree (Figure 1) represents grammatical relations between words in a sentence.",
+                    "sid": 75,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a slot grammar parser (McCord, 1995) to generate the parse tree of each sentence.",
+                    "sid": 76,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that there could be multiple paths between two arguments in the tree.",
+                    "sid": 77,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We only take the shortest path into consideration.",
+                    "sid": 78,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The popularity value corresponding to each rule represents how many times this rule applies to the given relation in the given data.",
+                    "sid": 79,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Multiple rules can be constructed from one relation instance, if multiple argument types are associated with the instance, or multiple nouns, prepositions or verbs are in the dependency path.",
+                    "sid": 80,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To find a sentence on the Wikipedia page that is likely to express a relation in its infobox, we consider the first sentence on the page that mentions both arguments of the relation.",
+                    "sid": 81,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This heuristic approach returns reasonably good results, but brings in about 20% noise in the form of false positives, which is a concern when building an accurate statistical relation detector.",
+                    "sid": 82,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this issue, we have developed a two-step technique to automatically remove some of the noisy data.",
+                    "sid": 83,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first step, we extract popular argument types and keywords for each DBpedia relation from the given data, and then use the combinations of those types and words to create initial rules.",
+                    "sid": 84,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of the argument types and keywords introduced by the noisy data are often not very popular, so they can be filtered out in the first step.",
+                    "sid": 85,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not all initial rules make sense.",
+                    "sid": 86,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second step, we check each rule against the training data to see if that rule really exists in the training data or not.",
+                    "sid": 87,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If it does not exist, we filter it out.",
+                    "sid": 88,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a sentence does not have a single rule passing the above procedure, that sentence will be removed.",
+                    "sid": 89,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the above techniques, we collect examples characterizing 7,628 DBpedia relations.",
+                    "sid": 90,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 learning multiscale relation topics",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "An extra step extracting knowledge from the raw data is needed for two reasons: Firstly, many DBpedia relations are inter-related.",
+                    "sid": 91,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, some DBpedia relations have a subclass relationship, e.g.",
+                    "sid": 92,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cAcademyAward\u201d and \u201cAward\u201d; others overlap in their scope and use, e.g., \u201cComposer\u201d and \u201cArtist\u201d; while some are equivalent, e.g., \u201cDateOfBirth\u201d and \u201cBirthDate\u201d.",
+                    "sid": 93,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, a fairly large amount of the noisy labels are still in the training data.",
+                    "sid": 94,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reveal the intrinsic structure of the current DBpedia relation space and filter out noise, we carried out a correlation analysis of relations in the training data, resulting in a relation topic space.",
+                    "sid": 95,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each relation topic is a multinomial distribution over the existing relations.",
+                    "sid": 96,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adapted diffusion wavelets (Coifman and Maggioni, 2006) for this task.",
+                    "sid": 97,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to the other well-known topic extraction methods like LDA (Blei et al., 2003) and LSI (Deerwester et al., 1990), diffusion wavelets can efficiently extract a hierarchy of interpretable topics without any user input parameter (Wang and Mahadevan, 2009).",
+                    "sid": 98,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The diffusion wavelets algorithm constructs a compressed representation of the dyadic powers of a square matrix by representing the associated matrices at each scale not in terms of the original (unit vector) basis, but rather using a set of custom generated bases (Coifman and Maggioni, 2006).",
+                    "sid": 99,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 summarizes the procedure to generate diffusion wavelets.",
+                    "sid": 100,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a matrix T, the QR (a modified QR decomposition) subroutine decomposes T into an orthogonal matrix Q and a triangular matrix R such that T Pz\ufffd QR, where |Ti,k \u2212 (QR)i,k |< e for any i and k. Columns in Q are orthonormal basis functions spanning the column space of T at the finest scale.",
+                    "sid": 101,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RQ is the new representation of T with sentations of the input matrix at different scales.",
+                    "sid": 102,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "QR is a modified QR decomposition.",
+                    "sid": 103,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "J is the max step number (this is optional, since the algorithm automatically terminates when it reaches a matrix of size 1 x 1).",
+                    "sid": 104,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The notation [T]\u03c6b \u03c6a denotes matrix T whose column space is represented using basis \ue18bb at scale b, and row space is represented using basis \ue18ba at scale a.",
+                    "sid": 105,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The notation [\ue18bb]\u03c6a denotes basis \ue18bb represented on the basis \ue18ba.",
+                    "sid": 106,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At an arbitrary scale j, we have pj basis functions, and length of each function is lj.",
+                    "sid": 107,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of pj is determined by the intrinsic structure of the given dataset in QR routine.",
+                    "sid": 108,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "[T]\u03c6b is a pb x la matrix, and [\ue18bb]\u03c6a is an la x pb matrix. \u03c6a respect to the space spanned by the columns of Q (this result is based on the matrix invariant subspace theory).",
+                    "sid": 109,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At an arbitrary level j, DWT learns the basis functions from T2' using QR.",
+                    "sid": 110,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to the number of basis functions spanning T2'\u2019s original column space, we usually get fewer basis functions, since some high frequency information (corresponding to the \u201cnoise\u201d at that level) can be filtered out.",
+                    "sid": 111,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DWT then computes T2'+1 using the low frequency representation of T23 and the procedure repeats.",
+                    "sid": 112,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assume we have M relations, and the ith of them is characterized by mi <rule, popularity> pairs.",
+                    "sid": 113,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use s(a, b) to represent the similarity between the ath and bth relations.",
+                    "sid": 114,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compute s(a, b), we first normalize the popularities for each relation, and then look for the rules that are shared by both relation a and b.",
+                    "sid": 115,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the product of corresponding popularity values to represent the similarity score between two relations with respect to each common rule. s(a, b) is set to the sum of such scores over all common rules.",
+                    "sid": 116,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relation-relation correlation matrix S is constructed as follows: We have more than 200, 000 argument types, tens of thousands of distinct nouns, prepositions, and verbs, so we potentially have trillions of distinct rules.",
+                    "sid": 117,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One rule may appear in multiple relations.",
+                    "sid": 118,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The more rules two relations share, the more related two relations should be.",
+                    "sid": 119,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rules shared across different relations offer us a novel way to model the correlations between different relations, and further allow us to create relation topics.",
+                    "sid": 120,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rules can also be simplified.",
+                    "sid": 121,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we may treat argument1, argument2, noun, preposition and verb separately.",
+                    "sid": 122,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This results in simple rules that only involve in one argument type or word.",
+                    "sid": 123,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The correlations between relations are then computed only based on one particular component like argument1, noun, etc.",
+                    "sid": 124,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Matrix S models the correlations between relations in the training data.",
+                    "sid": 125,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once S is constructed, we adapt diffusion wavelets (Coifman and Maggioni, 2006) to automatically extract the basis functions spanning the original column space of S at multiple scales.",
+                    "sid": 126,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key strength of the approach is that it is data-driven, largely parameter-free and can automatically determine the number of levels of the topical hierarchy, as well as the topics at each level.",
+                    "sid": 127,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, to apply diffusion wavelets to S, we first need to show that S is a positive semi-definite matrix.",
+                    "sid": 128,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This property guarantees that all eigenvalues of S are > 0.",
+                    "sid": 129,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on the way we formalize the rules, the methods to validate this property are slightly different.",
+                    "sid": 130,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we treat argument1, argument2, noun, preposition and verb separately, it is straightforward to see the property holds.",
+                    "sid": 131,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Theorem 1, we show the property also holds when we use more complicated rules (using the 5-tuple rule in Section 2.2 as an example in the proof).",
+                    "sid": 132,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Theorem 1.",
+                    "sid": 133,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S is a Positive Semi-Definite matrix.",
+                    "sid": 134,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proof: An arbitrary rule ri is uniquely characterized by a five tuple: argument1 type |argument2 type| noun |preposition |verb.",
+                    "sid": 135,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the number of distinct argument types and words are constants, the number of all possible rules is also a constant: R. If we treat each rule as a feature, then the set of rules characterizing an arbitrary relation ri can be represented as a point [p1i , \u00b7 \u00b7 \u00b7 , pRi ] in a latent R dimensional rule space, where pji represents the popularity of rule j in relation ri in the given data.",
+                    "sid": 136,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can verify that the way to compute s(a, b) is the same as s(a, b) = < [p1a \u00b7 \u00b7 \u00b7 pRa ], [p1b \u00b7 \u00b7 \u00b7 pRb ] >, where < \u00b7, \u00b7 > is the cosine similarity (kernel).",
+                    "sid": 137,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It follows directly from the definition of positive semidefinite matrix (PSD) that S is PSD (Sch\u00a8olkopf and Smola, 2002).",
+                    "sid": 138,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our approach, we construct multiscale relation topics by applying DWT to decompose S/Amax(S), where Amax(S) represents the largest eigenvalue of S. Theorem 2 shows that this decomposition will converge, resulting in a relation topic hierarchy with one single topic at the top level.",
+                    "sid": 139,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea underlying diffusion wavelets is based on decomposing the spectrum of an input matrix into various spectral bands, spanned by basis functions (Coifman and Maggioni, 2006).",
+                    "sid": 140,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let T = S/Amax(S).",
+                    "sid": 141,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 2, we construct spectral bands of eigenvalues, whose associated eigenvectors span the corresponding subspaces.",
+                    "sid": 142,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Define dyadic spatial scales tj as where A(T) represents any eigenvalue of T, and E E (0, 1) is a pre-defined threshold in Figure 2.",
+                    "sid": 143,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can now associate with each of the spectral bands a vector subspace spanned by the corresponding eigenvectors: Vj = (f\ufffda : A E A(T), Atj > E}), j > 0 .",
+                    "sid": 144,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the limit, we obtain That is, the highest level of the resulting subspace hierarchy is spanned by the eigenvector associated with the largest eigenvalue of T. This result shows that the multiscale analysis of the relation space will automatically terminate at the level spanned by one basis, which is the most popular relation topic in the training data.",
+                    "sid": 145,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first create a set of rules to characterize each input relation.",
+                    "sid": 146,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these rules may occur in multiple relations, they provide a way to model the cooccurrence relationship between different relations.",
+                    "sid": 147,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm starts with the relation co-occurrence matrix and then repeatedly applies QR decomposition to learn the topics at the current level while at the same time modifying the matrix to focus more on low-frequency indirect co-occurrences (between relations) for the next level.",
+                    "sid": 148,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Running DWT is equivalent to running a Markov chain on the input data forward in time, integrating the local geometry and therefore revealing the relevant geometric structures of the whole data set at different scales.",
+                    "sid": 149,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At scale j, the representation of T2'+1 is compressed based on the amount of remaining information and the desired precision.",
+                    "sid": 150,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This procedure is illustrated in Figure 3.",
+                    "sid": 151,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the resulting topic space, instances with related relations will be grouped together.",
+                    "sid": 152,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach may significantly help us detect new relations, since it potentially expands the information brought in by new relation instances from making use of the knowledge extracted from the existing relation repository.",
+                    "sid": 153,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in Figure 3, the topic spaces at different levels are spanned by a different number of basis functions.",
+                    "sid": 154,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These numbers reveal the dimensions of the relevant geometric structures of data at different levels.",
+                    "sid": 155,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These numbers are completely data-driven: the diffusion wavelets approach can automatically find the number of levels and simultaneously generate the topics at each level.",
+                    "sid": 156,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that most multiscale topics are interpretable (due to the sparsity of the scaling functions), such that we can interpret the topics at different scales and select the best scale for embedding.",
+                    "sid": 157,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to bootstrapping approach, our approach is accumulative; that is as the system learns more relations, it gets better at learning new relations.",
+                    "sid": 158,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because our approach takes advantage of the previously learned relations, and the topic space is enriched as we learn more and more relations.",
+                    "sid": 159,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use diffusion wavelets (DWT) rather than other hierarchy topic models like hLDA (Blei et al., 2004) to extract relation topics for two reasons.",
+                    "sid": 160,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, DWT is parameter free while other models need some user-input parameters like hierarchy level.",
+                    "sid": 161,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, DWT is more efficient than the other models.",
+                    "sid": 162,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After the relation correlation matrix is constructed, DWT only needs a couple of minutes to extract multiscale topics on a regular computer.",
+                    "sid": 163,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A direct experimental comparison between DWT and hLDA can be found in (Wang and Mahadevan, 2009). lim j\u2192\u221e",
+                    "sid": 164,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 constructing relation detectors with multiscale relation topics",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "When we design detectors for new relations, we treat arg1, arg2, noun, and verb separately to get stronger correlations between relations.",
+                    "sid": 165,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not directly use preposition.",
+                    "sid": 166,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any DBpedia relation r \ue18d {1, \u00b7 \u00b7 \u00b7 , M} is represented with 4 vectors rt = [rt(1), \u00b7 \u00b7 \u00b7 , rt(Nt)], where t \ue18d {arg1, arg2, noun, verb}, Nt represents the size of the vocabulary set of the type t component in the Wikipedia training data, and rt(j) represents the occurrence count of type t component in relation r. For example, Nverb is the size of the verb vocabulary set in the training data and rverb(j) represents the occurrence count of the jth verb in relation r. When a new relation instance x is given, we extract the dependency path between two arguments, and create four vectors xt, where t \ue18d {arg1, arg2, noun, verb}, following the same format as rt.",
+                    "sid": 167,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The projection result of xt onto the DBpedia relation space Xt is as follows: where < \u00b7, \u00b7 > is the cosine similarity of two vectors.",
+                    "sid": 168,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At level k, the embedding of x is Ekx = [EkX , EX , EkX , EkX b], where Ek = We combine Exk with 3 existing kernels (KArgument, KPath and KBOW) to create a new kernel for relation detection. prepositions and verbs in the given sentences but not in the dependency paths.",
+                    "sid": 169,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these words are not as important as the words inside the dependency path, we assign weight 0.25 to them.",
+                    "sid": 170,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) KTFk(x, y) =< Exk, Eky >, where x, y are two input relation instances, and < \u00b7, \u00b7 > models the cosine similarity of two vectors.",
+                    "sid": 171,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TF stands for topic feature.",
+                    "sid": 172,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) The final kernel used in this paper is where \u03b1z can be tuned for each individual domain.",
+                    "sid": 173,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we set \u03b1z = 1 for i \ue18d {1, 2, 3, 4}. the diffusion wavelets implementation described in Section 3.1.",
+                    "sid": 174,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "[Ok]oo are the scaling function bases at level k represented as an M x pk matrix, k = 1, \u00b7 \u00b7 \u00b7 , h represents the level in the topic hierarchy.",
+                    "sid": 175,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The value of pk is determined in DWT () based on the intrinsic structure of the given dataset.",
+                    "sid": 176,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Columns of [Ok]oo are used as relation topics at level k.",
+                    "sid": 177,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3.",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Given the training data from a new relation, project the data onto level k of the multiscale topic hierarchy, where k is chosen by users (Section 4.1).",
+                    "sid": 178,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Apply SVM classifiers together with our kernel (Section 4.2) to create detectors for new relations.",
+                    "sid": 179,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 experimental results",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We used SVMLight (Joachims, 1999) together with the user defined kernel setting in our approach.",
+                    "sid": 180,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The trade-off parameter between training error and margin c is 1 for all experiments.",
+                    "sid": 181,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach to learn multiscale relation topics is largely parameter free.",
+                    "sid": 182,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only parameter to be set is the precision \u03b5 = 10\u22125, which is also the default value in the diffusion wavelets implementation.",
+                    "sid": 183,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the approach discussed in Section 2.1, we collect more than 620,000 training instances for arg1 arg 2 noun ver ([0k]00)TXt, and [\ufffdk]00 is defined in Figure 2.",
+                    "sid": 184,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7,628 DBpedia relations.",
+                    "sid": 185,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For any given topic vector v, we know it is a column vector of length M, where M is the size of the DBpedia relation set and \ufffdvl = 1.",
+                    "sid": 186,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The entry v[i] represents the contribution of relation i to this topic.",
+                    "sid": 187,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To explain the main concept of topic v, we sort the entries on v and print out the relations corresponding to the top entries.",
+                    "sid": 188,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These relations summarize the topics in the relation repository.",
+                    "sid": 189,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One topic example is as follows: [doctoraladvisor (0.683366), doctoralstudents (0.113201), candidate (0.014662), academicadvisors (0.008623), notablestudents (0.003829), college (0.003021), operatingsystem (0.002964), combatant (0.002826), influences (0.002285), training (0.002148), \u00b7 \u00b7 \u00b7 ], where doctoraladvisor is a DBpedia relation and 0.683366 is its contribution to the topic.",
+                    "sid": 190,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The length of this relation vector is 7,628.",
+                    "sid": 191,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We only list the top 10 relations here.",
+                    "sid": 192,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach identifies 5 different topic hierarchies under different settings (use args, noun, preposition and verb; arg1 only; arg2 only; noun only and verb only).",
+                    "sid": 193,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of the topics at each level is shown in Table 1.",
+                    "sid": 194,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the first level, each input relation is treated as a topic.",
+                    "sid": 195,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the second level, numbers of topics go down to reasonable numbers like 269.",
+                    "sid": 196,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally at the top level, the number of topic is down to 1 (Theorem 2 also proves this).",
+                    "sid": 197,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show some topic examples under the first setting.",
+                    "sid": 198,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 3 topics at level 5 are shown in Table 2.",
+                    "sid": 199,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They represent the most popular DBpedia relation topics.",
+                    "sid": 200,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Almost all 269 topics at level 5 look semantically meaningful.",
+                    "sid": 201,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They nicely capture the related relations.",
+                    "sid": 202,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some examples are in Table 3.",
+                    "sid": 203,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In previous experiment, 20,000 relation instances were held and not used to construct the topic space.",
+                    "sid": 204,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These instances are randomly selected from 100 relations (200 instances from each relation).",
+                    "sid": 205,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This set is used as a benchmark to compare different relation detection approaches.",
+                    "sid": 206,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this experiment, 100 instances from each relation are used for training, and the other 100 are for testing.",
+                    "sid": 207,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In training, we try three different settings: n = 5, 20 and 100, where n is the size of the training set for each relation.",
+                    "sid": 208,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we train a model for one relation, we use the training positive instances from the other 99 relations as training negatives.",
+                    "sid": 209,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we use 5 training positive instances and 5*99=495 training negatives to train a detector for each relation.",
+                    "sid": 210,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare our approach against the regular rule-based approach (Lin and Pantel, 2001) and two other kernel-based approaches (presented in Section 4.2) for relation detection task.",
+                    "sid": 211,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The comparison results are summarized in Table 4.",
+                    "sid": 212,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach using relation topics (level 2) consistently outperforms the other three approaches in all three settings.",
+                    "sid": 213,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When n = 5, it achieves the largest improvement over the other three.",
+                    "sid": 214,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This indicates that using relation topics that integrate the knowledge extracted from the existing relations, can significantly benefit us when the training data is insufficient.",
+                    "sid": 215,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is reasonable, since the prior knowledge becomes more valuable in this scenario.",
+                    "sid": 216,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The users can select the level that is the most ap- heuristic rules were applied.",
+                    "sid": 217,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are aware of some propriate for their applications.",
+                    "sid": 218,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this example, we methods that could stack on our approach to further only have alignment results at 7 levels.",
+                    "sid": 219,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Choosing the improve the performance on ACE test.",
+                    "sid": 220,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Comspace at level 2 spanned by a couple of hundreds of posite kernel result in Table 5 is based on a linear basis functions is a natural choice, since the levels combination of the Argument kernel and Convolubelow and above this have too many or too few fea- tion Tree kernel.",
+                    "sid": 221,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Zhang et al., 2006) showed that tures, respectively.",
+                    "sid": 222,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A user can also select the most by carefully choosing the weight of each compoappropriate level by checking if the related relation nent and using a polynomial expansion, they could topics are meaningful for their applications. achieve the best performance on this data: 72.1% F5.3 Relation Detection on ACE Data measure.",
+                    "sid": 223,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Nguyen et al., 2009) further showed that In this experiment, we use the news domain docu- the performance can be improved by taking syntacments of the ACE 2004 corpus (ACE, 2004) to com- tic and semantic structures into consideration.",
+                    "sid": 224,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They pare our approaches against the state-of-the-art ap- used several types of syntactic information includproaches.",
+                    "sid": 225,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This dataset includes 348 documents and ing constituent and dependency syntactic parse trees around 4400 relation instances.",
+                    "sid": 226,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 relation types, to improve the state of the art approaches to 71.5% 7 entity types, numerous relation sub-types, entity on F-measure.",
+                    "sid": 227,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Heuristic rules extracted from the sub-types, and mention types are defined on this target data can also help improve the performance. set.",
+                    "sid": 228,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is to classify the relation instances (Jiang and Zhai, 2007) reported that by taking sevinto one of the 7 relation types or \u201cNONE\u201d, which eral heuristic rules they can improve the F-measure means there is no relation.",
+                    "sid": 229,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison, we use of Composite Kernel to 70.4%.",
+                    "sid": 230,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also showed the same setting as (Zhang et al., 2006), by apply- that using maximum entropy classifier rather than ing a 5-fold cross-validation.",
+                    "sid": 231,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The scores reported SVM achieved the best performance on this task: here are the average of all 5 folds.",
+                    "sid": 232,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is also how 72.9% F-measure.",
+                    "sid": 233,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To the best of our knowledge, the the other approaches are evaluated.",
+                    "sid": 234,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this test, we most recent result was reported by (Zhou and Zhu, treat entity types, entity sub-types and mention types 2011), who extended their previous work in (Zhou equally as argument types.",
+                    "sid": 235,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 summarizes et al., 2007).",
+                    "sid": 236,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By using several heuristics to define the performance after applying the kernels presented an effective portion of constituent trees, and training in Section 4.2 incrementally, showing the improve- the classifiers using ACE relation sub-types (rather ment from each individual kernel.",
+                    "sid": 237,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also com- than on types), they achieved an impressive 75.8% pare our approaches to the other state-of-the-art ap- F-measure.",
+                    "sid": 238,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, as pointed out in (Nguyen et proaches including Convolution Tree kernel (Collins al., 2009), such heuristics are tuned on the target reand Duffy, 2001), Syntactic kernel (Zhao and Grish- lation extraction task and might not be appropriate to man, 2005), Composite kernel (linear) (Zhang et al., compare against the automatic learning approaches.",
+                    "sid": 239,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2006) and the best kernel in (Nguyen et al., 2009).",
+                    "sid": 240,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even though we have not done any domain specific Our approach with relation topics at level 2 has the parameter tuning or applied any heuristics, our apbest performance, achieving a 73.24% F-measure. proach still achieve significant improvements over The impact of the relation topics is huge.",
+                    "sid": 241,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They im- all approaches mentioned above except one, which prove the F-measure from 61.15% to 73.24%.",
+                    "sid": 242,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We is based on heuristics extracted from the target doalso test our approach using the topics at level 3. main.",
+                    "sid": 243,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This also implies that by combining some of The performance is slightly worse than using level the above ideas with relation topics, the performance 2, but still better than the others. on ACE data may be further improved.",
+                    "sid": 244,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper studies how relation topics extracted 6 Conclusions from Wikipedia relation repository can help improve This paper proposes a novel approach to create derelation detection performance.",
+                    "sid": 245,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not want to tectors for new relations integrating the knowledge tune our approach to one particular relation detec- extracted from the existing relations.",
+                    "sid": 246,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contribution task, like ACE 2004.",
+                    "sid": 247,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, no tions of this paper are three-fold.",
+                    "sid": 248,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, we proparameter tuning was taken and no domain specific 1434 vide an automatic way to collect training data for more than 7,000 relations from Wikipedia and DBpedia.",
+                    "sid": 249,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, we present an unsupervised way to construct a set of relation topics at multiple scales.",
+                    "sid": 250,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different from the topics defined over words, relation topics are defined over the existing relations.",
+                    "sid": 251,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thirdly, we design a new kernel for relation detection by integrating the relation topics in the representation of the relation instances.",
+                    "sid": 252,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By leveraging the knowledge extracted from the Wikipedia relation repository, our approach significantly improves the performance over the state-of-the-art approaches on ACE data.",
+                    "sid": 253,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper makes use of all DBpedia relations to create relation topics.",
+                    "sid": 254,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is possible that using a subset of them (more related to the target relations) might improve the performance.",
+                    "sid": 255,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will explore this in future work.",
+                    "sid": 256,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We thank the reviewers for their helpful comments.",
+                    "sid": 257,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This material is based upon work supported in part by the IBM DeepQA (Watson) project.",
+                    "sid": 258,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also gratefully acknowledge the support of Defense Advanced Research Projects Agency (DARPA) Machine Reading Program under Air Force Research Laboratory (AFRL) prime contract no.",
+                    "sid": 259,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "FA8750-09C-0172.",
+                    "sid": 260,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings, and conclusion or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the view of the DARPA, AFRL, or the US government.",
+                    "sid": 261,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

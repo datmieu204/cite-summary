@@ -1,0 +1,965 @@
+{
+    "ID": "P14-2022",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Faster Phrase-Based Decoding by Refining Feature State",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We contribute a faster decoding algorithm for phrase-based machine translation.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translation hypotheses keep track of state, such as context for the language model and coverage of words in the source sentence.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most features depend upon only part of the state, but traditional algorithms, including cube pruning, handle state atomically.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, cube pruning will repeatedly query the language model with hypotheses that differ only in source coverage, despite the fact that source coverage is irrelevant to the language model.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our key contribution avoids this behavior by placing hypotheses into equivalence classes, masking the parts of state that matter least to the score.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, we exploit shared words in hypotheses to iteratively refine language model scores rather than handling language model state atomically.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our algorithm and cube pruning are both approximate, improvement can be used to increase speed or accuracy.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When tuned to attain the same accuracy, our algorithm is 4.0\u20137.7 times as fast as the Moses decoder with cube pruning.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Translation speed is critical to making suggestions as translators type, mining for parallel data by translating the web, and running on mobile devices without Internet connectivity.",
+                    "sid": 9,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We contribute a fast decoding algorithm for phrase-based machine translation along with an implementation in a new open-source (LGPL) decoder available at http://kheafield.com/code/.",
+                    "sid": 10,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase-based decoders (Koehn et al., 2007; Cer et al., 2010; Wuebker et al., 2012) keep track of several types of state with translation hypotheses: coverage of the source sentence thus far, context for the language model, the last position for the distortion model, and anything else features need.",
+                    "sid": 11,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Existing decoders handle state atomically: hypotheses that have exactly the same state can be recombined and efficiently handled via dynamic programming, but there is no special handling for partial agreement.",
+                    "sid": 12,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, features are repeatedly consulted regarding hypotheses that differ only in ways irrelevant to their score, such as coverage of the source sentence.",
+                    "sid": 13,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our decoder bundles hypotheses into equivalence classes so that features can focus on the relevant parts of state.",
+                    "sid": 14,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We pay particular attention to the language model because it is responsible for much of the hypothesis state.",
+                    "sid": 15,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the decoder builds translations from left to right (Koehn, 2004), it records the last N \u2212 1 words of each hypothesis so that they can be used as context to score the first N \u2212 1 words of a phrase, where N is the order of the language model.",
+                    "sid": 16,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditional decoders (Huang and Chiang, 2007) try thousands of combinations of hypotheses and phrases, hoping to find ones that the language model likes.",
+                    "sid": 17,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm instead discovers good combinations in a coarse-to-fine manner.",
+                    "sid": 18,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm exploits the fact that hypotheses often share the same suffix and phrases often share the same prefix.",
+                    "sid": 19,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These shared suffixes and prefixes allow the algorithm to coarsely reason over many combinations at once.",
+                    "sid": 20,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our primary contribution is a new search algorithm that exploits the above observations, namely that state can be divided into pieces relevant to each feature and that language model state can be further subdivided.",
+                    "sid": 21,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The primary claim is that our algorithm is faster and more accurate than the popular cube pruning algorithm.",
+                    "sid": 22,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 related work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Our previous work (Heafield et al., 2013) developed language model state refinement for bottomProceedings of the 52nd Annual Meeting of the Association for Computational Linguistics (Short Papers), pages 130\u2013135, Baltimore, Maryland, USA, June 23-25 2014. c\ufffd2014 Association for Computational Linguistics up decoding in syntatic machine translation.",
+                    "sid": 23,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In bottom-up decoding, hypotheses can be extended to the left or right, so hypotheses keep track of both their prefix and suffix.",
+                    "sid": 24,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The present phrasebased setting is simpler because sentences are constructed from left to right, so prefix information is unnecessary.",
+                    "sid": 25,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, phrase-based translation implements reordering by allowing hypotheses that translate discontiguous words in the source sentence.",
+                    "sid": 26,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are exponentially many ways to cover the source sentence and hypotheses carry this information as additional state.",
+                    "sid": 27,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A main contribution in this paper is efficiently ignoring coverage when evaluating the language model.",
+                    "sid": 28,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, syntactic machine translation hypotheses correspond to contiguous spans in the source sentence, so in prior work we simply ran the search algorithm in every span.",
+                    "sid": 29,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another improvement upon Heafield et al. (2013) is that we previously made no effort to exploit common words that appear in translation rules, which are analogous to phrases.",
+                    "sid": 30,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, we explicitly group target phrases by common prefixes, doing so directly in the phrase table.",
+                    "sid": 31,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Coarse-to-fine approaches (Petrov et al., 2008; Zhang and Gildea, 2008) invoke the decoder multiple times with increasingly detailed models, pruning after each pass.",
+                    "sid": 32,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key difference in our work is that, rather than refining models in lock step, we effectively refine the language model on demand for hypotheses that score well.",
+                    "sid": 33,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, their work was performed in syntactic machine translation while we address issues specific to phrase-based translation.",
+                    "sid": 34,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our baseline is cube pruning (Chiang, 2007; Huang and Chiang, 2007), which is both a way to organize search and an algorithm to search through cross products of sets.",
+                    "sid": 35,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopt the same search organization (Section 3.1) but change how cross products are searched.",
+                    "sid": 36,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chang and Collins (2011) developed an exact decoding algorithm based on Lagrangian relaxation.",
+                    "sid": 37,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it has not been shown to tractably scale to 5-gram language models used by many modern translation systems.",
+                    "sid": 38,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 decoding",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We begin by summarizing the high-level organization of phrase-based cube pruning (Koehn, 2004; Koehn et al., 2007; Huang and Chiang, 2007).",
+                    "sid": 39,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sections 3.2 and later show our contribution.",
+                    "sid": 40,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase-based decoders construct hypotheses from left to right by appending phrases in the target language.",
+                    "sid": 41,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder organizes this search process using stacks (Figure 1).",
+                    "sid": 42,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stacks contain hypotheses that have translated the same number of source words.",
+                    "sid": 43,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The zeroth stack contains one hypothesis with nothing translated.",
+                    "sid": 44,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subsequent stacks are built by extending hypotheses in preceding stacks.",
+                    "sid": 45,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the second stack contains hypotheses that translated two source words either separately or as a phrasal unit.",
+                    "sid": 46,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Returning to Figure 1, the decoder can apply a phrase pair to translate \u201cle chat\u201d as \u201ccat\u201d or it can derive \u201cthe cat\u201d by translating one word at a time; both appear in the second stack because they translate two source words.",
+                    "sid": 47,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To generalize, the decoder populates the ith stack by pairing hypotheses in the i \u2212 jth stack with target phrases that translate source phrases of length j.",
+                    "sid": 48,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hypotheses remember which source word they translated, as indicated by the filled circles.",
+                    "sid": 49,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reordering limit prevents hypotheses from jumping around the source sentence too much and dramatically reduces the search space.",
+                    "sid": 50,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, the decoder cannot propose translations that would require jumping back more than R words in the source sentence, including multiple small jumps.",
+                    "sid": 51,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, stacks are limited to k hypotheses, where k is set by the user.",
+                    "sid": 52,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Small k is faster but may prune good hypotheses, while large k is slower but more thorough, thereby comprising a time-accuracy trade-off.",
+                    "sid": 53,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The central question in this paper is how to select these k hypotheses.",
+                    "sid": 54,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Populating a stack boils down to two steps.",
+                    "sid": 55,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the decoder matches hypotheses with source phrases subject to three constraints: the total source length matches the stack being populated, none of the source words has already been transThe leaves indicate source coverage and any other hypothesis state. lated, and the reordering limit.",
+                    "sid": 56,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, the decoder searches through these matches to select k high-scoring hypotheses for placement in the stack.",
+                    "sid": 57,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We improve this second step.",
+                    "sid": 58,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder provides our algorithm with pairs consisting of a hypothesis and a compatible source phrase.",
+                    "sid": 59,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each source phrase translates to multiple target phrases.",
+                    "sid": 60,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is to grow these hypotheses by appending a target phrase, yielding new hypotheses.",
+                    "sid": 61,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These new hypotheses will be placed into a stack of size k, so we are interested in selecting k new hypotheses that score highly.",
+                    "sid": 62,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Beam search (Lowerre, 1976; Koehn, 2004) tries every hypothesis with every compatible target phrase then selects the top k new hypotheses by score.",
+                    "sid": 63,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is wasteful because most hypotheses are discarded.",
+                    "sid": 64,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we follow cube pruning (Chiang, 2007) in using a priority queue to generate k hypotheses.",
+                    "sid": 65,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A key difference is that we generate these hypotheses iteratively.",
+                    "sid": 66,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each source phrase, we collect the set of compatible hypotheses.",
+                    "sid": 67,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then place these hypotheses in a trie that emphasizes the suffix words because these matter most when appending a target phrase.",
+                    "sid": 68,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows an example.",
+                    "sid": 69,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While it suffices to build this trie on the last N \u2212 1 words that matter to the language model, Li and Khudanpur (2008) have identified cases where fewer words are necessary because the language model will back off.",
+                    "sid": 70,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The leaves of the trie are complete hypotheses and reveal information irrelevant to the language model, such as coverage of the source sentence and the state of other features.",
+                    "sid": 71,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each source phrase translates to a set of target phrases.",
+                    "sid": 72,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because these phrases will be appended to a hypothesis, the first few words matter the most to the language model.",
+                    "sid": 73,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore Figure 3: Target phrases arranged into a trie.",
+                    "sid": 74,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Set in italic, leaves reveal parts of the phrase that are irrelevant to the language model. arrange the target phrases into a prefix trie.",
+                    "sid": 75,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example is shown in Figure 3.",
+                    "sid": 76,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar to the hypothesis trie, the depth may be shorter than N \u2212 1 in cases where the language model will provably back off (Li and Khudanpur, 2008).",
+                    "sid": 77,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The trie can also be short because the target phrase has fewer than N \u2212 1 words.",
+                    "sid": 78,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We currently store this trie data structure directly in the phrase table, though it could also be computed on demand to save memory.",
+                    "sid": 79,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Empirically, our phrase table uses less RAM than Moses\u2019s memory-based phrase table.",
+                    "sid": 80,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an optimization, a trie reveals multiple words when there would otherwise be no branching.",
+                    "sid": 81,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This allows the search algorithm to make decisions only when needed.",
+                    "sid": 82,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Heafield et al. (2013), leaves in the trie take the score of the underlying hypothesis or target phrase.",
+                    "sid": 83,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-leaf nodes take the maximum score of their descendants.",
+                    "sid": 84,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Children of a node are sorted by score.",
+                    "sid": 85,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea is that the decoder reasons over pairs of nodes in the hypothesis and phrase tries before devling into detail.",
+                    "sid": 86,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, it can determine what the language model likes and, conversely, quickly discard combinations that the model does not like.",
+                    "sid": 87,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A boundary pair consists of a node in the hypothesis trie and a node in the target phrase trie.",
+                    "sid": 88,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the decoder starts at the root of each trie with the boundary pair (E, E).",
+                    "sid": 89,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The score of a boundary pair is the sum of the scores of the underlying trie nodes.",
+                    "sid": 90,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, once some words have been revealed, the decoder calls the language model to compute a score adjustment.",
+                    "sid": 91,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the boundary pair (country, that) has score adjustment times the weight of the language model.",
+                    "sid": 92,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has the effect of cancelling out the estimate made when the phrase was scored in isolation, replacing it with a more accurate estimate based on available context.",
+                    "sid": 93,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These score adjustments are efficient to compute because the decoder retained a pointer to \u201cthat\u201d in the language model\u2019s data structure (Heafield et al., 2011).",
+                    "sid": 94,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Refinement is the notion that the boundary pair (E, E) divides into several boundary pairs that reveal specific words from hypotheses or target phrases.",
+                    "sid": 95,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most straightforward way to do this is simply to split into all children of a trie node.",
+                    "sid": 96,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Continuing the example from Figure 2, we could split (E, E) into three boundary pairs: (country, E), (nations, E), and (countries, E).",
+                    "sid": 97,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is somewhat inefficient to separately consider the low-scoring child (countries, E).",
+                    "sid": 98,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we continue to split off the best child (country, E) and leave a note that the zeroth child has been split off, denoted (E[1+], E).",
+                    "sid": 99,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The index increases each time a child is split off.",
+                    "sid": 100,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The the boundary pair (E[1+], E) no longer counts (country, E) as a child, so its score is lower.",
+                    "sid": 101,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Splitting alternates sides.",
+                    "sid": 102,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, (country, E) splits into (country, that) and (country, E[1+]).",
+                    "sid": 103,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If one side has completely revealed words that matter to the language model, then splitting continues with the other side.",
+                    "sid": 104,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This procedure ensures that the language model score is completely resolved before considering irrelevant differences, such as coverage of the source sentence.",
+                    "sid": 105,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Search proceeds in a best-first fashion controlled by a priority queue.",
+                    "sid": 106,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each source phrase, we convert the compatible hypotheses into a trie.",
+                    "sid": 107,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The target phrases were already converted into a trie when the phrase table was loaded.",
+                    "sid": 108,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then push the root (E, E) boundary pair into the priority queue.",
+                    "sid": 109,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do this for all source phrases under consideration, putting their root boundary pairs into the same priority queue.",
+                    "sid": 110,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm then loops by popping the top boundary pair.",
+                    "sid": 111,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It the top boundary pair uniquely describes a hypothesis and target phrase, then remaining features are evaluated and the new hypothesis is output to the decoder\u2019s stack.",
+                    "sid": 112,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, the algorithm splits the boundary pair and pushes both split versions.",
+                    "sid": 113,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Iteration continues until k new hypotheses have been found.",
+                    "sid": 114,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We build hypotheses from left-to-right and manage stacks just like cube pruning.",
+                    "sid": 115,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only difference is how the k elements of these stacks are selected.",
+                    "sid": 116,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the decoder matches a hypothesis with a compatible source phrase, we immediately evaluate the distortion feature and update future costs, both of which are independent of the target phrase.",
+                    "sid": 117,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our future costs are exactly the same as those used in Moses (Koehn et al., 2007): the highest-scoring way to cover the rest of the source sentence.",
+                    "sid": 118,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This includes the language model score within target phrases but ignores the change in language model score that would occur were these phrases to be appended together.",
+                    "sid": 119,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hypotheses compatible with each source phrase are arranged into a trie.",
+                    "sid": 120,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the priority queue algorithm from the preceding section searches for options that the language model likes.",
+                    "sid": 121,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "The primary claim is that our algorithm performs better than cube pruning in terms of the trade-off between time and accuracy.",
+                    "sid": 122,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare our new decoder implementation with Moses (Koehn et al., 2007) by translating 1677 sentences from Chinese to English.",
+                    "sid": 123,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These sentences are a deduplicated subset of the NIST Open MT 2012 test set and were drawn from Chinese online text sources, such as discussion forums.",
+                    "sid": 124,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained our phrase table using a bitext of 10.8 million sentence pairs, which after tokenization amounts to approximately 290 million words on the English side.",
+                    "sid": 125,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bitext contains data from several sources, including news articles, UN proceedings, Hong Kong government documents, online forum data, and specialized sources such as an idiom translation table.",
+                    "sid": 126,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also trained our language model on the English half of this bitext using unpruned interpolated modified Kneser-Ney smoothing (Kneser and Ney, 1995; Chen and Goodman, 1998).",
+                    "sid": 127,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system has standard phrase table, length, distortion, and language model features.",
+                    "sid": 128,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to implement lexicalized reordering in future work; without this, the test system is 0.53 BLEU (Papineni et al., 2002) point behind a state-of-theart system.",
+                    "sid": 129,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set the reordering limit to R = 15.",
+                    "sid": 130,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The phrase table was pre-pruned by applying the same heuristic as Moses: select the top 20 target phrases by score, including the language model.",
+                    "sid": 131,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moses (Koehn et al., 2007) revision d6df825 was compiled with all optimizations recommended in the documentation.",
+                    "sid": 132,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the inmemory phrase table for speed.",
+                    "sid": 133,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tests were run on otherwise-idle identical machines with 32 GB RAM; the processes did not come close to running out of memory.",
+                    "sid": 134,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The language model was compiled into KenLM probing format (Heafield, 2011) and placed in RAM while text phrase tables were forced into the disk cache before each run.",
+                    "sid": 135,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Timing is based on CPU usage (user plus system) minus loading time, as measured by running on empty input; our decoder is also faster at loading.",
+                    "sid": 136,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All results are single-threaded.",
+                    "sid": 137,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Model score is comparable across decoders and averaged over all 1677 sentences; higher is better.",
+                    "sid": 138,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relationship between model score and uncased BLEU (Papineni et al., 2002) is noisy, so peak BLEU is not attained by the highest search accuracy.",
+                    "sid": 139,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 shows the results for pop limits k ranging from 5 to 10000 while Table 1 shows select results.",
+                    "sid": 140,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Moses, we also set the stack size to k to disable a second pruning pass, as is common.",
+                    "sid": 141,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because Moses is slower, we also ran our decoder with higher beam sizes to fill in the graph.",
+                    "sid": 142,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our decoder is more accurate, but mostly faster.",
+                    "sid": 143,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can interpret accuracy improvments as speed improvements by asking how much time is required to attain the same accuracy as the baseline.",
+                    "sid": 144,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By this metric, our decoder is 4.0 to 7.7 times as fast as Moses, depending on k.",
+                    "sid": 145,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 conclusion",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We have contributed a new phrase-based search algorithm based on the principle that the language model cares the most about boundary words.",
+                    "sid": 146,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This leads to two contributions: hiding irrelevant state from features and an incremental refinement algorithm to find high-scoring combinations.",
+                    "sid": 147,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm is implemented in a new fast phrase-based decoder, which we release as open-source under the LGPL at kheafield.com/code/.",
+                    "sid": 148,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgements",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "This work was supported by the Defense Advanced Research Projects Agency (DARPA) Broad Operational Language Translation (BOLT) program through IBM.",
+                    "sid": 149,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work used Stampede provided by the Texas Advanced Computing Center (TACC) at The University of Texas at Austin under XSEDE allocation TG-CCR140009.",
+                    "sid": 150,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "XSEDE is supported by NSF grant number OCI1053575.",
+                    "sid": 151,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the view of DARPA or the US government.",
+                    "sid": 152,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

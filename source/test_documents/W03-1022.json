@@ -1,0 +1,1223 @@
+{
+    "ID": "W03-1022",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Supersense Tagging Of Unknown Nouns In WordNet",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a new framework for classifying common nouns that extends namedentity classification.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a fixed set 26 semantic labels, which we called su- These are the labels used by lexicographers developing WordNet.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This framework has a number of practical advantages.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show how information contained in the dictionary can be used as additional training data that improves accuracy in learning new nouns.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also define a more realistic evaluation procedure than cross-validation.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Lexical semantic information is useful in many natural language processing and information retrieval applications, particularly tasks that require complex inferences involving world knowledge, such as question answering or the identification of coreferential entities (Pasca and Harabagiu, 2001; Pustejovsky et al., 2002).",
+                    "sid": 6,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, even large lexical databases such as WordNet (Fellbaum, 1998) do not include all of the words encountered in broad-coverage NLP applications.",
+                    "sid": 7,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ideally, we would like a system that automatically extends existing lexical resources by \u2701We would like to thank Thomas Hofmann, Brian Roark, and our colleagues in the Brown Laboratory for Linguistic Information Processing (BLLIP), as well as Jesse Hochstadt for his editing advice.",
+                    "sid": 8,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This material is based upon work supported by the National Science Foundation under Grant No.",
+                    "sid": 9,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0085940. identifying the syntactic and semantic properties of unknown words.",
+                    "sid": 10,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In terms of the WordNet lexical database, one would like to automatically assign unknown words a position in the synset hierarchy, introducing new synsets and extending the synset hierarchy where appropriate.",
+                    "sid": 11,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Doing this accurately is a difficult problem, and in this paper we address a simpler problem: automatically determining the broad semantic class, or supersense, to which unknown words belong.",
+                    "sid": 12,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Systems for thesaurus extension (Hearst, 1992; Roark and Charniak, 1998), information extraction (Riloff and Jones, 1999) or named-entity recognition (Collins and Singer, 1999) each partially address this problem in different ways.",
+                    "sid": 13,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal in these tasks is automatically tagging words with semantic labels such as \u201cvehicle\u201d, \u201corganization\u201d, \u201cperson\u201d, etc.",
+                    "sid": 14,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we extend the named-entity recognition approach to the classification of common nouns into 26 different supersenses.",
+                    "sid": 15,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than define these ourselves, we adopted the 26 \u201clexicographer class\u201d labels used in WordNet, which include labels such as person, location, event, quantity, etc.",
+                    "sid": 16,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe our general approach should generalize to other definitions of supersenses.",
+                    "sid": 17,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the WordNet lexicographer classes as supersenses has a number of practical advantages.",
+                    "sid": 18,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we show how information contained in the dictionary can be used as additional training data that improves the system\u2019s accuracy.",
+                    "sid": 19,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, it is possible to use a very natural evaluation procedure.",
+                    "sid": 20,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A system can be trained on an earlier release of WordNet and tested on the words added in a later release, since these labels are constant across different releases.",
+                    "sid": 21,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This new evaluation defines a realistic lexical acquisition task which is well defined, well motivated and easily standardizable.",
+                    "sid": 22,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The heart of our system is a multiclass perceptron classifier (Crammer and Singer, 2002).",
+                    "sid": 23,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features used are the standard ones used in word-sense classification and named-entity extraction tasks, i.e., collocation, spelling and syntactic context features.",
+                    "sid": 24,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experiments presented below show that when the classifier also uses the data contained in the dictionary its accuracy improves over that of a traditionally trained classifier.",
+                    "sid": 25,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we show that there are both similarities and differences in the results obtained with the new evaluation and standard crossvalidation.",
+                    "sid": 26,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This might suggest that in fact that the new evaluation defines a more realistic task.",
+                    "sid": 27,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The paper is organized as follows.",
+                    "sid": 28,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 2 we discuss the problem of unknown words and the task of semantic classification.",
+                    "sid": 29,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 3 we describe the WordNet lexicographer classes, how to extract training data from WordNet, the new evaluation method and the relation of this task to namedentity classification.",
+                    "sid": 30,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 4 we describe the experimental setup, and in Section 5 we explain the averaged perceptron classifier used.",
+                    "sid": 31,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 6 and 7 we discuss the results and the two evaluations.",
+                    "sid": 32,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 unknown words and semantic classification",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Language processing systems make use of \u201cdictionaries\u201d, i.e., lists that associate words with useful information such as the word\u2019s frequency or syntactic category.",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In tasks that also involve inferences about world knowledge, it is useful to know something about the meaning of the word.",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This lexical semantic information is often modeled on what is found in normal dictionaries, e.g., that \u201cirises\u201d are flowers or that \u201cexane\u201d is a solvent.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This information can be crucial in tasks such as question answering - e.g., to answer a question such as \u201cWhat kind of flowers did Van Gogh paint?\u201d (Pasca and Harabagiu, 2001) - or the individuation of co-referential expressions, as in the passage \u201c... the prerun can be performed with ... this can be considered ...\u201d (Pustejovsky et al., 2002).",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexical semantic information can be extracted from existing dictionaries such as WordNet.",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these resources are incomplete and systems that rely on them often encounter unknown words, even if the dictionary is large.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an example, in the Bllip corpus (a very large corpus of Wall Street Journal text) the relative frequency of common nouns that are unknown to WordNet 1.6 is approximately 0.0054; an unknown noun occurs, on average, every eight sentences.",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WordNet 1.6 lists 95,000 noun types.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason the importance of issues such as automatically building, extending or customizing lexical resources has been recognized for some time in computational linguistics (Zernik, 1991).",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Solutions to this problem were first proposed in AI in the context of story understanding, cf.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Granger, 1977).",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal is to label words using a set of semantic labels specified by the dictionary.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several studies have addressed the problem of expanding one semantic category at a time, such as \u201cvehicle\u201d or \u201corganization\u201d, that are relevant to a particular task (Hearst, 1992; Roark and Charniak, 1998; Riloff and Jones, 1999).",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In named-entity classification a large set of named entities (proper nouns) are classified using a comprehensive set of semantic labels such as \u201corganization\u201d, \u201cperson\u201d, \u201clocation\u201d or \u201cother\u201d (Collins and Singer, 1999).",
+                    "sid": 46,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This latter approach assigns all named entities in the data set a semantic label.",
+                    "sid": 47,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extend this approach to the classification of common nouns using a suitable set of semantic classes.",
+                    "sid": 48,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 lexicographer classes for noun classification",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "WordNet (Fellbaum, 1998) is a broad-coverage machine-readable dictionary.",
+                    "sid": 49,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Release 1.71 of the English version lists about 150,000 entries for all open-class words, mostly nouns (109,000 types), but also verbs, adjectives, and adverbs.",
+                    "sid": 50,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WordNet is organized as a network of lexicalized concepts, sets of synonyms called synsets; e.g., the nounschairman, chairwoman, chair, chairperson form a synset.",
+                    "sid": 51,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A word that belongs to several synsets is ambiguous.",
+                    "sid": 52,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To facilitate the development of WordNet, lexicographers organize synsets into several domains, based on syntactic category and semantic coherence.",
+                    "sid": 53,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each noun synset is assigned one out of 26 broad categories1.",
+                    "sid": 54,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these broad categories group together very many synsets, i.e., word senses, we call them supersenses.",
+                    "sid": 55,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The supersense labels that WordNet lexicographers use to organize nouns are listed in Table 12.",
+                    "sid": 56,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that since the lexicographer labels are assigned to synsets, often ambiguity is preserved even at this level.",
+                    "sid": 57,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, chair has three supersenses: \u201cperson\u201d, \u201cartifact\u201d, and \u201cact\u201d.",
+                    "sid": 58,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This set of labels has a number of attractive features for the purposes of lexical acquisition.",
+                    "sid": 59,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is fairly general and therefore small.",
+                    "sid": 60,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reasonable size of the label set makes it possible to apply stateof-the-art machine learning methods.",
+                    "sid": 61,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, classifying new words at the synset level defines a multiclass problem with a huge class space - more than 66,000 noun synsets in WordNet 1.6, more than 75,000 in the newest release, 1.71 (cf. also (Ciaramita, 2002) on this problem).",
+                    "sid": 62,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the same time the labels are not too abstract or vague.",
+                    "sid": 63,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the classes seem natural and easily recognizable.",
+                    "sid": 64,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is probably why they were chosen by the lexicographers to facilitate their task.",
+                    "sid": 65,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But there are more important practical and methodological advantages.",
+                    "sid": 66,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WordNet contains a great deal of information about words and word senses.The information contained in the dictionary\u2019s glosses is very similar to what is typically listed in normal dictionaries: synonyms, definitions and example sentences.",
+                    "sid": 67,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests a very simple way in which it can be put into use: it can be compiled into training data for supersense labels.",
+                    "sid": 68,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This data can then be added to the data extracted from the training corpus.",
+                    "sid": 69,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For several thousand concepts WordNet\u2019s glosses are very informative.",
+                    "sid": 70,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The synset \u201cchair\u201d for example looks as follows: : president, chairman, chairwoman, chair, chairperson \u2013 (the officer who presides at the meetings of an organization); \u201caddress your remarks to the chairperson\u201d.",
+                    "sid": 71,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In WordNet 1.6, 66,841 synsets contain definitions (in parentheses above), and 6,147 synsets contain example sentences (in quotation marks).",
+                    "sid": 72,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we show below, this information about word senses is useful for supersense tagging.",
+                    "sid": 73,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Presumably this is because if it can be said of a \u201cchairperson\u201d that she can \u201cpreside at meetings\u201d or that \u201ca remark\u201d can be \u201caddressed to her\u201d, then logically speaking these things can be said of the superordinates of \u201cchairperson\u201d, like \u201cperson\u201d, as well.",
+                    "sid": 74,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore information at the synset level is relevant also at the supersense level.",
+                    "sid": 75,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, while individually each gloss doesn\u2019t say too much about the narrow concept it is attached to (at least from a machine learning perspective) at the supersense level this information accumulates.",
+                    "sid": 76,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact it forms a small corpus of supersense-annotated data that can be used to train a classifier for supersense tagging of words or for other semantic classification tasks.",
+                    "sid": 77,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formulating the problem in this fashion makes it possible to define also a very natural evaluation procedure.",
+                    "sid": 78,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Systems can be trained on nouns listed in a given release of WordNet and tested on the nouns introduced in a later version.",
+                    "sid": 79,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of lexicographer labels remains constant and can be used across different versions.",
+                    "sid": 80,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way systems can be tested on a more realistic lexical acquisition task - the same task that lexicographers carried out to extend the database.",
+                    "sid": 81,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is then well defined and motivated, and easily standardizable.",
+                    "sid": 82,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The categories typically used in named-entity recognition tasks are a subset of the noun supersense labels: \u201cperson\u201d, \u201clocation\u201d, and \u201cgroup\u201d.",
+                    "sid": 83,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Small label sets like these can be sufficient in named-entity recognition.",
+                    "sid": 84,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins and Singer (1999) for example report that 88% of the named entities occurring in their data set belong to these three categories (Collins and Singer, 1999).",
+                    "sid": 85,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The distribution of common nouns, however, is more uniform.",
+                    "sid": 86,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We estimated this distribution by counting the occurrences of 744 unambiguous common nouns newly introduced in WordNet 1.71.",
+                    "sid": 87,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 plots the cumulative frequency distribution of supersense tokens; the labels are ordered by decreasing relative frequency as in Table 1.",
+                    "sid": 88,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most frequent supersenses are \u201cperson\u201d, \u201ccommunication\u201d, \u201cartifact\u201d etc.",
+                    "sid": 89,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The three most frequent supersenses account for a little more of 50% of all tokens, and 9 supersenses account for 90% of all tokens.",
+                    "sid": 90,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A larger number of labels is needed for supersense tagging than for named-entity recognition.",
+                    "sid": 91,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The figure also shows the distribution of labels for all unambiguous tokens in WordNet 1.6; the two distributions are quite similar.",
+                    "sid": 92,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "The \u201cnew\u201d nouns in WordNet 1.71 and the \u201cold\u201d ones in WordNet 1.6 constitute the test and training data that we used in our word classification experiments.",
+                    "sid": 93,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we describe the experimental setup: training and test data, and features used.",
+                    "sid": 94,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extracted from the Bllip corpus all occurrences of nouns that have an entry in WordNet 1.6.",
+                    "sid": 95,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bllip (BLLIP, 2000) is a 40-million-word syntactically parsed corpus.",
+                    "sid": 96,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the parses to extract the syntactic features described below.",
+                    "sid": 97,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then removed all ambiguous nouns, i.e., nouns that are tagged with more than one supersense label (72% of the tokens, 28.9% of the types).",
+                    "sid": 98,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way we avoided dealing with the problem of ambi We extracted a feature vector for each noun instance using the feature set described below.",
+                    "sid": 99,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each vector is a training instance.",
+                    "sid": 100,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition we compiled another training set from the example sentences and from the definitions in the noun database of WordNet 1.6.",
+                    "sid": 101,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall this procedure produced 787,186 training instances from Bllip, 66,841 training instances from WordNet\u2019s definitions, and 6,147 training instances from the example sentences.",
+                    "sid": 102,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a mix of standard features used in word sense disambiguation, named-entity classification and lexical acquisition.",
+                    "sid": 103,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following sentence illustrates them: \u201cThe art-students, nine teen-agers, read the book\u201d, art-students is the tagged noun: Open class words were morphologically simplified with the \u201cmorph\u201d function included in WordNet.",
+                    "sid": 104,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We parsed the WordNet definitions and example sentences with the same syntactic parser used for Bllip (Charniak, 2000).",
+                    "sid": 105,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not always possible to identify the noun that represents the synset in the WordNet glosses.",
+                    "sid": 106,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the gloss for the synset relegation the example sentence is \u201cHe has been relegated to a post in Siberia\u201d, where a verb is used instead of the noun.",
+                    "sid": 107,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When it was possible to identify the target noun the complete feature set was used; otherwise only the surrounding-word features (2) and the spelling features (7) of all synonyms were used.",
+                    "sid": 108,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With the definitions it is much harder to individuate the target; consider the definition \u201ca member of the genus Canis\u201d for dog.",
+                    "sid": 109,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all definitions we used only the reduced feature set.",
+                    "sid": 110,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One training instance per synset was extracted from the example sentences and one training instance from the definitions.",
+                    "sid": 111,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, in the experiments we performed we used around 1.5 million features.",
+                    "sid": 112,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a similar way to how we produced the training data we compiled a test set from the Bllip corpus.",
+                    "sid": 113,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found all instances of nouns that are not in WordNet 1.6 but are listed in WordNet 1.71 with only one supersense.",
+                    "sid": 114,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The majority of the novel nouns in WordNet 1.71 are unambiguous (more than 90%).",
+                    "sid": 115,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There were 744 new noun types, with a total frequency of 9,537 occurrences.",
+                    "sid": 116,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer to this test set as Test .",
+                    "sid": 117,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also randomly removed 755 noun types (20,394 tokens) from the training data and used them as an alternative test set.",
+                    "sid": 118,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer to this other test set as Test .",
+                    "sid": 119,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then ran experiments using the averaged multiclass perceptron.",
+                    "sid": 120,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 the multiclass averaged perceptron",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We used a multiclass averaged perceptron classifier, which is an \u201cultraconservative\u201d on-line learning algorithm (Crammer and Singer, 2002), that is a multiclass extension of the standard perceptron learning to the multiclass case.",
+                    "sid": 121,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It takes as input a training set , where each instance represents an instance of a noun and .",
+                    "sid": 122,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here Algorithm 1 Multiclass Perceptron is the set of supersenses defined by WordNet.",
+                    "sid": 123,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since for training and testing we used only unambiguous words there is always exactly one label per instance.",
+                    "sid": 124,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus summarizes word tokens that belong to the dictionary, where each instance is represented as a vector of features extracted from the context in which the noun occurred; is the total number of features; and is the true label of .",
+                    "sid": 125,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, a multiclass classifier for the dictionary is a function that maps feature vectors to one of the possible supersenses of WordNet.",
+                    "sid": 126,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the multiclass perceptron, one introduces a weight vector for every and defines implicitly by the so-called winner-take-all rule Here refers to the matrix of weights, with every column corresponding to one of the weight vectors .",
+                    "sid": 127,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The learning algorithm works as follows: Training patterns are presented one at a time in the standard on-line learning setting.",
+                    "sid": 128,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whenever an update step is performed; otherwise the weight vectors remain unchanged.",
+                    "sid": 129,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To perform the update, one first computes the error set containing those class labels that have received a higher score than the correct class: An ultraconservative update scheme in its most general form is then defined as follows: Update with learning rates fulfilling the constraints , ,and for .",
+                    "sid": 130,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence changes are limited to for .",
+                    "sid": 131,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sum constraint ensures that the update is balanced, which is crucial to guaranteeing the convergence of the learning procedure (cf.",
+                    "sid": 132,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Crammer and Singer, 2002)).",
+                    "sid": 133,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have focused on the simplest case of uniform update weights, for .",
+                    "sid": 134,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm is summarized in Algorithm 1.",
+                    "sid": 135,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that the multiclass perceptron algorithm learns all weight vectors in a coupled manner, in contrast to methods that perform multiclass classification by combining binary classifiers, for example, training a classifier for each class in a one-againstthe-rest manner.",
+                    "sid": 136,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The averaged version of the perceptron (Collins, 2002), like the voted perceptron (Freund and Schapire, 1999), reduces the effect of over-training.",
+                    "sid": 137,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the matrix of weight vectors the model keeps track for each feature of each value it assumed during training, , and the number of consecutive training instance presentations during which this weight was not changed, or \u201clife span\u201d, .",
+                    "sid": 138,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When training is done these weights are averaged and the final averaged weight of feature is computed as For example, if there is a feature weight that is not updated until example 500, at which point it is incremented to value 1, and is not touched again until after example 1000, then the average weight of that feature in the averaged perceptron at example 750 will be: , or 1/3.",
+                    "sid": 139,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At example 1000 it will be 1/2, etc.",
+                    "sid": 140,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the averaged model for evaluation and parameter setting; see below.",
+                    "sid": 141,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 plots the results on test data of both models.",
+                    "sid": 142,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average model produces a betterperforming and smoother output.",
+                    "sid": 143,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used an implementation with full, i.e., not sparse, representation of the matrix for the perceptron.",
+                    "sid": 144,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training and test are fast, at the expense of a slightly greater memory load.",
+                    "sid": 145,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the great number of features, we couldn\u2019t use the full training set from the Bllip corpus.",
+                    "sid": 146,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead we randomly sampled from roughly half of the available training data, yielding around 400,000 instances, the size of the training is close to 500,000 instances with also the WordNet data.",
+                    "sid": 147,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When training to test on Test , we removed from the WordNet training set the synsets relative to the nouns in Test .",
+                    "sid": 148,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only adjustable parameter to set is the number of passes on the training data, or epochs.",
+                    "sid": 149,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While testing on Test we set this parameter using Test , and vice versa for Test .",
+                    "sid": 150,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The estimated values for the stopping iterations were very close at roughly ten passes.",
+                    "sid": 151,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As Figure 2 shows, the great amount of data requires many passes over the data, around 1,000, before reaching convergence (on Test ).",
+                    "sid": 152,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 results",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The classifier outputs the estimated supersense label of each instance of each unknown noun type.",
+                    "sid": 153,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The label of a noun type is obtained by voting4: where is the indicator function and means that is a token of type .",
+                    "sid": 154,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The score on is 1 if , where is the correct label for , and 0 otherwise.",
+                    "sid": 155,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 summarizes the results of the experiments on Test (upper half) and on Test (bottom half).",
+                    "sid": 156,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A baseline was computed that always selected the most frequent label in the training data, \u201cperson\u201d, which is also the most frequent in both Test and Test .",
+                    "sid": 157,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline performances are in the low twenties.",
+                    "sid": 158,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first and second columns report performance on tokens and types respectively.",
+                    "sid": 159,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The classifiers\u2019 results are averages over 50 trials in which a fraction of the Bllip data was randomly selected.",
+                    "sid": 160,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One classifier was trained on 55% of the Bllip data (AP-B-55).",
+                    "sid": 161,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An identical one was trained on the same data and, additionally, on the WordNet data (AP-B-55+WN).",
+                    "sid": 162,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also trained a classifier on 65% of the Bliip data (AP-B-65).",
+                    "sid": 163,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adding the WordNet data to this training set was not possible because of memory limitations.",
+                    "sid": 164,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model also trained on WordNet outperforms on both test sets those trained only on the Bllip data.",
+                    "sid": 165,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A paired t-test proved the difference between models with and without WordNet data to be statistically significant.",
+                    "sid": 166,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \u201cleast\u201d significant difference is between AP-B-65 and APB-55+WN (token) on Test : .",
+                    "sid": 167,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all other cases the -level is much smaller.",
+                    "sid": 168,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results seem to show that the positive impact of the WordNet data is not simply due to the fact that there is more training data5.",
+                    "sid": 169,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adding the WordNet data seems more effective than adding an equivalent amount of standard training data.",
+                    "sid": 170,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 plots the results of the last set of (single trial) experiments we performed, in which we varied the 5Notice that 10% of the Bllip data is approximately the size of the WordNet data and therefore AP-B-65 and AP-B-55+WN are trained on roughly the same amount of data. amount of Bllip data to be added to the WordNet one.",
+                    "sid": 171,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model with WordNet data often performs better than the model trained only on Bllip data even when the latter training set is much larger.",
+                    "sid": 172,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two important reasons why the WordNet data is particularly good are, in our opinion, the following.",
+                    "sid": 173,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data is less noisy because it is extracted from sentences and definitions that are always \u201cpertinent\u201d to the class label.",
+                    "sid": 174,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data also contains instances of disambiguated polysemous nouns, which instead were excluded from the Bllip training.",
+                    "sid": 175,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that disambiguating the training data is important; unfortunately this is not a trivial task.",
+                    "sid": 176,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the WordNet data provides a simple way of getting at least some information from ambiguous nouns.",
+                    "sid": 177,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 differences between test sets",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "The type scores on both evaluations produced similar results.",
+                    "sid": 178,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This finding supports the hypothesis that the two evaluations are similar in difficulty, and that the two versions of WordNet are not inconsistent in the way they assign supersenses to nouns.",
+                    "sid": 179,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The evaluations show, however, very different patterns at the token level.",
+                    "sid": 180,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This might be due to the fact that the label distribution of the training data is more similar to Test than to Test .",
+                    "sid": 181,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, there are many new nouns in Test that belong to \u201cabstract\u201d classes6, which seem harder to learn.",
+                    "sid": 182,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Abstract classes are also more confusable; i.e., members of these classes are frequently mis-classified with the same wrong label.",
+                    "sid": 183,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A few very frequently mis-classified pairs are communication/act, communication/person and communication/artifact.",
+                    "sid": 184,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result of the fact that abstract nouns are more frequent in Test than in Test the accuracy on tokens is much worse in the new evaluation than in the more standard one.",
+                    "sid": 185,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has an impact also on the type scores.",
+                    "sid": 186,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 plots the results on types for Test and Test grouped in bins of test noun types ranked by decreasing frequency.",
+                    "sid": 187,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It shows that the first bin is harder in Test than in Test .",
+                    "sid": 188,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, then, it seems that there are similarities but also important differences between the evaluations.",
+                    "sid": 189,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore the new evaluation might define a more realistic task than cross-validation.",
+                    "sid": 190,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "8 conclusion",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "We presented a new framework for word sense classification, based on the WordNet lexicographer classes, that extends named-entity classification.",
+                    "sid": 191,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Within this framework it is possible to use the information contained in WordNet to improve classification and define a more realistic evaluation than standard cross-validation.",
+                    "sid": 192,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Directions for future research include the following topics: disambiguation of the training data, e.g. during training as in cotraining; learning unknown ambiguous nouns, e.g., studying the distribution of the labels the classifier guessed for the individual tokens of the new word.",
+                    "sid": 193,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

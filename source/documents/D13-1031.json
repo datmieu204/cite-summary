@@ -1,0 +1,2237 @@
+{
+    "ID": "D13-1031",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Nowadays supervised sequence labeling models can reach competitive performance on the task of Chinese word segmentation.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the ability of these models is restricted by the availability of annotated data and the design of features.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose a scalable semi-supervised feature engineering approach.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to previous works using prede\ufb01ned task- speci\ufb01c features with \ufb01xed values, we dynamically extract representations of label distributions from both an in-domain corpus and an out-of-domain corpus.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We update the representation values with a semi-supervised approach.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on the benchmark datasets show that our approach achieve good results and reach an f-score of 0.961.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature engineering approach proposed here is a general iterative semi-supervised method and not limited to the word segmentation task.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Chinese is a language without natural word delimiters.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, Chinese Word Segmentation (CWS) is an essential task required by further language processing.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous research shows that sequence labeling models trained on labeled data can reach competitive accuracy on the CWS task, and supervised models are more accurate than unsupervised models (Xue, 2003; Low et al., 2005).",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the resource of manually labeled training corpora is limited.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, semi-supervised learning has become one \u2217Corresponding author of the most natural forms of training for CWS.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditional semi-supervised methods focus on adding new unlabeled instances to the training set by a given criterion.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The possible mislabeled instances, which are introduced from the automatically labeled raw data, can hurt the performance and not easy to exclude by setting a sound selecting criterion.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we propose a simple and scal- able semi-supervised strategy that works by providing semi-supervision at the level of representation.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous works mainly assume that context features are helpful to decide the potential label of a character.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when some of the context features do not appear in the training corpus, this assumption may fail.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example is shown in table 1.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the context of \u201c\u6c34\u201dand \u201c\u7bee\u201d is totally di\ufb00erent, they share a homo geneous structure as \u201cverb-noun\u201d.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Amuch better way is to map the context informa tion to a kind of representation.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More precisely, the mapping should let the similar contexts map to similar representations, while let the distinct contexts map to distinct representations.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u5403\u6c34\u679c \u6253\u7bee\u7403 Label B B Character \u5403 \u6c34 \u679c \u6253 \u7bee \u7403 Context Features C-1= \u5403 C0= \u6c34 C1= \u679c C-1= \u6253 C0= \u7bee C1= \u7403 Table 1: Example of the context of \u201c\u6c34\u201d in \u201c\u5403\u6c34 \u679c (Eat fruits)\u201d and the context of \u201c\u7bee\u201d in \u201c\u6253\u7bee\u7403 (Play basketball)\u201d We use the label distribution information that 311 Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing, pages 311\u2013321, Seattle, Washington, USA, 1821 October 2013.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2013 Association for Computational Linguistics is extracted from the unlabeled corpus as this representation to enhance the supervised model.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We add \u201cpseudo-labels\u201d by tagging the unlabeled data with the trained model on the training corpus.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These \u201cpseudo-labels\u201d are not accurate enough.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we use the label distribution, which is much more accurate.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To accurately calculate the precise label distribution, we use a framework similar to the co- training algorithm to adjust the feature values iteratively.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generally speaking, unlabeled data can be classi\ufb01ed as in-domain data and out-of- domain data.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In previous works these two kinds of unlabeled data are used separately for di\ufb00erent purposes.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In-domain data is mainly used to solve the problem of data sparseness (Sun and Xu, 2011).",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, out-of domain data is used for domain adaptation (Chang and Han, 2010).",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our work, we use in-domain and out-of-domain data together to adjust the labels of the unlabeled corpus.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate the performance of CWS on the benchmark dataset of Peking University in the second International Chinese Word Segmentation Bakeo\ufb00.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiment results show that our approach yields improvements compared with the state-of-art systems.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even when the labeled data is insu\ufb03cient, our methods can still work better than traditional methods.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to the baseline CWS model, which has already achieved an f-score above 0.95, we further reduce the error rate by 15%.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method is not limited to word segmentation.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also applicable to other problems which can be solved by sequence labeling models.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also applied our method to the Chinese Named Entity Recognition task, and also achieved better results compared to traditional methods.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main contributions of our work are as follows: \u2022 We proposed a general method to utilize the label distribution given text contexts as representations in a semi-supervised framework.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We let the co-training process adjust the representation values from label distribution instead of using manually pre de\ufb01ned feature templates.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Compared with previous work, our method achieved a new state-of-art accuracy on the CWS task as well as on the NER task.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remaining part of this paper is organized as follows.",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 2 describes the details of the problem and our algorithm.",
+                    "sid": 45,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 describes the experiment and presents the results.",
+                    "sid": 46,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 reviews the related work.",
+                    "sid": 47,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5 concludes this paper.",
+                    "sid": 48,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "system architecture. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "2.1 Sequence Labeling.",
+                    "sid": 49,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nowadays the character-based sequence labeling approach is widely used for the Chinese word segmentation problem.",
+                    "sid": 50,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It was \ufb01rst proposed in Xue (2003), which assigns each character a label to indicate its position in the word.",
+                    "sid": 51,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most prevalent tag set is the BMES tag set, which uses 4 tags to carry word boundary information.",
+                    "sid": 52,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This tag set uses B, M, E and S to represent the Beginning, the Middle, the End of a word and a Single character forming a word respectively.",
+                    "sid": 53,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use this tag set in our method.",
+                    "sid": 54,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of the \u201cBMES\u201d representation is shown in table 2.",
+                    "sid": 55,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Character: \u6211 \u7231 \u5317 \u4eac \u5929 \u5b89 \u95e8 Tag: S S B E B M E Table 2: An example for the \u201cBMES\u201d representation.",
+                    "sid": 56,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sentence is \u201c\u6211\u7231\u5317\u4eac\u5929\u5b89\u95e8\u201d (I love Bei jing Tian-an-men square), which consists of 4 Chinese words: \u201c\u6211\u201d (I), \u201c\u7231\u201d (love), \u201c\u5317\u4eac\u201d (Beijing), and \u201c\u5929\u5b89\u95e8\u201d (Tian-an-men square).",
+                    "sid": 57,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Unlabeled Data.",
+                    "sid": 58,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlabeled data can be divided into in-domain data and out-of-domain data.",
+                    "sid": 59,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In previous works, these two kinds of unlabeled data are used separately for di\ufb00erent purposes.",
+                    "sid": 60,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In-domain data only solves the problem of data sparseness (Sun and Xu, 2011).",
+                    "sid": 61,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Out-of domain data is used only for domain adaptation (Chang and Han, 2010).",
+                    "sid": 62,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These two functionalities are not contradictory but complementary.",
+                    "sid": 63,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our study shows that by correctly designing features and algorithms, both in-domain unlabeled data and out- of-domain unlabeled data can work together to help enhancing the segmentation model.",
+                    "sid": 64,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our algorithm, the dynamic features learned from one corpus can be adjusted incrementally with the dynamic features learned from the other corpus.",
+                    "sid": 65,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for the out-of-domain data, it will be even better if the corpus is not limited to a speci\ufb01c domain.",
+                    "sid": 66,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We choose a Chinese encyclopedia corpus which meets exactly this requirement.",
+                    "sid": 67,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the corpus to learn a large set of informative features.",
+                    "sid": 68,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiment, two di\ufb00erent views of features on unlabeled data are considered: Static Statistical Features (SSFs): These features capture statistical information of characters and character n-grams from the unlabeled corpus.",
+                    "sid": 69,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The values of these features are \ufb01xed during the training process once the unlabeled corpus is given.",
+                    "sid": 70,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dynamic Statistical Features (DSFs): These features capture label distribution information from the unlabeled corpus given \ufb01xed text contexts.",
+                    "sid": 71,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the training process proceeds, the value of these features will change, since the trained tagger at each training iteration may assign di\ufb00erent labels to the unlabeled data.",
+                    "sid": 72,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.3 Framework.",
+                    "sid": 73,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose we have labeled data L, two unlabeled corpora Ua and Ub (one is an in-domain corpus and the other is an out-of-domain corpus).",
+                    "sid": 74,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm is shown in Table 3.",
+                    "sid": 75,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During each iteration, we tag the unlabeled corpus Ua using Tb to get pseudo-labels.",
+                    "sid": 76,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we extract features from the pseudo-labels.",
+                    "sid": 77,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the label distribution information as dynamic features.",
+                    "sid": 78,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We add these features to the training data to train a new tagger Ta . To adjust the feature values, we extract features from one corpus and then apply the statistics to the other corpus.",
+                    "sid": 79,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is similar to the principle of co- training (Yarowsky, 1995; Blum and Mitchell, 1998; Dasgupta et al., 2002).",
+                    "sid": 80,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The di\ufb00erence is that there are not di\ufb00erent views of features, but di\ufb00erent kinds of unlabeled data.",
+                    "sid": 81,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Detailed description of features is given in the next section.",
+                    "sid": 82,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm Init: Using baseline features only: Train an initial tagger T0 based on L () Label Ua and Ub individually using T0 BEGIN LOOP: Generate DSFs from tagged Ua Augment L with DSFs to get La Generate DSFs from tagged Ub Augment L with DSFs to get Lb Using baseline features, SSFs and DSFs: Train new tagger Ta using La Train new tagger Tb using Lb Label Ua using Tb Label Ub using Ta LOOP until performance does not improve RETURN the tagger which is trained with in-domain features.",
+                    "sid": 83,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3: Algorithm description 2.4 Features.",
+                    "sid": 84,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.4.1 Baseline Features Our baseline feature templates include the features described in previous works (Sun and Xu, 2011; Sun et al., 2012).",
+                    "sid": 85,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features are widely used in the CWS task.",
+                    "sid": 86,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To be convenient, for a character ci with context . . .",
+                    "sid": 87,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ci\u22121 ci ci+1 . . ., its baseline features are listed below: \u2022 Character uni-grams: ck (i \u2212 3 < k < i + 3) \u2022 Character bi-grams: ck ck+1 (i \u2212 3 < k < i + 2) \u2022 Whether ck and ck+1 are identical (i \u2212 2 < k < i + 2) \u2022 Whether ck and ck+2 are identical (i \u2212 4 < k < i + 2) The last two feature templates are designed to detect character reduplication, which is a morphological phenomenon in Chinese language.",
+                    "sid": 88,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example is \u201c\u5341\u5168\u5341\u7f8e\u201d (Perfect), which is a Chinese idiom with structure \u201cABAC\u201d.",
+                    "sid": 89,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.4.2 Static statistical features Statistical features are statistics that distilled from the large unlabeled corpus.",
+                    "sid": 90,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are proved useful in the Chinese word segmentation task.",
+                    "sid": 91,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We de\ufb01ne Static Statistical Features (SSFs) as features whose value do not change during the training process.",
+                    "sid": 92,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SSFs in our approach includes Mutual information, Punctuation information and Accessor variety.",
+                    "sid": 93,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous works have already explored the functions of the three static statistics in the Chinese word segmentation task, e.g. Feng et al.",
+                    "sid": 94,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004); Sun and Xu (2011).",
+                    "sid": 95,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We mainly follow their de\ufb01nitions while considering more details and giving some modi\ufb01cation.",
+                    "sid": 96,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mutual information Mutual information (MI) is a quantity that measures the mutual dependence of two random variables.",
+                    "sid": 97,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous works showed that larger MI of two strings claims higher probability that the two strings should be combined.",
+                    "sid": 98,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, MI can show the tendency of two strings forming one word.",
+                    "sid": 99,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, previous works mainly focused on the balanced case, i.e., the MI of strings with the same length.",
+                    "sid": 100,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our study we \ufb01nd that, in Chinese, there remains large amount of imbalanced cases, like a string with length 1 followed by a string with length 2, and vice versa.",
+                    "sid": 101,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further considered the MI of these string pairs to capture more information.",
+                    "sid": 102,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Punctuation information Punctuations can provide implicit labels for the characters before and after them.",
+                    "sid": 103,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The character after punctuations must be the \ufb01rst character of a word.",
+                    "sid": 104,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The character before punctuations must be the last character of a word.",
+                    "sid": 105,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When a string appears frequently after punctuations, it tends to be the beginning of a word.",
+                    "sid": 106,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The situation is similar when a string appears frequently preceding punctuations.",
+                    "sid": 107,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides, the probability of a string appears in the corpus also a\ufb00ects this tendency.",
+                    "sid": 108,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering all these factors, we propose \u201cpunctuation rate\u201d (PR) to capture this information.",
+                    "sid": 109,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a string with length len and probability p in the corpus, we de\ufb01ne the left punctuation rate LP Rlen as the number of times the string appears after punctuations, di vided by p. Similarly, the right punctuation rate RP Rlen is de\ufb01nes as the number of times it appears preceding punctuations divided by its probability p. The length of string we consider is from 1 to 4.",
+                    "sid": 110,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Accessor variety Accessor variety (AV) is also known as letter successor variety (LSV) (Harris, 1955; Hafer and Weiss, 1974).",
+                    "sid": 111,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a string appears after or preceding many di\ufb00erent characters, this may provide some information of the string itself.",
+                    "sid": 112,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous work of Feng et al.",
+                    "sid": 113,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004), Sun and Xu (2011) used AV to represent this statistic.",
+                    "sid": 114,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar to punctuation rate, we also consider both left AV and right AV.",
+                    "sid": 115,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a string s with length l, we de\ufb01ne the left accessor variety (LAV) as the types of distinct characters preceding s in the corpus, and the right accessor variety (RAV) as the types of distinct characters after s in the corpus.",
+                    "sid": 116,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The length of string we consider is also from 1 to 4.",
+                    "sid": 117,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.4.3 Dynamic statistical features The unlabeled corpus lacks precise labels.",
+                    "sid": 118,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can use the trained tagger to give the unlabeled data \u201cpseudo-labels\u201d.",
+                    "sid": 119,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These labels cannot guarantee an acceptable precision.",
+                    "sid": 120,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the label distribution will not be largely a\ufb00ected by small mistakes.",
+                    "sid": 121,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the label distribution information is more accurate than using the pseudo-labels directly.",
+                    "sid": 122,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on this assumption, we propose \u201cdynamic statistical features\u201d (DSFs).",
+                    "sid": 123,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The DSFs are intended to capture label distribution information given a text context.",
+                    "sid": 124,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word \u201cDynamic\u201d is in accordance with the fact that these feature values will change during the training process.",
+                    "sid": 125,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We give a formal description of DSFs.",
+                    "sid": 126,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose there are K labels in our task.",
+                    "sid": 127,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, K = 4 if we take BMES labeling method.",
+                    "sid": 128,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We de\ufb01ne the whole character sequence with length n as X = (x1 , x2 \u00b7 \u00b7 \u00b7 xj \u00b7 \u00b7 \u00b7 xn ).",
+                    "sid": 129,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a text context Ci , where i is current character position, the DSFs can be represented as a list, DSF (Ci ) = (DSF (Ci )1 , \u00b7 \u00b7 \u00b7 , DSF (Ci )K ) Each element in the list represents the probability of the corresponding label in the distribution.",
+                    "sid": 130,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For convenience, we further de\ufb01ne function \u2018count(condition)\u2019 as the total number of times a \u2018condition\u2019 is true in the unlabeled corpus.",
+                    "sid": 131,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, count (current=\u2018a\u2019) represents the times the current character equals \u2018a\u2019, which isexactly the number of times character \u2018a\u2019 ap pears in the unlabeled corpus.",
+                    "sid": 132,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to di\ufb00erent types of text context We de\ufb01ne Bigram DSF with current character position i, text context Ci and label l (the lth dimension in the list) as: B(Ci )l = P (y = l|Ci = xi\u2212j xi\u2212j+1 ) = count(Ci = xi\u2212j xi\u2212j+1 \u2227 y = l) count(Ci = xi\u2212j xi\u2212j+1 ) j can take value 0 and 1.",
+                    "sid": 133,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this equation, the numerator counts the number of times current context is xi\u2212j xi\u2212j+1with label l. The denominator counts the num Ci , we can divide DSFs into 3 types: 1.Basic DSF ber of times current context is xi\u2212j x 3.WindowDSF i\u2212j+1 . For Basic DSF of Ci , we de\ufb01ne D(Ci ): D(Ci ) = (D(Ci )1 , . . .",
+                    "sid": 134,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", D(Ci )K ) We de\ufb01ne Basic DSF with current character position i, text context Ci and label l (the lth dimension in the list) as: D(Ci )l = P (y = l|Ci = xi ) = count(Ci = xi \u2227 y = l) count(Ci = xi ) In this equation, the numerator counts the number of times current character is xi with label l. The denominator counts the number of times current character is xi . We use the term \u201cBasic\u201d because this kind of DSFs only considers the character of position i Considering Basic DSF and Bigram DSF only might cause the over-\ufb01tting problem, therefore we introduce another kind of DSF.",
+                    "sid": 135,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call it Window DSF, which considers the surrounding context of a character and omits the character itself.",
+                    "sid": 136,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Window DSF, we de\ufb01ne W (Ci ): W (Ci ) = (W (Ci )1 , . . .",
+                    "sid": 137,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", W (Ci )K ) We de\ufb01ne Window DSF with current character position i, text context Ci and label l (the lth dimension in the list) as: W (Ci )l = P (y = l|Ci = xi\u22121 xi+1 ) = count(Ci = xi\u22121 xi+1 \u2227 y = l) count(Ci = xi\u22121 xi+1 ) In this equation, the numerator counts theas its context.",
+                    "sid": 138,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The text context refers to the cur rent character itself.",
+                    "sid": 139,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This feature captures the number of times current context is xi\u22121 x i+1with label l. The denominator counts the num label distribution information given the character itself.",
+                    "sid": 140,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ber of times current context is xi\u22121 x i+1 . 2.BigramDSFBasic DSF is simple and very easy to implement.",
+                    "sid": 141,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weakness is that it is less power ful to describe word-building features.",
+                    "sid": 142,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Althoughcharacters convey context information, characters themselves in Chinese is sometimes meaningless.",
+                    "sid": 143,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Character bi-grams can carry more con text information than uni-grams.",
+                    "sid": 144,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We modify Basic DSFs to bi-gram level and propose Bigram DSFs.",
+                    "sid": 145,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Bigram DSF of Ci , we de\ufb01ne B(Ci ): B(Ci ) = (B(Ci )1 , . . .",
+                    "sid": 146,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", B(Ci )K ) 2.4.4 Discrete features VS. Continuous features The statistical features may be expressed as real values.",
+                    "sid": 147,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A more natural way is to use discrete values to incorporate them into the sequence labeling models . Previous works like Sun and Xu (2011) solve this problem by setting thresholds and converting the real value into boolean values.",
+                    "sid": 148,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a di\ufb00erent method to solve this, which does not need to consider tuning thresholds.",
+                    "sid": 149,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our method, we process static and dynamic statistical features using different strategies.",
+                    "sid": 150,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For static statistical value: For mutual information, we round the real value to their nearest integer.",
+                    "sid": 151,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For punctuation rate and accessor variety, as the values tend to be large, we \ufb01rst get the log value of the feature and then use the nearest integer as the corresponding discrete value.",
+                    "sid": 152,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For dynamic statistical value: Dynamic statistical features are distributions of a label.",
+                    "sid": 153,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The values of DSFs are all percentage values.",
+                    "sid": 154,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can solve this by multiply the probability by an integer N and then take the integer part as the \ufb01nal feature value.",
+                    "sid": 155,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set the value of N by cross-validation..",
+                    "sid": 156,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.5 Conditional Random Fields.",
+                    "sid": 157,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm is not necessarily limited to a speci\ufb01c baseline tagger.",
+                    "sid": 158,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity and reliability, we use a simple Conditional Random Field (CRF) tagger, although other sequence labeling models like Semi-Markov CRF Gao et al.",
+                    "sid": 159,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) and Latent-variable CRF Sun et al.",
+                    "sid": 160,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) may provide better results than a single CRF.",
+                    "sid": 161,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Detailed de\ufb01nition of CRF can be found in La\ufb00erty et al.",
+                    "sid": 162,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2001); McCallum (2002); Pinto et al.",
+                    "sid": 163,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2003).",
+                    "sid": 164,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiment. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 Data and metrics.",
+                    "sid": 165,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the benchmark datasets provided by the second International Chinese Word Segmentation Bakeo\ufb001 to test our approach.",
+                    "sid": 166,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We chose the Peking University (PKU) data in our experiment.",
+                    "sid": 167,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the benchmark provides another three data sets, two of them are data of traditional Chinese, which is quite di\ufb00erent from simpli\ufb01ed Chinese.",
+                    "sid": 168,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another is the data from Microsoft Research (MSR).",
+                    "sid": 169,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented on this data and got 97.45% in f-score compared to the state-of-art 97.4% reported in Sun et al.",
+                    "sid": 170,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012).",
+                    "sid": 171,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this corpus is much larger than the PKU corpus.",
+                    "sid": 172,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the labeled data alone can get a relatively good tagger and the unlabeled data contributes little to the performance.",
+                    "sid": 173,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity and e\ufb03ciency, our further 1 http://www.sighan.org/bakeoff2005/ experiments are all conducted on the PKU data.",
+                    "sid": 174,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Details of the PKU data are listed in table 4.",
+                    "sid": 175,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also used two un-segmented corpora as unlabeled data.",
+                    "sid": 176,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \ufb01rst one is Chinese Gigaword2 corpus.",
+                    "sid": 177,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is a comprehensive archive of newswire data.",
+                    "sid": 178,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second one is articles from Baike3 of baidu.com.",
+                    "sid": 179,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is a Chinese encyclopedia similar to Wikipedia but contains more Chinese items and their descriptions.",
+                    "sid": 180,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the experiment we used about 5 million characters from each corpus for e\ufb03ciency.",
+                    "sid": 181,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Details of unlabeled data can be found in table 5.",
+                    "sid": 182,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiment, we did not use any extra resources such as common surnames, part- of-speech or other dictionaries.",
+                    "sid": 183,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "F-score is used as the accuracy measure.",
+                    "sid": 184,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We de\ufb01ne precision P as the percentage of words in the output that are segmented correctly.",
+                    "sid": 185,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We de\ufb01ne recall R as the percentage of the words in reference that are correctly segmented.",
+                    "sid": 186,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then F-score is as follows: F = 2 \u00d7 P \u00d7 R P + R The recall of out-of-vocabulary is also taken into consideration, which measures the ability of the model to correctly segment out of vocabulary words.",
+                    "sid": 187,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Main Results.",
+                    "sid": 188,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 summarizes the segmentation results on test data with di\ufb00erent feature combinations.",
+                    "sid": 189,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We performed incremental evaluation.",
+                    "sid": 190,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this table, we \ufb01rst present the results of the tagger only using baseline features.",
+                    "sid": 191,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we show the results of adding SSF and DSF individually.",
+                    "sid": 192,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the end we compare the results of combining SSF and DSF with baseline features.",
+                    "sid": 193,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the baseline features is strong to reach a relative good result, it is not easy to largely enhance the performance.",
+                    "sid": 194,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nevertheless, there are signi\ufb01cant increases in f-score and OOV-Recall when adding these features.",
+                    "sid": 195,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From table 6 we can see that by adding SSF and DSF individually, the F-score is improved by +1.1% 2 http://www.ldc.upenn.edu/Catalog/ catalogEntry.jsp?catalogId=LDC2003T09 3 http://baike.baidu.com/ Id en tic al w or ds To tal w or d Id en tic al C ha ra ct er To tal ch ar ac te r 5.",
+                    "sid": 196,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 \u00d7 10 4 1.",
+                    "sid": 197,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 \u00d7 10 6 5 \u00d7 10 3 1.",
+                    "sid": 198,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 \u00d7 10 6 Table 4: Details of the PKU data C or p us C h ar ac te r us ed Gi ga w or d 50 00 19 3 Ba ik e 50 00 14 7 Table 5: Details of the unlabeled data.",
+                    "sid": 199,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P R F O O V Ba sel in e 0.",
+                    "sid": 200,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 0 0.",
+                    "sid": 201,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 3 0.",
+                    "sid": 202,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 6 0.",
+                    "sid": 203,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "67 6 + S S F 0.",
+                    "sid": 204,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 1 0.",
+                    "sid": 205,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 3 0.",
+                    "sid": 206,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 7 0.",
+                    "sid": 207,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "72 8 + D S F 0.",
+                    "sid": 208,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 8 0.",
+                    "sid": 209,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 3 0.",
+                    "sid": 210,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 5 0.",
+                    "sid": 211,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "67 8 +S S F + D S F 0.",
+                    "sid": 212,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 5 0.",
+                    "sid": 213,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 8 0.",
+                    "sid": 214,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 1 0.",
+                    "sid": 215,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "73 1 Table 6: Segmentation results on test data with di\ufb00erent feature combinations.",
+                    "sid": 216,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The symbol \u201c+\u201d means this feature con\ufb01guration contains features set containing the baseline features and all features after \u2018+\u2019.",
+                    "sid": 217,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size of unlabeled data is \ufb01xed as 5 million characters.",
+                    "sid": 218,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and +0.9%.",
+                    "sid": 219,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The OOV-Recall is also improved, especially after adding SSFs.",
+                    "sid": 220,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When considering SSF and DSF together, the f-score is improved by +1.5% while the OOV-Recall is improved by +5.5%.",
+                    "sid": 221,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compare the contribution of unlabeleddata, we conduct experiments of using di\ufb00er ent sizes of unlabeled data.",
+                    "sid": 222,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the SSFs are still calculated using all the unlabeled data.",
+                    "sid": 223,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, each iteration in the algorithm uses unlabeled data with di\ufb00erent sizes.",
+                    "sid": 224,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 7 shows the results when changing the size of unlabeled data.",
+                    "sid": 225,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented on three di\ufb00erent sizes: 0.5 million, 1 million and 5 million characters.",
+                    "sid": 226,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P R F O O V D SF (0.",
+                    "sid": 227,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 M ) 0.",
+                    "sid": 228,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 2 0.",
+                    "sid": 229,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 4 0.",
+                    "sid": 230,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 8 0.",
+                    "sid": 231,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "72 7 D SF (1 M ) 0.",
+                    "sid": 232,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 3 0.",
+                    "sid": 233,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 5 0.",
+                    "sid": 234,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 9 0.",
+                    "sid": 235,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "72 8 D SF (5 M ) 0.",
+                    "sid": 236,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 5 0.",
+                    "sid": 237,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 8 0.",
+                    "sid": 238,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 1 0.",
+                    "sid": 239,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "73 1 Table 7: Comparison of results when changing the size of unlabeled data.",
+                    "sid": 240,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(0.5 million, 1 million and 5 million characters).",
+                    "sid": 241,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further experimented on unlabeled corpus with larger size (up to 100 million characters).",
+                    "sid": 242,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However the performance did not change significantly.",
+                    "sid": 243,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides, because the number of features in our method is very large, using too large unlabeled corpus is intractable in real applications due to the limitation of memory.",
+                    "sid": 244,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method can keep working well even when the labeled data are insu\ufb03cient.",
+                    "sid": 245,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 8 shows the comparison of f-scores when changing the size of labeled data.",
+                    "sid": 246,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared the results of using all labeled data with 3 di\ufb00erent situations: using 1/10, 1/2 and 1/4 of all the labeled data.",
+                    "sid": 247,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, the best system on the Second International Chinese Word Segmentation bakeo\ufb00 reached 0.95 in f-score by using all labeled data.",
+                    "sid": 248,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From table 8 we can see that our algorithm only needs 1/4 of all labeled data to achieve the same f-score.",
+                    "sid": 249,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ba sel in e +S S F + D S F I m pr ov e 1/ 10 0.",
+                    "sid": 250,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "93 4 0.",
+                    "sid": 251,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 3 +0 .9 6 % 1/ 4 0.",
+                    "sid": 252,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 6 0.",
+                    "sid": 253,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 1 +0 .5 3 % 1/ 2 0.",
+                    "sid": 254,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 2 0.",
+                    "sid": 255,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 6 +0 .4 2 % Al l 0.",
+                    "sid": 256,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 7 0.",
+                    "sid": 257,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 1 +0 .4 2 % Table 8: Comparison of f-scores when changing the size of labeled data.",
+                    "sid": 258,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1/10, 1/4, 1/2 and all labeled data.",
+                    "sid": 259,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The size of unlabeled data is \ufb01xed as 5 million characters.)",
+                    "sid": 260,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also explored how the performance changes as iteration increases.",
+                    "sid": 261,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows the change of F-score during the \ufb01rst 10 iterations.",
+                    "sid": 262,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From \ufb01gure 1 we \ufb01nd that f-score has a fast improvement in the \ufb01rst few iterations, and then stables at a \ufb01xed point.",
+                    "sid": 263,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides, as the size of labeled data increases, it converges faster.",
+                    "sid": 264,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using an in-domain corpus and an out-of- domain corpus is better than use one corpus alone.",
+                    "sid": 265,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared our approach with the method which uses only one unlabeled corpus.",
+                    "sid": 266,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To use only one corpus, we modify our algorithm to extract DSFs from the Chinese Giga word corpus and apply the learned features to itself.",
+                    "sid": 267,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1: Learning curve of using di\ufb00erent size of labeled data Table 9 shows the result.",
+                    "sid": 268,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can see that our method outperforms by +0.2% in f-score and +0.7% in OOV-Recall.",
+                    "sid": 269,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we compared our method with thestate-of-art systems reported in the previous papers.",
+                    "sid": 270,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 10 listed the results.",
+                    "sid": 271,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Best05 represents the best system reported on the Second International Chinese Word Segmentation Bakeo\ufb00.",
+                    "sid": 272,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CRF + Rule system represents a combination of CRF model and rule based model presented in Zhang et al.",
+                    "sid": 273,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006).",
+                    "sid": 274,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other three systems all represent the methods using their cor responding model in the corresponding papers.",
+                    "sid": 275,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that these state-of-art systems are eitherusing complicated models with semi-Markov relaxations or latent variables, or modifying mod els to \ufb01t special conditions.",
+                    "sid": 276,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system uses a single CRF model.",
+                    "sid": 277,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we can see in table 10, our method achieved higher F-scores than the previous best systems.",
+                    "sid": 278,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Results on NER task.",
+                    "sid": 279,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method is not limited to the CWS problem.",
+                    "sid": 280,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is applicable to all sequence labeling problems.",
+                    "sid": 281,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We applied our method on the Chinese NER task.",
+                    "sid": 282,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the MSR corpus of the sixth SIGHAN Workshop on Chinese Language Processing.",
+                    "sid": 283,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is the only NER corpus using simpli\ufb01ed Chinese in that workshop.",
+                    "sid": 284,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared our method with the pure sequence labeling approach in He and Wang (2008).",
+                    "sid": 285,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We re- implemented their method to eliminate the difference of various CRFs implementations.",
+                    "sid": 286,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiment results are shown in table 11.",
+                    "sid": 287,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can see that our methods works better, especially when handling the out-of-vocabulary named entities;",
+                    "sid": 288,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Recent studies show that character sequence labeling is an e\ufb00ective method of Chinese word segmentation for machine learning (Xue, 2003; Low et al., 2005; Zhao et al., 2006a,b).",
+                    "sid": 289,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These supervised methods show good results.",
+                    "sid": 290,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised word segmentation (Maosong et al., 1998; Peng and Schuurmans, 2001; Feng et al., 2004; Goldwater et al., 2006; Jin and TanakaIshii, 2006) takes advantage of the huge amount of raw text to solve Chinese word segmentation problems.",
+                    "sid": 291,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These methods need no annotated corpus, and most of them use statistics to help model the problem.",
+                    "sid": 292,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they usually are less accurate than supervised ones.",
+                    "sid": 293,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Currently \u201cfeature-engineering\u201d methodshave been successfully applied into NLP ap plications.",
+                    "sid": 294,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Miller et al.",
+                    "sid": 295,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) applied this method to named entity recognition.",
+                    "sid": 296,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Koo et al.(2008) applied this method to dependency pars ing.",
+                    "sid": 297,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Turian et al.",
+                    "sid": 298,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) applied this method toboth named entity recognition and text chunk ing.",
+                    "sid": 299,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These papers shared the same concept of word clustering.",
+                    "sid": 300,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we cannot simply equal Chinese character to English word becausecharacters in Chinese carry much less informa tion than words in English and the clustering results is less meaningful.",
+                    "sid": 301,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features extracted from large unlabeled corpus in previous works mainly focus on statistical information of characters.",
+                    "sid": 302,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feng et al.",
+                    "sid": 303,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) used the accessor variety criterion to extract word types.",
+                    "sid": 304,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Li and Sun (2009) used punctuation information in Chinese word segmentation by introducing extra labels \u2019L\u2019 and \u2019R\u2019.",
+                    "sid": 305,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chang and Han (2010), Sun and Xu (2011) used rich statistical information as discrete features in a sequence labeling framework.",
+                    "sid": 306,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All these approaches can be viewed as using static statistics features in a supervised approach.",
+                    "sid": 307,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method is di\ufb00erent from theirs.",
+                    "sid": 308,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the static statistics features in our approach, we not only consider richer string pairs with the di\ufb00erent lengths, but also consider term frequency when processing P R F O O V Us in g on e co rp us 0.",
+                    "sid": 309,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 3 0.",
+                    "sid": 310,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 5 0.",
+                    "sid": 311,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 9 0.",
+                    "sid": 312,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "72 4 O ur m et ho d 0.",
+                    "sid": 313,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 5 0.",
+                    "sid": 314,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 8 0.",
+                    "sid": 315,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 1 0.",
+                    "sid": 316,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "73 1 Table 9: Comparison of our approach with using only the Gigaword corpus M et ho d P RF sc or e Be st0 5 (C he n et al.",
+                    "sid": 317,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2 00 5) ) 0.",
+                    "sid": 318,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 3 0.",
+                    "sid": 319,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 6 0.",
+                    "sid": 320,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 0 C R F + rule sy ste m (Z ha ng et al.",
+                    "sid": 321,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2 00 6) ) 0.",
+                    "sid": 322,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 7 0.",
+                    "sid": 323,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 5 0.",
+                    "sid": 324,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 1 Se mi pe rc ep tr on (Z ha ng an d Cl ar k (2 00 7) ) N /A N /A 0.",
+                    "sid": 325,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 5 La te nt va ria bl e C R F (S un et al.",
+                    "sid": 326,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2 00 9) ) 0.",
+                    "sid": 327,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 6 0.",
+                    "sid": 328,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 8 0.",
+                    "sid": 329,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 2 A DF C R F (S un et al.",
+                    "sid": 330,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2 01 2) ) 0.",
+                    "sid": 331,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 8 0.",
+                    "sid": 332,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "94 9 0.",
+                    "sid": 333,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 4 O ur m et ho d 0.",
+                    "sid": 334,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 5 0.",
+                    "sid": 335,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 8 0.",
+                    "sid": 336,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 1 Table 10: Comparison of our approach with the state-of-art systems P R F O O V Tr ad iti on al 0.",
+                    "sid": 337,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "92 5 0.",
+                    "sid": 338,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "87 2 0.",
+                    "sid": 339,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "89 8 0.",
+                    "sid": 340,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "71 2 O ur m et ho d 0.",
+                    "sid": 341,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "91 6 0.",
+                    "sid": 342,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "88 7 0.",
+                    "sid": 343,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "90 2 0.",
+                    "sid": 344,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "73 7 Table 11: Comparison of our approach with traditional NER systems punctuation features.There are previous works using features extracted from label distribution of unlabeled cor pus in NLP tasks.",
+                    "sid": 345,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Schapire et al.",
+                    "sid": 346,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2002) use a set of features annotated with majority labels to boost a logistic regression model.",
+                    "sid": 347,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are di\ufb00erent from their approach because there isno pseudo-example labeling process in our ap proach.",
+                    "sid": 348,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qi et al.",
+                    "sid": 349,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) investigated on largeset of distribution features and used these fea tures in a self-training way.",
+                    "sid": 350,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They applied themethod on three tasks: named entity recogni tion, POS tagging and gene name recognition and got relatively good results.",
+                    "sid": 351,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is di\ufb00erent from theirs.",
+                    "sid": 352,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although we all consider label distribution, the way we use features aredi\ufb00erent.",
+                    "sid": 353,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides, our approach uses two unla beled corpora which can mutually enhancing to get better result.",
+                    "sid": 354,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion and perspectives. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this paper, we presented a semi-supervised method for Chinese word segmentation.",
+                    "sid": 355,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two kinds of new features are used for the iterative modeling: static statistical features and dy namic statistical features.",
+                    "sid": 356,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dynamic statistical features use label distribution information for text contexts, and can be adjusted automatically during the co-training process.",
+                    "sid": 357,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results show that the new features can improve the performance on the Chinese word segmentation task.",
+                    "sid": 358,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further conducted experiments to show that the performance is largely improved, especially when the labeled data is insu\ufb03cient.",
+                    "sid": 359,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposed iterative semi-supervised method is not limited to the Chinese word segmentation task.",
+                    "sid": 360,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It can be easily extended to any sequence labeling task.",
+                    "sid": 361,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, it works well on the NER task as well.",
+                    "sid": 362,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As our future work, we plan to apply our method to other natural language processing tasks, such as text chunking.",
+                    "sid": 363,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "This research was partly supported by Major National Social Science Fund of China(No. 12&ZD227),National High Technology Research and Development Program of China (863 Program) (No. 2012AA011101) and National Natural Science Foundation of China (No.91024009).",
+                    "sid": 364,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also thank Xu Sun and Qiuye Zhao for proofreading the paper.",
+                    "sid": 365,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

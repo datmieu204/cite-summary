@@ -1,0 +1,1079 @@
+{
+    "ID": "P11-1060",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Learning Dependency-Based Compositional Semantics",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compositional question answering begins by mapping questions to logical forms, but training a semantic parser to perform this mapping typically requires the costly annotation of the target logical forms.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we learn to map questions to answers via latent logical forms, which are induced automatically from question-answer pairs.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In tackling this challenging learning problem, we introduce a new semantic representation which highlights a parallel between dependency syntax and efficient evaluation of logical forms.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On two stansemantic parsing benchmarks our system obtains the highest published accuracies, despite requiring no annotated logical forms.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "What is the total population of the ten largest capitals in the US?",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Answering these types of complex questions compositionally involves first mapping the questions into logical forms (semantic parsing).",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Supervised semantic parsers (Zelle and Mooney, 1996; Tang and Mooney, 2001; Ge and Mooney, 2005; Zettlemoyer and Collins, 2005; Kate and Mooney, 2007; Zettlemoyer and Collins, 2007; Wong and Mooney, 2007; Kwiatkowski et al., 2010) rely on manual annotation of logical forms, which is expensive.",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, existing unsupervised semantic parsers (Poon and Domingos, 2009) do not handle deeper linguistic phenomena such as quantification, negation, and superlatives.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in Clarke et al. (2010), we obviate the need for annotated logical forms by considering the endto-end problem of mapping questions to answers.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we still model the logical form (now as a latent variable) to capture the complexities of language.",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows our probabilistic model: with respect to a world w (database of facts), producing an answer y.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We represent logical forms z as labeled trees, induced automatically from (x, y) pairs.",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We want to induce latent logical forms z (and parameters 0) given only question-answer pairs (x, y), which is much cheaper to obtain than (x, z) pairs.",
+                    "sid": 13,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The core problem that arises in this setting is program induction: finding a logical form z (over an exponentially large space of possibilities) that produces the target answer y.",
+                    "sid": 14,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike standard semantic parsing, our end goal is only to generate the correct y, so we are free to choose the representation for z.",
+                    "sid": 15,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Which one should we use?",
+                    "sid": 16,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dominant paradigm in compositional semantics is Montague semantics, which constructs lambda calculus forms in a bottom-up manner.",
+                    "sid": 17,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CCG is one instantiation (Steedman, 2000), which is used by many semantic parsers, e.g., Zettlemoyer and Collins (2005).",
+                    "sid": 18,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the logical forms there can become quite complex, and in the context of program induction, this would lead to an unwieldy search space.",
+                    "sid": 19,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the same time, representations such as FunQL (Kate et al., 2005), which was used in Clarke et al. (2010), are simpler but lack the full expressive power of lambda calculus.",
+                    "sid": 20,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main technical contribution of this work is a new semantic representation, dependency-based compositional semantics (DCS), which is both simple and expressive (Section 2).",
+                    "sid": 21,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The logical forms in this framework are trees, which is desirable for two reasons: (i) they parallel syntactic dependency trees, which facilitates parsing and learning; and (ii) evaluating them to obtain the answer is computationally efficient.",
+                    "sid": 22,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained our model using an EM-like algorithm (Section 3) on two benchmarks, GEO and JOBS (Section 4).",
+                    "sid": 23,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system outperforms all existing systems despite using no annotated logical forms.",
+                    "sid": 24,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 semantic representation",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We first present a basic version (Section 2.1) of dependency-based compositional semantics (DCS), which captures the core idea of using trees to represent formal semantics.",
+                    "sid": 25,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then introduce the full version (Section 2.2), which handles linguistic phenomena such as quantification, where syntactic and semantic scope diverge.",
+                    "sid": 26,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We start with some definitions, using US geography as an example domain.",
+                    "sid": 27,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let V be the set of all values, which includes primitives (e.g., 3, CA \u2208 V) as well as sets and tuples formed from other values (e.g., 3, {3, 4, 7}, (CA, {5}) \u2208 V).",
+                    "sid": 28,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let P be a set of predicates (e.g., state, count \u2208 P), which are just symbols.",
+                    "sid": 29,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A world w is mapping from each predicate p \u2208 P to a set of tuples; for example, w(state) = {(CA), (OR),... }.",
+                    "sid": 30,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conceptually, a world is a relational database where each predicate is a relation (possibly infinite).",
+                    "sid": 31,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Define a special predicate \u00f8 with w(\u00f8) = V. We represent functions by a set of inputoutput pairs, e.g., w(count) = {(S, n) : n = |S|}.",
+                    "sid": 32,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As another example, w(average) = {(S, \u00afx) : We write a DCS tree z as hp; r1 : c1; ... ; rm : cmi.",
+                    "sid": 33,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2(a) shows an example of a DCS tree.",
+                    "sid": 34,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although a DCS tree is a logical form, note that it looks like a syntactic dependency tree with predicates in place of words.",
+                    "sid": 35,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is this transparency between syntax and semantics provided by DCS which leads to a simple and streamlined compositional semantics suitable for program induction.",
+                    "sid": 36,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The basic version of DCS restricts R to join and aggregate relations (see Table 1).",
+                    "sid": 37,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us start by considering a DCS tree z with only join relations.",
+                    "sid": 38,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such a z defines a constraint satisfaction problem (CSP) with nodes as variables.",
+                    "sid": 39,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The CSP has two types of constraints: (i) x \u2208 w(p) for each node x labeled with predicate p \u2208 P; and (ii) xj = yj0 (the j-th component of x must equal the j'-th component of y) for each edge (x, y) labeled with j0j \u2208 R. A solution to the CSP is an assignment of nodes to values that satisfies all the constraints.",
+                    "sid": 40,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We say a value v is consistent for a node x if there exists a solution that assigns v to x.",
+                    "sid": 41,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The denotation JzKw (z evaluated on w) is the set of consistent values of the root node (see Figure 2 for an example).",
+                    "sid": 42,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computation We can compute the denotation JzKw of a DCS tree z by exploiting dynamic programming on trees (Dechter, 2003).",
+                    "sid": 43,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The recurrence is as follows: At each node, we compute the set of tuples v consistent with the predicate at that node (v \u2208 w(p)), and S(x)}, where a set of pairs S is treated as a set-valued function S(x) = {y : (x, y) \u2208 S} with domain S1 = {x : (x, y) \u2208 S}.",
+                    "sid": 44,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The logical forms in DCS are called DCS trees, where nodes are labeled with predicates, and edges are labeled with relations.",
+                    "sid": 45,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally: Definition 1 (DCS trees) Let Z be the set of DCS trees, where each z \u2208 Z consists of (i) a predicate for each child i, the ji-th component of v must equal the j'i-th component of some t in the child\u2019s denotation (t \u2208 JciKw).",
+                    "sid": 46,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm is linear in the number of nodes times the size of the denotations.1 Now the dual importance of trees in DCS is clear: We have seen that trees parallel syntactic dependency structure, which will facilitate parsing.",
+                    "sid": 47,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, trees enable efficient computation, thereby establishing a new connection between dependency syntax and efficient semantic evaluation.",
+                    "sid": 48,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Aggregate relation DCS trees that only use join relations can represent arbitrarily complex compositional structures, but they cannot capture higherorder phenomena in language.",
+                    "sid": 49,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, consider the phrase number of major cities, and suppose that number corresponds to the count predicate.",
+                    "sid": 50,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is impossible to represent the semantics of this phrase with just a CSP, so we introduce a new aggregate relation, notated E. Consider a tree hE:ci, whose root is connected to a child c via E. If the denotation of c is a set of values s, the parent\u2019s denotation is then a singleton set containing s. Formally: Figure 3(a) shows the DCS tree for our running example.",
+                    "sid": 51,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The denotation of the middle node is {s}, where s is all major cities.",
+                    "sid": 52,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Having instantiated s as a value, everything above this node is an ordinary CSP: s constrains the count node, which in turns constrains the root node to |s|.",
+                    "sid": 53,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A DCS tree that contains only join and aggregate relations can be viewed as a collection of treestructured CSPs connected via aggregate relations.",
+                    "sid": 54,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tree structure still enables us to compute denotations efficiently based on (1) and (2).",
+                    "sid": 55,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The basic version of DCS described thus far handles a core subset of language.",
+                    "sid": 56,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But consider Figure 4: (a) is headed by borders, but states needs to be extracted; in (b), the quantifier no is syntactically dominated by the head verb borders but needs to take wider scope.",
+                    "sid": 57,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now present the full version of DCS which handles this type of divergence between syntactic and semantic scope.",
+                    "sid": 58,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key idea that allows us to give semanticallyscoped denotations to syntactically-scoped trees is as follows: We mark a node low in the tree with a mark relation (one of E, Q, or C).",
+                    "sid": 59,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then higher up in the tree, we invoke it with an execute relation Xi to create the desired semantic scope.2 This mark-execute construct acts non-locally, so to maintain compositionality, we must augment the denotation d = JzKw to include any information about the marked nodes in z that can be accessed by an execute relation later on.",
+                    "sid": 60,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the basic version, d was simply the consistent assignments to the root.",
+                    "sid": 61,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now d contains the consistent joint assignments to the active nodes (which include the root and all marked nodes), as well as information stored about each marked node.",
+                    "sid": 62,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Think of d as consisting of n columns, one for each active node according to a pre-order traversal of z.",
+                    "sid": 63,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Column 1 always corresponds to the root node.",
+                    "sid": 64,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, a denotation is defined as follows (see Figure 5 for an example): Definition 2 (Denotations) Let D be the set of denotations, where each d E D consists of where each store a contains a mark relation a.r E {E, Q, C, 0}, a base denotation a.b E D U{0}, and a child denotation a.c E D U{0}.",
+                    "sid": 65,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We write d as ((A; (ri, bi, ci); ... ; (rn, bn, cn))).",
+                    "sid": 66,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use d{ri = x} to mean d with d.ri = d.ai.r = x (similar definitions apply for d{ai = x}, d{bi = x}, and d{ci = x}).",
+                    "sid": 67,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The denotation of a DCS tree can now be defined recursively: The base case is defined in (3): if z is a single node with predicate p, then the denotation of z has one column with the tuples w(p) and an empty store.",
+                    "sid": 68,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other six cases handle different edge relations.",
+                    "sid": 69,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These definitions depend on several operations (mj,j0, E, Xi, M) which we will define shortly, but let us first get some intuition.",
+                    "sid": 70,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let z be a DCS tree.",
+                    "sid": 71,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the last child c of z\u2019s root is a join (jj0), aggregate (E), or execute (Xi) relation ((4)\u2013(6)), then we simply recurse on z with c removed and join it with some transformation (identity, E, or Xi) of c\u2019s denotation.",
+                    "sid": 72,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the last (or first) child is connected via a mark relation E, C (or Q), then we strip off that child and put the appropriate information in the store by invoking M. We now define the operations mj,j0, E, Xi, M. Some helpful notation: For a sequence v = (v1,... , vn) and indices i = (i1, ... , ik), let vi = (vi1, ... , vik) be the projection of v onto i; we write v\u2212i to mean v\ufffd1 i.",
+                    "sid": 73,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Extending this notation to denotations, let (hA; \u03b1ii[i] = hh{ai : a \u2208 A}; \u03b1iii.",
+                    "sid": 74,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let d[\u2212\u00f8] = d[\u2212i], where i are the columns with empty stores.",
+                    "sid": 75,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, for d in Figure 5, d[1] keeps column 1, d[\u2212\u00f8] keeps column 2, and d[2, \u22122] swaps the two columns.",
+                    "sid": 76,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Join The join of two denotations d and d' with respect to components j and j' (\u2217 means all components) is formed by concatenating all arrays a of d with all compatible arrays a' of d', where compatibility means a1j = a'1j0.",
+                    "sid": 77,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The stores are also concatenated (\u03b1 + \u03b1').",
+                    "sid": 78,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-initial columns with empty stores are projected away by applying \u00b7[1,\u2212\u00f8].",
+                    "sid": 79,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The full definition of join is as follows: Aggregate The aggregate operation takes a denotation and forms a set out of the tuples in the first column for each setting of the rest of the columns: Now we turn to the mark (M) and execute (Xi) operations, which handles the divergence between syntactic and semantic scope.",
+                    "sid": 80,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In some sense, this is the technical core of DCS.",
+                    "sid": 81,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Marking is simple: When a node (e.g., size in Figure 5) is marked (e.g., with relation C), we simply put the relation r, current denotation d and child c\u2019s denotation into the store of column 1: The execute operation Xi(d) processes columns i in reverse order.",
+                    "sid": 82,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It suffices to define Xi(d) for a single column i.",
+                    "sid": 83,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are three cases: Extraction (d.ri = E) In the basic version, the denotation of a tree was always the set of consistent values of the root node.",
+                    "sid": 84,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Extraction allows us to return the set of consistent values of a marked non-root node.",
+                    "sid": 85,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, extraction simply moves the i-th column to the front: Xi(d) = d[i, \u2212(i, \u00f8)]{\u03b11 = \u00f8}.",
+                    "sid": 86,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in Figure 4(a), before execution, the denotation of the DCS tree is hh{[(CA, OR), (OR)],... }; \u00f8; (E, Qhstatei\ufffdw, \u00f8)ii; after applying X1, we have hh{[(OR)], ... }; \u00f8ii.",
+                    "sid": 87,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generalized Quantification (d.ri = Q) Generalized quantifiers are predicates on two sets, a restrictor A and a nuclear scope B.",
+                    "sid": 88,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, In a DCS tree, the quantifier appears as the child of a Q relation, and the restrictor is the parent (see Figure 4(b) for an example).",
+                    "sid": 89,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This information is retrieved from the store when the quantifier in column i is executed.",
+                    "sid": 90,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particu- using the exact same machinery as superlatives.",
+                    "sid": 91,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figlar, the restrictor is A = E (d.bi) and the nu- ure 4(g) shows that we can naturally account for clear scope is B = E (d[i, \u2212(i, 0)]).",
+                    "sid": 92,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then superlative ambiguity based on where the scopeapply d.ci to these two sets (technically, denota- determining execute relation is placed. tions) and project away the first column: Xi(d) = 3 Semantic Parsing ((d.ci ./1,1 A) ./2,1 B) [\u22121].",
+                    "sid": 93,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now turn to the task of mapping natural language For the example in Figure 4(b), the de- utterances to DCS trees.",
+                    "sid": 94,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our first question is: given notation of the DCS tree before execution is an utterance x, what trees z \u2208 Z are permissible?",
+                    "sid": 95,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To California cities), and it also allows us to underspecify L. In particular, our L will not include verbs or prepositions; rather, we rely on the predicates corresponding to those words to be triggered by traces.",
+                    "sid": 96,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The augmentation function A takes a set of trees and optionally attaches E and Xi relations to the root (e.g., A(hcityi) = {hcityi , hcity; E:\u00f8i}).",
+                    "sid": 97,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The filtering function F rules out improperly-typed trees such as hcity; 00:hstateii.",
+                    "sid": 98,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To further reduce the search space, F imposes a few additional constraints, e.g., limiting the number of marked nodes to 2 and only allowing trace predicates between arity 1 predicates.",
+                    "sid": 99,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Model We now present our discriminative semantic parsing model, which places a log-linear distribution over z \u2208 ZL(x) given an utterance x.",
+                    "sid": 100,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, p\u03b8(z  |x) \u221d e\u03c6(x,z)T\u03b8, where \u03b8 and \u03c6(x, z) are parameter and feature vectors, respectively.",
+                    "sid": 101,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a running example, consider x = city that is in California and z = hcity; 11:hloc; 21:hCAiii, where city triggers city and California triggers CA.",
+                    "sid": 102,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To define the features, we technically need to augment each tree z \u2208 ZL(x) with alignment information\u2014namely, for each predicate in z, the span in x (if any) that triggered it.",
+                    "sid": 103,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This extra information is already generated from the recursive definition in (13).",
+                    "sid": 104,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature vector \u03c6(x, z) is defined by sums of five simple indicator feature templates: (F1) a word triggers a predicate (e.g., [city, city]); (F2) a word is under a relation (e.g., [that, 11]); (F3) a word is under a trace predicate (e.g., [in, loc]); (F4) two predicates are linked via a relation in the left or right direction (e.g., [city,11, loc, RIGHT]); and (F5) a predicate has a child relation (e.g., [city, 11]).",
+                    "sid": 105,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning Given a training dataset D containing (x, y) pairs, we define the regularized marginal log-likelihood objective O(\u03b8) = E(x,y)ED log p\u03b8(JzKw = y  |x, z \u2208 ZL(x)) \u2212 \u03bbk\u03b8k22, which sums over all DCS trees z that evaluate to the target answer y.",
+                    "sid": 106,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model is arc-factored, so we can sum over all DCS trees in ZL(x) using dynamic programming.",
+                    "sid": 107,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in order to learn, we need to sum over {z \u2208 ZL(x) : JzKw = y}, and unfortunately, the additional constraint JzKw = y does not factorize.",
+                    "sid": 108,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore resort to beam search.",
+                    "sid": 109,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we truncate each Ci,j to a maximum of K candidates sorted by decreasing score based on parameters \u03b8.",
+                    "sid": 110,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let \u02dcZL,\u03b8(x) be this approximation of ZL(x).",
+                    "sid": 111,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our learning algorithm alternates between (i) using the current parameters \u03b8 to generate the K-best set \u02dcZL,\u03b8(x) for each training example x, and (ii) optimizing the parameters to put probability mass on the correct trees in these sets; sets containing no correct answers are skipped.",
+                    "sid": 112,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, let \u02dcO(\u03b8, \u03b8') be the objective function O(\u03b8) with ZL(x) \u02dcZL,\u03b8I(x).",
+                    "sid": 113,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We optimize \u02dcO(\u03b8,\u03b8') by setting \u03b8(0) = 0~ and iteratively solving \u03b8(t+1) = argmax\u03b8 \u02dcO(\u03b8, \u03b8(t)) using L-BFGS until t = T. In all experiments, we set \u03bb = 0.01, T = 5, and K = 100.",
+                    "sid": 114,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After training, given a new utterance x, our system outputs the most likely y, summing out the latent logical form z: argmaxy p\u03b8(T)(y  |x, z \u2208 \u02dcZL,\u03b8(T)).",
+                    "sid": 115,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We tested our system on two standard datasets, GEO and JOBS.",
+                    "sid": 116,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each dataset, each sentence x is annotated with a Prolog logical form, which we use only to evaluate and get an answer y.",
+                    "sid": 117,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This evaluation is done with respect to a world w. Recall that a world w maps each predicate p \u2208 P to a set of tuples w(p).",
+                    "sid": 118,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are three types of predicates in P: generic (e.g., argmax), data (e.g., city), and value (e.g., CA).",
+                    "sid": 119,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GEO has 48 non-value predicates and JOBS has 26.",
+                    "sid": 120,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For GEO, w is the standard US geography database that comes with the dataset.",
+                    "sid": 121,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For JOBS, if we use the standard Jobs database, close to half the y\u2019s are empty, which makes it uninteresting.",
+                    "sid": 122,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore generated a random Jobs database instead as follows: we created 100 job IDs.",
+                    "sid": 123,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each data predicate p (e.g., language), we add each possible tuple (e.g., (job37, Java)) to w(p) independently with probability 0.8.",
+                    "sid": 124,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the same training-test splits as Zettlemoyer and Collins (2005) (600+280 for GEO and 500+140 for JOBS).",
+                    "sid": 125,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During development, we further held out a random 30% of the training sets for validation.",
+                    "sid": 126,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our lexical triggers L include the following: (i) predicates for a small set of \u2248 20 function words (e.g., (most, argmax)), (ii) (x, x) for each value predicate x in w (e.g., (Boston, Boston)), and (iii) predicates for each POS tag in {JJ, NN, NNS} (e.g., (JJ, size), (JJ, area), etc.",
+                    "sid": 127,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ").3 Predicates corresponding to verbs and prepositions (e.g., traverse) are not included as overt lexical triggers, but rather in the trace predicates L(E).",
+                    "sid": 128,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also define an augmented lexicon L+ which includes a prototype word x for each predicate appearing in (iii) above (e.g., (large, size)), which cancels the predicates triggered by x\u2019s POS tag.",
+                    "sid": 129,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For GEO, there are 22 prototype words; for JOBS, there are 5.",
+                    "sid": 130,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifying these triggers requires minimal domain-specific supervision.",
+                    "sid": 131,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results We first compare our system with Clarke et al. (2010) (henceforth, SEMRESP), which also learns a semantic parser from question-answer pairs.",
+                    "sid": 132,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows that our system using lexical triggers L (henceforth, DCS) outperforms SEMRESP (78.9% over 73.2%).",
+                    "sid": 133,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, although neither DCS nor SEMRESP uses logical forms, DCS uses even less supervision than SEMRESP.",
+                    "sid": 134,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SEMRESP requires a lexicon of 1.42 words per non-value predicate, WordNet features, and syntactic parse trees; DCS requires only words for the domain-independent predicates (overall, around 0.5 words per non-value predicate), POS tags, and very simple indicator features.",
+                    "sid": 135,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, DCS performs comparably to even the version of SEMRESP trained using logical forms.",
+                    "sid": 136,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we add prototype triggers (use L+), the resulting system (DCS+) outperforms both versions of SEMRESP by a significant margin (87.2% over 73.2% and 80.4%).",
+                    "sid": 137,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we compared our systems (DCS and DCS+) with the state-of-the-art semantic parsers on the full dataset for both GEO and JOBS (see Table 3).",
+                    "sid": 138,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All other systems require logical forms as training data, whereas ours does not.",
+                    "sid": 139,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows that even DCS, which does not use prototypes, is comparable to the best previous system (Kwiatkowski et al., 2010), and by adding a few prototypes, DCS+ offers a decisive edge (91.1% over 88.9% on GEO).",
+                    "sid": 140,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than using lexical triggers, several of the other systems use IBM word alignment models to produce an initial word-predicate mapping.",
+                    "sid": 141,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This option is not available to us since we do not have annotated logical forms, so we must instead rely on lexical triggers to define the search space.",
+                    "sid": 142,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that having lexical triggers is a much weaker requirement than having a CCG lexicon, and far easier to obtain than logical forms.",
+                    "sid": 143,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuitions How is our system learning?",
+                    "sid": 144,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initially, the weights are zero, so the beam search is essentially unguided.",
+                    "sid": 145,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that only for a small fraction of training examples do the K-best sets contain any trees yielding the correct answer (29% for DCS on GEO).",
+                    "sid": 146,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, training on just these examples is enough to improve the parameters, and this 29% increases to 66% and then to 95% over the next few iterations.",
+                    "sid": 147,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This bootstrapping behavior occurs naturally: The \u201ceasy\u201d examples are processed first, where easy is defined by the ability of the current model to generate the correct answer using any tree. with scope variation.",
+                    "sid": 148,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Think of DCS as a higher-level Our system learns lexical associations between programming language tailored to natural language, words and predicates.",
+                    "sid": 149,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, area (by virtue which results in programs (DCS trees) which are of being a noun) triggers many predicates: city, much simpler than the logically-equivalent lambda state, area, etc.",
+                    "sid": 150,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspecting the final parameters calculus formulae.",
+                    "sid": 151,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(DCS on GEO), we find that the feature [area, area] The idea of using CSPs to represent semantics is has a much higher weight than [area, city].",
+                    "sid": 152,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Trace inspired by Discourse Representation Theory (DRT) predicates can be inserted anywhere, but the fea- (Kamp and Reyle, 1993; Kamp et al., 2005), where tures favor some insertions depending on the words variables are discourse referents.",
+                    "sid": 153,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The restriction to present (for example, [in, loc] has high weight). trees is similar to economical DRT (Bos, 2009).",
+                    "sid": 154,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The errors that the system makes stem from mul- The other major focus of this work is program tiple sources, including errors in the POS tags (e.g., induction\u2014inferring logical forms from their denostates is sometimes tagged as a verb, which triggers tations.",
+                    "sid": 155,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been a fair amount of past work on no predicates), confusion of Washington state with this topic: Liang et al. (2010) induces combinatory Washington D.C., learning the wrong lexical asso- logic programs in a non-linguistic setting.",
+                    "sid": 156,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eisenciations due to data sparsity, and having an insuffi- stein et al. (2009) induces conjunctive formulae and ciently large K. uses them as features in another learning problem.",
+                    "sid": 157,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Discussion Piantadosi et al. (2008) induces first-order formuA major focus of this work is on our semantic rep- lae using CCG in a small domain assuming observed resentation, DCS, which offers a new perspective lexical semantics.",
+                    "sid": 158,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The closest work to ours is Clarke on compositional semantics.",
+                    "sid": 159,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To contrast, consider et al. (2010), which we discussed earlier.",
+                    "sid": 160,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CCG (Steedman, 2000), in which semantic pars- The integration of natural language with denotaing is driven from the lexicon.",
+                    "sid": 161,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lexicon en- tions computed against a world (grounding) is becodes information about how each word can used in coming increasingly popular.",
+                    "sid": 162,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feedback from the context; for example, the lexical entry for borders world has been used to guide both syntactic parsing is S\\NP/NP : Ay.Ax.border(x, y), which means (Schuler, 2003) and semantic parsing (Popescu et borders looks right for the first argument and left al., 2003; Clarke et al., 2010).",
+                    "sid": 163,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Past work has also fofor the second.",
+                    "sid": 164,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These rules are often too stringent, cused on aligning text to a world (Liang et al., 2009), and for complex utterances, especially in free word- using text in reinforcement learning (Branavan et al., order languages, either disharmonic combinators are 2009; Branavan et al., 2010), and many others.",
+                    "sid": 165,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our employed (Zettlemoyer and Collins, 2007) or words work pushes the grounded language agenda towards are given multiple lexical entries (Kwiatkowski et deeper representations of language\u2014think grounded al., 2010). compositional semantics.",
+                    "sid": 166,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In DCS, we start with lexical triggers, which are 6 Conclusion more basic than CCG lexical entries.",
+                    "sid": 167,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A trigger for We built a system that interprets natural language borders specifies only that border can be used, but utterances much more accurately than existing sysnot how.",
+                    "sid": 168,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combination rules are encoded in the tems, despite using no annotated logical forms.",
+                    "sid": 169,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our features as soft preferences.",
+                    "sid": 170,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This yields a more system is based on a new semantic representation, factorized and flexible representation that is easier DCS, which offers a simple and expressive alterto search through and parametrize using features. native to lambda calculus.",
+                    "sid": 171,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Free from the burden It also allows us to easily add new lexical triggers of annotating logical forms, we hope to use our without becoming mired in the semantic formalism. techniques in developing even more accurate and Quantifiers and superlatives significantly compli- broader-coverage language understanding systems. cate scoping in lambda calculus, and often type rais- Acknowledgments We thank Luke Zettlemoyer ing needs to be employed.",
+                    "sid": 172,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In DCS, the mark-execute and Tom Kwiatkowski for providing us with data construct provides a flexible framework for dealing and answering questions.",
+                    "sid": 173,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "598",
+                    "sid": 174,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

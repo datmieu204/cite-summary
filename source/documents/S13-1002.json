@@ -1,0 +1,1601 @@
+{
+    "ID": "S13-1002",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We combine logical and distributional representations of natural language meaning by transforming distributional similarity judgments into weighted inference rules using Markov Logic Networks (MLNs).",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that this framework supports both judging sentence similarity and recognizing textual entailment by appropriately adapting the MLN implementation of logical connectives.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also show that distributional phrase similarity, used as textual inference rules created on the fly, improves its performance.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Tasks in natural language semantics are very diverse and pose different requirements on the underlying formalism for representing meaning.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some tasks require a detailed representation of the structure of complex sentences.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some tasks require the ability to recognize near-paraphrases or degrees of similarity between sentences.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some tasks require logical inference, either exact or approximate.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Often it is necessary to handle ambiguity and vagueness in meaning.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we frequently want to be able to learn relevant knowledge automatically from corpus data.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is no single representation for natural language meaning at this time that fulfills all requirements.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But there are representations that meet some of the criteria.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Logic-based representations (Montague, 1970; Kamp and Reyle, 1993) provide an expressive and flexible formalism to express even complex propositions, and they come with standardized inference mechanisms.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Distributional mod sim(hamster, gerbil) = w gerbil( hamster( x hamster(x) ! gerbil(x) | f (w) Figure 1: Turning distributional similarity into a weighted inference rule els (Turney and Pantel, 2010) use contextual similarity to predict semantic similarity of words and phrases (Landauer and Dumais, 1997; Mitchell and Lapata, 2010), and to model polysemy (Schu\u00a8 tze, 1998; Erk and Pado\u00b4 , 2008; Thater et al., 2010).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that distributional models and logic- based representations of natural language meaning are complementary in their strengths (Grefenstette and Sadrzadeh, 2011; Garrette et al., 2011), which encourages developing new techniques to combine them.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Garrette et al.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011; 2013) propose a framework for combining logic and distributional models in which logical form is the primary meaning representation.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Distributional similarity between pairs of words is converted into weighted inference rules that are added to the logical form, as illustrated in Figure 1.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, Markov Logic Networks (Richardson and Domingos, 2006) (MLNs) are used to perform weighted inference on the resulting knowledge base.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they only employed single-word distributional similarity rules, and only evaluated on a small 11 Second Joint Conference on Lexical and Computational Semantics (*SEM), Volume 1: Proceedings of the Main Conference and the Shared Task, pages 11\u201321, Atlanta, Georgia, June 1314, 2013.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2013 Association for Computational Linguistics set of short, handcrafted test sentences.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we extend Garrette et al.\u2019s approach and adapt it to handle two existing semantic tasks: recognizing textual entailment (RTE) and semantic textual similarity (STS).",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show how this single semantic framework using probabilistic logical form in Markov logic can be adapted to support both of these important tasks.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is possible because MLNs constitute a flexible programming language based on probabilistic logic (Domingos and Lowd, 2009) that can be easily adapted to support multiple types of linguistically useful inference.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the word and short phrase level, our approach model entailment through \u201cdistributional\u201d similarity (Figure 1).",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If X and Y occur in similar contexts, we assume that they describe similar entities and thus there is some degree of entailment between them.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the sentence level, however, we hold that a stricter, logic-based view of entailment is beneficial, and we even model sentence similarity (in STS) as entail- ment.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two main innovations in the formalism that make it possible for us to work with naturally occurring corpus data.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we use more expressive distributional inference rules based on the similarity of phrases rather than just individual words.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In comparison to existing methods for creating textual inference rules (Lin and Pantel, 2001b; Szpek- tor and Dagan, 2008), these rules are computed on the fly as needed, rather than pre-compiled.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we use more flexible probabilistic combinations of evidence in order to compute degrees of sentence similarity for STS and to help compensate for parser errors.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We replace deterministic conjunction by an average combiner, which encodes causal independence (Natarajan et al., 2010).",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that our framework is able to handle both sentence similarity (STS) and textual entailment (RTE) by making some simple adaptations to the MLN when switching between tasks.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The framework achieves reasonable results on both tasks.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On STS, we obtain a correlation of r = 0.66 with full logic, r = 0.73 in a system with weakened variable binding, and r = 0.85 in an ensemble model.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On RTE1 we obtain an accuracy of 0.57.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that the distributional inference rules benefit both tasks and that more flexible probabilistic combinations of evidence are crucial for STS.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Al though other approaches could be adapted to handle both RTE and STS, we do not know of any other methods that have been explicitly tested on both problems.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Distributional semantics Distributional models define the semantic relatedness of words as the similarity of vectors representing the contexts in which they occur (Landauer and Dumais, 1997; Lund and Burgess, 1996).",
+                    "sid": 38,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, such models have also been used to represent the meaning of larger phrases.",
+                    "sid": 39,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest models compute a phrase vector by adding the vectors for the individual words (Landauer and Dumais, 1997) or by a component-wise product of word vectors (Mitchell and Lapata, 2008; Mitchell and Lapata, 2010).",
+                    "sid": 40,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other approaches, in the emerging area of distributional compositional semantics, use more complex methods that compute phrase vectors from word vectors and tensors (Baroni and Zamparelli, 2010; Grefenstette and Sadrzadeh, 2011).",
+                    "sid": 41,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wide-coverage logic-based semantics Boxer (Bos, 2008) is a software package for wide-coverage semantic analysis that produces logical forms using Discourse Representation Structures (Kamp and Reyle, 1993).",
+                    "sid": 42,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It builds on the C&C CCG parser (Clark and Curran, 2004).",
+                    "sid": 43,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Markov Logic In order to combine logical and probabilistic information, we draw on existing work in Statistical Relational AI (Getoor and Taskar, 2007).",
+                    "sid": 44,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we utilize Markov Logic Networks (MLNs) (Domingos and Lowd, 2009), which employ weighted formulas in first-order logic to compactly encode complex undirected probabilistic graphical models.",
+                    "sid": 45,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MLNs are well suited for our approach since they provide an elegant framework for assigning weights to first-order logical rules, combining a diverse set of inference rules and performing sound probabilistic inference.",
+                    "sid": 46,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An MLN consists of a set of weighted first-order clauses.",
+                    "sid": 47,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It provides a way of softening first-order logic by allowing situations in which not all clauses are satisfied.",
+                    "sid": 48,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More specifically, they provide a well-founded probability distribution across possible worlds by specifying that the probability of a world increases exponentially with the total weight of the logical clauses that it satisfies.",
+                    "sid": 49,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While methods exist for learning MLN weights directly from training data, since the appropriate training data is lacking, our approach uses weights computed using dis- tributional semantics.",
+                    "sid": 50,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the open-source software package Alchemy (Kok et al., 2005) for MLN inference, which allows computing the probability of a query literal given a set of weighted clauses as background knowledge and evidence.",
+                    "sid": 51,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tasks: RTE and STS Recognizing Textual Entailment (RTE) is the task of determining whether one natural language text, the premise, implies another, the hypothesis.",
+                    "sid": 52,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider (1) below.",
+                    "sid": 53,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) p: Oracle had fought to keep the forms from being released h: Oracle released a confidential document Here, h is not entailed.",
+                    "sid": 54,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RTE directly tests whether a system can construct semantic representations that allow it to draw correct inferences.",
+                    "sid": 55,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of existing RTE approaches, the closest to ours is by Bos and Mark- ert (2005), who employ a purely logical approach that uses Boxer to convert both the premise and hypothesis into first-order logic and then checks for entailment using a theorem prover.",
+                    "sid": 56,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, our approach uses Markov logic with probabilistic inference.",
+                    "sid": 57,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Semantic Textual Similarity (STS) is the task of judging the similarity of two sentences on a scale from 0 to 5 (Agirre et al., 2012).",
+                    "sid": 58,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gold standard scores are averaged over multiple human annotations.",
+                    "sid": 59,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best performer in 2012\u2019s competition was by Ba\u00a8r et al.",
+                    "sid": 60,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012), an ensemble system that integrates many techniques including string similarity, n-gram overlap, WordNet similarity, vector space similarity and MT evaluation metrics.",
+                    "sid": 61,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weighted inference, and combined structural- distributional representations One approach to weighted inference in NLP is that of Hobbs et al.",
+                    "sid": 62,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1993), who proposed viewing natural language interpretation as abductive inference.",
+                    "sid": 63,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this framework, problems like reference resolution and syntactic ambiguity resolution become inferences to best explanations that are associated with costs.",
+                    "sid": 64,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this leaves open the question of how costs are assigned.",
+                    "sid": 65,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Raina et al.",
+                    "sid": 66,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) use this framework for RTE, deriving inference costs from WordNet similarity and properties of the syntactic parse.",
+                    "sid": 67,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Garrette et al.",
+                    "sid": 68,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011; 2013) proposed an approach to RTE that uses MLNs to combine traditional logical representations with distributional information in order to support probabilistic textual inference.",
+                    "sid": 69,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach can be viewed as a bridge between Bos and Markert (2005)\u2019s purely logical approach, which relies purely on hard logical rules and theorem proving, and distributional approaches, which support graded similarity between concepts but have no notion of logical operators or entailment.",
+                    "sid": 70,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are also other methods that combine dis- tributional and structured representations.",
+                    "sid": 71,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stern et al.",
+                    "sid": 72,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) conceptualize textual entailment as tree rewriting of syntactic graphs, where some rewriting rules are distributional inference rules.",
+                    "sid": 73,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Socher et al.",
+                    "sid": 74,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) recognize paraphrases using a \u201ctree of vectors,\u201d a phrase structure tree in which each constituent is associated with a vector, and overall sentence similarity is computed by a classifier that integrates all pairwise similarities.",
+                    "sid": 75,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(This is in contrast to approaches like Baroni and Zamparelli (2010) and Grefenstette and Sadrzadeh (2011), who do not offer a proposal for using vectors at multiple levels in a syntactic tree simultaneously.)",
+                    "sid": 76,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "mln system. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Our system extends that of Garrette et al.",
+                    "sid": 77,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011; 2013) to support larger-scale evaluation on standard benchmarks for both RTE and STS.",
+                    "sid": 78,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conceptualize both tasks as probabilistic entailment in Markov logic, where STS is judged as the average degree of mutual entailment, i.e. we compute the probabilityof both S1 |= S2 and S2 |= S1 and average the re sults.",
+                    "sid": 79,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Below are some sentence pairs that we use as examples in the discussion below: (2) S1: A man is slicing a cucumber.",
+                    "sid": 80,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2: A man is slicing a zucchini.",
+                    "sid": 81,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) S1: A boy is riding a bicycle.",
+                    "sid": 82,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2: A little boy is riding a bike.",
+                    "sid": 83,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) S1: A man is driving.",
+                    "sid": 84,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "S2: A man is driving a car.",
+                    "sid": 85,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "System overview.",
+                    "sid": 86,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compute the probability of an entailment S1 |= S2, the system first constructs logical forms for each sentence using Boxer and then translates them into MLN clauses.",
+                    "sid": 87,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In example (2) above, the logical form for S1: \u2203x0, e1, x2 man(x0) \u2227 slice(e1) \u2227 Agent(e1, x0)\u2227 cucumber(x2) \u2227 P atient(e1, x2)) is used as evidence, and the logical form for S2 is turned into the following formula (by default, variables are assumed to be universally quantified): man(x) \u2227 slice(e) \u2227 Agent(e, x)\u2227 zucchini(y) \u2227 P atient(e, y) \u2192 result() where result() is the query for which we have Alchemy compute the probability.",
+                    "sid": 88,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, S2 is not strictly entailed by S1 because of the mismatch between \u201ccucumber\u201d and \u201czucchini\u201d, so with just the strict logical-form translations of S1 and S2, the probability of result() will be zero.",
+                    "sid": 89,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is where we introduce distributional similarity, in this case# the sim\u00bbila#rity of\u00bb\u201ccucumber\u201dand \u201czucchini\u201d, cos(cucumber, zucchini).",
+                    "sid": 90,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We cre ate inference rules from such similarities as a form of background knowledge.",
+                    "sid": 91,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then treat similarity as degree of entailment, a move that has a long tradition (e.g., (Lin and Pantel, 2001b; Raina et al., 2005; Szpektor and Dagan, 2008)).",
+                    "sid": 92,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, given two words a and b, we transform their cosine similarity into an inference-rule weight wt(a, b) using: The distributional model we use contains all lemmas occurring at least 50 times in the Gigaword corpus (Graff et al., 2007) except a list of stop words.",
+                    "sid": 93,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dimensions are the 2,000 most frequent of these words, and cell values are weighted with point-wise mutual information.",
+                    "sid": 94,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 Phrase-based inference rules.",
+                    "sid": 95,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Garrette et al. only considered distributional inference rules for pairs of individual words.",
+                    "sid": 96,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extend their approach to dis- tributional inference rules for pairs of phrases in order to handle cases like (3).",
+                    "sid": 97,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To properly estimate the similarity between S1 and S2 in (3), we not only need an inference rule linking \u201cbike\u201d to \u201cbicycle\u201d, but also a rule estimating how similar \u201cboy\u201d is to \u201clittle boy\u201d.",
+                    "sid": 98,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do so, we make use of existing approaches that compute distributional representations for phrases.",
+                    "sid": 99,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, we compute the vector for a phrase from the vectors of the words in that phrase, using either vector addition (Landauer and Dumais, 1997) or component-wise multiplication (Mitchell and Lapata, 2008; Mitchell and Lapata, 2010).",
+                    "sid": 100,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The inference-rule weight, wt(p1, p2), for two phrases p1 and p2 is then determined using Eq.",
+                    "sid": 101,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) in the same way as for words.",
+                    "sid": 102,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Existing approaches that derive phrasal inference rules from distributional similarity (Lin and Pantel, 2001a; Szpektor and Dagan, 2008; Berant et al., 2011) precompile large lists of inference rules.",
+                    "sid": 103,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By comparison, distributional phrase similarity can be seen as a generator of inference rules \u201con the fly\u201d, as it is possible to compute distributional phrase cos( #\u00bb #\u00bb a , b ) vectors for arbitrary phrases on demand as they are wt(a, b) = log( #\u00bb #\u00bb ) \u2212 prior (5) 1 \u2212 cos( a , b ) Where prior is a negative weight used to initialize all predicates, so that by default facts are assumed to have very low probability.",
+                    "sid": 104,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we use prior = \u22123.",
+                    "sid": 105,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case of sentence pair (2), we generate the inference rule: cucumber(x) \u2192 zucchini(x) | wt(cuc., zuc.)",
+                    "sid": 106,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such inference rules are generated for all pairs of words (w1, w2) where w1 \u2208 S1 and w2 \u2208 S2.1 1 We omit inference rules for words (a, b) where cos(a, b) <.",
+                    "sid": 107,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "needed for particular examples.",
+                    "sid": 108,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inference rules are generated for all pairs of constituents (c1, c2) where c1 \u2208 S1 and c2 \u2208 S2, a constituent is a single word or a phrase.",
+                    "sid": 109,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The logical form provides a handy way to extract phrases, as they are generally mapped to one of two logical constructs.",
+                    "sid": 110,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Either we have multiple single-variable predicates operating on the same variable.",
+                    "sid": 111,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example the phrase \u201ca little boy\u201d has the logical formboy(x) \u2227 little(x).",
+                    "sid": 112,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Or we have two unary predi cates connected with a relation.",
+                    "sid": 113,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \u201cpizza slice\u201d and \u201cslice of pizza\u201d are both mapped to the \u03b8 for a threshold \u03b8 set to maximize performance on the training data.",
+                    "sid": 114,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Low-similarity pairs usually indicate dissimilar words.",
+                    "sid": 115,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This removes a sizeable number of rules for STS, while for RTE the tuned threshold was near zero.",
+                    "sid": 116,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 It is customary to transform raw counts in a way that cap-.",
+                    "sid": 117,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "tures association between target words and dimensions, for example through point-wise mutual information (Lowe, 2001).",
+                    "sid": 118,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "logical form, slice(x0) \u2227 of (x0, x1) \u2227 pizza(x1).",
+                    "sid": 119,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider all binary predicates as relations.",
+                    "sid": 120,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Average Combiner to determine similarity in the presence of missing phrases.",
+                    "sid": 121,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The logical forms for the sentences in (4): are S1: \u2203x0, e1 man(x0)\u2227agent(x0, e1)\u2227drive(e1)) S2: \u2203x0, e1, x2 man(x0) \u2227 agent(x0, e1) \u2227 drive(e1) \u2227 patient(e1, x2) \u2227 car(x2)) If we try to prove S1 |= S2, the probability of the result() will be zero: There is no evidence for a car, and the hypothesis predicates are conjoined using a deterministic AND.",
+                    "sid": 122,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For RTE, this makes sense: If one of the hypothesis predicates is False, the probability of entailment should be zero.",
+                    "sid": 123,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the STS task, this should in principle be the same, at least if the omitted facts are vital, but it seems that annotators rated the data points in this task more for overall similarity than for degrees of entailment.",
+                    "sid": 124,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So in STS, we want the similarity to be a function of the number of elements in the hypothesis that are inferable.",
+                    "sid": 125,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we need to replace the deterministic AND with a different way of combining evidence.",
+                    "sid": 126,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We chose to use the average evidence combiner for MLNs introduced by Natarajan et al.",
+                    "sid": 127,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010).",
+                    "sid": 128,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To use the average combiner, the full logical form is divided into smaller clauses (which we call mini-clauses), then the combiner averages their probabilities.",
+                    "sid": 129,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In case the formula is a list of con- juncted predicates, a mini-clause is a conjunction of a single-variable predicate with a relation predicate(as in the example below).",
+                    "sid": 130,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In case the logical form contains a negated sub-formula, the negated sub-formula is also a mini-clause.",
+                    "sid": 131,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hypothesis above after dividing clauses for the average combiner looks like this: man(x0 ) \u2227 agent(x0 , e1 ) \u2192 result(x0 , e1 , x2 ) | w drive(e1 ) \u2227 agent(x0 , e1 ) \u2192 result(x0 , e1 , x2 ) | w drive(e1 ) \u2227 patient(e1 , x2 ) \u2192 result(x0 , e1 , x2 ) | w car(x2 ) \u2227 patient(e1 , x2 ) \u2192 result(x0 , e1 , x2 ) | w where result is again the query predicate.",
+                    "sid": 132,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, result has all of the variables in the clause as arguments in order to maintain the binding of variables across all of the mini-clauses.",
+                    "sid": 133,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weights w are the following function of n, the number of mini-clauses (4 in the above example): where p is a value close to 1 that is set to maximize performance on the training data, and prior is the same negative weight as before.",
+                    "sid": 134,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Setting w this way produces a probability of p for the result() in cases that satisfy the antecedents of all mini-clauses.",
+                    "sid": 135,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the example above, the antecedents of the first two mini-clauses are satisfied, while the antecedents of the last two are not since the premise provides no evidence for an object of the verb drive.",
+                    "sid": 136,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The similarity is then computed to be the maximum probability of any grounding of the result predicate, which in this case is around p .3 An interesting variation of the average combiner is to omit variable bindings between the mini- clauses.",
+                    "sid": 137,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, the hypothesis clauses look like this for our example: man(x) \u2227 agent(x, e) \u2192 result() | w drive(e) \u2227 agent(x, e) \u2192 result() | w drive(e) \u2227 patient(e, x) \u2192 result() | w car(x) \u2227 patient(e, x) \u2192 result() | w This implementation loses a lot of information, for example it does not differentiate between \u201cA man is walking and a woman is driving\u201d and \u201cA man is driving and a woman is walking\u201d.",
+                    "sid": 138,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, logical form without variable binding degrades to a representation similar to a set of independent syntactic dependencies, 4 while the average combiner with variable binding retains all of the information in the original logical form.",
+                    "sid": 139,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Still, omitting variable binding turns out to be useful for the STS task.",
+                    "sid": 140,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also worth commenting on the efficiency of the inference algorithm when run on the three different approaches to combining evidence.",
+                    "sid": 141,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average combiner without variable binding is the fastest and has the least memory requirements because all cliques in the ground network are of limited size (just 3 or 4 nodes).",
+                    "sid": 142,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Deterministic AND is much slower than the average combiner without variable binding, because the maximum clique size depends on the sentence.",
+                    "sid": 143,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average combiner with variable binding is the most memory intensive since the 3 One could also give mini-clauses different weights depending on their importance, but we have not experimented with this 1 w = n \u00d7 (log( p 1 \u2212 p ) \u2212 prior) (6) so far.",
+                    "sid": 144,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 However, it is not completely the same since we do not divide up formulas under negation into mini clauses.",
+                    "sid": 145,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "number of arguments of the result() predicate can become large (there is an argument for each individual and event in the sentence).",
+                    "sid": 146,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, the inference algorithm needs to consider a combinatorial number of possible groundings of the result() predicate, making inference very slow.",
+                    "sid": 147,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adaptation of the logical form.",
+                    "sid": 148,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As discussed by Garrette et al.",
+                    "sid": 149,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011), Boxer\u2019s output is mapped to logical form and augmented with additional information to handle a variety of semantic phenomena.",
+                    "sid": 150,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we do not use their additional rules for handling implicatives and factives, as we wanted to test the system without background knowledge beyond that supplied by the vector space.",
+                    "sid": 151,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, current MLN inference algorithms are not able to efficiently handle complex formulas with nested quantifiers.",
+                    "sid": 152,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For that reason, we replaced universal quantifiers in Boxer\u2019s output with existentials since they caused serious problems for Alchemy.",
+                    "sid": 153,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although this is a radical change to the semantics of the logical form, due to the nature of the STS and RTE data, it only effects about 5% of the sentences, and we found that most of the universal quantifiers in these cases were actually due to parsing errors.",
+                    "sid": 154,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are currently exploring more effective ways of dealing with this issue.",
+                    "sid": 155,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "task 1: recognizing textual entailment. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1 Dataset.",
+                    "sid": 156,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to compare directly to the logic-based system of Bos and Markert (2005), we focus on the RTE1 dataset (Dagan et al., 2005), which includes 567 Text-Hypothesis (T-H) pairs in the development.",
+                    "sid": 157,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "set and 800 pairs in the test set.",
+                    "sid": 158,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data covers a wide range of issues in entailment, including lexical, syntactic, logical, world knowledge, and combinations of these at different levels of difficulty.",
+                    "sid": 159,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both development and test sets, 50% of sentence pairs are true entailments and 50% are not.",
+                    "sid": 160,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Method.",
+                    "sid": 161,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We run our system for different configurations of inference rules and evidence combiners.",
+                    "sid": 162,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For distributional inference rules (DIR), three different levels are tested: without inference rules (no DIR), inference rules for individual words (word DIR), and inference rules for words and phrases (phrase DIR).",
+                    "sid": 163,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase vectors were built using vector addition, as point-wise multiplication performed slightly worse.",
+                    "sid": 164,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To combine evidence for the result() query, three different options are available: without average combiner which is just using Deterministic AND (Deterministic AND), average combiner with variable binding (AvgComb) and average combiner without variable binding (AvgComb w/o VarBind).",
+                    "sid": 165,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different combinations of configurations are tested according to its suitability for the task; RTE and STS.",
+                    "sid": 166,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also tested several \u201cdistributional only\u201d systems.",
+                    "sid": 167,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first such system builds a vector representation for each sentence by adding its word vectors, then computes the cosine similarity between the sentence vectors for S1 and S2 (VS-Add).",
+                    "sid": 168,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second uses point-wise multiplication instead of vector addition (VS-Mul).",
+                    "sid": 169,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The third scales pairwise words similarities to the sentence level using weighted average where weights are inverse document frequencies idf as suggested by Mihalcea et al.",
+                    "sid": 170,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006) (VS- Pairwise).",
+                    "sid": 171,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the RTE task, systems were evaluated using both accuracy and confidence-weighted score (cws) as used by Bos and Markert (2005) and the RTE 1 challenge (Dagan et al., 2005).",
+                    "sid": 172,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to map a probability of entailment to a strict prediction of True or False, we determined a threshold that optimizes performance on the development set.",
+                    "sid": 173,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cws score rewards a system\u2019s ability to assign higher confidence scores to correct predictions than incorrect ones.",
+                    "sid": 174,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For cws, a system\u2019s predictions are sorted in decreasing order of confidence and the score is computed as: 1 n #correct-up-to-rank-i cws = n i i=1 where n is the number of the items in the test set, and i ranges over the sorted items.",
+                    "sid": 175,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our systems, we defined the confidence value for a T-H pair as the distance between the computed probability for the result() predicate and the threshold.",
+                    "sid": 176,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Results.",
+                    "sid": 177,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are shown in Table 1.",
+                    "sid": 178,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They show that the distributional only baselines perform very poorly.",
+                    "sid": 179,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, they perform worse than strict Table 1: Results on the RTE1 Test Set.",
+                    "sid": 180,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "entailment from Bos and Markert (2005), a system that uses only logic.",
+                    "sid": 181,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This illustrates the important role of logic-based representations for the entail- ment task.",
+                    "sid": 182,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to intractable memory demands of Alchemy inference, our current system with deterministic AND fails to execute on 118 of the 800 test pairs, so, by default, the system classifies these cases as False (non-entailing) with very low confidence.",
+                    "sid": 183,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing the two configurations of our system, using deterministic AND vs. the average combiner without variable binding (last two lines in Table 1), we see that for RTE, it is essential to retain the full logical form.",
+                    "sid": 184,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system with deterministic AND obtains both an accuracy and cws of 0.57.",
+                    "sid": 185,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best result in the RTE1 challenge by Bayer et al.",
+                    "sid": 186,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) obtained an accuracy of 0.59 and cws of 0.62.",
+                    "sid": 187,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 In terms of both accuracy and cws, our system outperforms both \u201cdistributional only\u201d systems and strict logical entailment, showing again that integrating both logical form and distributional inference rules using MLNs is beneficial.",
+                    "sid": 188,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, the strict entailment system of Bos and Markert incorporated generic knowledge, lexical knowledge (from Word- Net) and geographical knowledge that we do not utilize.",
+                    "sid": 189,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This demonstrates the advantage of using a model that operationalizes entailment between words and phrases as distributional similarity.",
+                    "sid": 190,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 On other RTE datasets there are higher previous results.",
+                    "sid": 191,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hickl (2008) achieves 0.89 accuracy and 0.88 cws on the combined RTE2 and RTE3 dataset.",
+                    "sid": 192,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "task 2: semantic textual similarity. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "5.1 Dataset.",
+                    "sid": 193,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dataset we use in our experiments is the MSR Video Paraphrase Corpus (MSRVid) subset of the STS 2012 task, consisting of 1,500 sentence pairs.",
+                    "sid": 194,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corpus itself was built by asking annotators from Amazon Mechanical Turk to describe very short video fragments (Chen and Dolan, 2011).",
+                    "sid": 195,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The organizers of the STS 2012 task (Agirre et al., 2012) sampled video descriptions and asked Turkers to assign similarity scores (ranging from 0 to 5) to pairs of sentences, without access to the video.",
+                    "sid": 196,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gold standard score is the average of the Turkers\u2019 annotations.",
+                    "sid": 197,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the MSR Video Paraphrase Corpus subset, the STS 2012 task involved data from machine translation and sense descriptions.",
+                    "sid": 198,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not use these because they do not consist of full grammatical sentences, which the parser does not handle well.",
+                    "sid": 199,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the STS 2012 data included sentences from the MSR Paraphrase Corpus, which we also do not currently use because some sentences are long and create intractable MLN inference problems.",
+                    "sid": 200,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This issue is discussed further in section 6.",
+                    "sid": 201,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following STS standards, our evaluation compares a system\u2019s similarity judgments to the gold standard scores using Pearson\u2019s correlation coefficient r. 5.2 Method.",
+                    "sid": 202,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system can be tested for different configuration of inference rules and evidence combiners which are explained in section 4.2.",
+                    "sid": 203,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tested systems on the STS task are listed in table 2.",
+                    "sid": 204,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Out experiments showed that using average combiner (AvgComb) is very memory intensive and MLN inference for 28 of the 1,500 pairs either ran out of memory or did not finish in reasonable time.",
+                    "sid": 205,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such cases, we back off to AvgComb w/o VarBind.",
+                    "sid": 206,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare to several baselines; our MLN system without distributional inference rules (AvgComb + no DIR), and distributional-only systems (VS-Add, VS-Mul, VS-Pairwise).",
+                    "sid": 207,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are the natural baselines for our system, since they use only one of the two types of information that we combine (i.e. logical form and distributional representations).",
+                    "sid": 208,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we built an ensemble that combines the output of multiple systems using regression trained mining meaning.",
+                    "sid": 209,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This also explains why the \u201cdis- tributional only\u201d baselines are actually doing better than the MLN systems.",
+                    "sid": 210,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the MLN system on its own does not perform better than the distributional compositional models, it does provide complementary information, as shown by the fact that ensembling it with the rest of the models improves performance (0.85 with the MLN system, compared to 0.83 without it).",
+                    "sid": 211,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of this ensemble is close to the current best result for this dataset (0.87).",
+                    "sid": 212,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2: Results on the STS video dataset.",
+                    "sid": 213,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "on the training data.",
+                    "sid": 214,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then compare the performance of an ensemble with and without our system.",
+                    "sid": 215,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the same technique used by Ba\u00a8r et al.",
+                    "sid": 216,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012) except we used additive regression (Friedman, 2002) instead of linear regression since it gave better results.",
+                    "sid": 217,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Results.",
+                    "sid": 218,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 summarizes the results of our experiments.",
+                    "sid": 219,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They show that adding distributional information improves results, as expected, and also that adding phrase rules gives further improvement: Using only word distributional inference rules improves results from 0.58 to 0.6, and adding phrase inference rules further improves them to 0.66.",
+                    "sid": 220,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for variable binding, note that although it provides more precise information, the STS scores actually improve when it is dropped, from 0.66 to 0.73.",
+                    "sid": 221,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We offer two explanations for this result: First, this information is very sensitive to parsing errors, and the C&C parser, on which Boxer is based, produces many errors on this dataset, even for simple sentences.",
+                    "sid": 222,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the C&C CCG parse is wrong, the resulting logical form is wrong, and the resulting similarity score is greatly affected.",
+                    "sid": 223,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dropping variable binding makes the systems more robust to parsing errors.",
+                    "sid": 224,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, in contrast to RTE, the STS dataset does not really test the important role of syntax and logical form in deter",
+                    "sid": 225,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "future work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The approach presented in this paper constitutes a step towards achieving the challenging goal of effectively combining logical representations with dis- tributional information automatically acquired from text.",
+                    "sid": 226,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we discuss some of limitations of the current work and directions for future research.",
+                    "sid": 227,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As noted before, parse errors are currently a significant problem.",
+                    "sid": 228,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use Boxer to obtain a logical representation for a sentence, which in turn relies on the C&C parser.",
+                    "sid": 229,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, C&C mis- parses many sentences, which leads to inaccurate logical forms.",
+                    "sid": 230,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce the impact of misparsing, we plan to use a version of C&C that can produce the top-n parses together with parse re-ranking (Ng and Curran, 2012).",
+                    "sid": 231,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an alternative to re-ranking, one could obtain logical forms for each of the top- n parses, and create an MLN that integrates all of them (together with their certainty) as an underspecified meaning representation that could then be used to directly support inferences such as STS and RTE.",
+                    "sid": 232,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also plan to exploit a greater variety of dis- tributional inference rules.",
+                    "sid": 233,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we intend to incorporate logical form translations of existing dis- tributional inference rule collections (e.g., (Berant et al., 2011; Chan et al., 2011)).",
+                    "sid": 234,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another issue is obtaining improved rule weights based on dis- tributional phrase vectors.",
+                    "sid": 235,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to experiment with more sophisticated approaches to computing phrase vectors such as those recently presented by Baroni and Zamparelli (2010) and Grefenstette and Sadrzadeh (2011).",
+                    "sid": 236,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we are currently deriving symmetric similarity ratings between word pairs or phrase pairs, when really what we need is di rectional similarity.",
+                    "sid": 237,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to incorporate directed similarity measures such as those of Kotlerman et al.",
+                    "sid": 238,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) and Clarke (2012).",
+                    "sid": 239,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A primary problem for our approach is the limitations of existing MLN inference algorithms, which do not effectively scale to large and complex MLNs.",
+                    "sid": 240,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to explore \u201ccoarser\u201d logical representations such as Minimal Recursion Semantics (MRS) (Copestake et al., 2005).",
+                    "sid": 241,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another potential approach to this problem is to trade expressivity for efficiency.",
+                    "sid": 242,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Domingos and Webb (2012) introduced a tractable subset of Markov Logic (TML) for which a future software release is planned.",
+                    "sid": 243,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formulating the inference problem in TML could potentially allow us to run our system on longer and more complex sentences.",
+                    "sid": 244,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "In this paper we have used an approach that combines logic-based and distributional representations for natural language meaning.",
+                    "sid": 245,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It uses logic as the primary representation, transforms distributional similarity judgments to weighted inference rules, and uses Markov Logic Networks to perform inferences over the weighted clauses.",
+                    "sid": 246,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach views textual entailment and sentence similarity as degrees of \u201clogical\u201d entailment, while at the same time using distributional similarity as an indicator of entailment at the word and short phrase level.",
+                    "sid": 247,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have evaluated the framework on two different tasks, RTE and STS, finding that it is able to handle both tasks given that we adapt the way evidence is combined in the MLN.",
+                    "sid": 248,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even though other entailment models could be applied to STS, given that similarity can obviously be operationalized as a degree of mutual entailment, this has not been done before to our best knowledge.",
+                    "sid": 249,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our framework achieves reasonable results on both tasks.",
+                    "sid": 250,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On RTE1 we obtain an accuracy of 0.57.",
+                    "sid": 251,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On STS, we obtain a correlation of r = 0.66 with full logic, r = 0.73 in a system with weakened variable binding, and r = 0.85 in an ensemble model.",
+                    "sid": 252,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that distributional word and phrase similarity, used as textual inference rules on the fly, leads to sizeable improvements on both tasks.",
+                    "sid": 253,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also find that using more flexible probabilistic combinations of evidence is crucial for STS.",
+                    "sid": 254,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgements",
+            "number": "",
+            "sents": [
+                {
+                    "text": "This research was supported in part by the NSF CAREER grant IIS 0845925, by the DARPA DEFT program under AFRL grant FA875013-20026, by MURI ARO grant W911NF08-10242 and by an NDSEG grant.",
+                    "sid": 255,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author and do not necessarily reflect the view of DARPA, AFRL, ARO, DoD or the US government.",
+                    "sid": 256,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of our experiments were run on theMastodon Cluster supported by NSF Grant EIA 0303609.",
+                    "sid": 257,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

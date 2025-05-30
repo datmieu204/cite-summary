@@ -1,0 +1,923 @@
+{
+    "ID": "E03-1005",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "An Efficient Implementation of a New DOP Model",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two apparently opposing DOP models exist in the literature: one which computes the parse tree involving the most frequent subtrees from a treebank and one which computes the parse tree involving the fewest subtrees from a treebank.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper proposes an integration of the two models which outperforms each of them separately.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Together with a PCFGreduction of DOP we obtain improved accuracy and efficiency on the Wall Street Journal treebank Our results show an 11% relative reduction in error rate over previous models, and an average processing time of 3.6 seconds per WSJ sentence.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction: a little history",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The distinctive feature of the DOP approach when it was proposed in 1992 was to model sentence structures on the basis of previously observed frequencies of sentence structure fragments, without imposing any constraints on the size of these fragments.",
+                    "sid": 4,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fragments include, for instance, subtrees of depth 1 (corresponding to context-free rules) as well as entire trees.",
+                    "sid": 5,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To appreciate these innovations, it should be noted that the model was radically different from all other statistical parsing models at the time.",
+                    "sid": 6,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other models started off with a predefined grammar and used a corpus only for estimating the rule probabilities (as e.g.",
+                    "sid": 7,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in Fujisaki et al. 1989; Black et al.",
+                    "sid": 8,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1992, 1993; Briscoe and I Thanks to Ivan Sag for this pun.",
+                    "sid": 9,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Waegner 1992; Pereira and Schabes 1992).",
+                    "sid": 10,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The DOP model, on the other hand, was the first model (to the best of our knowledge) that proposed not to train a predefined grammar on a corpus, but to directly use corpus fragments as a grammar.",
+                    "sid": 11,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach has now gained wide usage, as exemplified by the work of Collins (1996, 1999), Charniak (1996, 1997), Johnson (1998), Chiang (2000), and many others.",
+                    "sid": 12,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other innovation of DOP was to take (in principle) all corpus fragments, of any size, rather than a small subset.",
+                    "sid": 13,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This innovation has not become generally adopted yet: many approaches still work either with local trees, i.e. single level rules with limited means of information percolation, or with restricted fragments, as in Stochastic Tree-Adjoining Grammar (Schabes 1992; Chiang 2000) that do not include nonlexicalized fragments.",
+                    "sid": 14,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, during the last few years we can observe a shift towards using more and larger corpus fragments with fewer restrictions.",
+                    "sid": 15,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the models of Collins (1996) and Eisner (1996) restricted the fragments to the locality of head-words, later models showed the importance of including context from higher nodes in the tree (Charniak 1997; Johnson 1998a).",
+                    "sid": 16,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The importance of including nonheadwords has become uncontroversial (e.g.",
+                    "sid": 17,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins 1999; Charniak 2000; Goodman 1998).",
+                    "sid": 18,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And Collins (2000) argues for &quot;keeping track of counts of arbitrary fragments within parse trees&quot;, which has indeed been carried out in Collins and Duffy (2002) who use exactly the same set of (all) tree fragments as proposed in Bod (1992).",
+                    "sid": 19,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the major innovations of DOP are: 2. the use of arbitrarily large fragments rather than restricted ones Both have gained or are gaining wide usage, and are also becoming relevant for theoretical linguistics (see Bod et al. 2003a).",
+                    "sid": 20,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One instantiation of DOP which has received considerable interest is the model known as DOP12 (Bod 1992).",
+                    "sid": 21,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DOP1 combines subtrees from a treebank by means of node-substitution and computes the probability of a tree from the normalized frequencies of the subtrees (see Section 2 for a full definition).",
+                    "sid": 22,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bod (1993) showed how standard parsing techniques can be applied to DOP1 by converting subtrees into rules.",
+                    "sid": 23,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the problem of computing the most probable parse turns out to be NP-hard (Sima'an 1996), mainly because the same parse tree can be generated by exponentially many derivations.",
+                    "sid": 24,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many implementations of DOP1 therefore estimate the most probable parse by Monte Carlo techniques (Bod 1998; Chappelier & Rajman 2000), or by Viterbi n-best search (Bod 2001), or by restricting the set of subtrees (Sima'an 1999; Chappelier et al. 2002).",
+                    "sid": 25,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sima'an (1995) gave an efficient algorithm for computing the parse tree generated by the most probable derivation, which in some cases is a reasonable approximation of the most probable parse.",
+                    "sid": 26,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goodman (1996, 1998) developed a polynomial time PCFG-reduction of DOP1 whose size is linear in the size of the training set, thus converting the exponential number of subtrees to a compact grammar.",
+                    "sid": 27,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Goodman's method does still not allow for an efficient computation of the most probable parse in DOP1, it does efficiently compute the &quot;maximum constituents parse&quot;, i.e. the parse tree which is most likely to have the largest number of correct constituents.",
+                    "sid": 28,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Johnson (1998b, 2002) showed that DOP1's subtree estimation method is statistically biased and inconsistent.",
+                    "sid": 29,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bod (2000a) solved this problem by training the subtree probabilities by a maximum likelihood procedure based on Expectation-Maximization.",
+                    "sid": 30,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This resulted in a statistically consistent model dubbed ML-DOP.",
+                    "sid": 31,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, ML-DOP suffers from overlearning if the subtrees are trained on the same treebank trees as they are derived from.",
+                    "sid": 32,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cross-validation is needed to avoid this problem.",
+                    "sid": 33,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But even with cross-validation, ML-DOP is outperformed by the much simpler DOP1 model on both the ATIS and OVIS treebanks (Bod 2000b).",
+                    "sid": 34,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bonnema et al. (1999) observed that another problem with DOP1's subtree-estimation method is that it provides more probability to nodes with more subtrees, and therefore more probability to larger subtrees.",
+                    "sid": 35,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an alternative, Bonnema et al. (1999) propose a subtree estimator which reduces the probability of a tree by a factor of two for each non-root non-terminal it contains.",
+                    "sid": 36,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bod (2001) used an alternative technique which samples a fixed number of subtrees of each depth and which has the effect of assigning roughly equal weight to each node in the training data.",
+                    "sid": 37,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although Bod's method obtains very competitive results on the Wall Street Journal (WSJ) task, the parsing time was reported to be over 200 seconds per sentence (Bod 2003).",
+                    "sid": 38,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins & Duffy (2002) showed how the perceptron algorithm can be used to efficiently compute the best parse with DOP1's subtrees, reporting a 5.1% relative reduction in error rate over the model in Collins (1999) on the WSJ.",
+                    "sid": 39,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goodman (2002) furthermore showed how Bonnema et al. 's (1999) and Bod's (2001) estimators can be incorporated in his PCFGreduction, but did not report any experiments with these reductions.",
+                    "sid": 40,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper presents the first published results with Goodman's PCFG-reductions of both Bonnema et al. 's (1999) and Bod's (2001) estimators on the WSJ.",
+                    "sid": 41,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that these PCFG-reductions result in a 60 times speedup in processing time w.r.t.",
+                    "sid": 42,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bod (2001, 2003).",
+                    "sid": 43,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But while Bod's estimator obtains state-of-the-art results on the WSJ, comparable to Charniak (2000) and Collins (2000), Bonnema et al. 's estimator performs worse and is comparable to Collins (1996).",
+                    "sid": 44,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second part of this paper, we extend our experiments with a new notion of the best parse tree.",
+                    "sid": 45,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most previous notions of best parse tree in DOP1 were based on a probabilistic metric, with Bod (2000b) as a notable exception, who used a simplicity metric based on the shortest derivation.",
+                    "sid": 46,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that a combination of a probabilistic and a simplicity metric, which chooses the simplest parse from the n likeliest parses, outperforms the use of these metrics alone.",
+                    "sid": 47,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to Bod (2001), our results show an 11% improvement in terms of relative error reduction and a speedup which reduces the processing time from 220 to 3.6 seconds per WSJ sentence.",
+                    "sid": 48,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 pcfg-reductions of dop",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "DOP1 parses new input by combining treebanksubtrees by means of a leftmost node-subsitution operation, indicated as 0.",
+                    "sid": 49,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability of a parse tree is computed from the occurrencefrequencies of the subtrees in the treebank.",
+                    "sid": 50,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, the probability of a subtree t is taken as the number of occurrences of t in the training set, I t I, divided by the total number of occurrences of all subtrees t' with the same root label as t. Let r(t) return the root label of t: The probability of a derivation ti0...0tn is computed by the product of the probabilities of its subtrees ti: = HP (t1) An important feature of DOP1 is that there may be several derivations that generate the same parse tree.",
+                    "sid": 51,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability of a parse tree T is the sum of the probabilities of its distinct derivations.",
+                    "sid": 52,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let tid be the i-th subtree in the derivation d that produces tree T, then the probability of T is given by Thus DOP1 considers counts of subtrees of a wide range of sizes in computing the probability of a tree: everything from counts of single-level rules to counts of entire trees.",
+                    "sid": 53,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A disadvantage of this model is that an extremely large number of subtrees (and derivations) must be taken into account.",
+                    "sid": 54,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fortunately, there exists a compact PCFG-reduction of DOP1 that generates the same trees with the same probabilities, as shown by Goodman (1996, 2002).",
+                    "sid": 55,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we will only sketch this PCFG-reduction, which is heavily based on Goodman (2002).",
+                    "sid": 56,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goodman assigns every node in every tree a unique number which is called its address.",
+                    "sid": 57,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The notation A@k denotes the node at address k where A is the nonterminal labeling that node.",
+                    "sid": 58,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A new nonterminal is created for each node in the training data.",
+                    "sid": 59,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This nonterminal is called A k. Nonterminals of this form are called &quot;interior&quot; nonterminals, while the original nonterminals in the parse trees are called &quot;exterior&quot; nontermimals.",
+                    "sid": 60,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let aj represent the number of subtrees headed by the node A@j.",
+                    "sid": 61,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let a represent the number of subtrees headed by nodes with nonterminal A, that is a =Ej aj.",
+                    "sid": 62,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goodman (1996, 2002) further illustrates this by a node A @j of the following form: To see how many subtrees it has, Goodman first considers the possibilities of the left branch.",
+                    "sid": 63,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are bk non-trivial subtrees headed by B@k, and there is also the trivial case where the left node is simply B.",
+                    "sid": 64,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus there are bk + 1 different possibilities on the left branch.",
+                    "sid": 65,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, there are ci + 1 possibilities on the right branch.",
+                    "sid": 66,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can create a subtree by choosing any possible left subtree and any possible right subtree.",
+                    "sid": 67,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, there are aj= (bk+ 1)(ci + 1) possible subtrees headed by A @j. Goodman then gives a simple small PCFG with the following property: for every subtree in the training corpus headed by A, the grammar will generate an isomorphic subderivation with probability 1/a.",
+                    "sid": 68,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, rather than using the large, explicit DOP1 model, one can also use this small PCFG that generates isomorphic derivations, with identical probabilities.",
+                    "sid": 69,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goodman's construction is as follows.",
+                    "sid": 70,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the node in figure 1, the following eight PCFG rules are generated, where the number in parentheses following a rule is its probability.",
+                    "sid": 71,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goodman then shows by simple induction that subderivations headed by A with external nonterminals at the roots and leaves, internal nonterminals elsewhere have probability 1/a.",
+                    "sid": 72,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And subderivations headed by A1 with external nonterminals only at the leaves, internal nonterminals elsewhere, have probability 1/a1 (Goodman 1996).",
+                    "sid": 73,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goodman's main theorem is that this construction produces PCFG derivations isomorphic to DOP derivations with equal probability.",
+                    "sid": 74,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that summing up over derivations of a tree in DOP yields the same probability as summing over all the isomorphic derivations in the PCFG.",
+                    "sid": 75,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that Goodman's reduction method does still not allow for an efficient computation of the most probable parse tree of a sentence: there may still be exponentially many derivations generating the same tree.",
+                    "sid": 76,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But Goodman shows that with his PCFG-reduction he can efficiently compute the aforementioned maximum constituents parse.",
+                    "sid": 77,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, Goodman's PCFG reduction may also be used to estimate the most probable parse by Viterbi n-best search which computes the n most likely derivations and then sums up the probabilities of the derivations producing the same tree.",
+                    "sid": 78,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Bod (2001) needed to use a very large sample from the WSJ subtrees to do this, Goodman's method can do the same job with a more compact grammar.",
+                    "sid": 79,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DOP1 has a serious bias: its subtree estimator provides more probability to nodes with more subtrees (Bonnema et al. 1999).",
+                    "sid": 80,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The amount of probability given to two different training nodes depends on how many subtrees they have, and, given that the number of subtrees is an exponential function, this means that some training nodes could easily get hundreds or thousands of times the weight of others, even if both occur exactly once.",
+                    "sid": 81,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bonnema et al. (1999) show that as a consequence too much weight is given to larger subtrees, and that the parse accuracy of DOP1 deteriorates if (very) large subtrees are included.",
+                    "sid": 82,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although this property may not be very harmful for small corpora with relatively small trees, such as the ATIS, Bonnema et al. give evidence that it leads to severe biases for larger corpora such as the WSJ.",
+                    "sid": 83,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are several ways to fix this problem.",
+                    "sid": 84,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Bod (2001) samples a fixed number of subtrees of each depth, which has the effect of assigning roughly equal weight to each node in the training data, and roughly exponentially less probability for larger trees (see Goodman 2002: 12).",
+                    "sid": 85,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bod reports state-of-the-art results with this method, and observes no decrease in parse accuracy when larger subtrees are included (using subtrees up to depth 14).",
+                    "sid": 86,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yet, his grammar contains more than 5 million subtrees and processing times of over 200 seconds per WSJ sentence are reported (Bod 2003).",
+                    "sid": 87,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we will test a simple extension of Goodman's compact PCFG-reduction of DOP which has the same property as the normalization proposed in Bod (2001) in that it assigns roughly equal weight to each node in the training data.",
+                    "sid": 88,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let a be the number of times nonterminals of type A occur in the training data.",
+                    "sid": 89,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we slightly modify the PCFG-reduction in figure 2 as follows: We will also test the proposal by Bonnema et al. (1999) which reduces the probability of a subtree by a factor of two for each non-root nonterminal it contains.",
+                    "sid": 90,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It easy to see that this is equivalent to reducing the probability of a tree by a factor of four for each pair of nonterminals it contains, resulting in the PCFG reduction in figure 4.",
+                    "sid": 91,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tested on the OVIS corpus, Bonnema et al. 's proposal obtains results that are comparable to Sima'an (1999) -- see Bonnema et al.",
+                    "sid": 92,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1999).",
+                    "sid": 93,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper presents the first published results with this estimator on the WSJ.",
+                    "sid": 94,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By using these PCFG-reductions we can thus parse with all subtrees in polynomial time.",
+                    "sid": 95,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, as mentioned above, efficient parsing does not necessarily mean efficient disambiguation: the exact computation of the most probable parse remains exponential.",
+                    "sid": 96,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we will estimate the most probable parse by computing the 10,000 most probable derivations by means of Viterbi n-best, from which the most likely parse is estimated by summing up the probabilities of the derivations that generate the same parse.",
+                    "sid": 97,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 a new notion of the best parse tree",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Most DOP models, such as in Bod (1993), Goodman (1996), Bonnema et al. (1997), Sima'an (2000) and Collins & Duffy (2002), use a likelihood criterion in defining the best parse tree: they take (some notion of) the most likely (i.e. most probable) tree as a candidate for the best tree of a sentence.",
+                    "sid": 98,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will refer to these models as Likelihood-DOP models, but in this paper we will specifically mean by &quot;Likelihood-DOP&quot; the PCFG-reduction of Bod (2001) given in Section 2.2.",
+                    "sid": 99,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Bod (2000b), an alternative notion for the best parse tree was proposed based on a simplicity criterion: instead of producing the most probable tree, this model produced the tree generated by the shortest derivation with the fewest training subtrees.",
+                    "sid": 100,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will refer to this model as Simplicity-DOP.",
+                    "sid": 101,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In case the shortest derivation is not unique, Bod (2000b) proposes to back off to a frequency ordering of the subtrees.",
+                    "sid": 102,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, all subtrees of each root label are assigned a rank according to their frequency in the treebank: the most frequent subtree (or subtrees) of each root label gets rank 1, the second most frequent subtree gets rank 2, etc.",
+                    "sid": 103,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, the rank of each (shortest) derivation is computed as the sum of the ranks of the subtrees involved.",
+                    "sid": 104,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The derivation with the smallest sum, or highest rank, is taken as the final best derivation producing the best parse tree in Simplicity-DOP.3 Although Bod (2000b) reports that Simplicity DOP is outperformed by Likelihood-DOP, its results are still rather impressive for such a simple model.",
+                    "sid": 105,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What is more important, is, that the best parse trees predicted by Simplicity-DOP are quite different from the best parse trees predicted by Likelihood-DOP.",
+                    "sid": 106,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that a model which combines these two notions of best parse may boost the accuracy.",
+                    "sid": 107,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The underlying idea of combining LikelihoodDOP and Simplicity-DOP is that the parser selects the simplest tree from among the n most probable trees, where n is a free parameter.",
+                    "sid": 108,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A straightforward alternative would be to select the most probable tree from among the n simplest trees.",
+                    "sid": 109,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will refer to the first combination (which selects the simplest among the n likeliest trees) as Simplicity-Likelihood-DOP or SL-DOP, and to the second combination (which selects the likeliest among the n simplest trees) as Likelihood-Simplicity-DOP or LS-DOP.",
+                    "sid": 110,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that for n=1, SL-DOP is equal to Likelihood-DOP, since there is only one most probable tree to select from, and LS-DOP is equal to Simplicity-DOP, since there is only one simplest tree to select from.",
+                    "sid": 111,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, if n gets large, SL-DOP converges to Simplicity-DOP while LS-DOP converges to Likelihood-DOP.",
+                    "sid": 112,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By varying the parameter n, we will be able to compare Likelihood-DOP, Simplicity-DOP and several instantiations of SL-DOP and LS-DOP.",
+                    "sid": 113,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that Goodman's PCFG-reduction method summarized in Section 2 applies not only to Likelihood-DOP but also to Simplicity-DOP.",
+                    "sid": 114,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only thing that needs to be changed for Simplicity-DOP is that all subtrees should be assigned equal probabilities.",
+                    "sid": 115,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then the shortest derivation is equal to the most probable derivation and can be computed by standard Viterbi optimization, which can be seen as follows: if each subtree has a probability p then the probability of a derivation involving n subtrees is equal to pn, and since 0<p<1, the derivation with the fewest subtrees has the greatest probability.",
+                    "sid": 116,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For SL-DOP and LS-DOP, we first compute either n likeliest or n simplest trees by means of Viterbi optimization.",
+                    "sid": 117,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we either select the simplest tree among the n likeliest ones (for SL DOP) or the likeliest tree among the n simplest ones (for LS-DOP).",
+                    "sid": 118,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, n will never be larger than 1,000.",
+                    "sid": 119,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "For our experiments we used the standard division of the WSJ (Marcus et al. 1993), with sections 2 through 21 for training (approx.",
+                    "sid": 120,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "40,000 sentences) and section 23 for testing (2416 sentences 100 words); section 22 was used as development set.",
+                    "sid": 121,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As usual, all trees were stripped off their semantic tags, co-reference information and quotation marks.",
+                    "sid": 122,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without loss of generality, all trees were converted to binary branching (and were reconverted to n-ary trees after parsing).",
+                    "sid": 123,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employed the same unknown (category) word model as in Bod (2001), based on statistics on word-endings, hyphenation and capitalization in combination with Good-Turing (Bod 1998: 85 87).",
+                    "sid": 124,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used &quot;evalb&quot;4 to compute the standard PARSEVAL scores for our results (Manning & Schiitze 1999).",
+                    "sid": 125,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focused on the Labeled Precision (LP) and Labeled Recall (LR) scores, as these are commonly used to rank parsing systems.",
+                    "sid": 126,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our first experimental goal was to compare the two PCFG-reductions in Section 2.2, which we will refer to resp. as Bod01 and Bon99.",
+                    "sid": 127,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 gives the results of these experiments and compares them with some other statistical parsers (resp.",
+                    "sid": 128,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins 1996, Charniak 1997, Collins 1999 and Charniak 2000).",
+                    "sid": 129,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the PCFG reduction of Bod (2001) obtains state-of-the-art results on the WSJ, comparable to Charniak (2000), Bonnema et al. 's estimator performs worse and is comparable to Collins (1996).",
+                    "sid": 130,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As to the processing time, the PCFG reduction parses each sentence 100 words) in 3.6 seconds average, while the parser in Bod (2001, 2003), which uses over 5 million subtrees, is reported to take about 220 seconds per sentence.",
+                    "sid": 131,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This corresponds to a speedup of over 60 times.",
+                    "sid": 132,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It should be mentioned that the best precision and recall scores reported in Bod (2001) are slightly better than the ones reported here (the difference is only 0.2% for sentences 100 words).",
+                    "sid": 133,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may be explained by the fact our best results in Bod (2001) were obtained by testing various subtree restrictions until the highest accuracy was obtained, while in the current experiment we used all subtrees as given by the PCFG-reduction.",
+                    "sid": 134,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the following section first results of SL-DOP and LS-DOP with a compact PCFG-reduction. we will see that our new definition of best parse tree also outperforms the best results obtained in Bod (2001).",
+                    "sid": 135,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 conclusion",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "As our second experimental goal, we compared the models SL-DOP and LS-DOP explained in Section 3.2.",
+                    "sid": 136,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that for n=1, SL-DOP is equal to the PCFG-reduction of Bod (2001) (which we also called Likelihood-DOP) while LS-DOP is equal to Simplicity-DOP.",
+                    "sid": 137,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows the results for sentences 100 words for various values of n. Note that there is an increase in accuracy for both SL-DOP and LS-DOP if the value of n increases from 1 to 12.",
+                    "sid": 138,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But while the accuracy of SL-DOP decreases after n=14 and converges to Simplicity DOP, the accuracy of LS-DOP continues to increase and converges to Likelihood-DOP.",
+                    "sid": 139,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The highest accuracy is obtained by SL-DOP at 12 n 14: an LP of 90.8% and an LR of 90.7%.",
+                    "sid": 140,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is roughly an 11% relative reduction in error rate over Charniak (2000) and Bods PCFG-reduction reported in Table 1.",
+                    "sid": 141,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to the reranking technique in Collins (2000), who obtained an LP of 89.9% and an LR of 89.6%, our results show a 9% relative error rate reduction.",
+                    "sid": 142,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While SL-DOP and LS-DOP have been compared before in Bod (2002), especially in the context of musical parsing, this paper presents the The DOP approach is based on two distinctive features: (1) the use of corpus fragments rather than grammar rules, and (2) the use of arbitrarily large fragments rather than restricted ones.",
+                    "sid": 143,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the first feature has been generally adopted in statistical NLP, the second feature has for a long time been a serious bottleneck, as it results in exponential processing time when the most probable parse tree is computed.",
+                    "sid": 144,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper showed that a PCFG-reduction of DOP in combination with a new notion of the best parse tree results in fast processing times and very competitive accuracy on the Wall Street Journal treebank.",
+                    "sid": 145,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper also re-affirmed that the coarsegrained approach of using all subtrees from a treebank outperforms the fine-grained approach of specifically modeling lexical-syntactic depen dencies (as e.g. in Collins 1999 and Charniak 2000).",
+                    "sid": 146,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

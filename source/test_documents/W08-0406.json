@@ -1,0 +1,1439 @@
+{
+    "ID": "W08-0406",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Syntactic Reordering Integrated with Phrase-Based SMT",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a novel approach to word reordering which successfully integrates syntactic structural knowledge with phrase-based SMT.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is done by constructing a lattice of alternatives based on automatically learned probabilistic syntactic rules.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In decoding, the alternatives are scored based on the output word order, not the order of the input.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike previous approaches, this makes it possible to successfully integrate syntactic reordering with phrase-based SMT.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On an English- Danish task, we achieve an absolute improvement in translation quality of 1.1 % BLEU.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Manual evaluation supports the claim that the present approach is significantly superior to previous approaches.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The emergence of phrase-based statistical machine translation (PSMT) (Koehn et al., 2003) has been one of the major developments in statistical approaches to translation.",
+                    "sid": 7,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Allowing translation of word sequences (phrases) instead of single words provides SMT with a robustness in word selection and local word reordering.",
+                    "sid": 8,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PSMT has two means of reordering the words.",
+                    "sid": 9,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Either a phrase pair has been learned where the target word order differs from the source (phrase internal reordering), or distance penalized orderings of target phrases are attempted in decoding (phrase external reordering).",
+                    "sid": 10,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first solution is strong, the second is weak.",
+                    "sid": 11,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second solution is necessary for reorderings within a previously unseen sequence or over distances greater than the maximal phrase length.",
+                    "sid": 12,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, the system in essence relies on the target side language model to get the correct word order.",
+                    "sid": 13,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The choice is made without knowing what the source is.",
+                    "sid": 14,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Basically, it is a bias against phrase external reordering.",
+                    "sid": 15,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It seems clear that reordering often depends on higher level linguistic information, which is absent from PSMT.",
+                    "sid": 16,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In recent work, there has been some progress towards integrating syntactic information with the statistical approach to reordering.",
+                    "sid": 17,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In works such as (Xia and McCord, 2004; Collins et al., 2005; Wang et al., 2007; Habash, 2007), reordering decisions are done \u201cdeterministically\u201d, thus placing these decisions outside the actual PSMT system by learning to translate from a reordered source language.",
+                    "sid": 18,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Crego and Mari\u02dcno, 2007; Zhang et al., 2007; Li et al., 2007) are more in the spirit of PSMT, in that multiple reorderings are presented to the PSMT system as (possibly weighted) options.",
+                    "sid": 19,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Still, there remains a basic conflict between the syntactic reordering rules and the PSMT system: one that is most likely due to the discrepancy between the translation units (phrases) and units of the linguistic rules, as (Zhang et al., 2007) point out.",
+                    "sid": 20,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we proceed in the spirit of the nondeterministic approaches by providing the decoder with multiple source reorderings.",
+                    "sid": 21,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But instead of scoring the input word order, we score the order of the output.",
+                    "sid": 22,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By doing this, we avoid the integration problems of previous approaches.",
+                    "sid": 23,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It should be noted that even though the experiments are conducted within a source reordering approach, this scoring is also compatible with other approach.",
+                    "sid": 24,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will, however, not look further into this possiblity in the present paper.",
+                    "sid": 25,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we automatically learn reordering rules based on several levels of linguistic information from word form to subordination and syntactic structure to produce reordering rules that are not restricted to operations on syntactic tree structure nodes.",
+                    "sid": 26,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the next section, we discuss and contrast related work.",
+                    "sid": 27,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 describes aspects of English and Danish structure that are relevant to reordering.",
+                    "sid": 28,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 describes the automatic induction of reordering rules and its integration in PSMT.",
+                    "sid": 29,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In section 5, we describe the SMT system used in the experiments.",
+                    "sid": 30,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 6 evaluates and discusses the present approach.",
+                    "sid": 31,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 related work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "While several recent authors have achieved positive results, it has been difficult to integrate syntactic information while retaining the strengths of the statistical approach.",
+                    "sid": 32,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several approaches do deterministic reordering.",
+                    "sid": 33,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These do not integrate the reordering in the PSMT system; instead they place it outside the system by first reordering the source language, and then having a PSMT system translate from reordered source language to target language.",
+                    "sid": 34,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Collins et al., 2005; Wang et al., 2007) do this using manually created rules, and (Xia and McCord, 2004) and (Habash, 2007) use automatically extracted rules.",
+                    "sid": 35,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All use rules extracted from syntactic parses.",
+                    "sid": 36,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As mentioned by (Al-Onaizan and Papineni, 2006), it can be problematic that these deterministic choices are beyond the scope of optimization and cannot be undone by the decoder.",
+                    "sid": 37,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, there is no way to make up for bad information in later translation steps.",
+                    "sid": 38,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another approach is non-deterministic.",
+                    "sid": 39,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This provides the decoder with both the original and the reordered source sentence.",
+                    "sid": 40,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Crego and Mari\u02dcno, 2007) operate within Ngram-based SMT.",
+                    "sid": 41,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They make use of syntactic structure to reorder the input into a word lattice.",
+                    "sid": 42,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the paths are not weighted, the lattice merely narrows down the size of the search space.",
+                    "sid": 43,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder is not given reason to trust one path (reordering) over another.",
+                    "sid": 44,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Zhang et al., 2007) assign weights to the paths of their input word lattice.",
+                    "sid": 45,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of hierarchical linguistic structure, they use reordering rules based on POS and syntactic chunks, and train the system with both original and reordered source word order on a restricted data set (<500K words).",
+                    "sid": 46,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their system does not out-perform a standard PSMT system.",
+                    "sid": 47,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As they themselves point out, a reason for this might be that their reordering approach is not fully integrated with PSMT.",
+                    "sid": 48,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is one of the main problems addressed in the present work.",
+                    "sid": 49,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Li et al., 2007) use weighted n-best lists as input for the decoder.",
+                    "sid": 50,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use rules based on a syntactic parse, allowing children of a tree node to swap place.",
+                    "sid": 51,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is excessively restrictive.",
+                    "sid": 52,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a common reordering in English-Danish translation has the subject change place with the finite verb.",
+                    "sid": 53,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the verb is often embedded in a VP containing additional words that should not be moved, such rules cannot be captured by local reordering on tree nodes.",
+                    "sid": 54,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In many cases, the exact same word order that is obtained through a source sentence reordering, is also accessible through a phrase internal reordering.",
+                    "sid": 55,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A negative consequence of source order (SO) scoring as done by (Zhang et al., 2007) and (Li et al., 2007) is that they bias against the valuable phrase internal reorderings by only promoting the source sentence reordering.",
+                    "sid": 56,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As described in section 4.3, we solve this problem by reordering the input string, but scoring the output string, thus allowing the strengths of PSMT to co-exist with rule-based reordering.",
+                    "sid": 57,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 language comparison",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The two languages examined in this investigation, English and Danish, are very similar from a structural point of view.",
+                    "sid": 58,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A word alignment will most often display an almost one-to-one correlation.",
+                    "sid": 59,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the hand-aligned data, only 39% of the sentences contain reorderings (following the notion of reordering as defined in 4.1).",
+                    "sid": 60,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On average, a sentence contains 0.66 reorderings.",
+                    "sid": 61,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of the main differences between English and Danish word order is that Danish is a verb-second language: the finite verb of a declarative main clause must always be the second constituent.",
+                    "sid": 62,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since this is not the case for English, a reordering rule should move the subject of an English sentence to the right of the finite verb, if the first position is filled by something other than the subject.",
+                    "sid": 63,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is exemplified by (1) (examples are annotated with English gloss and translation), where \u2019they\u2019 should move to the right of \u2019come\u2019 to get the Danish word order as seen in the gloss.",
+                    "sid": 64,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2019here they come\u2019 Another difference is that Danish sentence adverbials in a subordinate clause move to the left of the finite verb.",
+                    "sid": 65,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is illustrated in example (2).",
+                    "sid": 66,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This example also shows the difficulty for a PSMT system.",
+                    "sid": 67,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the trigram \u2019han kan ikke\u2019 is frequent in Danish main clauses, and \u2019han ikke kan\u2019 is frequent in subordinate clauses, we need information on subordination to get the correct word order.",
+                    "sid": 68,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This information can be obtained from the conjunction \u2019that\u2019.",
+                    "sid": 69,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A trigram PSMT system would not be able to handle the reordering in (2), since \u2019that\u2019 is beyond the scope of \u2019not\u2019.",
+                    "sid": 70,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "[ han siger at han ikke kan se he says that he not can see ] \u2019he says that he can not see\u2019 In the main clause, on the other hand, Danish prefers the sentence adverbial to appear to the right of the finite verb.",
+                    "sid": 71,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, if the English adverbial appears to the left of the finite verb in a main clause, it should move right as exemplified by example (3).",
+                    "sid": 72,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2019she never saw the ship\u2019 Other differences are of a more conventionalized nature.",
+                    "sid": 73,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E.g. address numbers are written after the street in Danish (example (4)). nygade nygade \u2019he lives at 14 nygade\u2019",
+                    "sid": 74,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 reordering rules",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In this experiment, reordering is defined as two word sequences exchanging positions.",
+                    "sid": 75,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These two sequences are restricted by the following conditions: The sequences are not restricted in length, making both short and long distance reordering possible.",
+                    "sid": 76,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, they need not be phrases in the sense that they appear as an entry in the phrase table.",
+                    "sid": 77,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 illustrates reordering in a word alignment matrix.",
+                    "sid": 78,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The table contains reorderings between the light grey sequences (s32 and s64)1 and the dark grey sequences (s5 5 and s66).",
+                    "sid": 79,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the sequences s3 3 and s5 4 are e.g. not considered reordered, since neither are maximal, and s54 is not consecutive on the target side.",
+                    "sid": 80,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In section 3, we pointed out that subordination is very important for word order differences between English and Danish.",
+                    "sid": 81,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the sentence position of constituents plays a role.",
+                    "sid": 82,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All this information is present in a syntactic sentence parse.",
+                    "sid": 83,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A subordinate clause is defined as inside an SBAR con1Notation: s'Y means the consecutive source sequence covering words x to y. stituent; otherwise it is a main clause.",
+                    "sid": 84,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The constituent position can be extracted from the sentence start tag and the following syntactic phrases.",
+                    "sid": 85,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "POS and word form are also included to allow for more specific/lexicalized rules.",
+                    "sid": 86,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides including this information for the candidate reordering sequences (left sequence (LS) and right sequence (RS)), we also include it for the set of possible left (LC) and right (RC) contexts of these.",
+                    "sid": 87,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The span of the contexts varies from a single word to all the way to the sentence border.",
+                    "sid": 88,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 contains an example of the information available to the learning algorithm.",
+                    "sid": 89,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the example, LS and RS should change place, since the first position is occupied by something other than the subject in a main clause.",
+                    "sid": 90,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to minimize the training data, word and POS sequences are limited to 4 words, and phrase structure (PS) sequences are limited to 3 constituents.",
+                    "sid": 91,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, an entry is only used if at least one of these three levels is not too long for both LS and RS, and too long contexts are not included in the set.",
+                    "sid": 92,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This does not constrain the possible length of a reordering, since a PS sequence of length 1 can cover an entire sentence.",
+                    "sid": 93,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to extract rules from the annotated data, we use a rule-based classifier, Ripper (Cohen, 1996).",
+                    "sid": 94,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The motivation for using Ripper is that it allows features to be sets of strings, which fits well with our representation of the context, and it produces easily readable rules that allow better understanding of the decisions being made.",
+                    "sid": 95,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In section 6.2, extracted rules are exemplified and analyzed.",
+                    "sid": 96,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabilities of the rules are estimated using Maximum Likelihood Estimation based on the information supplied by Ripper on the performance of the individual rules on the training data.",
+                    "sid": 97,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These logarithmic probabilities are easily integratable in the log-linear PSMT model as an additional parameter by simple addition.",
+                    "sid": 98,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rules are extracted from the hand-aligned, Copenhagen Danish-English Dependency Treebank (Buch-Kromann et al., 2007).",
+                    "sid": 99,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5478 sentences from the news paper domain containing 111,805 English words and 100,185 Danish words.",
+                    "sid": 100,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English side is parsed using a state-of-the-art statistical English parser (Charniak, 2000).",
+                    "sid": 101,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The integration of the rule-based reordering in our PSMT system is carried out in two separate stages: Stage 1) is done in a non-deterministic fashion by generating a word lattice as input in the spirit of e.g.",
+                    "sid": 102,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Zens et al., 2002; Crego and Mari\u02dcno, 2007; Zhang et al., 2007).",
+                    "sid": 103,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This way, the system has both the original word order, and the reorderings predicted by the rule set.",
+                    "sid": 104,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The different paths of the word lattice are merely given as equal suggestions to the decoder.",
+                    "sid": 105,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are in no way individually weighted.",
+                    "sid": 106,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Separating stage 2) from stage 1) is motivated by the fact that reordering can have two distinct origins.",
+                    "sid": 107,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They can occur because of stage 1), i.e. the lattice reordering of the original English word order (phrase external reordering), and they can occur inside a single phrase (phrase internal reordering).",
+                    "sid": 108,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are, however, interested in doing phraseindependent, word reordering.",
+                    "sid": 109,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We want to promote rule-predicted reorderings, regardless of whether they owe their existence to a syntactic rule or a phrase table entry.",
+                    "sid": 110,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is accomplished by letting the actual scoring of the reordering focus on the target string.",
+                    "sid": 111,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder is informed of where a rule has predicted a reordering, how much it costs to do the reordering, and how much it costs to avoid it.",
+                    "sid": 112,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is then checked for each hypothezised target string by keeping track of what source position target order (SPTO) it corresponds to.",
+                    "sid": 113,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SPTO is a representation of which source position the word in each target position originates from.",
+                    "sid": 114,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Putting it differently, the hypotheses contain two parallel strings; a target word string and its SPTO string.",
+                    "sid": 115,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to access this information, each phrase table entry is annotated with its internal word alignment, which is available as an intermediate product from phrase table creation.",
+                    "sid": 116,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a phrase pair has multiple word alignments, the most frequent is chosen.",
+                    "sid": 117,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 exemplifies the SPTO scoring.",
+                    "sid": 118,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The source sentence is \u2019today he was late\u2019, and a rule has predicted that word 3 and 4 should change place.",
+                    "sid": 119,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the decoder has covered the first four input words, two of the hypothesis target strings might be H1 and H2.",
+                    "sid": 120,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At this point, it becomes apparent that H2 contains the desired SPTO (namely \u20194 3\u2019), and it get assigned the reordering cost.",
+                    "sid": 121,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "H1 does not contain the rule-suggested SPTO (in stead, the words are in the order \u20193 4\u2019), and it gets the violation cost.",
+                    "sid": 122,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both these scorings are performed in a phraseindependent manner.",
+                    "sid": 123,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder assigns the reordering cost to H2 without knowing whether the reordering is internal (due to a phrase table entry) or external (due to a syntactic rule).",
+                    "sid": 124,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase internal reorderings at other points of the sentence, i.e. points that are not covered by a rule, are not judged by the reordering model.",
+                    "sid": 125,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our rule extraction does not learn every possible reordering between the two languages, but only the most general ones.",
+                    "sid": 126,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If no rule has an opinion at a certain point in a sentence, the decoder is free to chose the phrase translation it prefers without reordering cost.",
+                    "sid": 127,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Separating the scoring from the source language reordering also has the advantage that the SPTO scoring in essence is compatible with other approaches such as a traditional PSMT system.",
+                    "sid": 128,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will, however, not examine this possibility further in the present paper.",
+                    "sid": 129,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 the psmt system",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The baseline is the PSMT system used for the 2006 NAACL SMT workshop (Koehn and Monz, 2006) with phrase length 3 and a trigram language model (Stolcke, 2002).",
+                    "sid": 130,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system was trained on the English and Danish part of the Europarl corpus version 3 (Koehn, 2005).",
+                    "sid": 131,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fourth quarter of 2000 was removed in order to use the common test set of 11369 sentences (330,082 English words and 309,942 Danish words with one reference) for testing.",
+                    "sid": 132,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, fourth quarter of 2001 was removed for development purposes.",
+                    "sid": 133,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of these, 10194 were used for various analysis purposes, thereby keeping the test data perfectly unseen.",
+                    "sid": 134,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "500 sentences were taken from the development set for tuning the decoder parameters.",
+                    "sid": 135,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was done using the Downhill Simplex algorithm.",
+                    "sid": 136,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In total, 1,137,088 sentences containing 31,376,034 English words and 29,571,518 Danish words were left for training the phrase table and language model.",
+                    "sid": 137,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder used for the baseline system is Pharaoh (Koehn, 2004) with its distance-penalizing reordering model.",
+                    "sid": 138,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the experiments, we use our own decoder which \u2014 except for the reordering model \u2014 uses the same knowledge sources as Pharaoh, i.e. bidirectional phrase translation model and lexical weighting model, phrase and word penalty, and target language model.",
+                    "sid": 139,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its behavior is comparable to Pharaoh when doing monotone decoding.",
+                    "sid": 140,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The search algorithm of our decoder is similar to the RG graph decoder of (Zens et al., 2002).",
+                    "sid": 141,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It expects a word lattice as input.",
+                    "sid": 142,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows the word lattice for the example in table 3.",
+                    "sid": 143,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the input format defines all possible word orders, a simple monotone search is sufficient.",
+                    "sid": 144,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using a language model of order n, for each hypothezised target string ending in the same n-1gram, we only have to extend the highest scoring hypothesis.",
+                    "sid": 145,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "None of the others can possibly outperform this one later on.",
+                    "sid": 146,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because the maximal context evaluating a phrase extending this hypothesis, is the history (n-1-gram) of the first word of that phrase.",
+                    "sid": 147,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder is not able to look any further back at the preceeding string.",
+                    "sid": 148,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 evaluation",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The SPTO reordering approach is evaluated on the 11369 sentences of the common test set.",
+                    "sid": 149,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results are listed in table 4 along with results on the development set.",
+                    "sid": 150,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also report on the swap subset.",
+                    "sid": 151,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are the 3853 sentences where the approach actually motivated reorderings in the test set, internal or external.",
+                    "sid": 152,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remaining 7516 sentences were not influenced by the SPTO reordering approach.",
+                    "sid": 153,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report on 1) the baseline PSMT system, 2) a system provided with a rule reordered word lattice but no scoring, 3) the same system but with an SO scoring in the spirit of (Zhang et al., 2007; Li et al., 2007), and finally 4) the same system but with the SPTO scoring.",
+                    "sid": 154,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SPTO approach gets an increase over the baseline PSMT system of 0.6 % BLEU.",
+                    "sid": 155,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The swap subset, however, shows that the extracted rules are somewhat restricted, only resulting in swap in s of the sentences.",
+                    "sid": 156,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relevant set, i.e. the set where the present approach actually differs from the baseline, is therefore the swap subset.",
+                    "sid": 157,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This way, we concentrate on the actual focus of the paper, namely the syntactically motivated SPTO reordering.",
+                    "sid": 158,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we achieve an increase in performance of 1.1 % BLEU.",
+                    "sid": 159,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing to the other scoring approaches does not show much improvement.",
+                    "sid": 160,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A possible explanation is that the rules do not apply very often, in combination with the fact that the SO and SPTO scoring mechanisms most often behave alike.",
+                    "sid": 161,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference in SO and SPTO scoring only leads to a difference in translation in 10% of the sentences where reordering is done.",
+                    "sid": 162,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This set is interesting, since it provides a focus on the difference between the SO and the SPTO approaches.",
+                    "sid": 163,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In table 5, we evaluate on this set.",
+                    "sid": 164,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU scores on the entire set indicate that SPTO is a superior scoring method.",
+                    "sid": 165,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To back this observation, the 100 first sentences are manually evaluated by two native speakers of Danish.",
+                    "sid": 166,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(CallisonBurch et al., 2007) show that ranking sentences gives higher inter-annotator agreement than scoring adequacy and fluency.",
+                    "sid": 167,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore employ this evaluation method, asking the evaluators to rank sentences from the four systems given the input sentence.",
+                    "sid": 168,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ties are allowed.",
+                    "sid": 169,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The annotators had reasonable inter-annotator agreement (n = 0.523, P(A) = 0.69, P(E) = 0.35).",
+                    "sid": 170,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 shows the average ratings of the systems.",
+                    "sid": 171,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This clearly shows the SPTO scoring to be significantly superior to the other methods (p < 0.05).",
+                    "sid": 172,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the cases (55) where SPTO outperforms SO are cases where SPTO knows that a phrase pair contains the desired reordering, but SO does not.",
+                    "sid": 173,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, SO has to use an external reordering which brings poorer translation than the internal reordering, because the words are translated individually rather than by a single phrase (37 cases), or it has to reject the desired reordering (18 cases), which also hurts translation, since it does not get the correct word order.",
+                    "sid": 174,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 shows the effect of SO and SPTO scoring in decoding.",
+                    "sid": 175,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most noticeable is that the SO scoring is strongly biased against phrase internal reorderings; SPTO uses nearly four times as many phrase internal reorderings as SO.",
+                    "sid": 176,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, SPTO is a little less likely to reject a rule proposed reordering.",
+                    "sid": 177,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rule induction resulted in a rule set containing 27 rules.",
+                    "sid": 178,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of these, 22 concerned different ways of identifying contexts where a reordering should occur due to the verb second nature of Danish.",
+                    "sid": 179,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 rules had to do with adverbials in main and in subordinate clauses, and the remaining rule expressed that currency is written after the amount in Danish, while it is the other way around in English.",
+                    "sid": 180,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the training data however only includes Danish Crowns, the rule was lexicalized to \u2019DKK\u2019.",
+                    "sid": 181,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 7 shows a few of the most frequently used rules.",
+                    "sid": 182,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first three rules deal with the verb second phenomenon.",
+                    "sid": 183,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only difference among these is the left context.",
+                    "sid": 184,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Either it is a prepositional phrase, a subordinate clause or an adverbial.",
+                    "sid": 185,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are three ways that the algorithm has learned to identify the verb second phenomenon conditions.",
+                    "sid": 186,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rule 3 is interesting in that it is lexicalized.",
+                    "sid": 187,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the learning data, the Danish correspondent to \u2019however\u2019 is most often not topicalized, and the subject is therefore not forced from the initial position.",
+                    "sid": 188,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a consequence, the rule states that it should only apply, if \u2019however\u2019 is not included in the left context of the reordering.",
+                    "sid": 189,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rule 4 handles the placement of adverbials in a subordinate clause.",
+                    "sid": 190,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the right context is subordinate and a verb phrase, the current sequences must also be subordinate.",
+                    "sid": 191,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the fifth rule deals with adverbials in a main clause, since the left context noun phrase is in a main clause.",
+                    "sid": 192,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A problem with the hand-aligned data used for rule-induction is that it is out of domain compared to the Europarl data used to train the SMT system.",
+                    "sid": 193,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hand-aligned data is news paper texts, and Europarl is transcribed spoken language from the European Parliament.",
+                    "sid": 194,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to its spoken nature, Europarl contains frequent sentence-initial forms of address.",
+                    "sid": 195,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, left adjacent elements that are not integrated parts of the sentence as illustrated by example (5).",
+                    "sid": 196,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is not straightforward, because on the surface these look a lot like topicalized constructions, as in example (6).",
+                    "sid": 197,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In topicalized constructions, it is an integrated part of the sentence that is moved to the front in order to affect the flow of discourse information.",
+                    "sid": 198,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This difference is crucial for the reordering rules, since \u2019i\u2019 and \u2019have\u2019 should reorder in (6), but not in (5), in order to get Danish word order.",
+                    "sid": 199,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) mr president, i have three points .",
+                    "sid": 200,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(6) as president, i have three points .",
+                    "sid": 201,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When translating the development set, it became clear that many constructions like (5) were reordered by a rule.",
+                    "sid": 202,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these constructions were not present in the hand-aligned data, the learning algorithm did not have the data to learn this difference.",
+                    "sid": 203,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore included a manual, lexicalized rule stating that if the left context contained one of a set of titles (mr, mrs, ms, madam, gentlemen), the reordering should not take place.",
+                    "sid": 204,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the learning includes word form information, this is a rule that the learning algorithm is able to learn.",
+                    "sid": 205,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To a great extent, the rule eliminates the problem.",
+                    "sid": 206,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The above examples also illustrate that local reordering (in this case as local as two neighboring words) can be a problem for PSMT, since even though the reordering is local, the information about whether to reorder or not is not necessarily local.",
+                    "sid": 207,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we will show and discuss a few examples of the reorderings made by the SPTO approach.",
+                    "sid": 208,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 8 contain two translations taken from the test set.",
+                    "sid": 209,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In translation 1), the subject (bold) is correctly moved to the right of the finite verb (italics), which the baseline system fails to do.",
+                    "sid": 210,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moving the finite verb away from the infinite verb \u2019feature\u2019, however, leads to incorrect agreement between these.",
+                    "sid": 211,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the baseline correctly retains the infinite form (\u2019st\u02daa\u2019), the language model forces another finite form (the past tense \u2019stod\u2019) in the SPTO reordering approach.",
+                    "sid": 212,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translation 2) illustrates the handling of adverbials.",
+                    "sid": 213,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first reordering is in a main clause, therefore, the adverbial is moved to the right of the finite verb.",
+                    "sid": 214,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second reordering occurs in a subordinate clause, and the adverbial is moved to the left of the finite verb.",
+                    "sid": 215,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Neither of these are handled successfully by the baseline system.",
+                    "sid": 216,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, the reordering leads to better word selection.",
+                    "sid": 217,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English \u2019aims to\u2019 corresponds to the Danish \u2019sigter mod\u2019, which the SPTO approach gets correct.",
+                    "sid": 218,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the baseline system translates \u2019to\u2019 to its much more common translation \u2019at\u2019, because \u2019to\u2019 is separated from \u2019aims\u2019 by the adverbial \u2019principally\u2019.",
+                    "sid": 219,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusion and future plans",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We have described a novel approach to word reordering in SMT, which successfully integrates syntactically motivated reordering in phrase-based SMT.",
+                    "sid": 220,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is achieved by reordering the input string, but scoring on the output string.",
+                    "sid": 221,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As opposed to previous approaches, this neither biases against phrase internal nor external reorderings.",
+                    "sid": 222,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieve an absolute improvement in translation quality of 1.1 % BLEU.",
+                    "sid": 223,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A result that is supported by manual evaluation, which shows that the SPTO approach is significantly superior to previous approaches.",
+                    "sid": 224,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the future, we plan to apply this approach to English-Arabic translation.",
+                    "sid": 225,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We expect greater gains, due to the higher need for reordering between these less-related languages.",
+                    "sid": 226,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also want to examine the relation between word alignment method and the extracted rules and the relationship between reordering and word selection.",
+                    "sid": 227,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, a limitation of the current experiments is that they only allow rule-based external reorderings.",
+                    "sid": 228,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the SPTO scoring is not tied to a source reordering approach, we want to examine the effect of simply adding it as an additional parameter to the baseline PSMT system.",
+                    "sid": 229,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This way, all external reorderings are made possible, but only the rule-supported ones get promoted.",
+                    "sid": 230,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

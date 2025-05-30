@@ -1,0 +1,539 @@
+{
+    "ID": "N07-2041",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Simultaneous Identification of Biomedical Named-Entity and Functional Relation Using Statistical Parsing Techniques",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we propose a statistical parsing technique that simultaneously identifies biomedical named-entities (NEs) and extracts subcellular localization relations for bacterial proteins from the text in MEDLINE articles.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We build a parser that derives both syntactic and domain-dependent semantic information achieves an F-score of the relation extraction task.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then propose a semi-supervised approach that incorporates noisy automatically labeled data to improve the F-score of our parser to Our key contributions are: learning from noisy data, and building an annotated corpus that can benefit relation extraction research.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Relation extraction from text is a step beyond Named-Entity Recognition (NER) and generally demands adequate domain knowledge to build relations among domain-specific concepts.",
+                    "sid": 4,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A Biomedical Functional Relation (relation for short) states interactions among biomedical substances.",
+                    "sid": 5,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we focus on one such relation: Bacterial Protein Localization (BPL), and introduce our approach for identifying BPLs from MEDLINE1 articles.",
+                    "sid": 6,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BPL is a key functional characteristic of proteins.",
+                    "sid": 7,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is essential to the understanding of the function of different proteins and the discovery of suitable drugs, vaccines and diagnostic targets.",
+                    "sid": 8,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are collaborating with researchers in molecular biology with the goal of automatically extracting BPLs from text with BioNLP techniques, to expand their protein localization database, namely PSORTdb2(Rey et al., 2005).",
+                    "sid": 9,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, the task is to produce as output the relation tuple BPL(BACTERIUM, PROTEIN, LOCATION) along with source sentence and document references.",
+                    "sid": 10,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is new to BioNLP in terms of the specific biomedical relation being sought.",
+                    "sid": 11,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we have to build annotated corpus from scratch and we are unable to use existing BioNLP shared task resources in our experiments.",
+                    "sid": 12,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we extract from the text of biomedical articles a relation among: a LOCATION (one of the possible locations shown in Figure 1 for Gram+ and Gram- bacteria); a particular BACTERIUM, e.g.",
+                    "sid": 13,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E. Coli, and a PROTEIN name, e.g.",
+                    "sid": 14,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "OprF.",
+                    "sid": 15,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Nair and Rost, 2002) used the text taken from Swiss-Prot annotations of proteins, and trained a subcellular classifier on this data.",
+                    "sid": 16,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Hoglund et al., 2006) predicted subcellular localizations using an SVM trained on both text and protein sequence data, by assigning each protein name a vector based on terms co-occurring with the localization name for each organism.",
+                    "sid": 17,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Lu and Hunter, 2005) applied a hierarchical architecture of SVMs to predict subcellular localization by incorporating a semantic hierarchy of localization classes modeled with biological processing pathways.",
+                    "sid": 18,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These approaches either ignore the actual location information in their predicted localization relations, or only focus on a small portion of eukaryotic proteins.",
+                    "sid": 19,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of these approaches are not comparable due to different tasks and datasets.",
+                    "sid": 20,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 system outline",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "During our system\u2019s preprocessing phase, sentences are automatically annotated with both syntactic information and domain-specific semantic information.",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Syntactic annotations are provided by a statistical parser (Charniak and Johnson, 2005).",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Domainspecific semantic information includes annotations on PROTEIN, BACTERIUM and LOCATION NEs by dictionary lookups from UMLS3, NCBI Taxonomy4 and SwissProt5, and two automatic Bio-NE recognizers: MMTx6 and Lingpipe7.",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose the use of a parser that simultaneously identifies NEs and extracts the BPL relations from each sentence.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define NEs to be Relevant to each other only if they are arguments of a BPL relation, otherwise they are defined to be Irrelevant.",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A sentence may contain multiple PROTEIN (LOCATION or ORGANISM) NEs, e.g., there are two PROTEIN NEs in the sentence below but only one, OmpA, is relevant.",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system aims to identify the correct BPL relation among all possible BPL tuples (candidate relations) in the sentence by only recognizing relevant NEs.",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each input sentence is assumed to have at least one BPL relation.",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nine of 10 monoclonal antibodies mapped within the carboxyterminal region of [PROTEIN OprF] that is homologous to the [ORGANISM Escherichia coli] [LOCATION outer membrane] protein [PROTEIN OmpA].",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 statistical syntactic and semantic parser",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Similar to the approach in (Miller et al., 2000) and (Kulick et al., 2004), our parser integrates both syntactic and semantic annotations into a single annotation as shown in Figure 2.",
+                    "sid": 30,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A lexicalized statistical parser (Bikel, 2004) is applied to the parsing task.",
+                    "sid": 31,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parse tree is decorated with two types of semanBinary relations are apparently much easier to represent on the parse tree, therefore we split the BPL ternary relation into two binary relations: BP (BACTERIUM and PROTEIN) and PL (PROTEIN and LOCATION).",
+                    "sid": 32,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After capturing BP and PL relations, we will predict BPL as a fusion of BP and PL, see \u00a74.1.",
+                    "sid": 33,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to the global inference done using our generative model, heavily pipelined discriminative approaches usually have problems with error propagation.",
+                    "sid": 34,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A more serious problem in a pipelined system when using syntactic parses for relation extraction is the alignment between the named entities produced by a separate system and the syntactic parses produced by the statistical parser.",
+                    "sid": 35,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This alignment issue is non-trivial and we could not produce a pipelined system that dealt with this issue satisfactorily for our dataset.",
+                    "sid": 36,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, we did not directly compare our generative approach to a pipelined strategy.",
+                    "sid": 37,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiment settings and evaluations",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "The training and test sets are derived from a small expert-curated corpus.",
+                    "sid": 38,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 lists numbers of sentences and relevant NEs in each BP/PL/BPL set.",
+                    "sid": 39,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the parsing results include both NE and path tags (note that we do not use any external NER system), there are two metrics to produce and evaluate PL or BP relations: Name-only and Name-path metrics.",
+                    "sid": 40,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The name-only metric only measures Relevant PROTEIN, BACTERIUM and LOCATION NEs (see Section 2).",
+                    "sid": 41,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It does not take path annotations into account.",
+                    "sid": 42,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The name-only metric is measured in terms of Precision, Recall and F-score, in which True Positive (TP) is the number of correctly identified NEs, False Positive (FP) is the number of incorrectly identified NEs and False Negative (FN) is the number of correct NEs that are not identified.",
+                    "sid": 43,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The name-path measures nodes being annotated as LNK, PTR or R along the path between NEs on the parse tree, therefore it represents confidence of NEs being arguments of the relation.",
+                    "sid": 44,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The namepath metric is a macro-average measure, which is the average performance of all sentences in data set.",
+                    "sid": 45,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In measurement of the name-path metric, TP is the number of correctly annotated nodes on the path between relevant NEs.",
+                    "sid": 46,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "FP is the number of incorrectly annotated nodes on the path and FN is the number of correct nodes that are not identified.",
+                    "sid": 47,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BPL relation can be predicted by a fusion of BP and PL once they are extracted.",
+                    "sid": 48,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, a BP and a PL that are extracted from the same sentence are merged into a BPL.",
+                    "sid": 49,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The predicted BPL relations are then evaluated by the same name-only and name-path metrics as for binary relations.",
+                    "sid": 50,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the name-path metric, nodes on both PL and BP paths are counted.",
+                    "sid": 51,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that we do not need a common protein NER to merge the BP and PL relations.",
+                    "sid": 52,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E.g., for name-only evaluation, assume true BPL(B1, P1, L1): if we predict BP(B1, ) and PL(P1, L2), then TP=2 due to B1, P1; FP=1 due to L2; and FN=1 due to P1.",
+                    "sid": 53,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 ner and bpl extraction",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Baseline: An intuitive method for relation extraction would assume that any sentence containing PROTEIN, ORGANISM and LOCATION NEs has the relation.",
+                    "sid": 54,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employ this method as a baseline system, in which NEs are identified by the automatic NE recognizers and dictionary lookups as introduced in \u00a72.",
+                    "sid": 55,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system is evaluated against the test set in Table 1.",
+                    "sid": 56,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results in Table 2 show low precision for PROTEIN NER and the name-path metric.",
+                    "sid": 57,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Extraction using Supervised Parsing: We first experiment a fully supervised approach by training the parser on the BP/PL training set and evaluate on the test set (see Table 1).",
+                    "sid": 58,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The name-only and name-path evaluation results in Table 2 show poor syntactic parsing annotation quality and low recall on PROTEIN NER.",
+                    "sid": 59,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The major reason of these problems is the lack of training data. periments with purely supervised learning show that our generative model requires a large curated set to minimize the sparse data problem, but domainspecific annotated corpora are always rare and expensive.",
+                    "sid": 60,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there is a huge source of unlabeled MEDLINE articles available that may meet our needs, by assuming that any sentence containing BACTERIUM, PROTEIN and LOCATION NEs has the BPL relation.",
+                    "sid": 61,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then choose such sentences from a subset of the MEDLINE database as the training data.",
+                    "sid": 62,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These sentences, after being parsed and BPL relations inserted, are in fact the very noisy data when used to train the parser, since the assumed relations do not necessarily exist.",
+                    "sid": 63,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason this noisy data works at all is probably because we can learn a preference for structural relations between entities that are close to each other in the sentence, and thus distinguish between competing relations in the same sentence.",
+                    "sid": 64,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work, we hope to explore explicit bootstrapping from the labeled data to improve the quality of the noisy data.",
+                    "sid": 65,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two experiments were carried out corresponding to choices of the training set: 1) noisy data only, 2) noisy data and curated training data.",
+                    "sid": 66,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation results given in Table 2.",
+                    "sid": 67,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation results on the name-only metric show that, compared to supervised parsing, our semisupervised method dramatically improves recall for NER.",
+                    "sid": 68,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, recall for PROTEIN NER increases from 25.0% to 81.3%; recall on BACTERIUM and LOCATION NERs increases about 30%.",
+                    "sid": 69,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for the name-path metric, the overall F-score is much higher than our fully supervised method increasing from 39.9% to 74.5%.",
+                    "sid": 70,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It shows that the inclusion of curated data in the semisupervised method does not improve performance much.",
+                    "sid": 71,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision of PROTEIN NER increases 6.5% on average, while F-score of overall BPL extraction increases only slightly.",
+                    "sid": 72,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented with training the semi-supervised method using noisy data alone, and testing on the entire curated set, i.e., 333 and 286 sentences for BP and PL extractions respectively.",
+                    "sid": 73,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that we do not directly train from the training set in this method, so it is still \u201cunseen\u201d data for this model.",
+                    "sid": 74,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The F-scores of path-only and pathname metrics are 75.5% and 67.1% respectively.",
+                    "sid": 75,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 discussion and future work",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "In this paper we introduced a statistical parsingbased method to extract biomedical relations from MEDLINE articles.",
+                    "sid": 76,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We made use of a large unlabeled data set to train our relation extraction model.",
+                    "sid": 77,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that the semi-supervised method significantly outperforms the fully supervised method with F-score increasing from 48.4% to 83.2%.",
+                    "sid": 78,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have implemented a discriminative model (Liu et al., 2007) which takes as input the examples with gold named entities and identifies BPL relations on them.",
+                    "sid": 79,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work, we plan to let the discriminative model take the output of our parser and refine our current results further.",
+                    "sid": 80,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also plan to train a graphical model based on all extracted BP, PL and BPL relations to infer relations from multiple sentences and documents.",
+                    "sid": 81,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

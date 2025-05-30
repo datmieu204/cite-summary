@@ -1,0 +1,1517 @@
+{
+    "ID": "P05-1061",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Simple Algorithms For Complex Relation Extraction With Applications To Biomedical IE",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "complex relation is any relation in which some of the arguments may be be unspecified.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present here a simple two-stage method for extracting complex relations between named entities in text.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first stage creates a graph from pairs of entities that are likely to be related, and the second stage scores maximal cliques in that graph as potential complex relation instances.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate the new method against a standard baseline for extracting genomic variation relations from biomedical text.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Most research on text information extraction (IE) has focused on accurate tagging of named entities.",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Successful early named-entity taggers were based on finite-state generative models (Bikel et al., 1999).",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More recently, discriminatively-trained models have been shown to be more accurate than generative models (McCallum et al., 2000; Lafferty et al., 2001; Kudo and Matsumoto, 2001).",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both kinds of models have been developed for tagging entities such as people, places and organizations in news material.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the rapid development of bioinformatics has recently generated interest on the extraction of biological entities such as genes (Collier et al., 2000) and genomic variations (McDonald et al., 2004b) from biomedical literature.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next logical step for IE is to begin to develop methods for extracting meaningful relations involving named entities.",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such relations would be extremely useful in applications like question answering, automatic database generation, and intelligent document searching and indexing.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Though not as well studied as entity extraction, relation extraction has still seen a significant amount of work.",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discuss some previous approaches at greater length in Section 2.",
+                    "sid": 13,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most relation extraction systems focus on the specific problem of extracting binary relations, such as the employee of relation or protein-protein interaction relation.",
+                    "sid": 14,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Very little work has been done in recognizing and extracting more complex relations.",
+                    "sid": 15,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a complex relation as any n-ary relation among n typed entities.",
+                    "sid": 16,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relation is defined by the schema (t1, ... , tn) where ti E T are entity types.",
+                    "sid": 17,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An instance (or tuple) in the relation is a list of entities (e1, ... , en) such that either type(ei) = ti, or ei =1 indicating that the ith element of the tuple is missing.",
+                    "sid": 18,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, assume that the entity types are T = {person, job, company} and we are interested in the ternary relation with schema (person, job, company) that relates a person to their job at a particular company.",
+                    "sid": 19,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the sentence \u201cJohn Smith is the CEO at Inc. Corp.\u201d, the system would ideally extract the tuple (John Smith, CEO, Inc. Corp.).",
+                    "sid": 20,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, for the sentence \u201cEveryday John Smith goes to his office at Inc. Corp.\u201d, the system would extract (John Smith, 1, Inc. Corp.), since there is no mention of a job title.",
+                    "sid": 21,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, the goal of complex relation extraction is to identify all instances of the relation of interest in some piece of text, including incomplete instances.",
+                    "sid": 22,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present here several simple methods for extracting complex relations.",
+                    "sid": 23,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the methods start by recognized pairs of entity mentions, that is, binary relation instances, that appear to be arguments of the relation of interest.",
+                    "sid": 24,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Those pairs can be seen as the edges of a graph with entity mentions as nodes.",
+                    "sid": 25,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithms then try to reconstruct complex relations by making tuples from selected maximal cliques in the graph.",
+                    "sid": 26,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The methods are general and can be applied to any complex relation fitting the above definition.",
+                    "sid": 27,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also assume throughout the paper that the entities and their type are known a priori in the text.",
+                    "sid": 28,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a fair assumption given the current high standard of state-of-the-art named-entity extractors.",
+                    "sid": 29,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A primary advantage of factoring complex relations into binary relations is that it allows the use of standard classification algorithms to decide whether particular pairs of entity mentions are related.",
+                    "sid": 30,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the factoring makes training data less sparse and reduces the computational cost of extraction.",
+                    "sid": 31,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will discuss these benefits further in Section 4.",
+                    "sid": 32,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated the methods on a large set of annotated biomedical documents to extract relations related to genomic variations, demonstrating a considerable improvement over a reasonable baseline.",
+                    "sid": 33,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 previous work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "A representative approach to relation extraction is the system of Zelenko et al. (2003), which attempts to identify binary relations in news text.",
+                    "sid": 34,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In that system, each pair of entity mentions of the correct types in a sentence is classified as to whether it is a positive instance of the relation.",
+                    "sid": 35,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the binary relation employee of and the sentence \u201cJohn Smith, not Jane Smith, works at IBM\u201d.",
+                    "sid": 36,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pair (John Smith, IBM) is a positive instance, while the pair (Jane Smith, IBM) is a negative instance.",
+                    "sid": 37,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instances are represented by a pair of entities and their position in a shallow parse tree for the containing sentence.",
+                    "sid": 38,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Classification is done by a support-vector classifier with a specialized kernel for that shallow parse representation.",
+                    "sid": 39,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach \u2014 enumerating all possible entity pairs and classifying each as positive or negative \u2014 is the standard method in relation extraction.",
+                    "sid": 40,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main differences among systems are the choice of trainable classifier and the representation for instances.",
+                    "sid": 41,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For binary relations, this approach is quite tractable: if the relation schema is (t1, t2), the number of potential instances is O(|t1 ||t2|), where |t |is the number of entity mentions of type t in the text under consideration.",
+                    "sid": 42,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One interesting system that does not belong to the above class is that of Miller et al. (2000), who take the view that relation extraction is just a form of probabilistic parsing where parse trees are augmented to identify all relations.",
+                    "sid": 43,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once this augmentation is made, any standard parser can be trained and then run on new sentences to extract new relations.",
+                    "sid": 44,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Miller et al. show such an approach can yield good results.",
+                    "sid": 45,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it can be argued that this method will encounter problems when considering anything but binary relations.",
+                    "sid": 46,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Complex relations would require a large amount of tree augmentation and most likely result in extremely sparse probability estimates.",
+                    "sid": 47,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, by integrating relation extraction with parsing, the system cannot consider long-range dependencies due to the local parsing constraints of current probabilistic parsers.",
+                    "sid": 48,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The higher the arity of a relation, the more likely it is that entities will be spread out within a piece of text, making long range dependencies especially important.",
+                    "sid": 49,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Roth and Yih (2004) present a model in which entity types and relations are classified jointly using a set of global constraints over locally trained classifiers.",
+                    "sid": 50,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This joint classification is shown to improve accuracy of both the entities and relations returned by the system.",
+                    "sid": 51,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the system is based on constraints for binary relations only.",
+                    "sid": 52,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, there has also been many results from the biomedical IE community.",
+                    "sid": 53,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rosario and Hearst (2004) compare both generative and discriminative models for extracting seven relationships between treatments and diseases.",
+                    "sid": 54,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Though their models are very flexible, they assume at most one relation per sentence, ruling out cases where entities participate in multiple relations, which is a common occurrence in our data.",
+                    "sid": 55,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McDonald et al. (2004a) use a rulebased parser combined with a rule-based relation identifier to extract generic binary relations between biological entities.",
+                    "sid": 56,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in predicate-argument extraction (Gildea and Jurafsky, 2002), each relation is always associated with a verb in the sentence that a.",
+                    "sid": 57,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All possible b.",
+                    "sid": 58,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All possible specifies the relation type.",
+                    "sid": 59,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Though this system is relation instances binary relations very general, it is limited by the fact that the design (John, CEO, Inc. Corp.) (John, CEO) ignores relations not expressed by a verb, as the em- (John, L, Inc. Corp.) (John, Inc. Corp.) ployee of relation in\u201cJohn Smith, CEO ofInc.",
+                    "sid": 60,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp., (John, CEO, Biz.",
+                    "sid": 61,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) (John, Biz.",
+                    "sid": 62,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) announced he will resign\u201d.",
+                    "sid": 63,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(John, L, Biz.",
+                    "sid": 64,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) (CEO, Inc. Corp.) Most relation extraction systems work primarily (John, CEO, L) (CEO, Biz.",
+                    "sid": 65,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) on a sentential level and never consider relations that (Jane, CEO, Inc. Corp.) (Jane, CEO) cross sentences or paragraphs.",
+                    "sid": 66,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since current data (Jane, L, Inc. Corp.) (Jane, Inc. Corp.) sets typically only annotate intra-sentence relations, (Jane, CEO, Biz.",
+                    "sid": 67,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) (Jane, Biz.",
+                    "sid": 68,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) this has not yet proven to be a problem.",
+                    "sid": 69,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Jane, L, Biz.",
+                    "sid": 70,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) (Jane, CEO, L) (L, CEO, Inc. Corp.) (L, CEO, Biz.",
+                    "sid": 71,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.)",
+                    "sid": 72,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 definitions",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Recall that a complex n-ary relation is specified by a schema (t1, ... , tn) where ti E T are entity types.",
+                    "sid": 73,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instances of the relation are tuples (e1, ... , en) where either type(ei) = ti, or ei =1 (missing argument).",
+                    "sid": 74,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only restriction this definition places on a relation is that the arity must be known.",
+                    "sid": 75,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we discuss it further in Section 6, this is not required by our methods but is assumed here for simplicity.",
+                    "sid": 76,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also assume that the system works on a single relation type at a time, although the methods described here are easily generalizable to systems that can extract many relations at once.",
+                    "sid": 77,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An undirected graph G = (V, E) is specified by a set of vertices V and a set of edges E, with each edge an unordered pair (u, v) of vertices.",
+                    "sid": 78,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "G' = (V ', E') is a subgraph of G if V ' C_ V and E' = {(u, v) : u, v E V ', (u, v) E E}.",
+                    "sid": 79,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A clique C of G is a subgraph of G in which there is an edge between every pair of vertices.",
+                    "sid": 80,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A maximal clique of G is a clique C = (VC, EC) such that there is no other clique C' = (VC,, EC,) such that VC C VC,.",
+                    "sid": 81,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 methods",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We describe now a simple method for extracting complex relations.",
+                    "sid": 82,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method works by first factoring all complex relations into a set of binary relations.",
+                    "sid": 83,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A classifier is then trained in the standard manner to recognize all pairs of related entities.",
+                    "sid": 84,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally a graph is constructed from the output of this classifier and the complex relations are determined from the cliques of this graph.",
+                    "sid": 85,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider again the motivating example of the (person, job, company) relation and the sentence \u201cJohn and Jane are CEOs at Inc. Corp. and Biz.",
+                    "sid": 86,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp. respectively\u201d.",
+                    "sid": 87,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This sentence contains two people, one job title and two companies.",
+                    "sid": 88,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible method for extracting the relation of interest would be to first consider all 12 possible tuples shown in Figure 1a.",
+                    "sid": 89,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using all these tuples, it should then be possible to train a classifier to distinguish valid instances such as (John, CEO, Inc. Corp.) from invalid ones such as (Jane, CEO, Inc. Corp.).",
+                    "sid": 90,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is analogous to the approach taken by Zelenko et al. (2003) for binary relations.",
+                    "sid": 91,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are problems with this approach.",
+                    "sid": 92,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computationally, for an n-ary relation, the number of possible instances is O(|t1 ||t2 |\u00b7 \u00b7 \u00b7 |tn|).",
+                    "sid": 93,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conservatively, letting m be the smallest |ti|, the run time is O(mn), exponential in the arity of the relation.",
+                    "sid": 94,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second problem is how to manage incomplete but correct instances such as (John, 1, Inc. Corp.) when training the classifier.",
+                    "sid": 95,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If this instance is marked as negative, then the model might incorrectly disfavor features that correlate John to Inc. Corp..",
+                    "sid": 96,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, if this instance is labeled positive, then the model may tend to prefer the shorter and more compact incomplete relations since they will be abundant in the positive training examples.",
+                    "sid": 97,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We could always ignore instances of this form, but then the data would be heavily skewed towards negative instances.",
+                    "sid": 98,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of trying to classify all possible relation instances, in this work we first classify pairs of entities as being related or not.",
+                    "sid": 99,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, as discussed in Section 4.2, we reconstruct the larger complex relations from a set of binary relation instances.",
+                    "sid": 100,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Factoring relations into a set of binary decisions has several advantages.",
+                    "sid": 101,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of possible pairs is much smaller then the set of all possible complex relation instances.",
+                    "sid": 102,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be seen in Figure 1b, which only considers pairs that are consistent with the relation definition.",
+                    "sid": 103,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More generally, the number of pairs to classify is O((Ei Itij)2) , which is far better than the exponentially many full relation instances.",
+                    "sid": 104,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is also no ambiguity when labeling pairs as positive or negative when constructing the training data.",
+                    "sid": 105,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we can rely on previous work on classification for binary relation extraction to identify pairs of related entities.",
+                    "sid": 106,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To train a classifier to identify pairs of related entities, we must first create the set of all positive and negative pairs in the data.",
+                    "sid": 107,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The positive instances are all pairs that occur together in a valid tuple.",
+                    "sid": 108,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the example sentence in Figure 1, these include the pairs (John, CEO), (John, Inc. Corp.), (CEO, Inc. Corp.), (CEO, Biz.",
+                    "sid": 109,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.), (Jane, CEO) and (Jane, Biz.",
+                    "sid": 110,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.).",
+                    "sid": 111,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To gather negative instances, we extract all pairs that never occur together in a valid relation.",
+                    "sid": 112,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the same example these would be the pairs (John, Biz.",
+                    "sid": 113,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) and (Jane, Inc. Corp.).",
+                    "sid": 114,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This leads to a large set of positive and negative binary relation instances.",
+                    "sid": 115,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At this point we could employ any binary relation classifier and learn to identify new instances of related pairs of entities.",
+                    "sid": 116,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a standard maximum entropy classifier (Berger et al., 1996) implemented as part of MALLET (McCallum, 2002).",
+                    "sid": 117,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model is trained using the features listed in Table 1.",
+                    "sid": 118,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a very simple binary classification model.",
+                    "sid": 119,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No deep syntactic structure such as parse trees is used.",
+                    "sid": 120,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All features are basically over the words separating two entities and their part-of-speech tags.",
+                    "sid": 121,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, it would be possible to use more syntactic information if available in a manner similar to that of Zelenko et al. (2003).",
+                    "sid": 122,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the primary purpose of our experiments was not to create a better binary relation extractor, but to see if complex relations could be extracted through binary factorization followed by reconstruction.",
+                    "sid": 123,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 5.2 we present an empirical evaluation of the binary relation classifier.",
+                    "sid": 124,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Having identified all pairs of related entities in the text, the next stage is to reconstruct the complex relations from these pairs.",
+                    "sid": 125,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let G = (V, E) be an undirected graph where the vertices V are entity mentions in the text and the edges E represent binary relations between entities.",
+                    "sid": 126,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We reconstruct the complex relation instances by finding maximal cliques in the graphs.",
+                    "sid": 127,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest approach is to create the graph so that two entities in the graph have an edge if the binary classifier believes they are related.",
+                    "sid": 128,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, consider the binary factorization in Figure 1 and imagine the classifier identified the following pairs as being related: (John, CEO), (John, Inc. Corp.), (John, Biz.",
+                    "sid": 129,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.), (CEO, Inc. Corp.), (CEO, Biz.",
+                    "sid": 130,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) and (Jane, CEO).",
+                    "sid": 131,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting graph can be seen in Figure 2a.",
+                    "sid": 132,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Looking at this graph, one solution to constructing complex relations would be to consider all the cliques in the graph that are consistent with the definition of the relation.",
+                    "sid": 133,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is equivalent to having the system return only relations in which the binary classifier believes that all of the entities involved are pairwise related.",
+                    "sid": 134,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the cliques in the example are shown in Figure 2b.",
+                    "sid": 135,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We add \ue18a fields to the tuples to be consistent with the relation definition.",
+                    "sid": 136,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This could lead to a set of overlapping cliques, for instance (John, CEO, Inc. Corp.) and (John, CEO, \ue18a).",
+                    "sid": 137,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of having the system return all cliques, our system just returns the maximal cliques, that is, those cliques that are not subsets of other cliques.",
+                    "sid": 138,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, for the example under consideration in Figure 2, the system would return the one correct relation, (John, CEO, Inc. Corp.), and two incorrect relations, (John, CEO, Biz.",
+                    "sid": 139,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) and (Jane, CEO, \ue18a).",
+                    "sid": 140,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second is incorrect since it does not specify the company slot of the relation even though that information is present in the text.",
+                    "sid": 141,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is possible to find degenerate sentences in which perfect binary classification followed by maximal clique reconstruction will lead to errors.",
+                    "sid": 142,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One such sentence is, \u201cJohn is C.E.O. and C.F.O. ofInc.",
+                    "sid": 143,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp. and Biz.",
+                    "sid": 144,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp. respectively and Jane vice-versa\u201d.",
+                    "sid": 145,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we expect such sentences to be rare; in fact, they never occur in our data.",
+                    "sid": 146,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The real problem with this approach is that an arbitrary graph can have exponentially many cliques, negating any efficiency advantage over enumerating all n-tuples of entities.",
+                    "sid": 147,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fortunately, there are algorithms for finding all maximal cliques that are efficient in practice.",
+                    "sid": 148,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the algorithm of Bron and Kerbosch (1973).",
+                    "sid": 149,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a well known branch and bound algorithm that has been shown to empirically run linearly in the number of maximal cliques in the graph.",
+                    "sid": 150,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, this algorithm found all maximal cliques in a matter of seconds.",
+                    "sid": 151,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The above approach has a major shortcoming in that it assumes the output of the binary classifier to be absolutely correct.",
+                    "sid": 152,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the classifier may have thought with probability 0.49, 0.99 and 0.99 that the following pairs were related: (Jane, Biz.",
+                    "sid": 153,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.), (CEO, Biz.",
+                    "sid": 154,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) and (Jane, CEO) respectively.",
+                    "sid": 155,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The maximal clique method would not produce the tuple (Jane, CEO, Biz.",
+                    "sid": 156,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.) since it never considers the edge between Jane and Biz.",
+                    "sid": 157,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corp.",
+                    "sid": 158,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, given the probability of the edges, we would almost certainly want this tuple returned.",
+                    "sid": 159,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What we would really like to model is a belief that on average a clique represents a valid relation instance.",
+                    "sid": 160,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this we use the complete graph G = (V, E) with edges between all pairs of entity mentions.",
+                    "sid": 161,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then assign weight w(e) to edge e equal to the probability that the two entities in e are related, according to the classifier.",
+                    "sid": 162,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define the weight of a clique w(C) as the mean weight of the edges in the clique.",
+                    "sid": 163,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since edge weights represent probabilities (or ratios), we use the geometric mean We decide that a clique C represents a valid tuple if w(C) \ue18d 0.5.",
+                    "sid": 164,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, the system finds all maximal cliques as before, but considers only those where w(C) \ue18d 0.5, and it may select a non-maximal clique if the weight of all larger cliques falls below the threshold.",
+                    "sid": 165,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cutoff of 0.5 is not arbitrary, since it ensures that the average probability of a clique representing a relation instance is at least as large as the average probability of it not representing a relation instance.",
+                    "sid": 166,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We ran experiments with varying levels of this threshold and found that, roughly, lower thresholds result in higher precision at the expense of recall since the system returns fewer but larger tuples.",
+                    "sid": 167,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Optimum results were obtained for a cutoff of approximately 0.4, but we report results only for w(C) \ue18d 0.5.",
+                    "sid": 168,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The major problem with this approach is that there will always be exponentially many cliques since the graph is fully connected.",
+                    "sid": 169,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in our experiments we pruned all edges that would force any containing clique C to have w(C) < 0.5.",
+                    "sid": 170,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This typically made the graphs very sparse.",
+                    "sid": 171,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another problem with this approach is the assumption that the binary relation classifier outputs probabilities.",
+                    "sid": 172,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For maximum entropy and other probabilistic frameworks this is not an issue.",
+                    "sid": 173,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, many classifiers, such as SVMs, output scores or distances.",
+                    "sid": 174,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is possible to transform the scores from those models through a sigmoid to yield probabilities, but there is no guarantee that those probability values will be well calibrated.",
+                    "sid": 175,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 experiments",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We test these methods on the task of extracting genomic variation events from biomedical text (McDonald et al., 2004b).",
+                    "sid": 176,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Briefly, we define a variation event as an acquired genomic aberration: a specific, one-time alteration at the genomic level and described at the nucleic acid level, amino acid level or both.",
+                    "sid": 177,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each variation event is identified by the relationship between a type of variation, its location, and the corresponding state change from an initialstate to an altered-state.",
+                    "sid": 178,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be formalized as the following complex schema (var-type, location, initial-state, altered-state) A simple example is the sentence \u201cAt codons 12 and 61, the occurrence of point mutations from G/A to T/G were observed\u201d which gives rise to the tuples (point mutation, codon 12, G, T) (point mutation, codon 61, A, G) Our data set consists of 447 abstracts selected from MEDLINE as being relevant to populating a database with facts of the form: gene X with variation event Y is associated with malignancy Z. Abstracts were randomly chosen from a larger corpus identified as containing variation mentions pertaining to cancer.",
+                    "sid": 179,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The current data consists of 4691 sentences that have been annotated with 4773 entities and 1218 relations.",
+                    "sid": 180,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the 1218 relations, 760 have two L arguments, 283 have one L argument, and 175 have no L arguments.",
+                    "sid": 181,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, 38% of the relations tagged in this data cannot be handled using binary relation classification alone.",
+                    "sid": 182,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, 4% of the relations annotated in this data are non-sentential.",
+                    "sid": 183,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system currently only produces sentential relations and is therefore bounded by a maximum recall of 96%.",
+                    "sid": 184,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we use gold standard entities in our experiments.",
+                    "sid": 185,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This way we can evaluate the performance of the relation extraction system isolated from any kind of pipelined entity extraction errors.",
+                    "sid": 186,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Entities in this domain can be found with fairly high accuracy (McDonald et al., 2004b).",
+                    "sid": 187,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is important to note that just the presence of two entity types does not entail a relation between them.",
+                    "sid": 188,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, 56% of entity pairs are not related, due either to explicit disqualification in the text (e.g.",
+                    "sid": 189,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201c... the lack of G to T transversion ...\u201d) or ambiguities that arise from multiple entities of the same type.",
+                    "sid": 190,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the data contains only 1218 examples of relations we performed 10-fold cross-validation tests for all results.",
+                    "sid": 191,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared three systems: In training system NE, all incomplete but correct instances were marked as positive since we found this had the best performance.",
+                    "sid": 192,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the same pairwise entity features in the binary classifier of the above two systems.",
+                    "sid": 193,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we also added higher order versions of the pairwise features.",
+                    "sid": 194,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this system we only take maximal relations,that is, if (John, CEO, Inc. Corp.) and (John, L, Inc. Corp.) are both labeled positive, the system would only return the former.",
+                    "sid": 195,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 contains the results of the maximum entropy binary relation classifier (used in systems MC and PC).",
+                    "sid": 196,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 1218 annotated complex relations produced 2577 unique binary pairs of related entities.",
+                    "sid": 197,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can see that the maximum entropy classifier performs reasonably well, although performance may be affected by the lack of rich syntactic features, which have been shown to help performance (Miller et al., 2000; Zelenko et al., 2003).",
+                    "sid": 198,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 compares the three systems on the real problem of extracting complex relations.",
+                    "sid": 199,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An extracted complex relation is considered correct if and only if all the entities in the relation are correct.",
+                    "sid": 200,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is no partial credit.",
+                    "sid": 201,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All training and clique finding algorithms took under 5 minutes for the entire data set.",
+                    "sid": 202,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Naive enumeration took approximately 26 minutes to train. relation to be classified correctly, all the entities in the relation must be correctly identified.",
+                    "sid": 203,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First we observe that the maximal clique method combined with maximum entropy (system MC) reduces the relative error rate over naively enumerating and classifying all instances (system NE) by 21%.",
+                    "sid": 204,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result is very positive.",
+                    "sid": 205,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system based on binary factorization not only is more efficient then naively enumerating all instances, but significantly outperforms it as well.",
+                    "sid": 206,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main reason naive enumeration does so poorly is that all correct but incomplete instances are marked as positive.",
+                    "sid": 207,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, even slight correlations between partially correct entities would be enough to classify an instance as correct, which results in relatively good recall but poor precision.",
+                    "sid": 208,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tried training only with correct and complete positive instances, but the result was a system that only returned few relations since negative instances overwhelmed the training set.",
+                    "sid": 209,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With further tuning, it may be possible to improve the performance of this system.",
+                    "sid": 210,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we use it only as a baseline and to demonstrate that binary factorization is a feasible and accurate method for extracting complex relations.",
+                    "sid": 211,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we see that using probabilistic cliques (system PC) provides another large improvement, a relative error reduction of 13% over using maximal cliques and 31% reduction over enumeration.",
+                    "sid": 212,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows the breakdown of relations returned by type.",
+                    "sid": 213,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are three types of relations, 2-ary, 3-ary and 4-ary, each with 2, 1 and 0 1 arguments respectively, e.g. type that were returned by each system.",
+                    "sid": 214,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each cell contains three numbers, Actual:Predicted:Correct, which represents for each arity the actual, predicted and correct number of relations for each system.",
+                    "sid": 215,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(point mutation, codon 12,1,1) is a 2-ary relation.",
+                    "sid": 216,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly the probabilistic clique method is much more likely to find larger non-binary relations, verifying the motivation that there are some low probability edges that can still contribute to larger cliques.",
+                    "sid": 217,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 conclusions and future work",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We presented a method for complex relation extraction, the core of which was to factorize complex relations into sets of binary relations, learn to identify binary relations and then reconstruct the complex relations by finding maximal cliques in graphs that represent relations between pairs of entities.",
+                    "sid": 218,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The primary advantage of this method is that it allows for the use of almost any binary relation classifier, which have been well studied and are often accurate.",
+                    "sid": 219,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We showed that such a method can be successful with an empirical evaluation on a large set of biomedical data annotated with genomic variation relations.",
+                    "sid": 220,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, this approach is both significantly quicker and more accurate then enumerating and classifying all possible instances.",
+                    "sid": 221,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe this work provides a good starting point for continued research in this area.",
+                    "sid": 222,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A distinction may be made between the factored system presented here and one that attempts to classify complex relations without factorization.",
+                    "sid": 223,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is related to the distinction between methods that learn local classifiers that are combined with global constraints after training and methods that incorporate the global constraints into the learning process.",
+                    "sid": 224,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McCallum and Wellner (2003) showed that learning binary co-reference relations globally improves performance over learning relations in isolation.",
+                    "sid": 225,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, their model relied on the transitive property inherent in the co-reference relation.",
+                    "sid": 226,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system can be seen as an instance of a local learner.",
+                    "sid": 227,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Punyakanok et al. (2004) argued that local learning actually outperforms global learning in cases when local decisions can easily be learnt by the classifier.",
+                    "sid": 228,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, it is reasonable to assume that our binary factorization method will perform well when binary relations can be learnt with high accuracy.",
+                    "sid": 229,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for future work, there are many things that we plan to look at.",
+                    "sid": 230,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The binary relation classifier we employ is quite simplistic and most likely can be improved by using features over a deeper representation of the data such as parse trees.",
+                    "sid": 231,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other more powerful binary classifiers should be tried such as those based on tree kernels (Zelenko et al., 2003).",
+                    "sid": 232,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also plan on running these algorithms on more data sets to test if the algorithms empirically generalize to different domains.",
+                    "sid": 233,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps the most interesting open problem is how to learn the complex reconstruction phase.",
+                    "sid": 234,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possibility is recent work on supervised clustering.",
+                    "sid": 235,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Letting the edge probabilities in the graphs represent a distance in some space, it may be possible to learn how to cluster vertices into relational groups.",
+                    "sid": 236,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, since a vertex/entity can participate in one or more relation, any clustering algorithm would be required to produce non-disjoint clusters.",
+                    "sid": 237,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We mentioned earlier that the only restriction of our complex relation definition is that the arity of the relation must be known in advance.",
+                    "sid": 238,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It turns out that the algorithms we described can actually handle dynamic arity relations.",
+                    "sid": 239,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All that is required is to remove the constraint that maximal cliques must be consistent with the structure of the relation.",
+                    "sid": 240,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This represents another advantage of binary factorization over enumeration, since it would be infeasible to enumerate all possible instances for dynamic arity relations.",
+                    "sid": 241,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "The authors would like to thank Mark Liberman, Mark Mandel and Eric Pancoast for useful discussion, suggestions and technical support.",
+                    "sid": 242,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was supported in part by NSF grant ITR 0205448.",
+                    "sid": 243,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

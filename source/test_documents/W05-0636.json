@@ -1,0 +1,647 @@
+{
+    "ID": "W05-0636",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Joint Parsing And Semantic Role Labeling",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A striking feature of human syntactic prois that it is that is, it seems to take into account semantic information from the discourse context and world knowledge.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we attempt to use this insight to bridge the gap between SRL results from gold parses and from automatically-generated parses.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this, we jointly perform parsing and semantic role labeling, using a probabilistic SRL system to rerank the results of a probabilistic parser.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our current results are negative, because a locallytrained SRL model can return inaccurate probability estimates.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Although much effort has gone into developing statistical parsing models and they have improved steadily over the years, in many applications that use parse trees errors made by the parser are a major source of errors in the final output.",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A promising approach to this problem is to perform both parsing and the higher-level task in a single, joint probabilistic model.",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This not only allows uncertainty about the parser output to be carried upward, such as through an k-best list, but also allows information from higher-level processing to improve parsing.",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Miller et al. (2000) showed that performing parsing and information extraction in a joint model improves performance on both tasks.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, one suspects that attachment decisions, which are both notoriously hard and extremely important for semantic analysis, could benefit greatly from input from higher-level semantic analysis.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The recent interest in semantic role labeling provides an opportunity to explore how higher-level semantic information can inform syntactic parsing.",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In previous work, it has been shown that SRL systems that use full parse information perform better than those that use shallow parse information, but that machine-generated parses still perform much worse than human-corrected gold parses.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal of this investigation is to narrow the gap between SRL results from gold parses and from automatic parses.",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We aim to do this by jointly performing parsing and semantic role labeling in a single probabilistic model.",
+                    "sid": 13,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both parsing and SRL, stateof-the-art systems are probabilistic; therefore, their predictions can be combined in a principled way by multiplying probabilities.",
+                    "sid": 14,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we rerank the k-best parse trees from a probabilistic parser using an SRL system.",
+                    "sid": 15,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare two reranking approaches, one that linearly weights the log probabilities, and the other that learns a reranker over parse trees and SRL frames in the manner of Collins (2000).",
+                    "sid": 16,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Currently, neither method performs better than simply selecting the top predicted parse tree.",
+                    "sid": 17,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discuss some of the reasons for this; one reason being that the ranking over parse trees induced by the semantic role labeling score is unreliable, because the model is trained locally.",
+                    "sid": 18,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 base srl system",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Our approach to joint parsing and SRL begins with a base SRL system, which uses a standard architecture from the literature.",
+                    "sid": 19,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our base SRL system is a cascade of maximum-entropy classifiers which select the semantic argument label for each constituent of a full parse tree.",
+                    "sid": 20,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in other systems, we use three stages: pruning, identification, and classification.",
+                    "sid": 21,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, in pruning, we use a deterministic preprocessing procedure introduced by Xue and Palmer (2004) to prune many constituents which are almost certainly not arguments.",
+                    "sid": 22,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, in identification, a binary MaxEnt classifier is used to prune remaining constituents which are predicted to be null with high probability.",
+                    "sid": 23,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, in classification, a multiclass MaxEnt classifier is used to predict the argument type of the remaining constituents.",
+                    "sid": 24,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This classifer also has the option to output NULL.",
+                    "sid": 25,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It can happen that the returned semantic arguments overlap, because the local classifiers take no global constraints into account.",
+                    "sid": 26,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is undesirable, because no overlaps occur in the gold semantic annotations.",
+                    "sid": 27,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We resolve overlaps using a simple recursive algorithm.",
+                    "sid": 28,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each parent node that overlaps with one of its descendents, we check which predicted probability is greater: that the parent has its locally-predicted argument label and all its descendants are null, or that the descendants have their optimal labeling, and the parent is null.",
+                    "sid": 29,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm returns the non-overlapping assignment with globally highest confidence.",
+                    "sid": 30,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overlaps are uncommon, however; they occurred only 68 times on the 1346 sentences in the development set.",
+                    "sid": 31,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train the classifiers on PropBank sections 02\u2013 21.",
+                    "sid": 32,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a true semantic argument fails to match any bracketing in the parse tree, then it is ignored.",
+                    "sid": 33,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both the identification and classification models are trained using gold parse trees.",
+                    "sid": 34,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of our features are standard features for this task that have been used in previous work, and are listed in Tables 1 and 2.",
+                    "sid": 35,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the maximum-entropy implementation in the Mallet toolkit (McCallum, 2002) with a Gaussian prior on parameters.",
+                    "sid": 36,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 reranking parse trees using srl information",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Here we give the general framework for the reranking methods that we present in the next section.",
+                    "sid": 37,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We write a joint probability model over semantic frames F and parse trees t given a sentence x as where p(t|x) is given by a standard probabilistic parsing model, and p(F|t, x) is given by the baseline SRL model described previously. opment set by the type of parse trees used.",
+                    "sid": 38,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we choose (F*, t*) to approximately maximize the probability p(F, t|x) using a reranking approach.",
+                    "sid": 39,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do the reranking, we generate a list of k-best parse trees for a sentence, and for each predicted tree, we predict the best frame using the base SRL model.",
+                    "sid": 40,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This results in a list {(F\ufffd, tz)} of parse tree / SRL frame pairs, from which the reranker chooses.",
+                    "sid": 41,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, our different reranking methods vary only in which parse tree is selected; given a parse tree, the frame is always chosen using the best prediction from the base model.",
+                    "sid": 42,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The k-best list of parses is generated using Dan Bikel\u2019s (2004) implementation of Michael Collins\u2019 parsing model.",
+                    "sid": 43,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser is trained on sections 2\u2013 21 of the WSJ Treebank, which does not overlap with the development or test sets.",
+                    "sid": 44,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The k-best list is generated in Bikel\u2019s implementation by essentially turning off dynamic programming and doing very aggressive beam search.",
+                    "sid": 45,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We gather a maximum of 500 best parses, but the limit is not usually reached using feasible beam widths.",
+                    "sid": 46,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The mean number of parses per sentence is 176.",
+                    "sid": 47,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 results and discussion",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In this section we present results on several reranking methods for joint parsing and semantic role labeling.",
+                    "sid": 48,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 compares F1 on the development set of our different reranking methods.",
+                    "sid": 49,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first four rows in Table 3 are baseline systems.",
+                    "sid": 50,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present baselines using gold trees (row 1 in Table 3) and predicted trees (row 2).",
+                    "sid": 51,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in previous work, gold trees perform much better than predicted trees.",
+                    "sid": 52,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also report two cheating baselines to explore the maximum possible performance of a reranking system.",
+                    "sid": 53,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we report SRL performance of ceiling parse trees (row 3), i.e., if the parse tree from the k-best list is chosen to be closest to the gold tree.",
+                    "sid": 54,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the best expected performance of a parse reranking approach that maximizes parse F1.",
+                    "sid": 55,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we report SRL performance where the parse tree is selected to maximize SRL F1, computing using the gold frame (row 4).",
+                    "sid": 56,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is a significant gap both between parse-F1-reranked trees and SRL-F1-reranked trees, which shows promise for joint reranking.",
+                    "sid": 57,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the gap between SRLF1-reranked trees and gold parse trees indicates that reranking of parse lists cannot by itself completely close the gap in SRL performance between gold and predicted parse trees.",
+                    "sid": 58,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equation 1 suggests a straightforward method for reranking: simply pick the parse tree from the k-best list that maximizes p(F, t|x), in other words, add the log probabilities from the parser and the base SRL system.",
+                    "sid": 59,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More generally, we consider weighting the individual probabilities as Such a weighted combination is often used in the speech community to combine acoustic and language models.",
+                    "sid": 60,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This reranking method performs poorly, however.",
+                    "sid": 61,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No choice of \u03b1 performs better than \u03b1 = 1, i.e., choosing the 1-best predicted parse tree.",
+                    "sid": 62,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Indeed, the more weight given to the SRL score, the worse the combined system performs.",
+                    "sid": 63,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem is that often a bad parse tree has many nodes which are obviously not constituents: thus p(F It, x) for such a bad tree is very high, and therefore not reliable.",
+                    "sid": 64,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As more weight is given to the SRL score, the unlabeled recall drops, from 55% when \u03b1 = 0 to 71% when \u03b1 = 1.",
+                    "sid": 65,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the decrease in F1 is due to the drop in unlabeled recall.",
+                    "sid": 66,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One potential solution to this problem is to add features of the entire frame, for example, to vote against predicted frames that are missing key arguments.",
+                    "sid": 67,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But such features depend globally on the entire frame, and cannot be represented by local classifiers.",
+                    "sid": 68,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way to train these global features is to learn a linear classifier that selects a parse / frame pair from the ranked list, in the manner of Collins (2000).",
+                    "sid": 69,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Reranking has previously been applied to semantic role labeling by Toutanova et al. (2005), from which we use several features.",
+                    "sid": 70,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between this paper and Toutanova et al. is that instead of reranking k-best SRL frames of a single parse tree, we are reranking 1-best SRL frames from the k-best parse trees.",
+                    "sid": 71,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of the the computational expense of training on k-best parse tree lists for each of 30,000 sentences, we train the reranker only on sections 15\u2013 18 of the Treebank (the same subset used in previous CoNLL competitions).",
+                    "sid": 72,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train the reranker using LogLoss, rather than the boosting loss used by Collins.",
+                    "sid": 73,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also restrict the reranker to consider only the top 25 parse trees.",
+                    "sid": 74,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This globally-trained reranker uses all of the features from the local model, and the following global features: (a) sequence features, i.e., the linear sequence of argument labels in the sentence (e.g.",
+                    "sid": 75,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A0_V_A1), (b) the log probability of the parse tree, (c) has-arg features, that is, for each argument type a binary feature indicating whether it appears in the frame, (d) the conjunction of the predicate and hasarg feature, and (e) the number of nodes in the tree classified as each argument type.",
+                    "sid": 76,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results of this system on the development set are given in Table 3 (row 6).",
+                    "sid": 77,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although this performs better than the score combination method, it is still no better than simply taking the 1-best parse tree.",
+                    "sid": 78,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may be due to the limited training set we used in the reranking model.",
+                    "sid": 79,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A base SRL model trained only on sections 15\u201318 has 61.26 F1, so in comparison, reranking provides a modest improvement.",
+                    "sid": 80,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This system is the one that we submitted as our official submission.",
+                    "sid": 81,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results on the test sets are given in Table 4.",
+                    "sid": 82,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 summing over parse trees",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "that maximizes the posterior probability: p(FIx) _ Et p(Fjt, x)p(tjx).",
+                    "sid": 83,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, we should be summing over the parse trees instead of maximizing over them.",
+                    "sid": 84,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The practical advantage of this approach is that even if one seemingly-good parse tree does not have a constituent for a semantic argument, many other parse trees in the k-best list might, and all are considered when computing F*.",
+                    "sid": 85,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, no single parse tree need have constituents for all of F*; because it sums over all parse trees, it can mix and match constituents between different trees.",
+                    "sid": 86,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The optimal frame F* can be computed by an O(N3) parsing algorithm if appropriate independence assumptions are made on p(Flx).",
+                    "sid": 87,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This requires designing an SRL model that is independent of the bracketing derived from any particular parse tree.",
+                    "sid": 88,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initial experiments performed poorly because the marginal model p(Flx) was inadequate.",
+                    "sid": 89,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Detailed exploration is left for future work.",
+                    "sid": 90,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 conclusion and related work",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "In this paper, we have considered several methods for reranking parse trees using information from semantic role labeling.",
+                    "sid": 91,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So far, we have not been able to show improvement over selecting the 1-best parse tree.",
+                    "sid": 92,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gildea and Jurafsky (Gildea and Jurafsky, 2002) also report results on reranking parses using an SRL system, with negative results.",
+                    "sid": 93,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we confirm these results with a MaxEnt-trained SRL model, and we extend them to show that weighting the probabilities does not help either.",
+                    "sid": 94,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results with Collins-style reranking are too preliminary to draw definite conclusions, but the potential improvement does not appear to be great.",
+                    "sid": 95,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work, we will explore the max-sum approach, which has promise to avoid the pitfalls of max-max reranking approaches.",
+                    "sid": 96,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgements",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "This work was supported in part by the Center for Intelligent Information Retrieval, in part by National Science Foundation under NSF grants #IIS-0326249 ond #IIS-0427594, and in part by the Defense Advanced Research Projec ts Agency (DARPA), through the Department of the Interior, NBC, Acquisition Services Division, under contract number NBCHD030010.",
+                    "sid": 97,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings and conclusions or recommendations expressed in this material are the author(s) and do not necessarily reflect those of the sponsor.",
+                    "sid": 98,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

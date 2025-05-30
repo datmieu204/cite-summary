@@ -1,0 +1,1817 @@
+{
+    "ID": "D11-1044",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We present a quasi-synchronous dependency grammar (Smith and Eisner, 2006) for machine translation in which the leaves of the tree are phrases rather than words as in previous work (Gimpel and Smith, 2009).",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This formulation allows us to combine structural components of phrase-based and syntax-based MT in a single model.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe a method of extracting phrase dependencies from parallel text using a target-side dependency parser.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For decoding, we describe a coarse-to-fine approach based on lattice dependency parsing of phrase lattices.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We demonstrate performance improvements for ChineseEnglish and UrduEnglish translation over a phrase-based baseline.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also investigate the use of unsupervised dependency parsers, reporting encouraging preliminary results.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Two approaches currently dominate statistical machine translation (MT) research.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase-based models (Koehn et al., 2003) excel at capturing local reordering phenomena and memorizing multi-word translations.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Models that employ syntax or syntax- like representations (Chiang, 2005; Galley et al., 2006; Zollmann and Venugopal, 2006; Huang et al., 2006) handle long-distance reordering better than phrase-based systems (Auli et al., 2009) but often require constraints on the formalism or rule extraction method in order to achieve computational tractability.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, certain instances of syntactic divergence are more naturally handled by phrase-based systems (DeNeefe et al., 2007).",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we present a new way of combining the advantages of phrase-based and syntax-based MT. We propose a model in which phrases are organized into a tree structure inspired by dependency syntax.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of standard dependency trees in which words are vertices, our trees have phrases as vertices.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe a simple heuristic to extract phrase dependencies from an aligned parallel corpus parsed on the target side, and use them to compute target-side tree features.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define additional string-to-tree features and, if a source-side dependency parser is available, tree-to-tree features to capture properties of how phrase dependencies interact with reordering.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To leverage standard phrase-based features alongside our novel features, we require a formalism that supports flexible feature combination and efficient decoding.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Quasi-synchronous grammar (QG) provides this backbone (Smith and Eisner, 2006); we describe a coarse-to-fine approach for decoding within this framework, advancing substantially over earlier QG machine translation systems (Gimpel and Smith, 2009).",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder involves generating a phrase lattice (Ueffing et al., 2002) in a coarse pass using a phrase-based model, followed by lattice dependency parsing of the phrase lattice.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach allows us to feasibly explore the combined search space of segmentations, phrase alignments, and target phrase dependency trees.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments demonstrate an average improvement of +0.65 BLEU in ChineseEnglish translation across three test sets and an improvement of +0.75 BLEU in UrduEnglish translation over a phrase-based baseline.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also describe experiments in which we replace supervised dependency parsers with unsupervised parsers, reporting promising results: using a supervised Chinese parser and a state-of-the-art unsupervised English parser provides our best results, giving an averaged gain of +0.79 BLEU over the baseline.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also discuss how our model improves translation quality and discuss future possibilities for combining approaches to ma 474 Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing, pages 474\u2013485, Edinburgh, Scotland, UK, July 27\u201331, 2011.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2011 Association for Computational Linguistics chine translation using our framework.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We previously applied quasi-synchronous grammar to machine translation (Gimpel and Smith, 2009), but that system performed translation fundamentally at the word level.",
+                    "sid": 23,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we generalize that model to function on phrases, enabling a tighter coupling be",
+                    "sid": 24,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "model. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Given a sentence s and its dependency tree \u03c4s, we formulate the translation problem as finding the target sentence t\u2217, the segmentation \u03b3\u2217 of s into phrases, the segmentation \u03c6\u2217 of t\u2217 into phrases, the dependency tree \u03c4 \u2217 on the target phrases \u03c6\u2217, and the one-to-one phrase alignment a\u2217 such that tween the phrase segmentation and syntactic structures.",
+                    "sid": 25,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also present a decoder efficient enough toscale to large data sets and present performance im (t\u2217, \u03b3\u2217, \u03c6\u2217, \u03c4 \u2217 , a\u2217) = argmax (t,\u03b3,\u03c6,\u03c4\u03c6 ,a) p(t, \u03b3, \u03c6, \u03c4\u03c6, a | s, \u03c4s) provements in large-scale experiments over a state- of-the-art phrase-based baseline.",
+                    "sid": 26,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Aside from QG, there have been many efforts to use dependency syntax in machine translation.",
+                    "sid": 27,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Quirk et al.",
+                    "sid": 28,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) used a source-side dependency parser and projected automatic parses across word alignments in order to model dependency syntax on phrase pairs.",
+                    "sid": 29,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Shen et al.",
+                    "sid": 30,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) presented an extension to Hiero (Chiang, 2005) in which rules have target-side dependency syntax and therefore enable the use of a dependency language model.",
+                    "sid": 31,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More recently, researchers have sought the benefits of dependency syntax while preserving the advantages of phrase-based models, such as efficiency and coverage.",
+                    "sid": 32,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Galley and Manning (2009) loosened standard assumptions about dependency parsing so that the efficient left-to-right decoding procedure of phrase-based translation could be retained while a dependency language model is incorporated.",
+                    "sid": 33,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Carreras and Collins (2009) presented a string-to- dependency system that permits non-projective dependency trees (thereby allowing a larger space of translations) and use a rule extraction procedure that includes rules for every phrase in the phrase table.",
+                    "sid": 34,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take an additional step in this direction by working with dependency grammars on the phrases themselves, thereby bringing together the structural components of phrase-based and dependency-based MT in a single model.",
+                    "sid": 35,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While others have worked on combining rules from multiple syntax-based systems (Liu et al., 2009) or using posteriors from multiple models to score translations (DeNero et al., 2010), we are not aware of any other work that seeks to directly integrate phrase-based and syntax-based machine translation at the modeling level.1 1 Dymetman and Cancedda (2010) present a formal analy-.",
+                    "sid": 36,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a linear model (Och and Ney, 2002): p(t, \u03b3, \u03c6, \u03c4\u03c6, a | s, \u03c4s) \u221d exp{\u03b8Tg(s, \u03c4s, t, \u03b3, \u03c6, \u03c4\u03c6, a)} where g is a vector of arbitrary feature functions on the full set of structures and \u03b8 holds corresponding feature weights.",
+                    "sid": 37,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 summarizes our notation.",
+                    "sid": 38,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In modeling p(t, \u03b3, \u03c6, \u03c4\u03c6, a | s, \u03c4s), we make use of quasi-synchronous grammar (QG; Smith and Eisner, 2006).",
+                    "sid": 39,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a source sentence and its parse, a QG induces a probabilistic monolingual grammar over sentences \u201cinspired\u201d by the source sentence and tree.",
+                    "sid": 40,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We denote this grammar by Gs,\u03c4s ; its (weighted) language is the set of translations of s. Quasi-synchronous grammar makes no restrictions on the form of the target monolingual grammar, though dependency grammars have been used in most previous applications of QG (Wang et al., 2007; Das and Smith, 2009; Smith and Eisner, 2009), including previous work in MT (Smith and Eisner, 2006; Gimpel and Smith, 2009).",
+                    "sid": 41,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We previously presented a word-based machine translation model based on a quasi-synchronous dependency grammar.",
+                    "sid": 42,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is well-known in the MT community that translation quality is improved when larger units are modeled.",
+                    "sid": 43,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we use a dependency grammar in which the leaves are phrases rather than words.",
+                    "sid": 44,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a phrase dependency grammar as a model p(\u03c6, \u03c4\u03c6|t) over the joint space of segmen tations of a sentence into phrases and dependency trees on the phrases.2 Phrase dependency grammars sis of the problem of intersecting phrase-based and hierarchical translation models, but do not provide experimental results.",
+                    "sid": 45,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 We restrict our attention to projective trees in this paper,.",
+                    "sid": 46,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "but the generalization to non-projective trees is easily made.",
+                    "sid": 47,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "s = (s1 , . . .",
+                    "sid": 48,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", sn ) so urc e lan gu ag e se nt en ce t = (t1 , . . .",
+                    "sid": 49,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", tm ) tar get lan gu ag e se nte nc e, tra nsl ati on of s \u03b3 = (\u03b3 1 , . . .",
+                    "sid": 50,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \u03b3n ) \u2200 i, \u03b3 i = ( s j , . . .",
+                    "sid": 51,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", s k ) s. t. \u03b3 1 \u00b7 . . .",
+                    "sid": 52,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00b7 \u03b3 n = s se gm ent ati on of s int o phr as es \u03c6 = (\u03c6 1 , . . .",
+                    "sid": 53,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", \u03c6m ) \u2200 i, \u03c6 i = ( tj , . . .",
+                    "sid": 54,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", t k ) s. t. \u03c6 1 \u00b7 . . .",
+                    "sid": 55,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00b7 \u03c6 m = t se gm ent ati on of t int o phr as es \u03c4s : {1, . . .",
+                    "sid": 56,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", n} \u2192 {0, . . .",
+                    "sid": 57,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", n} d e p e n d e nc y tr e e o n s o ur c e w or d s s, w h er e \u03c4s (i ) is th e in d e x of th e p ar e nt of w or d si (0 is th e ro ot , $) \u03c4\u03c6 : {1, . . .",
+                    "sid": 58,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ml } \u2192 {0, . . .",
+                    "sid": 59,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ml } d e p e n d e nc y tr e e o n ta rg et p hr as es \u03c6 , w h er e \u03c4\u03c6 (i ) is th e in d e x of th e p ar e nt of p hr as e \u03c6i a : {1, . . .",
+                    "sid": 60,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", ml } \u2192 {1, . . .",
+                    "sid": 61,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", nl } oneto on e ali gn me nt fro m phr as es in \u03c6 to phr as es in \u03b3 \u03b8 = (\u03bb, \u03c8) par am ete rs of the full mo del (\u03bb = phr ase ba se d, \u03c8 = Q P D G) Table 1: Key notation.",
+                    "sid": 62,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "have recently been used by Wu et al.",
+                    "sid": 63,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) for feature extraction for opinion mining.",
+                    "sid": 64,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When used for translation modeling, they allow us to capture phenomena like local reordering and idiomatic translations within each phrase as well as long-distance relationships among the phrases in a sentence.",
+                    "sid": 65,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then define a quasi-synchronous phrase dependency grammar (QPDG) as a conditionalmodel p(t, \u03b3, \u03c6, \u03c4\u03c6, a | s, \u03c4s) that induces a prob abilistic monolingual phrase dependency grammar over sentences inspired by the source sentence and (lexical) dependency tree.",
+                    "sid": 66,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The source and target sentences are segmented into phrases and the phrases are aligned in a one-to-one alignment.",
+                    "sid": 67,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that we actually depart here slightly from the original definition of QG.",
+                    "sid": 68,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The alignment variable in QG links target tree nodes to source tree nodes.",
+                    "sid": 69,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we never commit to a source phrase dependency tree, instead using a source lexical dependency tree output by a dependency parser, so our alignment variable a is a function from target tree nodes (phrases in \u03c6) to source phrases in \u03b3, which might not be source tree nodes.",
+                    "sid": 70,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features in our model may consider a large number of source phrase dependency trees as long as they are consistent with \u03c4s.",
+                    "sid": 71,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "features. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Our model contains all of the standard phrase-based features found in systems like Moses (Koehn et al., 2007), including four phrase table probability features, a phrase penalty feature, an n-gram language model, a distortion cost, six lexicalized reordering features, and a word penalty feature.",
+                    "sid": 72,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now describe in detail the additional features $ \u2190 said : $ \u2190 we should $ \u2190 said that $ \u2190 has been $ \u2190 is a - us \u2192 relations $ \u2190 will be $ \u2190 he said $ \u2190 it is cross - strait \u2192 relations $ \u2190 this is $ \u2190 pointed out that $ \u2190 we must , and \u2192 is the \u2192 united states the chinese \u2192 government the \u2192 development of $ \u2190 is the the two \u2192 countries $ \u2190 said , he \u2192 said : one - china \u2192 principle $ \u2190 he said : sino - us \u2192 relations Table 2: Most frequent phrase dependencies with at least 2 words in one of the phrases (dependencies in which one phrase is entirely punctuation are not shown).",
+                    "sid": 73,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "$ indicates the root of the tree.",
+                    "sid": 74,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "in our model that are used to score phrase dependency trees.",
+                    "sid": 75,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We shall refer to these as QPDG features and will find it useful later to notation- ally distinguish their feature weights from those of the phrase-based model.",
+                    "sid": 76,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use \u03bb for weights of the standard phrase-based model features and \u03c8 for weights of the QPDG features.",
+                    "sid": 77,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We include three categories of features, differentiated by what pieces of structure they consider.",
+                    "sid": 78,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Target Tree Features.",
+                    "sid": 79,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first include features that only consider t, \u03c6, and \u03c4\u03c6.",
+                    "sid": 80,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features can be categorized as \u201csyntactic language model\u201d features (Shen et al., 2008; Galley and Manning, 2009), though unlike previous work our features model both the phrase segmentation and dependency structure.",
+                    "sid": 81,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typically, these sorts of features are probabilities estimated from a corpus parsed using a supervised parser.",
+                    "sid": 82,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there do not currently exist treebanks with annotated phrase , \u2192 m a d e u p h e \u2192 m a d e u p s u p r e m e c o u r t \u2192 m a d e u p c o u r t \u2192 m a d e u p in s e pt e m b er 2 0 0 0 \u2192 m a d e u p in se pte mb er 20 00 , \u2192 ma de up 0.",
+                    "sid": 83,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 5 7 0.",
+                    "sid": 84,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 2 1 0.",
+                    "sid": 85,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1 4 0.",
+                    "sid": 86,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1 4 0.",
+                    "sid": 87,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1 4 0.",
+                    "sid": 88,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1 4 m a d e u p \u2190 o f m a d e u p \u2190 . m a d e u p \u2190 , m a d e u p \u2190 m i n d t o 0.",
+                    "sid": 89,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 6 5 0.",
+                    "sid": 90,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 2 9 0.",
+                    "sid": 91,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 1 6 0 . 0 1 Table 3: Most probable child phrases for the parent phrase \u201cmade up\u201d for each direction, sorted by the conditional probability of the child phrase given the parent phrase and direction.",
+                    "sid": 92,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "phrase dependencies of the form (u, v, d), where u is the head phrase, v is the child phrase, and d \u2208 {left , right } is the direction, we then estimate conditional probabilities p(v|u, d) using relative fre quency estimation.",
+                    "sid": 93,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows the most probable child phrases for an example parent phrase.",
+                    "sid": 94,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To combat data sparseness, we perform the same procedure with each word replaced by its word cluster ID obtained from Brown clustering (Brown et al., 1992).",
+                    "sid": 95,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We include a feature in the model for the sum of the scaled log-probabilities of each attachment: m dependency trees.",
+                    "sid": 96,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ") max (0, C + log p(\u03c6i|\u03c6\u03c4 i=1 (i), d(i)l (1) Our solution is to use a standard supervised dependency parser and extract phrase dependencies using bilingual information.3 We begin by obtaining symmetrized word alignments and extracting phrase pairs using the standard heuristic from phrase-based MT (Koehn et al., 2003).",
+                    "sid": 97,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the set of extracted phrase pairs for a sentence, denote by W the set of unique target-side phrases among them.",
+                    "sid": 98,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We parse the target sentence with a dependency parser and, for each pair of phrases u, v \u2208 W , we extract a phrase dependency (along with its direction) if u and v do not overlap and there is at least one lexical dependency between a word in u and a word in v. If there are lexical dependencies in both directions, we extract a phrase dependency only for the single longest one.",
+                    "sid": 99,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we use a projective dependency parser, the longest lexical dependency between two phrases is guaranteed to be unique.",
+                    "sid": 100,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows a listing of the most frequent phrase dependencies extracted (lexical dependencies are omitted).",
+                    "sid": 101,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that during training we never explicitly commit to any single phrase dependency tree for a target sentence.",
+                    "sid": 102,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather, we extract phrase dependencies from all phrase dependency trees consistent with the word alignments and the lexical dependency tree.",
+                    "sid": 103,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we treat phrase dependency trees analogously to phrase segmentations in standard phrase extraction.",
+                    "sid": 104,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We perform this procedure on all sentence pairs in the parallel corpus.",
+                    "sid": 105,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a set of extracted 3 For a monolingual task, Wu et al.",
+                    "sid": 106,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) used a shallow parser to convert lexical dependencies from a dependency parser into phrase dependencies.",
+                    "sid": 107,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where d(i) = I [\u03c4\u03c6(i) \u2212 i > 0] is the direction of the dependency arc. Although we use log-probabilities in this feature function, we first add a constant C to each to ensure they are all positive.4 The max expression protects unseen parent-child phrase dependencies from causing the score to be negative infinity.",
+                    "sid": 108,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our motivation is a desire for the features to be used to prefer one derivation over another but not to rule out a derivation completely if it merely happens to contain a dependency unobserved in the training data.",
+                    "sid": 109,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also include lexical weighting features similar to those used in phrase-based MT (Koehn et al., 2003).",
+                    "sid": 110,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whenever we extract a phrase dependency, we extract the longest lexical dependency containedwithin it.",
+                    "sid": 111,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all (parent, child, direction) lexical dependency tuples (x, y, d), we estimate conditional probabilities plex (y|x, d) from the parsed cor pus using relative frequency estimation.",
+                    "sid": 112,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, for a phrase dependency with longest lexical dependency (x, y, d), we add a feature for plex (y|x, d) to the model, using a formula similar to Eq. 1.",
+                    "sid": 113,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different instances of a phrase dependency may have different lexical dependencies extracted with them.",
+                    "sid": 114,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We add the lexical weight for the most frequent, breaking ties by choosing the lexical dependency that maxi mizes p(y|x, d), as was also done by Koehn et al.",
+                    "sid": 115,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2003).",
+                    "sid": 116,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all, we include 4 target tree features: one for phrase dependencies, one for lexical dependencies, 4 The reasoning here is that whenever we use a phrase dependency that we have observed in the training data, we want to boost the score of the translation.",
+                    "sid": 117,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we used log-probabilities, each observed dependency would incur a penalty.",
+                    "sid": 118,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a b c d e x y z a b c d e x y z a b c d e x y z a b c d e x y z Input: s e n t e n c e s , d e p e n d e n c y p a r s e \u03c4 s , c o a r s e p a r a m e t e r s \u03bb M , f i n e p a r a m e t e r s ( \u03bb , \u03c8 ) Output: translation t LMERT \u2190 GenerateL attices (s, \u03bbM ); LFB \u2190 FBPrune (LMERT , \u03bbM ); (t, \u03b3, \u03c6, \u03c4\u03c6 , a) \u2190 QGDEPPARSE (LFB , (\u03bb, \u03c8)); Figure 1: String-to-tree configurations; each is associated with a feature that counts its occurrences in a derivation.",
+                    "sid": 119,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and the same features computed from a transformed version of the corpus in which each word is replaced by its Brown cluster.",
+                    "sid": 120,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 String-to-Tree Configurations.",
+                    "sid": 121,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider features that count instances of reordering configurations involving phrase dependencies.",
+                    "sid": 122,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to the target-side structures, these features consider \u03b3 and a, though not s or \u03c4s. For example, when building a parent-child phrase dependency with the child to the left, one feature value is incremented if their aligned source-side phrases are in the same order.",
+                    "sid": 123,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This configuration is the leftmost in Fig.",
+                    "sid": 124,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1; we include features for the other three configurations there as well, for a total of 4 features in this category.",
+                    "sid": 125,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Tree-to-Tree Configurations.",
+                    "sid": 126,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We include features that consider s, \u03b3, and \u03c4s in addition to t, \u03c6, and \u03c4\u03c6.",
+                    "sid": 127,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We begin with features for each of the quasi-synchronous configurations from Smith and Eisner (2006), adapted to phrase dependency grammars.",
+                    "sid": 128,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, for a parent-child pair(\u03c4\u03c6(i), i) in \u03c4\u03c6, we consider the relationship be tween a(\u03c4\u03c6(i)) and a(i), the source-side phrasesto which \u03c4\u03c6(i) and i align.",
+                    "sid": 129,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the follow ing named configurations from Smith and Eisner:root-root, parent-child, child-parent, grandparent return t; Algorithm 1: CoarseToFineDecode we use a phrase dependency tree for the target side, a lexical dependency tree for the source side, and a phrase alignment.",
+                    "sid": 130,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the following heuristic approach.",
+                    "sid": 131,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a pair of source words, one with index j in source phrase a(\u03c4\u03c6(i)) and the other with index k in source phrase a(i), we have a parent- child configuration if \u03c4s(k) = j; if \u03c4s(j) = k, a child-parent configuration is present.",
+                    "sid": 132,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order for the grandparent-grandchild configuration to be present, the intervening parent word must be outside both phrases.",
+                    "sid": 133,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For sibling and other c-command configurations, the shared parent or ancestor must also be outside both phrases.",
+                    "sid": 134,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After obtaining a list of all configurations present for each pair of words (j, k), we fire the feature for the single configuration corresponding to the maximum distance |j \u2212 k|.",
+                    "sid": 135,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If no configurations are present between any pair of words, the \u201cother\u201d feature fires.",
+                    "sid": 136,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, only one configuration feature fires for each phrase dependency attachment.",
+                    "sid": 137,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we include features that consider the dependency path distance between phrases in the source-side dependency tree that are aligned to parent-child pairs in \u03c4\u03c6.",
+                    "sid": 138,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We include a feature that sums, for each target phrase i, the inverse of the minimum undirected path length between each word grandchild, sibling, and c-command.5 We define a in a(i) and each word in \u03c4\u03c6 (a(i)).",
+                    "sid": 139,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The minimumfeature to count instances of each of these configu rations, including an additional feature for \u201cother\u201d configurations that do not fit into these categories.6 When using a QPDG, there are multiple ways to compute tree-to-tree configuration features, since",
+                    "sid": 140,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "see fig. 3 in smith and eisner (2006) for illustrations.. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "6 We actually include two versions of each configuration feature other than \u201croot-root\u201d: one for the source phrases being in the same order as the target phrases and one for them being swapped.",
+                    "sid": 141,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "undirected path length is defined as the number of dependency arcs that must be crossed to travel from one word to the other in \u03c4s. We use one feature for undirected path length and one other for directed path length.",
+                    "sid": 142,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If there is no (un)directed path from a word in a(i) to a word in \u03c4\u03c6(a(i)), we use \u221e as the minimum length.",
+                    "sid": 143,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are 15 features in this category, for a total of 23 QPDG features.",
+                    "sid": 144,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Decoding.",
+                    "sid": 145,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a QPDG model, decoding consists of finding the highest-scoring tuple (t, \u03b3, \u03c6, \u03c4\u03c6, a) for an in put sentence s and its parse \u03c4s, i.e., finding the most probable derivation under the s/\u03c4s-specific grammar Gs,\u03c4s . We follow Gimpel and Smith (2009) in constructing a lattice to represent Gs,\u03c4s and using lattice parsing to search for the best derivation, but we construct the lattice differently and employ a coarse-to- fine strategy (Petrov, 2009) to speed up decoding.",
+                    "sid": 146,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has become common in recent years for MT researchers to exploit efficient data structures for encoding concise representations of the pruned search space of the model, such as phrase lattices for phrase-based MT (Ueffing et al., 2002; Macherey et al., 2008; Tromble et al., 2008).",
+                    "sid": 147,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each edge in a phrase lattice corresponds to a phrase pair and each path through the lattice corresponds to a tuple (t, \u03b3, \u03c6, a) for the input s. Decoding for a phrase lattice consists of finding the highest-scoring path, which is done using dynamic programming.",
+                    "sid": 148,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To also maximize over \u03c4\u03c6, we perform lattice dependency parsing, which allows us to search over the space of tuples (t, \u03b3, \u03c6, a, \u03c4\u03c6).",
+                    "sid": 149,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the lattice and Gs,\u03c4s , lattice parsing is a straightforward generalization of the standard arc-factored dynamic programming algorithm from Eisner (1996).",
+                    "sid": 150,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lattice parsing algorithm requires O(E2V ) time and O(E2 + V E) space, where E is the number of edges in the lattice and V is the number of nodes.7 Typical phrase lattices might easily contain tens of thousands of nodes and edges, making exact search prohibitively expensive for all but the smallest lattices.",
+                    "sid": 151,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So, we use approximate search based on coarse-to-fine decoding.",
+                    "sid": 152,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now discuss each step of this procedure; an outline is shown as Alg.",
+                    "sid": 153,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 154,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pass 1: Lattice Pruning After generating phrase lattices using a phrase-based MT system, we prune lattice edges using forward-backward pruning (Six- tus and Ortmanns, 1999), which has also been used in previous work using phrase lattices (Tromble et al., 2008).",
+                    "sid": 155,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This pruning method computes the max- marginal for each lattice edge, which is the score of the best full path that uses that edge.",
+                    "sid": 156,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Maxmarginals 7 To prevent confusion, we use the term edge to refer to a phrase lattice edge and arc to refer to a parent-child dependency in the phrase dependency tree.",
+                    "sid": 157,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "offer the advantage that the best path in the lattice is preserved during pruning.",
+                    "sid": 158,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each lattice, we use a grid search to find the most liberal threshold that leaves fewer than 1000 edges in the resulting lattice.",
+                    "sid": 159,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As complexity is quadratic in E, forcing E to be less than 1000 improves runtime substantially.",
+                    "sid": 160,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After pruning, the lattices still contain more than 1016 paths on average and oracle BLEU scores are typically 1215 points higher than the model-best paths.",
+                    "sid": 161,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pass 2: Parent Ranking Given a pruned lattice, we then remove some candidate dependency arcs from consideration.",
+                    "sid": 162,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is common in dependency parsing to use a coarse model to rank the top k parents for each word, and to only consider these during parsing (Martins et al., 2009; Bergsma and Cherry, 2010).",
+                    "sid": 163,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike string parsing, our phrase lattices impose several types of constraints on allowable arcs.",
+                    "sid": 164,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, each node in the phrase lattice is annotated with a coverage vector\u2014a bit vector indicating which words in the source sentence have been translated\u2014which implies a topological ordering of the nodes.",
+                    "sid": 165,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To handle constraints like these, we first use the FloydWarshall algorithm (Floyd, 1962) to find the best score between every pair of nodes in the lattice.",
+                    "sid": 166,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This algorithm also tells us whether each edge is reachable from each other edge, allowing us to immediately prune dependency arcs between edges that are unreachable from each other.",
+                    "sid": 167,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After eliminating impossible arcs, we turn to pruning away unlikely ones.",
+                    "sid": 168,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In standard (string) dependency parsing, every word is assigned a parent.",
+                    "sid": 169,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In lattice parsing, however, most lattice edges will not be assigned any parent.",
+                    "sid": 170,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Certain lattice edges are much more likely to be contained within paths, so we allow some edges to have more candidate parent edges than others.",
+                    "sid": 171,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce hyperparameters \u03b1, \u03b2, and \u00b5 to denote, respectively, the minimum, maximum, and average number of parent edges to be considered for each lattice edge (\u03b1 \u2264 \u00b5 \u2264 \u03b2).",
+                    "sid": 172,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We rank the full set of E2 arcs according to their scores (using the QPDG features and their weights \u03c8) and choose the top \u00b5E of these arcs while ensuring that each edge has at least \u03b1 and at most \u03b2 potential parent edges.",
+                    "sid": 173,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This step reduces the time complexity from O(E2V ) to O(\u00b5EV ), where \u00b5 < E. In our experiments, we set \u00b5 = 300, \u03b1 = 100, and \u03b2 = 400.",
+                    "sid": 174,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Input: tuning set D = (S, T ), initial weights \u03bb0 for coarse model, initial weights \u03c80 for additional features in fine model Output: coarse model learned weights: \u03bbM , fine model learned weights: (\u03bb\u2217, \u03c8\u2217) \u03bbM \u2190 MERT (S, T , \u03bb0 , 100, MOSES); LMERT \u2190 GenerateLattices (S, \u03bbM ); LFB \u2190 FBPrune (LMERT , \u03bbM ); (\u03bb\u2217, \u03c8\u2217) \u2190 MERT (LFB , T , (\u03bbM , \u03c80 ), 200, QGDEPPARSE); return \u03bbM , (\u03bb\u2217, \u03c8\u2217); Algorithm 2: CoarseToFineTrain Pass 3: Lattice Dependency Parsing After completing the coarse passes, we parse using bottom-up dynamic programming based on the agenda algorithm (Nederhof, 2003; Eisner et al., 2005).",
+                    "sid": 175,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We only consider arcs that survived the filtering in Pass 2.",
+                    "sid": 176,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We weight agenda items by the sum of their scores and the FloydWarshall best path scores both from the start node of the lattice to the beginning of the item and the end of the item to any final node.",
+                    "sid": 177,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This heuristic helps us to favor exploration of items that are highly likely under the phrase-based model.",
+                    "sid": 178,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the score of the partial structure can only get worse when combining it with other structures (e.g., in a PCFG), then the first time that we pop an item of type GOAL from the agenda, we are guaranteed to have the best parse.",
+                    "sid": 179,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in our model, some features are positive and others negative, making this property no longer hold; as a result, GOAL items may be popped out of order from the agenda.",
+                    "sid": 180,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we use an approximation, simply popping G GOAL items from the agenda and then stopping.",
+                    "sid": 181,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The items are sorted by their scores and the best is returned by the decoder (or the k best in the case of MERT).",
+                    "sid": 182,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we set G = 4000.",
+                    "sid": 183,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combined strategy yields average decoding times in the range of 30 seconds per sentence, which is comparable to other syntax-based MT systems.",
+                    "sid": 184,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "training. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "For tuning the coarse and fine parameters, we use minimum error rate training (MERT; Och, 2003) in a procedure shown as Alg.",
+                    "sid": 185,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 186,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first use MERT to train parameters for the coarse phrase-based model used to generate phrase lattices.",
+                    "sid": 187,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, after generating the lattices, we prune them and run MERT a second time to tune parameters of the fine model, which includes all phrase-based and QPDG parameters.",
+                    "sid": 188,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The arguments to MERT are a vector of source sentences (or lattices), a vector of target sentences, the initial parameter values, the size of the k-best list, and finally the decoder.",
+                    "sid": 189,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We initialize \u03bb to the default Moses feature weights and for \u03c8 we initialize the two target phrase dependency weights to 0.004, the two lexical dependency weights to 0.001, and the weights for all configuration features to 0.0.",
+                    "sid": 190,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our training procedure requires two executions of MERT, and the second typically takes more iterations to converge (10 to 20 is typical) than the first due to the use of a larger feature set and increased possibility for search error due to the enlarged search space.",
+                    "sid": 191,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "For experimental evaluation, we consider Chinese- to-English (ZHEN) and Urdu-to-English (UREN) translation and compare our system to Moses (Koehn et al., 2007).",
+                    "sid": 192,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For ZHEN, we used 303k sentence pairs from the FBIS corpus (LDC2003E14).",
+                    "sid": 193,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We segmented the Chinese data using the Stanford Chinese segmenter in \u201cCTB\u201d mode (Chang et al., 2008), giving us 7.9M Chinese words and 9.4M English words.",
+                    "sid": 194,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For UREN, we used parallel data from the NIST MT08 evaluation consisting of 1.2M Urdu words and 1.1M English words.",
+                    "sid": 195,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained a baseline Moses system using default settings and features.",
+                    "sid": 196,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word alignment was performed using GIZA++ (Och and Ney, 2003) in both directions and the grow-diag-final-and heuristic was used to symmetrize the alignments.",
+                    "sid": 197,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a max phrase length of 7 when extracting phrases.",
+                    "sid": 198,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Trigram language models were estimated using the SRI language modeling toolkit (Stolcke, 2002) with modified KneserNey smoothing (Chen and Goodman, 1998).",
+                    "sid": 199,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To estimate language models for each language pair, we used the English side of the parallel corpus concatenated with 200M words of randomly-selected sentences from the Gigaword v4 corpus (excluding the NY Times and LA Times).",
+                    "sid": 200,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used this baseline Moses system to generate phrase lattices for our system, so our model includes all of the Moses features in addition to the M T 03 (t un e) M T 0 2 M T 0 5 M T 0 6 A v e r a g e M os es Q PD G (T T) Q PD G (T T+ S2 T+ T2 T) 33 .8 4 34.",
+                    "sid": 201,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "63 (+ 0.",
+                    "sid": 202,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "79 ) 34.",
+                    "sid": 203,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "98 (+ 1.",
+                    "sid": 204,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14 ) 33 .3 5 31.81 28.82 34.",
+                    "sid": 205,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 (+ 0.",
+                    "sid": 206,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "75 ) 32.15 (+0.34) 29.33 (+0.51) 34.",
+                    "sid": 207,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "26 (+ 0.",
+                    "sid": 208,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "91 ) 32.34 (+0.53) 29.35 (+0.53) 31 .3 3 31.",
+                    "sid": 209,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "86 (+ 0.",
+                    "sid": 210,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "53 ) 31.",
+                    "sid": 211,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "98 (+ 0.",
+                    "sid": 212,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "65 ) Table 4: ChineseEnglish Results (% BLEU).",
+                    "sid": 213,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "QPDG features described in \u00a74.",
+                    "sid": 214,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we compare our QPDG system (lattice parsing on each lattice) to the Moses baseline (finding the best path through each lattice).",
+                    "sid": 215,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The conventional wisdom holds that hierarchical phrase-based translation (Chiang, 2005) performs better than phrase- based translation for language pairs that require large amounts of reordering, such as ZHEN and UREN.",
+                    "sid": 216,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, researchers have shown that this performance gap diminishes when using a larger distortion limit (Zollmann et al., 2008) and may disappear entirely when using a lexicalized reordering model (Lopez, 2008; Galley and Manning, 2010).",
+                    "sid": 217,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So, we increase the Moses distortion limit from 6 (the default) to 10 and use Moses\u2019 default lexical- ized reordering model (Koehn et al., 2005).",
+                    "sid": 218,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We parsed the Chinese text using the Stanford parser (Levy and Manning, 2003) and the English text using TurboParser (Martins et al., 2009).",
+                    "sid": 219,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that computing our features requires parsing the target (English) side of the parallel text, but not the source side.",
+                    "sid": 220,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We only need to parse the source side of the tuning and test sets, and the only features that look at the source-side parse are those from \u00a74.3.",
+                    "sid": 221,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To obtain Brown clusters for the target tree features in \u00a74.1, we used code from Liang (2005).8 We induced 100 clusters from the English side of the parallel corpus concatenated with 10M words of randomly-selected Gigaword sentences.",
+                    "sid": 222,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only words that appeared at least twice in this data were considered during clustering.",
+                    "sid": 223,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An additional cluster was created for all other words; this allowed us to use phrase dependency cluster features even for out-of- vocabulary words.",
+                    "sid": 224,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a max phrase length of 7 when extracting phrase dependencies to match the max phrase length used in phrase extraction.",
+                    "sid": 225,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Approximately 87M unique phrase dependencies were extracted from the ZHEN data and 7M from the UREN data.We tuned the weights of our model using the pro Table 5: UrduEnglish Results (% BLEU).",
+                    "sid": 226,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "cedure described in \u00a76.",
+                    "sid": 227,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For ZHEN we used MT03 for tuning and MT02, MT05, and MT06 for testing.",
+                    "sid": 228,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For UREN we used half of the documents (882 sentence pairs) from the MT08 test set for tuning (\u201cDev\u201d) and MT09 for testing.",
+                    "sid": 229,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated translation output using case-insensitive IBM BLEU (Pa- pineni et al., 2001).",
+                    "sid": 230,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7.1 Results.",
+                    "sid": 231,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results for ZHEN and UREN translation are shown in Tables 4 and 5.",
+                    "sid": 232,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show results when using only the target tree features from \u00a74.1 (TT), as well as when adding the string-to-tree features from \u00a74.2 (S2T) and the tree-to-tree features from \u00a74.3 (T2T).",
+                    "sid": 233,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We note that T2T features are unavailable for UREN because we do not have an Urdu parser.",
+                    "sid": 234,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that we can achieve moderate but consistent improvements over the baseline Moses system, for an average increase of 0.65 BLEU points for ZHEN and 0.75 for UREN.",
+                    "sid": 235,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fig.",
+                    "sid": 236,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 shows an example sentence from the MT05 test set along with its translation output and derivations produced by Moses and our QPDG system with the full feature set.",
+                    "sid": 237,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This example shows the kind of improvements that our system makes.",
+                    "sid": 238,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Chinese, modifiers such as prepositional phrases and clauses are generally placed in front of the words they modify, frequently the opposite of English.",
+                    "sid": 239,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, Chinese occasionally uses postpositions where English uses prepositions.",
+                    "sid": 240,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Chinese sentence in Fig.",
+                    "sid": 241,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 exhibits both of these, as the prepositional phrase \u201cafter the Palestinian election\u201d appears before the verb \u201cstrengthen\u201d in the Chinese sentence and \u201cafter\u201d appears as a postposition.",
+                    "sid": 242,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moses (Fig.",
+                    "sid": 243,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2(a)) does not properly reorder the prepositional phrase, while our system (Fig.",
+                    "sid": 244,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2(b)) properly handles both reorderings.9 We shall discuss these 8 http://www.cs.berkeley.edu/\u02dcpliang/ software 9 Our.",
+                    "sid": 245,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "system\u2019s derivation is not perfect, in that \u201cin\u201d is incor $ bush united : states will in palestine elections after strengthen peace efforts (a) (b) \u5e03\u5e0c : \u7f8e \u5c06 \u5728 \u5df4\u52d2\u65af\u5766 \u5927 \u540e \u52a0\u5f3a \u548c\u5e73 \u52aa\u529b pre sid enti al ele ctio n in the uni ted stat es wil l stre ngt hen the pea ce eff ort s \u5e03 \u5e0c : \u7f8e \u5c06 \u5728 \u5df4\u52d2\u65af\u5766 \u5927 \u540e \u52a0\u5f3a \u548c\u5e73 \u52aa\u529b $ (c) Refere nces b u s h : u s s e t t o b o o s t p e a c e e f f o r t s a f t e r p a l e s t i n i a n e l e c t i o n b u s h : u s t o s t e p u p p e a c e e f f o r t s a f t e r p a l e s t i n i a n e l e c t i o n s b u s h : u . s . w i l l e n h a n c e p e a c e e f f o r t s a f t e r p a l e s t i n i a n e l e c t i o n u s t o b o o s t p e a c e e f f o r t s a f t e r p a l e s t i n i a n e l e c t i o n s : b u s h Figure 2: (a) Moses translation output along with \u03b3, \u03c6, and a. An English gloss is shown above the Chinese sentence and above the gloss is shown the dependency parse from the Stanford parser.",
+                    "sid": 246,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(b) QPDG system output with additional structure \u03c4\u03c6 .",
+                    "sid": 247,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(c) reference translations.",
+                    "sid": 248,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "types of improvements further in \u00a78.",
+                    "sid": 249,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7.2 Unsupervised Parsing.",
+                    "sid": 250,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results thus far use supervised parsers for both Chinese and English, but parsers are only available for a small fraction of the languages we would like to translate.",
+                    "sid": 251,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fortunately, unsupervised dependency grammar induction has improved substantially in recent years due to a flurry of recent research.",
+                    "sid": 252,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While attachment accuracies on standard treebank test sets are still relatively low, it may be the case that even though unsupervised parsers do not match treebank annotations very well, they may perform well when used for extrinsic applications.",
+                    "sid": 253,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe that syntax-based MT offers a compelling platform for development and extrinsic evaluation of unsupervised parsers.",
+                    "sid": 254,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we use the standard dependency model with valence (DMV; Klein and Manning, 2004).",
+                    "sid": 255,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When training is initialized using the output of a simpler, concave dependency model, the rectly translated and reordered, but the system was nonetheless DMV can approach state-of-the-art unsupervised accuracy (Gimpel and Smith, 2011).",
+                    "sid": 256,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For English, the resulting parser achieves 53.1% attachment accuracy on Section 23 of the Penn Treebank (Marcus et al., 1993), which approaches the 55.7% accuracy of a recent state-of-the-art unsupervised model (Blunsom and Cohn, 2010).",
+                    "sid": 257,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Chinese parser, initialized and trained the same way, achieves 44.4%, which is the highest reported accuracy on the Chinese Treebank (Xue et al., 2004) test set.",
+                    "sid": 258,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most unsupervised grammar induction models assume gold standard POS tags and sentences stripped of punctuation.",
+                    "sid": 259,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the Stanford tag- ger (Toutanova et al., 2003) to obtain tags for both English and Chinese, parse the sentences without punctuation using the DMV, and then attach punctuation tokens to the root word of the tree in a post- processing step.",
+                    "sid": 260,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For English, the predicted parents agreed with those of TurboParser for 48.7% of the tokens in the corpus.",
+                    "sid": 261,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We considered all four scenarios: supervised and unsupervised English parsing paired with supervised E N u n s u p e r v i s e d supervised Z H u n s u p e r v i s e d s u p e r v i s e d 31.",
+                    "sid": 262,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "18 (3 3.",
+                    "sid": 263,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "76 ) 31.86 (34.78) 32.",
+                    "sid": 264,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12 (3 4.",
+                    "sid": 265,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "74 ) 31.98 (34.98) M o s e s 3 1 . 3 3 ( 3 3 . 8 4 ) Table 6: Results when using unsupervised dependency parsers.",
+                    "sid": 266,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cells contain averaged % BLEU on the three test sets and % BLEU on tuning data (MT03) in parentheses.",
+                    "sid": 267,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fe at ur e Ini tia l Le ar ne d Le ft chi ld, sa me or de r L ef t c hil d, s w a p p hr a s e s Ri g ht c hil d, s a m e o r d e r Ri g ht c hi ld , s w a p p hr a s e s 9 . 0 1 . 1 7 . 3 1 . 6 8 . 9 0 . 0 7 . 3 2 . 3 Root ro ot P a r e n t c h i l d C h i l d p a r e n t G r a n d p a r e n t g r a n d c h i l d S i b l i n gC co m m an d Ot he r 0 . 4 4 . 2 1 . 2 1 . 0 2 . 4 6 . 1 1 . 5 0 . 8 6 . 1 0 . 4 0 . 2 1 . 9 6 . 7 0 . 9 Table 7: Average feature values across best translations of sentences in the MT03 tuning set, both before MERT (column 2) and after (column 3).",
+                    "sid": 268,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cSame\u201d versions of tree- to-tree configuration features are shown; the rarer \u201cswap\u201d features showed a similar trend.",
+                    "sid": 269,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BLEU scores averaged over the three test sets with tuning data BLEU in parentheses.",
+                    "sid": 270,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Surprisingly, we achieve our best results when using the unsupervised English parser in place of the supervised one (+0.79 over Moses), while keeping the Chinese parser supervised.",
+                    "sid": 271,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Competitive performance is also found by using the unsupervised Chinese parser and supervised English parser (+0.53 over Moses).",
+                    "sid": 272,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when using unsupervised parsers for both languages, performance was below that of Moses.",
+                    "sid": 273,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During tuning for this configuration, we found that MERT struggled to find good parameter estimates, typically converging to suboptimal solutions after a small number of iterations.",
+                    "sid": 274,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe this is due to the large number of features (37), the noise in the parse trees, and known instabilities of MERT.",
+                    "sid": 275,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In future work we plan to experiment with training algorithms that are more stable and that can handle larger numbers of features.",
+                    "sid": 276,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "analysis. ",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "To understand what our model learns during MER training, we computed the feature vectors of the best derivation for each sentence in the tuning data at both the start and end of tuning.",
+                    "sid": 277,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 7 shows these feature values averaged across all tuning sentences.",
+                    "sid": 278,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first four features are the configurations from Fig.",
+                    "sid": 279,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1, in order from left to right.",
+                    "sid": 280,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From these rows, we can observe that the model learns to encourage swapping when generating right children and penalize swapping for left children.",
+                    "sid": 281,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to objects, right children in English are often prepositional phrases, relative clauses, or other modifiers; as we noted above, Chinese generally places these modifiers before their heads, requiring reordering during translation.",
+                    "sid": 282,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here the model appears to be learning this reordering behavior.",
+                    "sid": 283,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the second set of features, we see that the model learns to favor producing dependency trees that are mostly isomorphic to the source tree, by favoring root-root and parent-child configurations at the expense of most others.",
+                    "sid": 284,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion. ",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "In looking at BLEU score differences between the two systems, the unigram precisions were typically equal or only slightly different, while precisions for higher-order n-grams contained the bulk of the improvement.",
+                    "sid": 285,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that our system is not finding substantially better translations for individual words in the input, but rather is focused on reordering the existing translations.",
+                    "sid": 286,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is not surprising given our choice of features, which focus on syntactic language modeling and syntax-based reordering.",
+                    "sid": 287,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The obvious next step for our framework is to include bilingual rules that include source syntax (Quirk et al., 2005), target syntax (Shen et al., 2008), and syntax on both sides.",
+                    "sid": 288,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our framework allows integrating together all of these and other types of structures, with the ultimate goal of combining the strengths of multiple approaches to translation in a single model.",
+                    "sid": 289,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We thank Chris Dyer and the anonymous reviewers for helpful comments that improved this paper.",
+                    "sid": 290,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This research was supported in part by the NSF through grant IIS 0844507, the U. S. Army Research Laboratory and the U. S. Army Research Office under contract/grant number W911NF10-10533, and Sandia National Laboratories (fellowship to K. Gimpel).",
+                    "sid": 291,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

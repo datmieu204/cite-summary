@@ -1,0 +1,671 @@
+{
+    "ID": "P12-2023",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We propose an approach that biases machine translation systems toward relevant translations based on topic-specific contexts, where topics are induced in an unsupervised way using topic models; this can be thought of as inducing subcorpora for adaptation without any human annotation.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use these topic distributions to compute topic-dependent lexical weighting probabilities and directly incorporate them into our translation model as features.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conditioning lexical probabilities on the topic biases translations toward topic- relevant output, resulting in significant improvements of up to 1 BLEU and 3 TER on Chinese to English translation over a strong baseline.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The performance of a statistical machine translation (SMT) system on a translation task depends largely on the suitability of the available parallel training data.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Domains (e.g., newswire vs. blogs) may vary widely in their lexical choices and stylistic preferences, and what may be preferable in a general setting, or in one domain, is not necessarily preferable in another domain.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Indeed, sometimes the domain can change the meaning of a phrase entirely.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a food related context, the Chinese sentence \u201c\u7c89 \u4e1d \u5f88 \u591a \u201d (\u201cfe\u02c7ns\u00afi he\u02c7nduo\u00af \u201d) would mean \u201cThey have a lot of vermicelli\u201d; however, in an informal Internet conversation, this sentence would mean \u201cThey have a lot of fans\u201d.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without the broader context, it is impossible to determine the correct translation in otherwise identical sentences.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This problem has led to a substantial amount of recent work in trying to bias, or adapt, the translation model (TM) toward particular domains of interest (Axelrod et al., 2011; Foster et al., 2010; Snover et al., 2008).1 The intuition behind TM adaptation is to increase the likelihood of selecting relevant phrases for translation.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Matsoukas et al.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) introduced assigning a pair of binary features to each training sentence, indicating sentences\u2019 genre and collection as a way to capture domains.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They then learn a mapping from these features to sentence weights, use the sentence weights to bias the model probability estimates and subsequently learn the model weights.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As sentence weights were found to be most beneficial for lexical weighting, Chiang et al.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) extends the same notion of conditioning on provenance (i.e., the origin of the text) by removing the separate mapping step, directly optimizing the weight of the genre and collection features by computing a separate word translation table for each feature, estimated from only those sentences that comprise that genre or collection.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The common thread throughout prior work is the concept of a domain.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A domain is typically a hard constraint that is externally imposed and hand labeled, such as genre or corpus collection.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a sentence either comes from newswire, or weblog, but not both.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this poses several problems.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, since a sentence contributes its counts only to the translation table for the source it came from, many word pairs will be unobserved for a given table.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This sparsity requires smoothing.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we may not know the (sub)corpora our training 1 Language model adaptation is also prevalent but is not the focus of this work.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "115 Proceedings of the 50th Annual Meeting of the Association for Computational Linguistics, pages 115\u2013119, Jeju, Republic of Korea, 814 July 2012.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2012 Association for Computational Linguistics data come from; and even if we do, \u201csubcorpus\u201d may not be the most useful notion of domain for better translations.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take a finer-grained, flexible, unsupervised approach for lexical weighting by domain.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We induce unsupervised domains from large corpora, and we incorporate soft, probabilistic domain membership into a translation model.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised modeling of the training data produces naturally occurring sub- corpora, generalizing beyond corpus and genre.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on the model used to select subcorpora, we can bias our translation toward any arbitrary distinction.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This reduces the problem to identifying what automatically defined subsets of the training corpus may be beneficial for translation.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, we consider the underlying latent topics of the documents (Blei et al., 2003).",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Topic modeling has received some use in SMT, for instance Bilingual LSA adaptation (Tam et al., 2007), and the BiTAM model (Zhao and Xing, 2006), which uses a bilingual topic model for learning alignment.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our case, by building a topic distribution for the source side of the training data, we abstract the notion of domain to include automatically derived subcorpora with probabilistic membership.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This topic model infers the topic distribution of a test set and biases sentence translations to appropriate topics.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We accomplish this by introducing topic dependent lexical probabilities directly as c(f, e)/2.e c(f, e) . Phrase pair probabilities p(e|f ) are computed from these as described in Koehn et al.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2003).",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chiang et al.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) showed that is it beneficial to condition the lexical weighting features on provenance by assigning each sentence pair a set of features, fs(e|f ), one for each domain s, whichcompute a new word translation table ps(e|f ) esti mated from only those sentences which belong to s: cs(f, e)/2.e cs(f, e) , where cs(\u00b7) is the number of occurrences of the word pair in s. Topic Modeling for MT We extend provenance to cover a set of automatically generated topics zn.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a parallel training corpus T composed of documents di, we build a source side topic model over T , which provides a topic distribution p(zn|di) for zn = {1, . . .",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", K } over each document, using Latent Dirichlet Allocation (LDA) (Blei et al., 2003).",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we assign p(zn|di) to be the topic distribution for every sentence xj \u2208 di, thus enforcing topic sharing across sentence pairs in the same document instead of treating them as unrelated.",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computing the topic distribution over a document and assigning it to the sentences serves to tie the sentences together in the document context.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To obtain the lexical probability conditioned on topic distribution, we first compute the expected count ezn (e, f ) of a word pair under topic zn: features in the translation model, and interpolatingthem log-linearly with our other features, thus allow ezn (e, f ) = p(zn|di) cj (e, f ) (1) ing us to discriminatively optimize their weights on di \u2208T xj \u2208di an arbitrary objective function.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Incorporating these features into our hierarchical phrase-based translation system significantly improved translation per where cj (\u00b7) denotes the number of occurrences of the word pair in sentence xj , and then compute: ezn (e, f ) formance, by up to 1 BLEU and 3 TER over a strong Chinese to English baseline.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "pzn (e|f ) = 2.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "e ezn (e, f ) (2)",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "model description. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Thus, we will introduce 2\u00b7K new word translation tables, one for each pzn (e|f ) and pzn (f |e),Lexical Weighting Lexical weighting features es timate the quality of a phrase pair by combining and as many new corresponding features fzn (e|f ), the lexical translation probabilities of the words in the phrase2 (Koehn et al., 2003).",
+                    "sid": 45,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexical conditional probabilities p(e|f ) are obtained with maxi mum likelihood estimates from relative frequencies 2 For hierarchical systems, these correspond to translation.",
+                    "sid": 46,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "fzn (f |e).",
+                    "sid": 47,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The actual feature values we compute will depend on the topic distribution of the document we are translating.",
+                    "sid": 48,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a test document V , we infer topic assignments on V , p(zn|V ), keeping the topics found from T fixed.",
+                    "sid": 49,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature value then becomesfzn (e|f ) = \u2212 log {pzn (e|f ) \u00b7 p(zn|V )}, a combi topic distribution of the sentence from which we are extracting the phrase.",
+                    "sid": 50,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To optimize the weights of these features we combine them in our linear model with the other features when computing the model score for each phrase pair3: are learning how useful knowledge of the topic distribution is, i.e., f1 := p(arg maxzn (p(zn |V ))(e|f ) \u00b7 p(arg maxzn (p(zn|V ))|V ).",
+                    "sid": 51,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using F1, if we restrict our topics to have a one- to-one mapping with genre/collection4 we see that our method fully recovers Chiang (2011).",
+                    "sid": 52,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03bbphp(e, f ) p + \u03bbzn fzn (e|f ) zn (3) F1 is appropriate for cross-domain adaptation unadapted features adapted features when we have advance knowledge that the distribu tion of the tuning data will match the test data, as in Combining the topic conditioned word translation table pzn (e|f ) computed from the training corpus with the topic distribution p(zn|V ) of the test sen tence being translated provides a probability on how relevant that translation table is to the sentence.",
+                    "sid": 53,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This allows us to bias the translation toward the topic of the sentence.",
+                    "sid": 54,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if topic k is dominant in T , pk (e|f ) may be quite large, but if p(k|V ) is very small, then we should steer away from this phrase pair and select a competing phrase pair which may have a lower probability in T , but which is more relevant to the test sentence at hand.",
+                    "sid": 55,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In many cases, document delineations may not be readily available for the training corpus.",
+                    "sid": 56,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, a document may be too broad, covering too many disparate topics, to effectively bias the weights on a phrase level.",
+                    "sid": 57,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this case, we also propose a local LDA model (LTM), which treats each sentence as a separate document.",
+                    "sid": 58,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Chiang et al.",
+                    "sid": 59,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) has to explicitly smooth the resulting ps(e|f ), since many word pairs will be unseen for a given domain s, we are already performing an implicit form of smoothing (when computing the expected counts), since each document has a distribution over all topics, and therefore we have some probability of observing each word pair in every topic.",
+                    "sid": 60,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature Representation After obtaining the topic conditional features, there are two ways to present them to the model.",
+                    "sid": 61,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They could answer the question F1: What is the probability under topic 1, topic 2, etc., or F2: What is the probability under the most probable topic, second most, etc. A model using F1 learns whether a specific topic is useful for translation, i.e., feature f1 would be f1 := pz=1(e|f ) \u00b7 p(z = 1|V ).",
+                    "sid": 62,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With F2, we Chiang (2011), where they tune and test on web.",
+                    "sid": 63,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, we may not know what our data will be, so this will overfit the tuning set.",
+                    "sid": 64,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "F2, however, is intuitively what we want, since we do not want to bias our system toward a specific distribution, but rather learn to utilize information from any topic distribution if it helps us create topic relevant translations.",
+                    "sid": 65,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "F2 is useful for dynamic adaptation, where the adapted feature weight changes based on the source sentence.",
+                    "sid": 66,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, F2 is the approach we use in our work, which allows us to tune our system weights toward having topic information be useful, not toward a specific distribution.",
+                    "sid": 67,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Setup To evaluate our approach, we performed experiments on Chinese to English MT in two settings.",
+                    "sid": 68,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we use the FBIS corpus as our training bitext.",
+                    "sid": 69,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since FBIS has document delineations, we compare local topic modeling (LTM) with modeling at the document level (GTM).",
+                    "sid": 70,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second setting uses the non-UN and non-HK Hansards portions of the NIST training corpora with LTM only.",
+                    "sid": 71,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 summarizes the data statistics.",
+                    "sid": 72,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For both settings, the data were lowercased, tokenized and aligned using GIZA++ (Och and Ney, 2003) to obtain bidirectional alignments, which were symmetrized using the grow-diag-final-and method (Koehn et al., 2003).",
+                    "sid": 73,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Chinese data were segmented using the Stanford segmenter.",
+                    "sid": 74,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained a trigram LM on the English side of the corpus with an additional 150M words randomly selected from the non- NYT and non-LAT portions of the Gigaword v4 corpus using modified KneserNey smoothing (Chen and Goodman, 1996).",
+                    "sid": 75,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used cdec (Dyer et al., 4 3 The unadapted lexical weight p(e|f ) is included in the.",
+                    "sid": 76,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By having as many topics as genres/collections and settingp(zn |di ) to 1 for every sentence in the collection and 0 to ev Corpus Sentences Tokens E n Z h F B I S N I S T 2 6 9 K 1 . 6 M 1 0 . 3 M 4 4 . 4 M 7.",
+                    "sid": 77,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 M 40 .4 M Table 1: Corpus statistics 2010) as our decoder, and tuned the parameters of the system to optimize BLEU (Papineni et al., 2002) on the NIST MT06 tuning corpus using the Margin Infused Relaxed Algorithm (MIRA) (Crammer et al., 2006; Eidelman, 2012).",
+                    "sid": 78,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Topic modeling was performed with Mallet (Mccallum, 2002), a standard implementation of LDA, using a Chinese stoplist and setting the per-document Dirichlet parameter \u03b1 = 0.01.",
+                    "sid": 79,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This setting of was chosen to encourage sparse topic assignments, which make induced subdomains consistent within a document.",
+                    "sid": 80,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results Results for both settings are shown in Table 2.",
+                    "sid": 81,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "GTM models the latent topics at the document level, while LTM models each sentence as a separate document.",
+                    "sid": 82,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To evaluate the effect topic granularity would have on translation, we varied the number of latent topics in each model to be 5, 10, and 20.",
+                    "sid": 83,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On FBIS, we can see that both models achieve moderate but consistent gains over the baseline on both BLEU and TER.",
+                    "sid": 84,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best model, LTM10, achieves a gain of about 0.5 and 0.6 BLEU and 2 TER.",
+                    "sid": 85,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the performance on BLEU for both the 20 topic models LTM20 and GTM20 is suboptimal, the TER improvement is better.",
+                    "sid": 86,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, the difference in translation quality between capturing document coherence in GTM and modeling purely on the sentence level is not substantial.5 In fact, the opposite is true, with the LTM models achieving better performance.6 On the NIST corpus, LTM10 again achieves the best gain of approximately 1 BLEU and up to 3 TER.",
+                    "sid": 87,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LTM performs on par with or better than GTM, and provides significant gains even in the NIST data setting, showing that this method can be effectively applied directly on the sentence level to large training 5 An avenue of future work would condition the sentence topic distribution on a document distribution over topics (Teh et al., 2006).",
+                    "sid": 88,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 As an empirical validation of our earlier intuition regarding.",
+                    "sid": 89,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "feature representation, presenting the features in the form of F1 caused the performance to remain virtually unchanged from the baseline model.",
+                    "sid": 90,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2: Performance using FBIS training corpus (top) and NIST corpus (bottom).",
+                    "sid": 91,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Improvements are significant at the p <0.05 level, except where indicated (ns ).",
+                    "sid": 92,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "corpora which have no document markings.",
+                    "sid": 93,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on the diversity of training corpus, a varying number of underlying topics may be appropriate.",
+                    "sid": 94,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in both settings, 10 topics performed best.",
+                    "sid": 95,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion and. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Conclusion Applying SMT to new domains requires techniques to inform our algorithms how best to adapt.",
+                    "sid": 96,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper extended the usual notion of domains to finer- grained topic distributions induced in an unsupervised fashion.",
+                    "sid": 97,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that incorporating lexical weighting features conditioned on soft domain membership directly into our model is an effective strategy for dynamically biasing SMT towards relevant translations, as evidenced by significant performance gains.",
+                    "sid": 98,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This method presents several advantages over existing approaches.",
+                    "sid": 99,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can construct a topic model once on the training data, and use it infer topics on any test set to adapt the translation model.",
+                    "sid": 100,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can also incorporate large quantities of additional data (whether parallel or not) in the source language to infer better topics without relying on collection or genre annotations.",
+                    "sid": 101,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Multilingual topic models (BoydGraber and Resnik, 2010) would provide a technique to use data from multiple languages to ensure consistent topics.",
+                    "sid": 102,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "Vladimir Eidelman is supported by a National Defense Science and Engineering Graduate Fellowship.",
+                    "sid": 103,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was also supported in part by NSF grant #1018625, ARL Cooperative Agreement W911NF09-20072, and by the BOLT and GALE programs of the Defense Advanced Research Projects Agency, Contracts HR001112-C-0015 and HR001106-2001, respectively.",
+                    "sid": 104,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings, conclusions, or recommendations expressed are the authors\u2019 and do not necessarily reflect those of the sponsors.",
+                    "sid": 105,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

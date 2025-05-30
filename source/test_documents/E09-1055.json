@@ -1,0 +1,1565 @@
+{
+    "ID": "E09-1055",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Treebank Grammar Techniques for Non-Projective Dependency Parsing",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An open problem in dependency parsing is the accurate and efficient treatment of non-projective structures.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose to attack this problem using chart-parsing algorithms developed for mildly contextsensitive grammar formalisms.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we provide two key tools for this approach.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we show how to reduce nonprojective dependency parsing to parsing with Linear Context-Free Rewriting Systems (LCFRS), by presenting a technique for extracting LCFRS from dependency treebanks.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For efficient parsing, the extracted grammars need to be transformed in order to minimize the number of nonterminal symbols per production.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our second contribution is an algorithm that computes this transformation for a large, empirically relevant class of grammars.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Dependency parsing is the task of predicting the most probable dependency structure for a given sentence.",
+                    "sid": 7,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of the key choices in dependency parsing is about the class of candidate structures for this prediction.",
+                    "sid": 8,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many parsers are confined to projective structures, in which the yield of a syntactic head is required to be continuous.",
+                    "sid": 9,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A major benefit of this choice is computational efficiency: an exhaustive search over all projective structures can be done in cubic, greedy parsing in linear time (Eisner, 1996; Nivre, 2003).",
+                    "sid": 10,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A major drawback of the restriction to projective dependency structures is a potential loss in accuracy.",
+                    "sid": 11,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, around 23% of the analyses in the Prague Dependency Treebank of Czech (Haji\u02c7c et al., 2001) are nonprojective, and for German and Dutch treebanks, the proportion of non-projective structures is even higher (Havelka, 2007).",
+                    "sid": 12,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem of non-projective dependency parsing under the joint requirement of accuracy and efficiency has only recently been addressed in the literature.",
+                    "sid": 13,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some authors propose to solve it by techniques for recovering non-projectivity from the output of a projective parser in a post-processing step (Hall and Nov\u00e1k, 2005; Nivre and Nilsson, 2005), others extend projective parsers by heuristics that allow at least certain non-projective constructions to be parsed (Attardi, 2006; Nivre, 2007).",
+                    "sid": 14,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McDonald et al. (2005) formulate dependency parsing as the search for the most probable spanning tree over the full set of all possible dependencies.",
+                    "sid": 15,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this approach is limited to probability models with strong independence assumptions.",
+                    "sid": 16,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exhaustive nonprojective dependency parsing with more powerful models is intractable (McDonald and Satta, 2007), and one has to resort to approximation algorithms (McDonald and Pereira, 2006).",
+                    "sid": 17,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we propose to attack non-projective dependency parsing in a principled way, using polynomial chart-parsing algorithms developed for mildly context-sensitive grammar formalisms.",
+                    "sid": 18,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This proposal is motivated by the observation that most dependency structures required for the analysis of natural language are very nearly projective, differing only minimally from the best projective approximation (Kuhlmann and Nivre, 2006), and by the close link between such \u2018mildly non-projective\u2019 dependency structures on the one hand, and grammar formalisms with mildly context-sensitive generative capacity on the other (Kuhlmann and M\u00f6hl, 2007).",
+                    "sid": 19,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, as pointed out by McDonald and Satta (2007), chart-parsing algorithms are amenable to augmentation by non-local information such as arity constraints and Markovization, and therefore should allow for more predictive statistical models than those used by current systems for non-projective dependency parsing.",
+                    "sid": 20,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, mildly non-projective dependency parsing promises to be both efficient and accurate.",
+                    "sid": 21,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Contributions In this paper, we contribute two key tools for making the mildly context-sensitive approach to accurate and efficient non-projective dependency parsing work.",
+                    "sid": 22,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we extend the standard technique for extracting context-free grammars from phrase-structure treebanks (Charniak, 1996) to mildly context-sensitive grammars and dependency treebanks.",
+                    "sid": 23,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More specifically, we show how to extract, from a given dependency treebank, a lexicalized Linear Context-Free Rewriting System (LCFRS) whose derivations capture the dependency analyses in the treebank in the same way as the derivations of a context-free treebank grammar capture phrasestructure analyses.",
+                    "sid": 24,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our technique works for arbitrary, even non-projective dependency treebanks, and essentially reduces non-projective dependency to parsing with LCFRS.",
+                    "sid": 25,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This problem can be solved using standard chart-parsing techniques.",
+                    "sid": 26,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our extraction technique yields a grammar whose parsing complexity is polynomial in the length of the sentence, but exponential in both a measure of the non-projectivity of the treebank and the maximal number of dependents per word, reflected as the rank of the extracted LCFRS.",
+                    "sid": 27,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the number of highly non-projective dependency structures is negligible for practical applications (Kuhlmann and Nivre, 2006), the rank cannot easily be bounded.",
+                    "sid": 28,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we present an algorithm that transforms the extracted grammar into a normal form that has rank 2, and thus can be parsed more efficiently.",
+                    "sid": 29,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This contribution is important even independently of the extraction procedure: While it is known that a rank-2 normal form of LCFRS does not exist in the general case (Rambow and Satta, 1999), our algorithm succeeds for a large and empirically relevant class of grammars.",
+                    "sid": 30,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 preliminaries",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We start by introducing dependency trees and Linear Context-Free Rewriting Systems (LCFRS).",
+                    "sid": 31,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Throughout the paper, for positive integers i and j, we write [i, j ] for the interval { k I i < k < j }, and use [n] as a shorthand for [1, n].",
+                    "sid": 32,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dependency parsing is the task to assign dependency structures to a given sentence w. For the purposes of this paper, dependency structures are edge-labelled trees.",
+                    "sid": 33,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More formally, let w be a sentence, understood as a sequence of tokens over some given alphabet T , and let L be an alphabet of edge labels.",
+                    "sid": 34,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A dependency tree for w is a construct D = (w, E, k), where E forms a rooted tree (in the standard graph-theoretic sense) on the set [IwI], and k is a total function that assigns every edge in E a label in L. Each node of D represents a (position of a) token in w. Example 1 Figure 2 shows a dependency tree for the sentence A hearing is scheduled on the issue today, which consists of 8 tokens and the edges { (2, 1), (2, 5), (3, 2), (3, 4), (4, 8), (5, 7), (7, 6) }.",
+                    "sid": 35,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The edges are labelled with syntactic functions such as sbj for \u2018subject\u2019.",
+                    "sid": 36,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The root node is marked by a dotted line.",
+                    "sid": 37,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2751 Let u be a node of a dependency tree D. A node u' is a descendant of u, if there is a (possibly empty) path from u to u'.",
+                    "sid": 38,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A block of u is a maximal interval of descendants of u.",
+                    "sid": 39,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of blocks of u is called the block-degree of u.",
+                    "sid": 40,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The blockdegree of a dependency tree is the maximum among the block-degrees of its nodes.",
+                    "sid": 41,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A dependency tree is projective, if its block-degree is 1.",
+                    "sid": 42,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Example 2 The tree shown in Figure 2 is not projective: both node 2 (hearing) and node 4 (scheduled) have block-degree 2.",
+                    "sid": 43,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their blocks are { 2 }, {5, 6, 7 } and { 4 }, { 8 }, respectively.",
+                    "sid": 44,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear Context-Free Rewriting Systems (LCFRS) have been introduced as a generalization of several mildly context-sensitive grammar formalisms.",
+                    "sid": 45,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we use the standard definition of LCFRS (Vijay-Shanker et al., 1987) and only fix our notation; for a more thorough discussion of this formalism, we refer to the literature.",
+                    "sid": 46,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let G be an LCFRS.",
+                    "sid": 47,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that each nonterminal symbol A of G comes with a positive integer called the fan-out of A, and that a production p of G has the form where A, A1, ... , Ar are nonterminals with fan-out f, f1, ... , fr, respectively, g is a function symbol, and the equation to the right of the semicolon specifies the semantics of g. For each i E [r], xi is an fi-tuple of variables, and a\ufffd = (a1, ... , af ) is a tuple of strings over the variables on the left-hand side of the equation and the alphabet of terminal symbols in which each variable appears exactly once.",
+                    "sid": 48,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The production p is said to have rank r, fan-out f , and length Ia1I + \u2022 \u2022 \u2022 + Iaf I + (f \u20141).",
+                    "sid": 49,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 grammar extraction",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We now explain how to extract an LCFRS from a dependency treebank, in very much the same way as a context-free grammar can be extracted from a phrase-structure treebank (Charniak, 1996).",
+                    "sid": 50,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A simple way to induce a context-free grammar from a phrase-structure treebank is to read off the productions of the grammar from the trees.",
+                    "sid": 51,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will specify a procedure for extracting, from a given dependency treebank, a lexicalized LCFRS G that is adequate in the sense that for every analysis D of a sentence w in the treebank, there is a derivation tree of G that is isomorphic to D, meaning that it becomes equal to D after a suitable renaming and relabelling of nodes, and has w as its derived string.",
+                    "sid": 52,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, a derivation tree of an LCFRS G is an ordered tree such that each node u is labelled with a production p of G, the number of children of u equals the rank r of p, and for each i E [r], the ith child of u is labelled with a production that has as its left-hand side the ith nonterminal on the right-hand side of p. The basic idea behind our extraction procedure is that, in order to represent the compositional structure of a possibly non-projective dependency tree, one needs to represent the decomposition and relative order not of subtrees, but of blocks of subtrees (Kuhlmann and M\u00f6hl, 2007).",
+                    "sid": 53,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce some terminology.",
+                    "sid": 54,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A component of a node u in a dependency tree is either a block B of some child u' of u, or the singleton interval that contains u; this interval will represent the position in the string that is occupied by the lexical item corresponding to u.",
+                    "sid": 55,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We say that u' contributes B, and that u contributes [u, u] to u.",
+                    "sid": 56,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that the number of components that u' contributes to its parent u equals the block-degree of u'.",
+                    "sid": 57,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal is to construct for u a production of an LCFRS that specifies how each block of u decomposes into components, and how these components are ordered relative to one another.",
+                    "sid": 58,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These productions will make an adequate LCFRS, in the sense defined above.",
+                    "sid": 59,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The core of our extraction procedure is an efficient algorithm that annotates each node u of a given dependency tree with the list of its components, sorted by their left endpoints.",
+                    "sid": 60,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is helpful to think of this algorithm as of two independent parts, one that annotates each node u with the list of the left endpoints of its components (ANNOTATE-L) and one that annotates the corresponding right endpoints (ANNOTATE-R).",
+                    "sid": 61,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The list of components can then be obtained by zipping the two lists of endpoints together in linear time.",
+                    "sid": 62,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows pseudocode for ANNOTATE-L; the pseudocode for ANNOTATE-R is symmetric.",
+                    "sid": 63,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do a single left-to-right sweep over the nodes of the input tree D. In each step, we annotate all nodes u' that have the current node u as the left endpoint of one of their components.",
+                    "sid": 64,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the sweep is from left to right, this will get us the left endpoints of u' in the desired order.",
+                    "sid": 65,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The nodes that we annotate are the nodes u' on the path between u and the least common ancestor (lca) b of u and its predecessor, or the path from the root node to u, in case that u is the leftmost node of D. Example 3 For the dependency tree in Figure 2, ANNOTATE-L constructs the following lists left[u] of left endpoints, for u = 1, ... , 8: 1, 1 .",
+                    "sid": 66,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 .",
+                    "sid": 67,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5, 1 .",
+                    "sid": 68,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 .",
+                    "sid": 69,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 .",
+                    "sid": 70,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 .",
+                    "sid": 71,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8, 4 .",
+                    "sid": 72,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8, 5 .",
+                    "sid": 73,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6, 6, 6 .",
+                    "sid": 74,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7, 8 The following Lemma establishes the correctness of the algorithm: Lemma 1 Let D be a dependency tree, and let u and u' be nodes of D. Let b be the least common ancestor of u and its predecessor, or the root node in case that u is the leftmost node of D. Then u is the left endpoint of a component of u' if and only if u' lies on the path from b to u.",
+                    "sid": 75,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2751 PROOF It is clear that u' must be an ancestor of u.",
+                    "sid": 76,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If u is the leftmost node of D, then u is the left endpoint of the leftmost component of all of its ancestors.",
+                    "sid": 77,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now suppose that u is not the leftmost node of D, and let u\ufffd be the predecessor of u.",
+                    "sid": 78,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Distinguish three cases: If u' is not an ancestor of u, then u\ufffd does not belong to any component of u'; therefore, u is the left endpoint of a component of u'.",
+                    "sid": 79,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If u' is an ancestor of u\ufffd but u' # b, then u\ufffd and u belong to the same component of u'; therefore, u is not the left endpoint of this component.",
+                    "sid": 80,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, if u' = b, then u\ufffd and u belong to different components of u'; therefore, u is the left endpoint of the component it belongs to.",
+                    "sid": 81,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 We now turn to an analysis of the runtime of the algorithm.",
+                    "sid": 82,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let n be the number of components of D. It is not hard to imagine an algorithm that performs the annotation task in time O.n log n/: such an algorithm could construct the components for a given node u by essentially merging the list of components of the children of u into a new sorted list.",
+                    "sid": 83,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, our algorithm takes time O.n/.",
+                    "sid": 84,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The crucial part of the analysis is the assignment in line 6, which computes the least common ancestor of u and its predecessor.",
+                    "sid": 85,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using markers for the path from the root node to u, it is straightforward to implement this assignment in time O.17r1/, where 7r is the path b \u2022 \u2022 \u2022 u.",
+                    "sid": 86,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Now notice that, by our correctness argument, line 8 of the algorithm is executed exactly n times.",
+                    "sid": 87,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, the sum over the lengths of all the paths 7r, and hence the amortized time of computing all the least common ancestors in line 6, is O.n/.",
+                    "sid": 88,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This runtime complexity is optimal for the task we are solving.",
+                    "sid": 89,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We now describe how to extend the annotation algorithm into a procedure that extracts an LCFRS from a given dependency tree D. The basic idea is to transform the list of components of each node u of D into a production p. This transformation will only rename and relabel nodes, and therefore yield an adequate derivation tree.",
+                    "sid": 90,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the construction of the production, we actually need an extended version of the annotation algorithm, in which each component is annotated with the node that contributed it.",
+                    "sid": 91,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This extension is straightforward, and does not affect the linear runtime complexity.",
+                    "sid": 92,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let D be a dependency tree for a sentence w. Consider a single node u of D, and assume that u has r children, and that the block-degree of u is f .",
+                    "sid": 93,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We construct for u a production p with rank r and fan-out f .",
+                    "sid": 94,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For convenience, let us order the children of u, say by their leftmost descendants, and let us write ui for the ith child of u according to this order, and fi for the block-degree of ui, where L is the label of the incoming edge of u (or the special label root in case that u is the root node of D) and for each i E \u0152r\u2022: Li is the label of the incoming edge of ui; xi is a fi-tuple of variables of the form xi,j , where j E \u0152fi\u2022; and \u02db\ufffd is an f -tuple that is constructed in a single left-toright sweep over the list of components computed for u as follows.",
+                    "sid": 95,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let k E \u0152fi\u2022 be a pointer to a current segment of a; initially, k = 1.",
+                    "sid": 96,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the current component is not adjacent (as an interval) to the previous component, we increase k by one.",
+                    "sid": 97,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the current component is contributed by the child ui, i E \u0152r\u2022, we add the variable xi,j to \u02dbk, where j is the number of times we have seen a component contributed by ui during the sweep.",
+                    "sid": 98,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that j E \u0152fi\u2022.",
+                    "sid": 99,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the current component is the (unique) component contributed by u, we add the token corresponding to u to \u02dbk.",
+                    "sid": 100,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, we obtain a complete specification of how the blocks of u (represented by the segments of the tuple a) decompose into the components of u, and of the relative order of the components.",
+                    "sid": 101,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an example, Figure 2 shows the productions extracted from the tree above.",
+                    "sid": 102,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once we have extracted the grammar for a dependency treebank, we can apply any parsing algorithm for LCFRS to non-projective dependency parsing.",
+                    "sid": 103,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generic chart-parsing algorithm for LCFRS runs in time O.1P 1\u20221w1f.r+1//, where P is the set of productions of the input grammar G, w is the input string, r is the maximal rank, and f is the maximal fan-out of a production in G (Seki et al., 1991).",
+                    "sid": 104,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a grammar G extracted by our technique, the number f equals the maximal block-degree per node.",
+                    "sid": 105,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, without any further modification, we obtain a parsing algorithm that is polynomial in the length of the sentence, but exponential in both the block-degree and the rank.",
+                    "sid": 106,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is clearly unacceptable in practical systems.",
+                    "sid": 107,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relative frequency of analyses with a block-degree > 2 is almost negligible (Havelka, 2007); the bigger obstacle in applying the treebank grammar is the rank of the resulting LCFRS.",
+                    "sid": 108,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, in the remainder of the paper, we present an algorithm that can transform the productions of the input grammar G into an equivalent set of productions with rank at most 2, while preserving the fan-out.",
+                    "sid": 109,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This transformation, if it succeeds, yields a parsing algorithm that runs in time O.1P 1 \u2022 r \u2022 1w13f /.",
+                    "sid": 110,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 adjacency",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In this section we discuss a method for factorizing an LCFRS into productions of rank 2.",
+                    "sid": 111,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before starting, we get rid of the \u2018easy\u2019 cases.",
+                    "sid": 112,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A production p is connected if any two strings ai, aj in p\u2019s definition share at least one variable referring to the same nonterminal.",
+                    "sid": 113,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not difficult to see that, when p is not connected, we can always split it into new productions of lower rank.",
+                    "sid": 114,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, throughout this section we assume that LCFRS only have connected productions.",
+                    "sid": 115,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can split p into its connected components using standard methods for finding the strongly connected components of an undirected graph.",
+                    "sid": 116,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be implemented in time O(r \u2022 f ), where r and f are the rank and the fan-out of p, respectively.",
+                    "sid": 117,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let p be a production with length n and fan-out f , associated with function a g. The set of positions of p is the set [n].",
+                    "sid": 118,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Informally, each position represents a variable or a lexical element in one of the components of the definition of g, or else a \u2018gap\u2019 between two of these components.",
+                    "sid": 119,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Recall that n also accounts for the f - 1 gaps in the body of g.) Example 4 The set of positions of the production for hearing in Figure 2 is [4]: 1 for variable x1, 2 for hearing, 3 for the gap, and 4 for y1.",
+                    "sid": 120,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2751 Let i1, j1, i2, j2 2 [n].",
+                    "sid": 121,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An interval [i1, j1] is adjacent to an interval [i2, j2] if either j1 D i2 - 1 (left-adjacent) or i1 D j2 C 1 (right-adjacent).",
+                    "sid": 122,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A multi-interval, or m-interval for short, is a set v of pairwise disjoint intervals such that no interval in v is adjacent to any other interval in v. The fan-out of v, written f (v), is defined as jvj.",
+                    "sid": 123,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use m-intervals to represent the nonterminals and the lexical element heading p. The ith nonterminal on the right-hand side of p is represented by the m-interval obtained by collecting all the positions of p that represent a variable from the ith argument of g. The head of p is represented by the m-interval containing the associated position.",
+                    "sid": 124,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that all these m-intervals are pairwise disjoint.",
+                    "sid": 125,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Example 5 Consider the production for is in Figure 2.",
+                    "sid": 126,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The set of positions is [5].",
+                    "sid": 127,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first nonterminal is represented by the m-interval f [1, 1], [4, 4] g, the second nonterminal by f [3, 3], [5, 5] g, and the lexical head by f [2, 2] g. \u2751 For disjoint m-intervals v1, v2, we say that v1 is adjacent to v2, denoted by v1 ! v2, if for every interval I1 2 v1, there is an interval I2 2 v2 such that I1 is adjacent to I2.",
+                    "sid": 128,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adjacency is not symmetric: if v1 D f [1, 1], [4, 4] g and v2 D f [2, 2] g, then v2 ! v1, but not vice versa.",
+                    "sid": 129,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let V be some collection of pairwise disjoint m-intervals representing p as above.",
+                    "sid": 130,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The adjacency graph associated with p is the graph G D (V, !G) whose vertices are the m-intervals in V , and whose edges !G are defined by restricting the adjacency relation ! to the set V .",
+                    "sid": 131,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For m-intervals v1, v2 2 V , the merger of v1 and v2, denoted by v1 \u02da v2, is the (uniquely determined) m-interval whose span is the union of the spans of v1 and v2.",
+                    "sid": 132,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an example, if v1 D f[1, 1], [3, 3] g and v2 D f [2, 2] g, then v1 \u02da v2 D f [1, 3] g. Notice that the way in which we defined m-intervals ensures that a merging operation collapses all adjacent intervals.",
+                    "sid": 133,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proof of the following lemma is straightforward and omitted for space reasons: Lemma 2 If v1 ! v2, then f (v1 \u02da v2) < f(v2).",
+                    "sid": 134,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let G D (V, !G) be some adjacency graph, and let v1 !G v2.",
+                    "sid": 135,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can derive a new adjacency graph from G by merging v1 and v2.",
+                    "sid": 136,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting graph G' has vertices V ' D V \u2014 f v1, v2 g [ f v1 \u02da v2 g and set of edges !G0 obtained by restricting the adjacency relation ! to V '.",
+                    "sid": 137,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We denote the derive relation as G ).v1;v2/ G'.",
+                    "sid": 138,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Informally, if G represents some LCFRS production p and v1, v2 represent nonterminals A1, A2, then G' represents a production p' obtained from p by replacing A1, A2 with a fresh nonterminal A.",
+                    "sid": 139,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A new production p'' can also be constructed, expanding A into A1, A2, so that p', p'' together will be equivalent to p. Furthermore, p' has a rank smaller than the rank of p and, from Lemma 2, A does not increase the overall fan-out of the grammar.",
+                    "sid": 140,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to simplify the notation, we adopt the following convention.",
+                    "sid": 141,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let G ).v1;v2/ G' and let v !G v1, v \u00a4 v2.",
+                    "sid": 142,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If v !G0 v1 \u02da v2, then edges (v, v1) and (v, v1 \u02da v2) will be identified, and we say that G' inherits (v, v1 \u02da v2) from G. If v 6!G0 v1 \u02dav2, then we say that (v, v1) does not survive the derive step.",
+                    "sid": 143,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This convention is used for all edges incident upon v1 or v2.",
+                    "sid": 144,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our factorization algorithm is reported in Figure 3.",
+                    "sid": 145,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We start from an adjacency graph representing some LCFRS production that needs to be factorized.",
+                    "sid": 146,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We arbitrarily choose an edge e of the graph, and push it into a set R, in order to keep a record of the candidate factorization.",
+                    "sid": 147,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then merge the two m-intervals incident to e, and we recompute the adjacency relation for the new set of vertices.",
+                    "sid": 148,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We iterate until the resulting graph has an empty edge set.",
+                    "sid": 149,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the final graph has one one vertex, then we have managed to factorize our production into a set of productions with rank at most two that can be computed from R. Example 6 Let V D f v1, v2, v3 g with v1 D f [4, 4] g, v2 D f [1, 1], [3, 3] g, and v3 D f [2, 2], [5, 5] g. Then !G D f (v1, v2) g. After merging v1, v2 we have a new graph G with V D f v1 \u02da v2, v3 g and !G D f (v1 \u02da v2, v3) g. We finally merge v1 \u02da v2, v3 resulting in a new graph Gwith V D fv1 \u02da v2 \u02da v3 g and !G D ;.",
+                    "sid": 150,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then accept and stop.",
+                    "sid": 151,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2751 We have already argued that, if the algorithm accepts, then a binary factorization that does not increase the fan-out of the grammar can be built from R. We still need to prove that the algorithm answers consistently on a given input, despite of possibly different choices of edges at line 4.",
+                    "sid": 152,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do this through several intermediate results.",
+                    "sid": 153,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A derivation for an adjacency graph G is a sequence of edges d D he1, ... , eni, n > 1, such that G D G0 and Gi_1 )ei Gi for every i with 1 < i < n. For short, we write G0 )d Gn.",
+                    "sid": 154,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two derivations for G are competing if one is a permutation of the other.",
+                    "sid": 155,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lemma 3 If G )d1 G1 and G )d2 G2 with d1 and d2 competing derivations, then G1 D G2.",
+                    "sid": 156,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROOF We claim that the statement of the lemma holds for jd1j D 2.",
+                    "sid": 157,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To see this, let G )e1 G'1 )e2 G1 and G )e2 G'2 )e1 G2 be valid derivations.",
+                    "sid": 158,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe that G1 and G2 have the same set of vertices.",
+                    "sid": 159,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the edges of G1 and G2 are defined by restricting the adjacency relation to their set of vertices, our claim immediately follows.",
+                    "sid": 160,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The statement of the lemma then follows from the above claim and from the fact that we can always obtain the sequence d2 starting from d1 by repeatedly switching consecutive edges.",
+                    "sid": 161,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 We now consider derivations for the same adjacency graph that are not competing, and show that they always lead to isomorphic adjacency graphs.",
+                    "sid": 162,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two graphs are isomorphic if they become equal after some suitable renaming of the vertices.",
+                    "sid": 163,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lemma 4 The out-degree of G is bounded by 2.",
+                    "sid": 164,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROOF Assume v !G v1 and v !G v2, with v1 \u00a4 v2, and let I 2 v. I must be adjacent to some interval I1 2 v1.",
+                    "sid": 165,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Without loss of generality, assume that I is left-adjacent to I1.",
+                    "sid": 166,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I must also be adjacent to some interval I2 2 v2.",
+                    "sid": 167,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since v1 and v2 are disjoint, I must be right-adjacent to I2.",
+                    "sid": 168,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This implies that I cannot be adjacent to an interval in any other m-interval v0 of G. 0 A vertex v of G such that v --*G v1 and v --*G v2 is called a bifurcation. is no longer adjacent to v2.",
+                    "sid": 169,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2751 The example above shows that, when choosing one of the two outgoing edges in a bifurcation for merging, the other edge might not survive.",
+                    "sid": 170,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, such a choice might lead to distinguishable derivations that are not competing (one derivation has an edge that is not present in the other).",
+                    "sid": 171,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we will see (in the proof of Theorem 1), bifurcations are the only cases in which edges might not survive a merging.",
+                    "sid": 172,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lemma 5 Let v be a bifurcation of G with outgoing edges e1; e2, and let G me1 G1, G =:\ufffde2 G2.",
+                    "sid": 173,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then G1 and G2 are isomorphic.",
+                    "sid": 174,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROOF (SKETCH) Assume e1 has the form v --*G v1 and e2 has the form v --*G v2.",
+                    "sid": 175,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let also VS be the set of vertices shared by G1 and G2.",
+                    "sid": 176,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that the statement holds under the isomorphism mapping v \u00ae v1 and v2 in G1 to v1 and v \u00ae v2 in G2, respectively.",
+                    "sid": 177,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When restricted to VS, the graphs G1 and G2 are equal.",
+                    "sid": 178,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us then consider edges from G1 and G2 involving exactly one vertex in VS. We show that, for v0 E VS, v0 --*G1 v \u00ae v1 if and only if v0 --*G2 v1.",
+                    "sid": 179,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider an arbitrary interval I0 E v0.",
+                    "sid": 180,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If v0 --*G1 v \u00aev1, then I0 must be adjacent to some interval I1 E v \u00ae v1.",
+                    "sid": 181,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If I1 E v1 we are done.",
+                    "sid": 182,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, I1 must be the concatenation of two intervals I1v and I1v1 with I1v E v and I1v1 E v1.",
+                    "sid": 183,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since v --*G2 v2, I1v is also adjacent to some interval in v2.",
+                    "sid": 184,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, v0 and v2 are disjoint.",
+                    "sid": 185,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus I0 must be adjacent to I1v1 E v1.",
+                    "sid": 186,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conversely, if v0 --*G2 v1, then I0 must be adjacent to some interval I1 E v1.",
+                    "sid": 187,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because v0 and v are disjoint, I0 must also be adjacent to some interval in v \u00ae v1.",
+                    "sid": 188,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using very similar arguments, we can conclude that G1 and G2 are isomorphic when restricted to edges with at most one vertex in VS.",
+                    "sid": 189,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we need to consider edges from G1 and G2 that are not incident upon vertices in VS. We show that v \u00ae v1 --*G1 v2 only if v1 --*G2 v \u00ae v2; a similar argument can be used to prove the converse.",
+                    "sid": 190,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider an arbitrary interval I1 E v\u00aev1.",
+                    "sid": 191,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If v \u00ae v1 --*G1 v2, then I1 must be adjacent to some interval I2 E v2.",
+                    "sid": 192,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If I1 E v1 we are done.",
+                    "sid": 193,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, I1 must be the concatenation of two adjacent intervals I1v and I1v1 with I1v E v and I1v1 E v1.",
+                    "sid": 194,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since I1v is also adjacent to some interval I20 E v2 (here I02 might as well be I2), we conclude that I1v1 E v1 is adjacent to the concatenation of I1v and I02, which is indeed an interval in v \u00ae v2.",
+                    "sid": 195,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that our case distinction is exhaustive.",
+                    "sid": 196,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus conclude that v1 --*G2 v \u00ae v2.",
+                    "sid": 197,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A symmetrical argument can be used to show that v2 --*G1 v \u00ae v1 if and only if v \u00ae v2 --*G2 v1, which concludes our proof.",
+                    "sid": 198,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 Theorem 1 Let d1 and d2 be derivations for G, describing two different computations c1 and c2 of the algorithm of Figure 3 on input G. Computation c1 is accepting if and only if c2 is accepting.",
+                    "sid": 199,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PROOF First, we prove the claim that if e is not an edge outgoing from a bifurcation vertex, then in the derive relation G =:\ufffde G0 all of the edges of G but e and its reverse are inherited by G0.",
+                    "sid": 200,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us write e in the form v1 --*G v2.",
+                    "sid": 201,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Obviously, any edge of G not incident upon v1 or v2 will be inherited by G0.",
+                    "sid": 202,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If v --*G v2 for some m-interval v # v1, then every interval I E v is adjacent to some interval in v2.",
+                    "sid": 203,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since v and v1 are disjoint, I will also be adjacent to some interval in v1 \u00ae v2.",
+                    "sid": 204,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we have v --*Gl v1 \u00ae v2.",
+                    "sid": 205,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A similar argument shows that v --*G v1 implies v --*Gl v1 \u00ae v2.",
+                    "sid": 206,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If v2 --*G v for some v # v1, then every interval I E v2 is adjacent to some interval in v. From v1 --*G v2 we also have that each interval I12 E v1 \u00ae v2 is either an interval in v2 or else the concatenation of exactly two intervals I1 E v1 and I2 E v2.",
+                    "sid": 207,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(The interval I2 cannot be adjacent to more than an interval in v1, because v2 --*G v).",
+                    "sid": 208,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both cases I12 is adjacent to some interval in v, and hence v1 \u00ae v2 --*Gl v. This concludes the proof of our claim.",
+                    "sid": 209,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let d1, d2 be as in the statement of the theorem, with G =:\ufffdd1 G1 and G =:\ufffdd2 G2.",
+                    "sid": 210,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If d1 and d2 are competing, then the theorem follows from Lemma 3.",
+                    "sid": 211,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, assume that d1 and d2 are not competing.",
+                    "sid": 212,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From our claim above, some bifurcation vertices must appear in these derivations.",
+                    "sid": 213,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us reorder the edges in d1 in such a way that edges outgoing from a bifurcation vertex are processed last and in some canonical order.",
+                    "sid": 214,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting derivation has the form dd01, where d01 involves the processing of all bifurcation vertices.",
+                    "sid": 215,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can also reorder edges in d2 to obtain dd02, where d02 involves the processing of all bifurcation vertices in exactly the same order as in di, but with possibly different choices for the outgoing edges.",
+                    "sid": 216,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let G Ed Gd Edi Gi and G Ed Gd Edi G?.",
+                    "sid": 217,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Derivations ddi and d1 are competing.",
+                    "sid": 218,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, by Lemma 3, we have Gi = G1.",
+                    "sid": 219,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, we can conclude that G?",
+                    "sid": 220,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= G2.",
+                    "sid": 221,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since bifurcation vertices in di and in d2 are processed in the same canonical order, from repeated applications of Lemma 5 we have that Gi and G? are isomorphic.",
+                    "sid": 222,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then conclude that G1 and G2 are isomorphic as well.",
+                    "sid": 223,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The statement of the theorem follows immediately.",
+                    "sid": 224,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 We now turn to a computational analysis of the algorithm of Figure 3.",
+                    "sid": 225,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let G be the representation of an LCFRS production p with rank r. G has r vertices and, following Lemma 4, O(r) edges.",
+                    "sid": 226,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let v be an m-interval of G with fan-out fv.",
+                    "sid": 227,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The incoming and outgoing edges for v can be detected in time O(fv) by inspecting the 2 \u2022 fv endpoints of v. Thus we can compute G in time O(IpI).",
+                    "sid": 228,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of iterations of the while cycle in the algorithm is bounded by r, since at each iteration one vertex of G is removed.",
+                    "sid": 229,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider now an iteration in which m-intervals v1 and v2 have been chosen for merging, with v1 --*G v2.",
+                    "sid": 230,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(These mintervals might be associated with nonterminals in the right-hand side of p, or else might have been obtained as the result of previous merging operations.)",
+                    "sid": 231,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, we can compute the incoming and outgoing edges of v1 \u00ae v2 in time proportional to the number of endpoints of such an m-interval.",
+                    "sid": 232,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By Lemma 2, this number is bounded by O(f ), f the fan-out of the grammar.",
+                    "sid": 233,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus conclude that a run of the algorithm on G takes time O(r \u2022 f ).",
+                    "sid": 234,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 discussion",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We have shown how to extract mildly contextsensitive grammars from dependency treebanks, and presented an efficient algorithm that attempts to convert these grammars into an efficiently parseable binary form.",
+                    "sid": 235,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to previous results (Rambow and Satta, 1999), we know that this is not always possible.",
+                    "sid": 236,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, our algorithm may fail even in cases where a binarization exists\u2014our notion of adjacency is not strong enough to capture all binarizable cases.",
+                    "sid": 237,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This raises the question about the practical relevance of our technique.",
+                    "sid": 238,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to get at least a preliminary answer to this question, we extracted LCFRS productions from the data used in the 2006 CoNLL shared task on data-driven dependency parsing (Buchholz and Marsi, 2006), and evaluated how large a portion of these productions could be binarized using our algorithm.",
+                    "sid": 239,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are given in Table 1.",
+                    "sid": 240,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since it is easy to see that our algorithm always succeeds on context-free productions (productions where each nonterminal has fan-out 1), we evaluated our algorithm on the 102 687 productions with a higher fan-out.",
+                    "sid": 241,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Out of these, only 24 (0.02%) could not be binarized using our technique.",
+                    "sid": 242,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take this number as an indicator for the usefulness of our result.",
+                    "sid": 243,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is interesting to compare our approach with techniques for well-nested dependency trees (Kuhlmann and Nivre, 2006).",
+                    "sid": 244,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Well-nestedness is a property that implies the binarizability of the extracted grammar; however, the classes of wellnested trees and those whose corresponding productions can be binarized using our algorithm are incomparable\u2014in particular, there are well-nested productions that cannot be binarized in our framework.",
+                    "sid": 245,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nevertheless, the coverage of our technique is actually higher than that of an approach that relies on well-nestedness, at least on the CoNLL 2006 data (see again Table 1).",
+                    "sid": 246,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We see our results as promising first steps in a thorough exploration of the connections between non-projective and mildly context-sensitive parsing.",
+                    "sid": 247,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The obvious next step is the evaluation of our technique in the context of an actual parser.",
+                    "sid": 248,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a final remark, we would like to point out that an alternative technique for efficient non-projective dependency parsing, developed by G\u00f3mez Rodr\u00edguez et al. independently of this work, is presented elsewhere in this volume.",
+                    "sid": 249,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Acknowledgements We would like to thank Ryan McDonald, Joakim Nivre, and the anonymous reviewers for useful comments on drafts of this paper, and Carlos G\u00f3mez Rodr\u00edguez and David J. Weir for making a preliminary version of their paper available to us.",
+                    "sid": 250,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The work of the first author was funded by the Swedish Research Council.",
+                    "sid": 251,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second author was partially supported by MIUR under project PRIN No.",
+                    "sid": 252,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2007TJNZRE_002.",
+                    "sid": 253,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

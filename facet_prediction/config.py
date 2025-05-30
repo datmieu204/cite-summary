@@ -1,0 +1,16 @@
+import os
+
+ROOT_DIR = os.path.dirname(os.path.abspath(os.curdir))
+
+DEBUG = False
+
+MISSING_DOCUMENTS = ["P13-2003", "D07-1058", "H05-1035"]
+
+CREATE_TRAIN = True
+CREATE_TEST = True
+
+NUM_IMPORTANT_FEATURES_TEXT = 1000
+NUM_IMPORTANT_FEATURES_SECTION_TEXT = 100
+
+
+

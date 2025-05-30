@@ -1,0 +1,1715 @@
+{
+    "ID": "P12-1016",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "(1) ._}...-ll . When automatically translating from a weakly inflected source language like English to a target language with richer grammatical features such as gender and dual number, the output commonly contains morpho-syntactic agreement errors.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this issue, we present a target-side, class-based agreement model.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Agreement is promoted by scoring a sequence of fine-grained morpho-syntactic classes that are predicted during decoding for each translation hypothesis.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For English-to-Arabic translation, our model yields a +1.04 BLEU average improvement over a state-of-the-art baseline.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model does not require bitext or phrase table annotations and can be easily implemented as a feature in many phrase-based decoders.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Languages vary in the degree to which surface forms reflect grammatical relations.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "English is a weakly inflected language: it has a narrow verbal paradigm, restricted nominal inflection (plurals), and only the vestiges of a case system.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, translation into English\u2014which accounts for much of the machine translation (MT) literature (Lopez, 2008)\u2014often involves some amount of morpho-syntactic dimension- ality reduction.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Less attention has been paid to what happens during translation from English: richer grammatical features such as gender, dual number, and overt case are effectively latent variables that must be inferred during decoding.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the output of Google Translate for the simple English sentence in Fig.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The correct translation is a monotone mapping of the input.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in Arabic, SVO word order requires both gender and number agreement between the subject ._}...-ll \u2018the car\u2019 and verb . \u2018go\u2019.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The MT system selects the correct verb stem, but with masculine inflection.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the translation has the-carsg.def.fem gosg.masc with-speedsg.fem The car goes quickly Figure 1: Ungrammatical Arabic output of Google Translate for the English input The car goes quickly.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The subject should agree with the verb in both gender and number, but the verb has masculine inflection.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For clarity, the Arabic tokens are arranged left-to-right.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the correct semantics, it is ultimately ungrammatical.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper addresses the problem of generating text that conforms to morpho-syntactic agreement rules.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Agreement relations that cross statistical phrase boundaries are not explicitly modeled in most phrase- based MT systems (Avramidis and Koehn, 2008).",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We address this shortcoming with an agreement model that scores sequences of fine-grained morpho- syntactic classes.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, bound morphemes in translation hypotheses are segmented.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, the segments are labeled with classes that encode both syntactic category information (i.e., parts of speech) and grammatical features such as number and gender.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, agreement is promoted by scoring the predicted class sequences with a generative Markov model.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model scores hypotheses during decoding.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike previous models for scoring syntactic relations, our model does not require bitext annotations, phrase table features, or decoder modifications.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model can be implemented using the feature APIs of popular phrase-based decoders such as Moses (Koehn et al., 2007) and Phrasal (Cer et al., 2010).",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Intuition might suggest that the standard n-gram language model (LM) is sufficient to handle agreement phenomena.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, LM statistics are sparse, and they are made sparser by morphological variation.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For English-to-Arabic translation, we achieve a +1.04 BLEU average improvement by tiling our model on top of a large LM.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "146 Proceedings of the 50th Annual Meeting of the Association for Computational Linguistics, pages 146\u2013155, Jeju, Republic of Korea, 814 July 2012.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2012 Association for Computational Linguistics It has also been suggested that this setting requires morphological generation because the bitext may not Pron+Fem+Sg Verb+Masc+3+Pl Prt Conj contain all inflected variants (Minkov et al., 2007; Toutanova et al., 2008; Fraser et al., 2012).",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, using lexical coverage experiments, we show that it there is ample room for translation quality improvements through better selection of forms that already exist in the translation model.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "they write will and",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "a class-based model of agreement",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "2.1 Morpho-syntactic Agreement.",
+                    "sid": 35,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Morpho-syntactic agreement refers to a relationship between two sentence elements a and b that must have at least one matching grammatical feature.1 Agreement relations tend to be defined for particular syntactic configurations such as verb-subject, noun-adjective, and pronoun-antecedent.",
+                    "sid": 36,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In some languages, agreement affects the surface forms of the words.",
+                    "sid": 37,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, from the perspective of generative grammatical theory, the lexicon entry for the Arabic nominal ._}...-ll \u2018the car\u2019 contains a femininegender feature.",
+                    "sid": 38,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When this nominal appears in the sub ject argument position, the verb-subject agreement relationship triggers feminine inflection of the verb.",
+                    "sid": 39,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model treats agreement as a sequence of scored, pairwise relations between adjacent words.",
+                    "sid": 40,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, this assumption excludes some agreement phenomena, but it is sufficient for many common cases.",
+                    "sid": 41,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focus on EnglishArabic translation as an example of a translation direction that expresses substantially more morphological information in the target.",
+                    "sid": 42,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These relations are best captured in a target- side model because they are mostly unobserved (from lexical clues) in the English source.",
+                    "sid": 43,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The agreement model scores sequences of morpho- syntactic word classes, which express grammatical features relevant to agreement.",
+                    "sid": 44,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model has three components: a segmenter, a tagger, and a scorer.",
+                    "sid": 45,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Morphological Segmentation.",
+                    "sid": 46,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Segmentation is a procedure for converting raw surface forms to component morphemes.",
+                    "sid": 47,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In some languages, agreement relations exist between bound morphemes, which are syntactically independent yet phonologically dependent morphemes.",
+                    "sid": 48,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, 1 We use morpho-syntactic and grammatical agreement inter-.",
+                    "sid": 49,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2: Segmentation and tagging of the Arabic token};._....S:...\ufffd_, \u2018and they will write it\u2019.",
+                    "sid": 50,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This token has four seg ments with conflicting grammatical features.",
+                    "sid": 51,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the number feature is singular for the pronominal object and plural for the verb.",
+                    "sid": 52,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model segments the raw token, tags each segment with a morpho-syntactic class (e.g., \u201cPron+Fem+Sg\u201d), and then scores the class sequences.",
+                    "sid": 53,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the single raw token in Fig.",
+                    "sid": 54,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 contains at least four grammatically independent morphemes.",
+                    "sid": 55,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because the morphemes bear conflicting grammatical features and basic parts of speech (POS), we need to segment the token before we can evaluate agreement relations.2 Segmentation is typically applied as a bitext pre- processing step, and there is a rich literature on the effect of different segmentation schemata on translation quality (Koehn and Knight, 2003; Habash and Sadat, 2006; El Kholy and Habash, 2012).",
+                    "sid": 56,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike previous work, we segment each translation hypothesis as it is generated (i.e., during decoding).",
+                    "sid": 57,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This permits greater modeling flexibility.",
+                    "sid": 58,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, it may be useful to count tokens with bound morphemes as a unit during phrase extraction, but to score segmented morphemes separately for agreement.",
+                    "sid": 59,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We treat segmentation as a character-level sequence modeling problem and train a linear-chain conditional random field (CRF) model (Lafferty et al., 2001).",
+                    "sid": 60,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a pre-processing step, we group contiguous non-native characters (e.g., Latin characters in Arabic text).",
+                    "sid": 61,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model assigns four labels: \u2022 I: Continuation of a morpheme \u2022 O: Outside morpheme (whitespace) \u2022 B: Beginning of a morpheme \u2022 F: Non-native character(s) 2 Segmentation also improves translation of compounding languages such as German (Dyer, 2009) and Finnish (Macherey Translation Model e Target sequence of I words f Source sequence of J words a Sequence of K phrase alignments for (e, f ) \u03a0 Permutation of the alignments for target word order e h Sequence of M feature functions \u03bb Sequence of learned weights for the M features H A priority queue of hypotheses Class-based Agreement Model t \u2208 T Set of morpho-syntactic classes s \u2208 S Set of all word segments \u03b8seg Learned weights for the CRF-based segmenter \u03b8tag Learned weights for the CRF-based tagger \u03c6o , \u03c6t CRF potential functions (emission and transition) \u03c4 Sequence of I target-side predicted classes \u03c0 T dimensional (log) prior distribution over classesSet of Classes The tagger assigns morpho syntactic classes, which are coarse POS categories refined with grammatical features such as gender and definiteness.",
+                    "sid": 62,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The coarse categories are the universal POS tag set described by Petrov et al.",
+                    "sid": 63,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012).",
+                    "sid": 64,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More than 25 tree- banks (in 22 languages) can be automatically mapped to this tag set, which includes \u201cNoun\u201d (nominals), \u201cVerb\u201d (verbs), \u201cAdj\u201d (adjectives), and \u201cADP\u201d (pre- and post-positions).",
+                    "sid": 65,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of these treebanks also contain per-token morphological annotations.",
+                    "sid": 66,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is easy to combine the coarse categories with selected grammatical annotations.",
+                    "sid": 67,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "s\u02c6 Sequence of l word segments \u03c3 Model state: a tagged segment (s, t) Figure 3: Notation used in this paper.",
+                    "sid": 68,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The convention eI indicates a subsequence of a length I sequence.",
+                    "sid": 69,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features are indicators for (character, position, label) triples for a five character window and bigram label transition indicators.",
+                    "sid": 70,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This formulation is inspired by the classic \u201cIOB\u201d text chunking model (Ramshaw and Marcus, 1995), which has been previously applied to Chinese segmentation (Peng et al., 2004).",
+                    "sid": 71,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It can be learned from gold-segmented data, generally applies to languages with bound morphemes, and does not require a hand- compiled lexicon.3 Moreover, it has only four labels, so Viterbi decoding is very fast.",
+                    "sid": 72,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We learn the parameters \u03b8seg using a quasi-Newton (QN) procedure with l1 (lasso) regularization (Andrew and Gao, 2007).",
+                    "sid": 73,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.3 Morpho-syntactic Tagging.",
+                    "sid": 74,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After segmentation, we tag each segment with a fine- grained morpho-syntactic class.",
+                    "sid": 75,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this task we also train a standard CRF model on full sentences with gold classes and segmentation.",
+                    "sid": 76,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the same QN procedure as before to obtain \u03b8tag . A translation derivation is a tuple (e, f, a) where e is the target, f is the source, and a is an alignment between the two.",
+                    "sid": 77,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The CRF tagging model predicts a target-side class sequence \u03c4 \u2217 I \u03c4 \u2217 = arg max ) \u03b8tag \u00b7 {\u03c6o(\u03c4i, i, e) + \u03c6t(\u03c4i, \u03c4i\u22121)} i=1 where further notation is defined in Fig.",
+                    "sid": 78,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 79,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "mada, the standard tool for arabic segmentation (habash. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "For Arabic, we used the coarse POS tags plus definiteness and the so-called phi features (gender, number, and person).4 For example, ._}...-ll \u2018the car\u2019 would be tagged \u201cNoun+Def+Sg+Fem\u201d.",
+                    "sid": 80,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We restricted the set of classes to observed combinations in the training data, so the model implicitly disallows incoherent classes like \u201cVerb+Def\u201d.",
+                    "sid": 81,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Features The tagging CRF includes emission features \u03c6o that indicate a class \u03c4i appearing with various orthographic characteristics of the word sequence being tagged.",
+                    "sid": 82,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In typical CRF inference, the entire observation sequence is available throughout inference, so these features can be scored on observed words in an arbitrary neighborhood around the current position i. However, we conduct CRF inference in tandem with the translation decoding procedure (\u00a73), creating an environment in which subsequent words of the observation are not available; the MT system has yet to generate the rest of the translation when the tagging features for a position are scored.",
+                    "sid": 83,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we only define emission features on the observed words at the current and previous positions of a class: \u03c6o(\u03c4i, ei, ei\u22121).",
+                    "sid": 84,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The emission features are word types, prefixes and suffixes of up to three characters, and indicators for digits and punctuation.",
+                    "sid": 85,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "None of these features are language specific.",
+                    "sid": 86,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bigram transition features \u03c6t encode local agreement relations.",
+                    "sid": 87,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the model learns that the Arabic class \u201cNoun+Fem\u201d is followed by \u201cAdj+Fem\u201d and not \u201cAdj+Masc\u201d (noun-adjective gender agreement).",
+                    "sid": 88,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.4 Word Class Sequence Scoring.",
+                    "sid": 89,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The CRF tagger model defines a conditional distribution p(\u03c4 |e; \u03b8tag ) for a class sequence \u03c4 given a sentence e and model parameters \u03b8tag . That is, the sample space is over class\u2014not word\u2014sequences.",
+                    "sid": 90,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in MT, we seek a measure of sentence quality q(e) that is comparable across different hypotheses on the beam (much like the n-gram language model score).",
+                    "sid": 91,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discriminative model scores have been used as MT features (Galley and Manning, 2009), but we obtained better results by scoring the 1-best class sequences with a generative model.",
+                    "sid": 92,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained a simple add-1 smoothed bigram language model over gold class sequences in the same treebank training data: I Input: implicitly defined search space generate initial hypotheses and add to H set Hf inal to \u2205 while H is not empty: set Hext to \u2205 for each hypothesis \u03b7 in H : if \u03b7 is a goal hypothesis: add \u03b7 to Hf inal else Extend \u03b7 and add to Hext ..,Score agreement Recombine and Prune Hext set H to Hext Output: argmax of Hf inal Figure 4: Breadth-first beam search algorithm of Och and Ney (2004).",
+                    "sid": 93,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typically, a hypothesis stack H is maintained for each unique source coverage set.",
+                    "sid": 94,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Input: (eI , n, is_goal) run segmenter on attachment eI to get s\u02c6L q(e) = p(\u03c4 ) = n p(\u03c4i|\u03c4i\u22121) et model state \u03c3 = s, t for translation prefix en i=1 We chose a bigram model due to the aggressive g initialize \u03c0 to \u2212\u221e set \u03c0(t) = 0 n+1 1 ) 1 recombination strategy in our phrase-based decoder.",
+                    "sid": 95,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "compute \u03c4 \u2217 from parameters s, s\u02c6L , \u03c0, is_goal) For contexts in which the LM is guaranteed to back off (for instance, after an unseen bigram), our decoder compute q(eI ) = p(\u03c4 \u2217) under the generative LM L ) for prefix eI maintains only the minimal state needed (perhaps only Output : q(eI ) a single word).",
+                    "sid": 96,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In less restrictive decoders, higher order scoring models could be used to score longer- distance agreement relations.",
+                    "sid": 97,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We integrate the segmentation, tagging, and scoring models into a self-contained component in the translation decoder.",
+                    "sid": 98,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Inference during Translation Decoding.",
+                    "sid": 99,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scoring the agreement model as part of translation decoding requires a novel inference procedure.",
+                    "sid": 100,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Crucially, the inference procedure does not measurably affect total MT decoding time.",
+                    "sid": 101,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Phrase-based Translation Decoding.",
+                    "sid": 102,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider the standard phrase-based approach to MT (Och and Ney, 2004).",
+                    "sid": 103,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The distribution p(e|f ) is modeled directly using a log-linear model, yielding the following decision rule: Figure 5: Procedure for scoring agreement for each hypothesis generated during the search algorithm of Fig.",
+                    "sid": 104,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 105,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the extended hypothesis eI , the index n + 1 indicates the start of the new attachment.",
+                    "sid": 106,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Extend a hypothesis with a new phrase pair \u2022 Recombine hypotheses with identical states We assume familiarity with these operations, which are described in detail in (Och and Ney, 2004).",
+                    "sid": 107,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Agreement Model Inference.",
+                    "sid": 108,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The class-based agreement model is implemented as a feature function hm in Eq.",
+                    "sid": 109,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1).",
+                    "sid": 110,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, when Extend generates a new hypothesis, we run the algorithm shown in Fig.",
+                    "sid": 111,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.",
+                    "sid": 112,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The inputs are a translation hypothesis eI , an index n distinguishing the prefix from the attachment, and a flag indicating if their concatenation is a goal hypothesis.The beam search maintains state for each deriva e\u2217 = arg max e,a,\u03a0 ( M ) ) \u03bbmhm(e, f, a, \u03a0) m=1 (1) tion, the score of which is a linear combination of the feature values.",
+                    "sid": 113,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "States in this program depend on some amount of lexical history.",
+                    "sid": 114,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With a trigram lan This decoding problem is NP-hard, thus a beam search is often used (Fig.",
+                    "sid": 115,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4).",
+                    "sid": 116,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The beam search relies on three operations, two of which affect the agreement model: guage model, the state might be the last two words of the translation prefix.",
+                    "sid": 117,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recombine can be applied to any two hypotheses with equivalent states.",
+                    "sid": 118,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result, two hypotheses with different full prefixes\u2014 and thus potentially different sequences of agreement relations\u2014can be recombined.",
+                    "sid": 119,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Incremental Greedy Decoding Decoding with the CRF-based tagger model in this setting requires some slight modifications to the Viterbi algorithm.",
+                    "sid": 120,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make a greedy approximation that permits recombination and works well in practice.",
+                    "sid": 121,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The agreement model state is the last tagged segment (s, t) of the concatenated hypothesis.",
+                    "sid": 122,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tag a new attachment by assuming a prior distribution \u03c0 over the starting position such that \u03c0(t) = 0 and \u2212\u221e for all other classes, a deterministic distribution in the tropical semiring.",
+                    "sid": 123,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This forces the Viterbi path to go through t. We only tag the final boundary symbol for goal hypotheses.",
+                    "sid": 124,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To accelerate tagger decoding in our experiments, we also used tagging dictionaries for frequently observed word types.",
+                    "sid": 125,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each word type observed more than 100 times in the training data, we restricted the set of possible classes to the set of observed classes.",
+                    "sid": 126,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Translation Model Features.",
+                    "sid": 127,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The agreement model score is one decoder feature function.",
+                    "sid": 128,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The output of the procedure in Fig.",
+                    "sid": 129,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 is the log probability of the class sequence of each attachment.",
+                    "sid": 130,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Summed over all attachments, this gives the log probability of the whole class sequence.",
+                    "sid": 131,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also add a new length penalty feature.",
+                    "sid": 132,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To discriminate between hypotheses that might have the same number of raw tokens, but different underlying segmentations, we add a penalty equal to the length difference between the segmented and unsegmented attachments |s\u02c6L| \u2212 |eI |.",
+                    "sid": 133,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "solution is to manually extract unification rules from phrase-structure trees.",
+                    "sid": 134,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Williams and Koehn (2011) annotated German trees, and extracted translation rules from them.",
+                    "sid": 135,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They then specified manual unification rules, and applied a penalty according to the number of unification failures in a hypothesis.",
+                    "sid": 136,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, our class-based model does not require any manual rules and scores similar agreement phenomena as probabilistic sequences.",
+                    "sid": 137,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Factored Translation Models Factored translation models (Koehn and Hoang, 2007) facilitate a more data-oriented approach to agreement modeling.",
+                    "sid": 138,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Words are represented as a vector of features such as lemma and POS.",
+                    "sid": 139,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bitext is annotated with separate models, and the annotations are saved during phrase extraction.",
+                    "sid": 140,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hassan et al.",
+                    "sid": 141,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) noticed that the target- side POS sequences could be scored, much as we do in this work.",
+                    "sid": 142,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They used a target-side LM over Combinatorial Categorial Grammar (CCG) supertags, along with a penalty for the number of operator violations, and also modified the phrase probabilities based on the tags.",
+                    "sid": 143,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, Birch et al.",
+                    "sid": 144,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) showed that this approach captures the same reordering phenomena as lexicalized reordering models, which were not included in the baseline.",
+                    "sid": 145,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Birch et al.",
+                    "sid": 146,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) then investigated source-side CCG supertag features, but did not show an improvement for DutchEnglish.",
+                    "sid": 147,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subotin (2011) recently extended factored translation models to hierarchical phrase-based translation and developed a discriminative model for predicting target-side morphology in EnglishCzech.",
+                    "sid": 148,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "His model benefited from gold morphological annotations on the target-side of the 8M sentence bitext.",
+                    "sid": 149,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1",
+                    "sid": 150,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "n+1 In contrast to these methods, our model does not affect phrase extraction and does not require annotated translation rules.We compare our class-based model to previous ap proaches to scoring syntactic relations in MT. Unification-based Formalisms Agreement rules impose syntactic and semantic constraints on the structure of sentences.",
+                    "sid": 151,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A principled way to model these constraints is with a unification-based grammar (UBG).",
+                    "sid": 152,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Johnson (2003) presented algorithms for learning and parsing with stochastic UBGs.",
+                    "sid": 153,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, training data for these formalisms remains extremely limited, and it is unclear how to learn such knowledge- rich representations from unlabeled data.",
+                    "sid": 154,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One partial Class-based LMs Class-based LMs (Brown et al., 1992) reduce lexical sparsity by placing words in equivalence classes.",
+                    "sid": 155,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They have been widely used for speech recognition, but not for MT. Och (1999) showed a method for inducing bilingual word classes that placed each phrase pair into a two-dimensional equivalence class.",
+                    "sid": 156,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To our knowledge, Uszkoreit and Brants (2008) are the only recent authors to show an improvement in a state-of-the-art MT system using class-based LMs.",
+                    "sid": 157,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They used a classical exchange algorithm for clustering, and learned 512 classes from a large monolingual corpus.",
+                    "sid": 158,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then they mixed the classes into a word-based LM.",
+                    "sid": 159,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, both Och (1999) and Uszkoreit and Brants (2008) relied on automatically induced classes.",
+                    "sid": 160,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is unclear if their classes captured agreement information.",
+                    "sid": 161,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Monz (2011) recently investigated parameter estimation for POS-based language models, but his classes did not include inflectional features.",
+                    "sid": 162,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Target-Side Syntactic LMs Our agreement model is a form of syntactic LM, of which there is a long history of research, especially in speech processing.5 Syntactic LMs have traditionally been too slow for scoring during MT decoding.",
+                    "sid": 163,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One exception was the quadratic-time dependency language model presented by Galley and Manning (2009).",
+                    "sid": 164,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They applied a quadratic time dependency parser to every hypothesis during decoding.",
+                    "sid": 165,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, to achieve quadratic running time, they permitted ill-formed trees (e.g., parses with multiple roots).",
+                    "sid": 166,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More recently, Schwartz et al.",
+                    "sid": 167,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011) integrated a right-corner, incremental parser into Moses.",
+                    "sid": 168,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They showed a large improvement for UrduEnglish, but decoding slowed by three orders of magnitude.6 In contrast, our class-based model encodes shallow syntactic information without a noticeable effect on decoding time.",
+                    "sid": 169,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model can be viewed as a way to score local syntactic relations without extensive decoder modifications.",
+                    "sid": 170,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For long-distance relations, Shen et al.",
+                    "sid": 171,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) proposed a new decoder that generates target-side dependency trees.",
+                    "sid": 172,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The target-side structure enables scoring hypotheses with a trigram dependency LM.",
+                    "sid": 173,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We first evaluate the Arabic segmenter and tagger components independently, then provide EnglishArabic translation quality results.",
+                    "sid": 174,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Intrinsic Evaluation of Components.",
+                    "sid": 175,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental Setup All experiments use the Penn Full (%) Incremental (%) Segmenter 98.6 \u2013 Tagger 96.3 96.2 Table 1: Intrinsic evaluation accuracy [%] (development set) for Arabic segmentation and tagging.",
+                    "sid": 176,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ATB contains clitic-segmented text with per- segment morphological analyses (in addition to phrase-structure trees, which we discard).",
+                    "sid": 177,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For training the segmenter, we used markers in the vocalized section to construct the IOB character sequences.",
+                    "sid": 178,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For training the tagger, we automatically converted the ATB morphological analyses to the fine-grained class set.",
+                    "sid": 179,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This procedure resulted in 89 classes.",
+                    "sid": 180,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the segmentation evaluation, we report per- character labeling accuracy.8 For the tagger, we report per-token accuracy.",
+                    "sid": 181,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results Tbl.",
+                    "sid": 182,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 shows development set accuracy for two settings.",
+                    "sid": 183,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Full is a standard evaluation in which features may be defined over the whole sentence.",
+                    "sid": 184,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This includes next-character segmenter features and next- word tagger features.",
+                    "sid": 185,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Incremental emulates the MT setting in which the models are restricted to current and previous observation features.",
+                    "sid": 186,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the segmenter operates at the character level, we can use the same feature set.",
+                    "sid": 187,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, next-observation features must be removed from the tagger.",
+                    "sid": 188,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonetheless, tagging accuracy only decreases by 0.1%.",
+                    "sid": 189,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Translation Quality.",
+                    "sid": 190,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental Setup Our decoder is based on the phrase-based approach to translation (Och and Ney, 2004) and contains various feature functions including phrase relative frequency, word-level alignment statistics, and lexicalized reordering models (Till- mann, 2004; Och et al., 2004).",
+                    "sid": 191,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tuned the feature weights on a development set using lattice-based min imum error rate training (MERT) (Macherey et al., Arabic Treebank (ATB) (Maamouri et al., 2004) parts 1\u20133 divided into training/dev/test sections according to the canonical split (Rambow et al., 2005).7 5 See (Zhang, 2009) for a comprehensive survey..",
+                    "sid": 192,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 In principle, their parser should run in linear time.",
+                    "sid": 193,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An implementation issue may account for the decoding slowdown.",
+                    "sid": 194,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(p.c.) 7 LDC catalog numbers: LDC2008E61 (ATBp1v4), LDC2008E62 (ATBp2v3), and LDC2008E22 (ATBp3v3.1).",
+                    "sid": 195,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data was pre-processed with packages from the Stanford Arabic parser (Green and Manning, 2010).",
+                    "sid": 196,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corpus split is available at http://nlp.stanford.edu/projects/arabic.shtml.",
+                    "sid": 197,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 We ignore orthographic re-normalization performed by the annotators.",
+                    "sid": 198,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, they converted the contraction \u2018 Jl\u2019 ll back to \u2018 Jl J\u2019 l Al. As a result, we can report accuracy since the guess and gold segmentations have equal numbers of non- whitespace characters.",
+                    "sid": 199,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MT04 (tune) MT02 MT03 MT05 Avg Ba sel ine 18 .1 4 23 .8 7 1 8.",
+                    "sid": 200,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 8 2 2.",
+                    "sid": 201,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 0 + PO S 18 .1 1 \u2212 0 . 0 3 23 .6 5 \u2212 0 . 2 2 1 8.",
+                    "sid": 202,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 9 + 0 . 1 1 2 2.",
+                    "sid": 203,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 9 \u2212 0 . 3 1 \u2212 0.",
+                    "sid": 204,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 7 + PO S + Ag r 18 .8 6 + 0 . 7 2 24 .8 4 + 0 . 9 7 2 0.",
+                    "sid": 205,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 6 + 1 . 3 8 2 3.",
+                    "sid": 206,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 8 + 0 . 8 8 + 1.",
+                    "sid": 207,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 4 ge nre s n w nw nw n w #s ent en ce s 13 53 72 8 66 3 10 56 2 4 4 7 Table 2: Translation quality results (BLEU4 [%]) for newswire (nw) sets.",
+                    "sid": 208,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Avg is the weighted averaged (by number of sentences) of the individual test set gains.",
+                    "sid": 209,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All improvements are statistically significant at p \u2264 0.01.",
+                    "sid": 210,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MT06 MT08 Avg Baseline 14.68 14.30 +POS 14.57 \u22120.11 14.30 +0.0 \u22120.06 +POS+Agr 15.04 +0.36 14.49 +0.19 +0.29 genres nw,bn,ng nw,ng,wb #sentences 1797 1360 3157 Table 3: Mixed genre test set results (BLEU4 [%]).",
+                    "sid": 211,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The MT06 result is statistically significant at p \u2264 0.01; MT08 is significant at p \u2264 0.02.",
+                    "sid": 212,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The genres are: nw, broadcast news (bn), newsgroups (ng), and weblog (wb).",
+                    "sid": 213,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2008).",
+                    "sid": 214,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each set of results, we initialized MERT with uniform feature weights.",
+                    "sid": 215,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We trained the translation model on 502 million words of parallel text collected from a variety of sources, including the Web.",
+                    "sid": 216,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word alignments were induced using a hidden Markov model based alignment model (Vogel et al., 1996) initialized with bilexical parameters from IBM Model 1 (Brown et al., 1993).",
+                    "sid": 217,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both alignment models were trained using two iterations of the expectation maximization algorithm.",
+                    "sid": 218,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our distributed 4-gram language model was trained on 600 million words of Arabic text, also collected from many sources including the Web (Brants et al., 2007).",
+                    "sid": 219,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For development and evaluation, we used the NIST ArabicEnglish data sets, each of which contains one set of Arabic sentences and multiple English references.",
+                    "sid": 220,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reverse the translation direction for each data set, we chose the first English reference as the source and the Arabic as the reference.",
+                    "sid": 221,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The NIST sets come in two varieties: newswire (MT0205) and mixed genre (MT06,08).",
+                    "sid": 222,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Newswire contains primarily Modern Standard Arabic (MSA), while the mixed genre data sets also contain transcribed speech and web text.",
+                    "sid": 223,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the ATB contains MSA, and significant lexical and syntactic differences may exist between MSA and the mixed genres, we achieved best results by tuning on MT04, the largest newswire set.",
+                    "sid": 224,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated translation quality with BLEU4 (Pa- pineni et al., 2002) and computed statistical significance with the approximate randomization method of Riezler and Maxwell (2005).9",
+                    "sid": 225,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion of translation results. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Tbl.",
+                    "sid": 226,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 shows translation quality results on newswire, while Tbl.",
+                    "sid": 227,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 contains results for mixed genres.",
+                    "sid": 228,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline is our standard system feature set.",
+                    "sid": 229,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison, +POS indicates our class-based model trained on the 11 coarse POS tags only (e.g., \u201cNoun\u201d).",
+                    "sid": 230,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, +POS+Agr shows the class-based model with the fine-grained classes (e.g., \u201cNoun+Fem+Sg\u201d).",
+                    "sid": 231,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best result\u2014a +1.04 BLEU average gain\u2014 was achieved when the class-based model training data, MT tuning set, and MT evaluation set contained the same genre.",
+                    "sid": 232,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We realized smaller, yet statistically significant, gains on the mixed genre data sets.",
+                    "sid": 233,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tried tuning on both MT06 and MT08, but obtained insignificant gains.",
+                    "sid": 234,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the next section, we investigate this issue further.",
+                    "sid": 235,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tuning with a Treebank-Trained Feature The class-based model is trained on the ATB, which is predominantly MSA text.",
+                    "sid": 236,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This data set is syntactically regular, meaning that it does not have highly dialectal content, foreign scripts, disfluencies, etc. Conversely, the mixed genre data sets contain more irregularities.",
+                    "sid": 237,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, 57.4% of MT06 comes from non- newswire genres.",
+                    "sid": 238,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the 764 newsgroup sentences, 112 contain some Latin script tokens, while others contain very little morphology: 9 With the implementation of Clark et al.",
+                    "sid": 239,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2011), available at:.",
+                    "sid": 240,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "http://github.com/jhclark/multeval.",
+                    "sid": 241,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) . l 1/2 _ J } Human Evaluation We also manually evaluated mix 1/2 cup vinegar apple the MT05 output for improvemen ts in agreement.",
+                    "sid": 242,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 Mix 1/2 cup apple vinegar Our system produced different output from the base line for 785 (74.3%) sentences.",
+                    "sid": 243,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We randomly sam (3) } __...",
+                    "sid": 244,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "} Music Match pled 100 of these sentences and counted agreeme nt start program miozik maatsh MusicMatch Start the program music match (MusicMatch) In these imperatives, there are no lexically marked agreement relations to score.",
+                    "sid": 245,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ex.",
+                    "sid": 246,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) is an excerpt from a recipe that appears in full in MT06.",
+                    "sid": 247,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ex.",
+                    "sid": 248,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) is part of usage instructions for the MusicMatch software.",
+                    "sid": 249,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ATB contains few examples like these, so our class-based model probably does not effectively discriminate between alternative hypotheses for these types of sentences.",
+                    "sid": 250,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase Table Coverage In a standard phrase- based system, effective translation into a highly inflected target language requires that the phrase table contain the inflected word forms necessary to construct an output with correct agreement.",
+                    "sid": 251,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the requisite words are not present in the search space of the decoder, then no feature function would be sufficient to enforce morpho-syntactic agreement.",
+                    "sid": 252,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During development, we observed that the phrase table of our large-scale EnglishArabic system did often contain the inflected forms that we desired the system to select.",
+                    "sid": 253,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, correctly agreeing alternatives often appeared in n-best translation lists.",
+                    "sid": 254,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To verify this observation, we computed the lexical coverage of the MT05 reference sentences in the decoder search space.",
+                    "sid": 255,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The statistics below report the token- level recall of reference unigrams:10 errors of all types.",
+                    "sid": 256,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline contained 78 errors, while our system produced 66 errors, a statistically significant 15.4% error reduction at p \u2264 0.01 according to a paired t-test.",
+                    "sid": 257,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our output, a frequent source of remaining errors was the case of so-called \u201cdeflected agreement\u201d: inanimate plural nouns require feminine singular agreement with modifiers.",
+                    "sid": 258,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, animate plural nouns require the sound plural, which is indicated by an appropriate masculine or feminine suffix.For example, the inanimate plural }.\ufffd_ll \u2019states\u2019 re quires the singular feminine adjective . ;.,..",
+                    "sid": 259,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Jl \u2018united\u2019,not the sound plural l ;.,..",
+                    "sid": 260,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Jl.",
+                    "sid": 261,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ATB does not con tain animacy annotations, so our agreement model cannot discriminate between these two cases.",
+                    "sid": 262,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, Alkuhlani and Habash (2011) have recently started annotating the ATB for animacy, and our model could benefit as more data is released.",
+                    "sid": 263,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion and outlook. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "Our class-based agreement model improves translation quality by promoting local agreement, but with a minimal increase in decoding time and no additional storage requirements for the phrase table.",
+                    "sid": 264,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model can be implemented with a standard CRF package, trained on existing treebanks for many languages, and integrated easily with many MT feature APIs.",
+                    "sid": 265,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieved best results when the model training data, MT tuning set, and MT evaluation set con The bottom category includes all lexical items that the decoder could produce in a translation of the source.",
+                    "sid": 266,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This large gap between the unigram recall of the actual translation output (top) and the lexical coverage of the phrase-based model (bottom) indicates that translation performance can be improved dramatically by altering the translation model through features such as ours, without expanding the search space of the decoder.",
+                    "sid": 267,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "mixed genre evaluation sets.",
+                    "sid": 268,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, our class-based model should be more robust to unseen word types and other phenomena that make non-newswire genres challenging.",
+                    "sid": 269,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, our analysis has shown that for Arabic, these genres typically contain more Latin script and transliterated words, and thus there is less morphology to score.",
+                    "sid": 270,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One potential avenue of future work would be to adapt our component models to new genres by self-training them on the target side of a large bitext.",
+                    "sid": 271,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 To focus on possibly inflected word forms, we excluded.",
+                    "sid": 272,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "numbers and punctuation from this analysis.",
+                    "sid": 273,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 The annotator was the first author..",
+                    "sid": 274,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Acknowledgments We thank Zhifei Li and Chris Manning for helpful discussions, and Klaus Macherey, Wolfgang Macherey, Daisy Stanton, and Richard Zens for engineering support.",
+                    "sid": 275,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was conducted while the first author was an intern at Google.",
+                    "sid": 276,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At Stanford, the first author is supported by a National Science Foundation Graduate Research Fellowship.",
+                    "sid": 277,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,455 @@
+{
+    "ID": "P09-2003",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "An Earley Parsing Algorithm for Range Concatenation Grammars",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a CYK and an Earley-style algorithm for parsing Range Concatenation Grammar (RCG), using the deductive parsing framework.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The characteristic property of the Earley parser is that we use a technique of range boundary constraint propagation to compute the yields of non-terminals as late as possible.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that, compared to previous approaches, the constraint propagation helps to considerably decrease the number of items in the chart.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "RCGs (Boullier, 2000) have recently received a growing interest in natural language processing (S\u00f8gaard, 2008; Sagot, 2005; Kallmeyer et al., 2008; Maier and S\u00f8gaard, 2008).",
+                    "sid": 4,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RCGs generate exactly the class of languages parsable in deterministic polynomial time (Bertsch and Nederhof, 2001).",
+                    "sid": 5,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are in particular more powerful than linear context-free rewriting systems (LCFRS) (Vijay-Shanker et al., 1987).",
+                    "sid": 6,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LCFRS is unable to describe certain natural language phenomena that RCGs actually can deal with.",
+                    "sid": 7,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One example are long-distance scrambling phenomena (Becker et al., 1991; Becker et al., 1992).",
+                    "sid": 8,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other examples are non-semilinear constructions such as case stacking in Old Georgian (Michaelis and Kracht, 1996) and Chinese number names (Radzinski, 1991).",
+                    "sid": 9,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Boullier (1999) shows that RCGs can describe the permutations occurring with scrambling and the construction of Chinese number names.",
+                    "sid": 10,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parsing algorithms for RCG have been introduced by Boullier (2000), who presents a directional top-down parsing algorithm using pseudocode, and Barth\u00b4elemy et al. (2001), who add an oracle to Boullier\u2019s algorithm.",
+                    "sid": 11,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The more restricted class of LCFRS has received more attention concerning parsing (Villemonte de la Clergerie, 2002; Burden and Ljungl\u00a8of, 2005).",
+                    "sid": 12,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This article proposes new CYK and Earley parsers for RCG, formulating them in the framework of parsing as deduction (Shieber et al., 1995).",
+                    "sid": 13,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second section introduces necessary definitions.",
+                    "sid": 14,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 presents a CYK-style algorithm and Section 4 extends this with an Earley-style prediction.",
+                    "sid": 15,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 preliminaries",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The rules (clauses) of RCGs1 rewrite predicates ranging over parts of the input by other predicates.",
+                    "sid": 16,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E.g., a clause 5(aXb) \u2014* 5(X) signifies that 5 is true for a part of the input if this part starts with an a, ends with a b, and if, furthermore, 5 is also true for the part between a and b.",
+                    "sid": 17,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Central to RCGs is the notion of ranges on strings. first (resp. second) component of the ith element of 0, that is xi (resp. yi).",
+                    "sid": 18,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to instantiate a clause of the grammar, we need to find ranges for all variables in the clause and for all occurrences of terminals.",
+                    "sid": 19,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For convenience, we assume the variables in a clause and the occurrences of terminals to be equipped with distinct subscript indices, starting with 1 and ordered from left to right (where for variables, only the first occurrence is relevant for this order).",
+                    "sid": 20,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce a function \u03a5 : P \u2192 N that gives the maximal index in a clause, and we define \u03a5(c, x) for a given clause c and x a variable or an occurrence of a terminal as the index of x in c. ated clause.",
+                    "sid": 21,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also introduce range constraint vectors, vectors of pairs of range boundary variables together with a set of constraints on these variables.",
+                    "sid": 22,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Definition 4.",
+                    "sid": 23,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let Vr = {r1, r2,... } be a set of range boundary variables.",
+                    "sid": 24,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A range constraint vector of dimension k is a pair hp, Ci where a) p\ufffd \u2208 (Vr2)k; we define Vr(pl as the set of range boundary variables occurring in 'p. b) C is a set of constraints cr that have one of the following forms: r1 = r2, k = r1, r1 + k = r2, k \u2264 r1, r1 \u2264 k, r1 \u2264 r2 or r1 + k \u2264 r2 for r1, r2 \u2208 Vr(pJ and k \u2208 N. We say that a range vector 0 satisfies a range constraint vector hp, Ci iff 0 and p are of the same dimension k and there is a function f : Vr \u2192 N that maps p(i).l to 0(i).l and p(i).r to 0(i).r for all 1 \u2264 i \u2264 k such that all constraints in C are satisfied.",
+                    "sid": 25,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we say that a range constraint vector hp, Ci is satisfiable iff there exists a range vector 0 that satisfies it.",
+                    "sid": 26,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Definition 5.",
+                    "sid": 27,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every clause c, we define its range constraint vector hp, Ci w.r.t. a w with |w |= n as follows: a) p has dimension \u03a5(c) and all range boundary variables in p are pairwise different. b) For all hr1, r2i \u2208 p: 0 \u2264 r1, r1 \u2264 r2, r2 \u2264 n \u2208 C. For all occurrences x of terminals in c with i = \u03a5(c, x): p(i).l+1 = p(i).r \u2208 C. For all x, y that are variables or occurrences of terminals in c such that xy is a substring of one of the arguments in c: p(\u03a5(c, x)).r = p(\u03a5(c, y)).l \u2208 C. These are all constraints in C. The range constraint vector of a clause c captures all information about boundaries forming a range, ranges containing only a single terminal, and adjacent variables/terminal occurrences in c. An RCG derivation consists of rewriting instantiated predicates applying instantiated clauses, i.e. in every derivation step \u03931 \u21d2w \u03932, we replace the lefthand side of an instantiated clause with its righthand side (w.r.t. a word w).",
+                    "sid": 28,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The language of an RCG G is the set of strings that can be reduced to the empty word: L(G) = {w | S(h0, |w|i) +\u21d2G,w E}.",
+                    "sid": 29,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The expressive power of RCG lies beyond mild context-sensitivity.",
+                    "sid": 30,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an example, consider the RCG from Fig.",
+                    "sid": 31,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 that generates a language that is not semilinear.",
+                    "sid": 32,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity, we assume in the following without loss of generality that empty arguments (E) occur only in clauses whose righthand sides are empty.2",
+                    "sid": 33,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 directional bottom-up chart parsing",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "In our directional CYK algorithm, we move a dot through the righthand side of a clause.",
+                    "sid": 34,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore have passive items [A, 0] where A is a predicate and 0 a range vector of dimension dim(A) and active items.",
+                    "sid": 35,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the latter, while traversing the righthand side of the clause, we keep a record of the left and right boundaries already found for variables and terminal occurrences.",
+                    "sid": 36,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is achieved by subsequently enriching the range constraint vector of the clause.",
+                    "sid": 37,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Active items have the form [A(x) \u2192 \u03a6 \u2022 \u03a8, hp, Ci] with A(x) \u2192 \u03a6\u03a8 a clause, \u03a6\u03a8 =6 E, \u03a5(A(x \u2192 \u03a6\u03a8)) = j and hp, Ci a range constraint vector of dimension j.",
+                    "sid": 38,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We require that hp, Ci be satisfiable.3 The deduction rules are shown in Fig.",
+                    "sid": 39,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 40,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first rule scans the yields of terminating clauses.",
+                    "sid": 41,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initialize introduces clauses with the dot on the left of the righthand side.",
+                    "sid": 42,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Complete moves the dot over a predicate provided a corresponding passive item has been found.",
+                    "sid": 43,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Convert turns an active item with the dot at the end into a passive item.",
+                    "sid": 44,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 the earley algorithm",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We now add top-down prediction to our algorithm.",
+                    "sid": 45,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Active items are as above.",
+                    "sid": 46,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Passive items have an additional flag p or c depending on whether the item is predicted or completed, i.e., they either have the form [A, (\u03c1, C), p] where (\u03c1, C) is a range constraint vector of dimension dim(A), or the form [A, 0, c] where 0 is a range vector of dimension dim(A). axiom is the prediction of an 5 ranging over the entire input (initialize).",
+                    "sid": 47,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have two predict operations: Predict-rule predicts active items with the dot on the left of the righthand side, for a given predicted passive item.",
+                    "sid": 48,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Predict-pred predicts a passive item for the predicate following the dot in an active item.",
+                    "sid": 49,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scan is applied whenever a predicted predicate can be derived by an e-clause.",
+                    "sid": 50,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rules complete and convert are the ones from the CYK algorithm except that we add flags c to the passive items occurring in these rules.",
+                    "sid": 51,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal is again [5, ((0, n)), c].",
+                    "sid": 52,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand how this algorithm works, consider the example in Fig.",
+                    "sid": 53,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 54,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The crucial property of this algorithm, in contrast to previous approaches, is the dynamic updating of a set of constraints on range boundaries.",
+                    "sid": 55,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can leave range boundaries unspecified and compute their values in a more incremental fashion instead of guessing all ranges of a clause at once at prediction.4 For evaluation, we have implemented a directional top-down algorithm where range boundaries are guessed at prediction (this is essentially the algorithm described in Boullier (2000)), and the new Earley-style algorithm.",
+                    "sid": 56,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithms were tested on different words of the language L = {a2n|n < 01.",
+                    "sid": 57,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows the number of generated items. where hp0, C0i is obtained from the range constraint vector of the clause A(x1 ... y1, ... , xk ... yk) \u2192 \u03a8 by taking all constraints from C, mapping all p(i).l to p0(\u03a5(xi)).l and all p(i).r to p0(\u03a5(yi)).r, and then adding the resulting constraints to the range constraint vector of the clause.",
+                    "sid": 58,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Predict-pred: where p0(i).l = p(\u03a5(xi)).l, p0(i).r = p(\u03a5(yi)).r for all The deduction rules are listed in Fig.",
+                    "sid": 59,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 60,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Clearly, range boundary constraint propagation increases the amount of information transported in single items and thereby decreases considerably the number of generated items.",
+                    "sid": 61,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 conclusion and future work",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We have presented a new CYK and Earley parsing algorithms for the full class of RCG.",
+                    "sid": 62,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The crucial difference between previously proposed topdown RCG parsers and the new Earley-style algorithm is that while the former compute all clause instantiations during predict operations, the latter 4Of course, the use of constraints makes comparisons between items more complex and more expensive which means that for an efficient implementation, an integer-based representation of the constraints and adequate techniques for constraint solving are required.",
+                    "sid": 63,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A(x) \u2192 \u03b5 \u2208 P with an instantiation \u03c8 satisfying hp, Ci such that \u03c8(A(x)) = A(0) avoids this using a technique of dynamic updating of a set of constraints on range boundaries.",
+                    "sid": 64,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments show that this significantly decreases the number of generated items, which confirms that range boundary constraint propagation is a viable method for a lazy computation of ranges.",
+                    "sid": 65,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Earley parser could be improved by allowing to process the predicates of the righthand sides of clauses in any order, not necessarily from left to right.",
+                    "sid": 66,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This way, one could process predicates whose range boundaries are better known first.",
+                    "sid": 67,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plan to include this strategy in future work.",
+                    "sid": 68,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

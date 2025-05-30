@@ -1,0 +1,1247 @@
+{
+    "ID": "N09-1007",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Conventional approaches to Chinese word segmentation treat the problem as a character- based tagging task.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, semi-Markov models have been applied to the problem, incorporating features based on complete words.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we propose an alternative, a latent variable model, which uses hybrid information based on both word sequences and character sequences.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We argue that the use of latent variables can help capture long range dependencies and improve the recall on segmenting long words, e.g., named-entities.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results show that this is indeed the case.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this improvement, evaluations on the data of the second SIGHAN CWS bakeoff show that our system is competitive with the best ones in the literature.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "For most natural language processing tasks, words are the basic units to process.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since Chinese sentences are written as continuous sequences of characters, segmenting a character sequence into a word sequence is the \ufb01rst step for most Chinese processing applications.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we study the problem of Chinese word segmentation (CWS), which aims to \ufb01nd these basic units (words1) for a given sentence in Chinese.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chinese character sequences are normally ambiguous, and out-of-vocabulary (OOV) words are a major source of the ambiguity.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typical examples of OOV words include named entities (e.g., organization names, person names, and location names).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Those named entities may be very long, and a dif \ufb01cult case occurs when a long word W (|W | \u2265 4) consists of some words which can be separate words on their own; in such cases an automatic segmenter may split the OOV word into individual words.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, (Computer Committee of International Federation of Automatic Control) is one of the organization names in the Microsoft Research corpus.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its length is 13 and it contains more than 6 individual words, but it should be treated as a single word.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proper recognition of long OOV words are meaningful not only for word segmentation, but also for a variety of other purposes, e.g., full-text indexing.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, as is illustrated, recognizing long words (without sacri\ufb01c- ing the performance on short words) is challenging.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conventional approaches to Chinese word segmentation treat the problem as a character-based la 1 Following previous work, in this paper, words can also refer to multi-word expressions, including proper names, long named entities, idioms, etc. 56 Human Language Technologies: The 2009 Annual Conference of the North American Chapter of the ACL, pages 56\u201364, Boulder, Colorado, June 2009.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2009 Association for Computational Linguistics beling task (Xue, 2003).",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Labels are assigned to each character in the sentence, indicating whether the character xi is the start (Labeli = B), middle or end of a multi-character word (Labeli = C ).",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A popular discriminative model that have been used for this task is the conditional random \ufb01elds (CRFs) (Lafferty et al., 2001), starting with the model of Peng et al.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004).",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the Second International Chinese Word Segmentation Bakeoff (the second SIGHAN CWS bakeoff) (Emerson, 2005), two of the highest scoring systems in the closed track competition were based on a CRF model (Tseng et al., 2005; Asahara et al., 2005).",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the CRF model is quite effective compared with other models designed for CWS, it may be limited by its restrictive independence assumptions on non-adjacent labels.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the window can in principle be widened by increasing the Markov order, this may not be a practical solution, because the complexity of training and decoding a linear- chain CRF grows exponentially with the Markov order (Andrew, 2006).",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this dif\ufb01culty, a choice is to relax the Markov assumption by using the semi-Markov conditional random \ufb01eld model (semi-CRF) (Sarawagi and Cohen, 2004).",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Despite the theoretical advantage of semi-CRFs over CRFs, however, some previous studies (Andrew, 2006; Liang, 2005) exploring the use of a semi-CRF for Chinese word segmentation did not \ufb01nd signi\ufb01cant gains over the CRF ones.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As discussed in Andrew (2006), the reason may be that despite the greater representational power of the semi-CRF, there are some valuable features that could be more naturally expressed in a character-based labeling model.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, on a CRF model, one might use the feature \u201cthe current character xi is X and the current label Labeli is C \u201d.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This feature may be helpful in CWS for generalizing to new words.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, it may rule out certain word boundaries if X were a character that normally occurs only as a suf\ufb01x but that combines freely with some other basic forms to create new words.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This type of features is slightly less natural in a semi-CRF, since in that case local features \u03d5(yi, yi+1, x) are de\ufb01ned on pairs of adjacent words.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is to say, information about which characters are not on boundaries is only implicit.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notably, except the hybrid Markov/semi-Markov system in An drew (2006)2, no other studies using the semi-CRF (Sarawagi and Cohen, 2004; Liang, 2005; Daume\u00b4 III and Marcu, 2005) experimented with features of segmenting non-boundaries.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, instead of using semi-Markov models, we describe an alternative, a latent variable model, to learn long range dependencies in Chinese word segmentation.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the discriminative probabilistic latent variable models (DPLVMs) (Morency et al., 2007; Petrov and Klein, 2008), which use latent variables to carry additional information that may not be expressed by those original labels, and therefore try to build more complicated or longer dependencies.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is especially meaningful in CWS, because the used labels are quite coarse: Label(y) \u2208 {B, C }, where B signi\ufb01es beginning a word and C signi\ufb01es the continuation of a word.3 For example, by using DPLVM, the aforementioned feature may turn to \u201cthe current character xi is X , Labeli = C , and LatentV ariablei = LV \u201d.",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The current latent variable LV may strongly depend on the previous one or many latent variables, and therefore we can model the long range dependencies which may not be captured by those very coarse labels.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, since character and word information have their different advantages in CWS, in our latent variable model, we use hybrid information based on both character and word sequences.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "a latent variable segmenter",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "2.1 Discriminative Probabilistic Latent.",
+                    "sid": 39,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Variable Model Given data with latent structures, the task is to learn a mapping between a sequence of observations x = x1, x2,..., xm and a sequence of labels y = y1, y2,..., ym.",
+                    "sid": 40,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each yj is a class label for the j\u2019th character of an input sequence, and is a member of a set Y of possible class labels.",
+                    "sid": 41,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each sequence, the model also assumes a sequence of latent variables h = h1, h2,..., hm, which is unobserv- able in training examples.",
+                    "sid": 42,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The DPLVM is de\ufb01ned as follows (Morency et al., 2 The system was also used in Gao et al.",
+                    "sid": 43,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007), with an improved performance in CWS.",
+                    "sid": 44,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "guistic intuitions (Xue, 2003).",
+                    "sid": 45,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2007): P (y|x, \u0398)= ) P (y|h, x, \u0398)P (h|x, \u0398), (1) h where \u0398 are the parameters of the model.",
+                    "sid": 46,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "DPLVMs can be seen as a natural extension of CRF models, and CRF models can be seen as a special case of DPLVMs that have only one latent variable for each label.",
+                    "sid": 47,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To make the training and inference ef\ufb01cient, the model is restricted to have disjoint sets of latent variables associated with each class label.",
+                    "sid": 48,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each hj is a member in a set Hyj of possible latent variables for the class label yj . H is de\ufb01ned as the set of all pos sible latent variables, i.e., the union of all Hyj sets.",
+                    "sid": 49,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Viterbi algorithm because of the incorporation of hidden states.",
+                    "sid": 50,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we use a techniquebased on A\u2217 search and dynamic programming de scribed in Sun and Tsujii (2009), for producing the most probable label sequence y\u2217 on DPLVM.",
+                    "sid": 51,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In detail, an A\u2217 search algorithm5 (Hart et al., 1968) with a Viterbi heuristic function is adopted to produce top-n latent paths, h1, h2,... hn.",
+                    "sid": 52,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, a forward-backward-style algorithm is used to compute the exact probabilities of their corresponding label paths, y1, y2,... yn.",
+                    "sid": 53,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model then tries to determine the optimal label path based on the top-n statistics, without enumerating the remaining low-probability paths, which could be exponentially enormous.",
+                    "sid": 54,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since sequences which have any hj \u2208/ Hyj will by The optimal label path y\u2217is ready when the fol de\ufb01nition have P (y|x, \u0398) = 0, the model can be further de\ufb01ned4 as: lowing \u201cexact-condition\u201d is achieved: P (y|x, \u0398)= ) P (h|x, \u0398), (2) P (y1|x, \u0398) \u2212 (1 \u2212 ) yk \u2208LPn P (yk |x, \u0398)) \u2265 0, (6) h\u2208Hy1 \u00d7...\u00d7Hym where y1 is the most probable label sequence in where P (h|x, \u0398) is de\ufb01ned by the usual conditional random \ufb01eld formulation: exp \u0398\u00b7f (h, x) current stage.",
+                    "sid": 55,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is straightforward to prove that y\u2217 = y1, and further search is unnecessary.",
+                    "sid": 56,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because the remaining probability mass, 1 \u2212y \u2208LPn P (yk |x, \u0398), cannot beat the current op P (h|x, \u0398)= L \u2200h exp \u0398\u00b7f (h, x) , (3) k timal label path in this case.",
+                    "sid": 57,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For more details of the in which f (h, x) is a feature vector.",
+                    "sid": 58,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a training set consisting of n labeled sequences, (xi, yi), for i = 1 ... n, parameter estimation is performed by optimizing the objective function, n L(\u0398)= ) log P (yi|xi, \u0398) \u2212 R(\u0398).",
+                    "sid": 59,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) i=1 The \ufb01rst term of this equation is the conditional log- likelihood of the training data.",
+                    "sid": 60,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second term is a regularizer that is used for reducing over\ufb01tting in parameter estimation.",
+                    "sid": 61,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For decoding in the test stage, given a test sequence x, we want to \ufb01nd the most probable label sequence, y\u2217: inference, refer to Sun and Tsujii (2009).",
+                    "sid": 62,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Hybrid Word/Character Information.",
+                    "sid": 63,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We divide our main features into two types: character-based features and word-based features.",
+                    "sid": 64,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The character-based features are indicator functions that \ufb01re when the latent variable label takes some value and some predicate of the input (at a certain position) corresponding to the label is satis\ufb01ed.",
+                    "sid": 65,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each latent variable label hi (the latent variable label at position i), we use the predicate templates as follows: \u2022 Input characters/numbers/letters locating at positions i \u2212 2, i \u2212 1, i, i +1 and i +2 The character/number/letter bigrams locating y\u2217 = argmaxy P (y|x, \u0398\u2217).",
+                    "sid": 66,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(5) \u2022 at positions i \u2212 2,i \u2212 1, i and i +1 For latent conditional models like DPLVMs, the best label path y\u2217 cannot directly be produced by the 4 It means that Eq. 2 is from Eq. 1 with additional de\ufb01nition..",
+                    "sid": 67,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 A\u2217 search and its variants, like beam-search, are widely used in statistical machine translation.",
+                    "sid": 68,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to other search techniques, an interesting point of A\u2217 search is that it can produce top-n results one-by-one in an ef\ufb01cient manner.",
+                    "sid": 69,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Whether xj and xj+1 are identical, for j = (i \u2212 2) ...",
+                    "sid": 70,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(i + 1) \u2022 Whether xj and xj+2 are identical, for j = (i \u2212 3) ...",
+                    "sid": 71,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(i + 1) The latter two feature templates are designed to detect character or word reduplication, a morphological phenomenon that can in\ufb02uence word segmentation in Chinese.",
+                    "sid": 72,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word-based features are indicator functions that \ufb01re when the local character sequence matches a word or a word bigram.",
+                    "sid": 73,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A dictionary containing word and bigram information was collected from the training data.",
+                    "sid": 74,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each latent variable label unigram hi, we use the set of predicate template checking for word-based features: \u2022 The identity of the string xj ... xi, if it matches a word A from the word-dictionary of training data, with the constraint i \u22126 <j < i; multiple features will be generated if there are multiple strings satisfying the condition.",
+                    "sid": 75,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 The identity of the string xi ... xk , if it matches a word A from the word-dictionary of training data, with the constraint i<k < i+6; multiple features could be generated.",
+                    "sid": 76,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 The identity of the word bigram (xj ... xi\u22121, xi ... xk ), if it matches a word bigram in the bigram dictionary and satis\ufb01es the aforementioned constraints on j and k; multiple features could be generated.",
+                    "sid": 77,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 The identity of the word bigram (xj ... xi, xi+1 ... xk ), if it matches a word bigram in the bigram dictionary and satis\ufb01es the aforementioned constraints on j and k; multiple features could be generated.",
+                    "sid": 78,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All feature templates were instantiated with values that occur in positive training examples.",
+                    "sid": 79,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that using low-frequency features that occur only a few times in the training set improves performance on the development set.",
+                    "sid": 80,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hence do not do any thresholding of the DPLVM features: we simply use all those generated features.",
+                    "sid": 81,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The aforementioned word based features can incorporate word information naturally.",
+                    "sid": 82,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, following Wang et al.",
+                    "sid": 83,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006), we found using a very simple heuristic can further improve the segmentation quality slightly.",
+                    "sid": 84,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More speci\ufb01cally, two operations, merge and split, are performed on the DPLVM/CRF outputs: if a bigram A B was not observed in the training data, but the merged one AB was, then A B will be simply merged into AB; on the other hand, if AB was not observed but A B appeared, then it will be split into A B. We found this simple heuristic on word information slightly improved the performance (e.g., for the PKU corpus, +0.2% on the F-score).",
+                    "sid": 85,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We used the data provided by the second International Chinese Word Segmentation Bakeoff to test our approaches described in the previous sections.",
+                    "sid": 86,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data contains three corpora from different sources: Microsoft Research Asia (MSR), City University of Hong Kong (CU), and Peking University (PKU).",
+                    "sid": 87,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the purpose of this work is to evaluate the proposed latent variable model, we did not use extra resources such as common surnames, lexicons, parts-of-speech, and semantics.",
+                    "sid": 88,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the generation of word-based features, we extracted a word list from the training data as the vocabulary.",
+                    "sid": 89,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Four metrics were used to evaluate segmentation results: recall (R, the percentage of gold standard output words that are correctly segmented by the decoder), precision (P , the percentage of words in the decoder output that are segmented correctly), balanced F-score (F ) de\ufb01ned by 2P R/(P + R), recall of OOV words (R-oov).",
+                    "sid": 90,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For more detailed information on the corpora and these metrics, refer to Emerson (2005).",
+                    "sid": 91,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Training the DPLVM Segmenter.",
+                    "sid": 92,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We implemented DPLVMs in C++ and optimized the system to cope with large scale problems, in which the feature dimension is beyond millions.",
+                    "sid": 93,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employ the feature templates de\ufb01ned in Section 2.2, taking into account those 3,069,861 features for the MSR data, 2,634,384 features for the CU data, and 1,989,561 features for the PKU data.",
+                    "sid": 94,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for numerical optimization, we performed gradient decent with the Limited-Memory BFGS (L-BFGS)6 optimization technique (Nocedal and Wright, 1999).",
+                    "sid": 95,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "L-BFGS is a second-order Quasi- Newton method that numerically estimates the curvature from previous gradients and updates.",
+                    "sid": 96,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With no requirement on specialized Hessian approximation, L-BFGS can handle large-scale problems in an ef\ufb01cient manner.",
+                    "sid": 97,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the objective function of the DPLVM model is non-convex, we randomly initialized parameters for the training.7 To reduce over\ufb01tting, we employed 1800K 1500K 1200K 900K 600K 300K 0 DPLVM CRF an L2 Gaussian weight prior8 (Chen and Rosen feld, 1999).",
+                    "sid": 98,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training, we varied the L2regularization term (with values 10k , k from -3 to 3), and \ufb01nally set the value to 1.",
+                    "sid": 99,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use 4 hidden variables per label for this task, compromising between accuracy and ef\ufb01ciency.",
+                    "sid": 100,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Comparison on Convergence Speed.",
+                    "sid": 101,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we show a comparison of the convergence speed between the objective function of DPLVMs and CRFs.",
+                    "sid": 102,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply the L-BFGS optimization algorithm to optimize the objective function of DPLVM and CRF models, making a comparison between them.",
+                    "sid": 103,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We \ufb01nd that the number of iterations required for the convergence of DPLVMs are fewer than for CRFs.",
+                    "sid": 104,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 illustrates the convergence-speed comparison on the MSR data.",
+                    "sid": 105,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The DPLVM model arrives at the plateau of convergence in around 300 iterations, with the penalized loss of 95K when #passes = 300; while CRFs require 900 iterations, with the penalized loss of 98K when #passes = 900.",
+                    "sid": 106,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we should note that the time cost of the DPLVM model in each iteration is around four times higher than the CRF model, because of the incorporation of hidden variables.",
+                    "sid": 107,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to speed up the 6 For numerical optimization on latent variable models, we also experimented the conjugate-gradient (CG) optimization algorithm and stochastic gradient decent algorithm (SGD).",
+                    "sid": 108,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found the L-BFGS with L2 Gaussian regularization performs slightly better than the CG and the SGD.",
+                    "sid": 109,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we adopt the L-BFGS optimizer in this study.",
+                    "sid": 110,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 For a non-convex objective function, different parame-.",
+                    "sid": 111,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ter initializations normally bring different optimization results.",
+                    "sid": 112,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, to approach closer to the global optimal point, it is recommended to perform multiple experiments on DPLVMs 100 200 300 400 500 600 700 800 900 Forward-Backward Passes Figure 1: The value of the penalized loss based on the number of iterations: DPLVMs vs. CRFs on the MSR data.",
+                    "sid": 113,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "St yl e # W. T. # W or d # C. T. # C ha r M S R S. C. 88 K 2, 36 8 K 5 K 4, 05 0 K C U T. C. 69 K 1, 45 5 K 5 K 2, 40 3 K P K U S. C. 55 K 1, 10 9 K 5 K 1, 82 6 K Table 1: Details of the corpora.",
+                    "sid": 114,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "W.T. represents word types; C.T. represents character types; S.C. represents simpli\ufb01ed Chinese; T.C. represents traditional Chinese.",
+                    "sid": 115,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "training speed of the DPLVM model in the future, one solution is to use the stochastic learning technique9.",
+                    "sid": 116,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another solution is to use a distributed version of L-BFGS to parallelize the batch training.",
+                    "sid": 117,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "results and. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Discussion Since the CRF model is one of the most successful models in Chinese word segmentation, we compared DPLVMs with CRFs.",
+                    "sid": 118,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tried to make experimental results comparable between DPLVMs and CRF models, and have therefore employed the same feature set, optimizer and \ufb01ne-tuning strategy between the two.",
+                    "sid": 119,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also compared DPLVMs with semi- CRFs and other successful systems reported in previous work.",
+                    "sid": 120,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Evaluation.",
+                    "sid": 121,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results Three training and test corpora were used in the test, including the MSR Corpus, the CU Corpus, and the with random initialization and then select a good start point.",
+                    "sid": 122,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 We also tested the L-BFGS with L1 regularization, and we found the L-BFGS with L2 regularization performs better in this task.",
+                    "sid": 123,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 We have tried stochastic gradient decent, as described.",
+                    "sid": 124,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "previously.",
+                    "sid": 125,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is possible to try other stochastic learning methods, e.g., stochastic meta decent (Vishwanathan et al., 2006).",
+                    "sid": 126,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "M S R da ta P R FR oo v D PL V M (*) 97 .3 97 .3 97 .3 72 .2 C RF (*) 97 .1 96 .8 97 .0 72 .0 semi C RF (A 06 ) N/ A N/ A 96 .8 N/ A semi C RF (G 07 ) N/ A N/ A 97 .2 N/ A C RF (Z 06 -a) 96 .5 96 .3 96 .4 71 .4 Z06 b 97 .2 96 .9 97 .1 71 .2 Z C 07 N/ A N/ A 97 .2 N/ A Be st0 5 (T 05 ) 96 .2 96 .6 96 .4 71 .7 C U da ta P R FR oo v D PL V M (*) 94 .7 94 .4 94 .6 68 .8 C RF (*) 94 .3 93 .9 94 .1 65 .8 C RF (Z 06 -a) 95 .0 94 .2 94 .6 73 .6 Z06 b 95 .2 94 .9 95 .1 74 .1 Z C 07 N/ A N/ A 95 .1 N/ A Be st0 5 (T 05 ) 94 .1 94 .6 94 .3 69 .8 P K U da ta P R FR oo v D PL V M (*) 95 .6 94 .8 95 .2 77 .8 C RF (*) 95 .2 94 .2 94 .7 76 .8 C RF (Z 06 -a) 94 .3 94 .6 94 .5 75 .4 Z06 b 94 .7 95 .5 95 .1 74 .8 Z C 07 N/ A N/ A 94 .5 N/ A Be st0 5 (C 05 ) 95 .3 94 .6 95 .0 63 .6 Table 2: Results from DPLVMs, CRFs, semi-CRFs, and other systems.",
+                    "sid": 127,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PKU Corpus (see Table 1 for details).",
+                    "sid": 128,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are shown in Table 2.",
+                    "sid": 129,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are grouped into three sub-tables according to different corpora.",
+                    "sid": 130,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each row represents a CWS model.",
+                    "sid": 131,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each group, therows marked by \u2217 represent our models with hy brid word/character information.",
+                    "sid": 132,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Best05 represents the best system of the Second International Chinese Word Segmentation Bakeoff on the corresponding data; A06 represents the semi-CRF model in Andrew (2006)10, which was also used in Gao et al.",
+                    "sid": 133,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) (denoted as G07) with an improved performance; Z06-a and Z06-b represents the pure sub- word CRF model and the con\ufb01dence-based combination of CRF and rule-based models, respectively (Zhang et al., 2006); ZC07 represents the word-based perceptron model in Zhang and Clark (2007); T05 represents the CRF model in Tseng et al.",
+                    "sid": 134,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005); C05 represents the system in Chen et al. 10 It is a hybrid Markov/semi-Markov CRF model which outperforms conventional semi-CRF models (Andrew, 2006).",
+                    "sid": 135,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in general, as discussed in Andrew (2006), it is essentially still a semi-CRF model.",
+                    "sid": 136,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005).",
+                    "sid": 137,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best F-score and recall of OOV words of each group is shown in bold.",
+                    "sid": 138,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is shown in the table, we achieved the best F-score in two out of the three corpora.",
+                    "sid": 139,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also achieved the best recall rate of OOV words on those two corpora.",
+                    "sid": 140,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both of the MSR and PKU Corpus use simpli\ufb01ed Chinese, while the CU Corpus uses the traditional Chinese.",
+                    "sid": 141,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the MSR Corpus, the DPLVM model reduced more than 10% error rate over the CRF model using exactly the same feature set.",
+                    "sid": 142,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also compared our DPLVM model with the semi-CRF models in Andrew (2006) and Gao et al.",
+                    "sid": 143,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007), and demonstrate that the DPLVM model achieved slightly better performance than the semi-CRF models.",
+                    "sid": 144,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Andrew (2006) and Gao et al.",
+                    "sid": 145,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) only reported the results on the MSR Corpus.",
+                    "sid": 146,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In summary, tests for the Second International Chinese Word Segmentation Bakeoff showed competitive results for our method compared with the best results in the literature.",
+                    "sid": 147,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our discriminative latent variable models achieved the best F-scores on the MSR Corpus (97.3%) and PKU Corpus (95.2%); the latent variable models also achieved the best recalls of OOV words over those two corpora.",
+                    "sid": 148,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will analyze the results by varying the word-length in the following subsection.",
+                    "sid": 149,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Effect on Long Words.",
+                    "sid": 150,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One motivation of using a latent variable model for CWS is to use latent variables to more adequately learn long range dependencies, as we argued in Section 1.",
+                    "sid": 151,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the test data of the MSR Corpus, 19% of the words are longer than 3 characters; there are also 8% in the CU Corpus and 11% in the PKU Corpus, respectively.",
+                    "sid": 152,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the MSR Corpus, there are some extremely long words (Length > 10), while the CU and PKU corpus do not contain such extreme cases.",
+                    "sid": 153,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows the recall rate on different groups of words categorized by their lengths (the number of characters).",
+                    "sid": 154,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we expected, the DPLVM model performs much better on long words (Length \u2265 4) than the CRF model, which used exactly the same feature set.",
+                    "sid": 155,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared with the CRF model, the DPLVM model exhibited almost the same level of performance on short words.",
+                    "sid": 156,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both models have the best performance on segmenting the words with the length of two.",
+                    "sid": 157,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of the CRF 100 80 60 40 20 DPLVM CRF 0 100 80 60 40 20 0 100 90 80 70 60 50 40 0 2 4 6 8 10 12 14 L e n g t h o f W o r d ( M S R ) DPLV M CRF 0 2 4 6 8 10 12 14 L e n g t h o f W o r d ( C U ) DPLV M CRF 0 2 4 6 8 10 12 14 L e n g t h o f W o r d ( P K U ) Table 3: Error analysis on the latent variable segmenter.",
+                    "sid": 158,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The errors are grouped into four types: over- generalizat ion, errors on named entities, errors on idioms and errors from data inconsist ency.",
+                    "sid": 159,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Shijiazhu ang-city Branch, the second sales department) and (Science and Technolo gy Commissi on of China, National Institution on Scienti\ufb01c Informati on Analysis) . How-.",
+                    "sid": 160,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ever, it sometimes over generaliz ed to long words.",
+                    "sid": 161,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, as shown in the top row, Figure 2: The recall rate on words grouped by the length.",
+                    "sid": 162,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "model deteriorates rapidly as the word length increases, which demonstrated the dif\ufb01culty on modeling long range dependencies in CWS.",
+                    "sid": 163,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared with the CRF model, the DPLVM model performed quite well in dealing with long words, without sacri- \ufb01cing the performance on short words.",
+                    "sid": 164,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All in all, we conclude that the improvement of using the DPLVM model came from the improvement on modeling long range dependencies in CWS.",
+                    "sid": 165,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Error Analysis.",
+                    "sid": 166,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 lists the major errors collected from the latent variable segmenter.",
+                    "sid": 167,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We examined the collected errors and found that many of them can be grouped into four types: over-generalization (the top row), errors on named entities (the following three rows), errors on idioms (the following three rows) and errors from inconsistency (the two rows at the bottom).",
+                    "sid": 168,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system performed reasonably well on very complex OOV words, such as (Agricultural Bank of China, (National Department of Environmental Protection) and (The Central Propaganda Department) are two organization names, but they are incorrectly merged into a single word.",
+                    "sid": 169,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for the following three rows, (Chen Yao) and (Chen Fei) are person names.",
+                    "sid": 170,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are wrongly segmented because we lack the features to capture the information of person names (such useful knowledge, e.g., common surname list, are currently not used in our system).",
+                    "sid": 171,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the future, such errors may be solved by integrating open resources into our system.",
+                    "sid": 172,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Vasillis) is a transliterated foreign location name and is also wrongly segmented.",
+                    "sid": 173,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the corpora that considered 4 character idioms as a word, our system successfully combined most of new idioms together.",
+                    "sid": 174,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This differs greatly from the results of CRFs.",
+                    "sid": 175,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there are still a number of new idioms that failed to be correctly segmented, as listed from the \ufb01fth row to the seventh row.",
+                    "sid": 176,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, some errors are due to inconsistencies in the gold segmentation.",
+                    "sid": 177,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, // (propagandist) is two words, but a word with similar structure, (theorist), is one word.",
+                    "sid": 178,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(deserti\ufb01cation) is one word, but its synonym, // (deserti\ufb01cation), is two words in the gold segmentation.",
+                    "sid": 179,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion and future work. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Stanley F. Chen and Ronald Rosenfeld.",
+                    "sid": 180,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1999.",
+                    "sid": 181,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A gaussian prior for smoothing maximum entropy models.",
+                    "sid": 182,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Technical Report CMU-CS-99108, CMU.",
+                    "sid": 183,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Aitao Chen, Yiping Zhou, Anne Zhang, and Gordon Sun.",
+                    "sid": 184,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2005.",
+                    "sid": 185,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unigram language model for chinese word segmentation.",
+                    "sid": 186,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proceedings of the fourth SIGHAN workshop.",
+                    "sid": 187,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We presented a latent variable model for Chinese Hal Daume\u00b4III and Daniel Marcu.",
+                    "sid": 188,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2005.",
+                    "sid": 189,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learn word segmentation, which used hybrid information based on both word and character sequences.",
+                    "sid": 190,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discussed that word and character information have different advantages, and could be complementary to each other.",
+                    "sid": 191,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model is an alternative to the existing word based models and character based models.",
+                    "sid": 192,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We argued that using latent variables can better capture long range dependencies.",
+                    "sid": 193,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We performed experiments and demonstrated that our model can indeed improve the segmentation accuracy on long words.",
+                    "sid": 194,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this improvement, tests on the data of the Second International Chinese Word Segmentation Bakeoff show that our system is competitive with the best in the literature.",
+                    "sid": 195,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the latent variable model allows a wide range of features, so the future work will consider how to integrate open resources into our system.",
+                    "sid": 196,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The latent variable model handles latent-dependencies naturally, and can be easily extended to other labeling tasks.",
+                    "sid": 197,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We thank Kun Yu, Galen Andrew and Xiaojun Lin for the enlightening discussions.",
+                    "sid": 198,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also thank the anonymous reviewers who gave very helpful comments.",
+                    "sid": 199,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was partially supported by Grant- in-Aid for Specially Promoted Research (MEXT, Japan).",
+                    "sid": 200,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

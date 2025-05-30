@@ -1,0 +1,665 @@
+{
+    "ID": "W11-2133",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Topic Adaptation for Lecture Translation through Bilingual Latent Semantic Models",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work presents a simplified approach to bilingual topic modeling for language model adaptation by combining text in the source and target language into very short documents and performing Probabilistic Latent Semantic Analysis (PLSA) during model training.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During inference, documents containing only the source language can be used to infer a full topic-word distribution on all words in the target language\u2019s vocabulary, from which we perform Minimum Discrimination Information (MDI) adaptation on a background language model (LM).",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply our approach on the English-French IWSLT 2010 TED Talk exercise, and report a 15% reduction in perplexity and relative BLEU and NIST improvements of 3% and 2.4%, respectively over a baseline only using a 5-gram background LM over the entire translation task.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our topic modeling approach is simpler to construct than its counterparts.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Adaptation is usually applied to reduce the performance drop of Statistical Machine Translation (SMT) systems when translating documents that deviate from training and tuning conditions.",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we focus primarily on language model (LM) adaptation.",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In SMT, LMs are used to promote fluent translations.",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As probabilistic models of sequences of words, language models guide the selection and ordering of phrases in translation.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With respect to *This work was carried out during an internship period at Fondazione Bruno Kessler.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LM training, LM adaptation for SMT tries to improve an existing LM by using smaller amounts of texts.",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When adaptation data represents the translation task domain one generally refers to domain adaptation, while when they just represent the content of the single document to be translated one typically refers to topic adaptation.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose a cross-language topic adaptation method, enabling the adaptation of a LM based on the topic distribution of the source document during translation.",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train a latent semantic topic model on a collection of bilingual documents, in which each document contains both the source and target language.",
+                    "sid": 13,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During inference, a latent topic distribution of words across both the source and target languages is inferred from a source document to be translated.",
+                    "sid": 14,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After inference, we remove all source language words from the topic-word distributions and construct a unigram language model which is used to adapt our background LM via Minimum Discrimination Information (MDI) estimation (Federico, 1999, 2002; Kneser et al., 1997).",
+                    "sid": 15,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We organize the paper as follows: In Section 2, we discuss relevant previous work.",
+                    "sid": 16,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 3, we review topic modeling.",
+                    "sid": 17,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 4, we review MDI adaptation.",
+                    "sid": 18,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 5, we describe our new bilingual topic modeling based adaptation technique.",
+                    "sid": 19,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 6, we report adaptation experiments, followed by conclusions and future work in Section 7.",
+                    "sid": 20,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 previous work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Zhao et al. (2004) construct a baseline SMT system using a large background language model and use it to retrieve relevant documents from large monolingual corpora and subsequently interpolate the resulting small domain-specific language model with the background language model.",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Sethy et al. (2006), domain-specific language models are obtained by including only the sentences that are similar to the ones in the target domain via a relative entropy based criterion.",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Researchers such as Foster and Kuhn (2007) and Koehn and Schroeder (2007) have investigated mixture model approaches to adaptation.",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Foster and Kuhn (2007) use a mixture model approach that involves splitting a training corpus into different components, training separate models on each component, and applying mixture weights as a function of the distances of each component to the source text.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Koehn and Schroeder (2007) learn mixture weights for language models trained with in-domain and outof-domain data respectively by minimizing the perplexity of a tuning (development) set and interpolating the models.",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the application of mixture models yields significant results, the number of mixture weights to learn grows linearly with the number of independent language models applied.",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most works focus on monolingual language model adaptation in the context of automatic speech recognition.",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Federico (2002) combines Probabilistic Latent Semantic Analysis (PLSA) (Hofmann, 1999) for topic modeling with the minimum discrimination information (MDI) estimation criterion for speech recognition and notes an improvement in terms of perplexity and word error rate (WER).",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Latent Dirichlet Allocation (LDA) techniques have been proposed as an alternative to PLSA to construct purely generative models.",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LDA techniques include variational Bayes (Blei et al., 2003) and HMM-LDA (Hsu and Glass, 2006).",
+                    "sid": 30,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, bilingual approaches to topic modeling have also been proposed.",
+                    "sid": 31,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A Hidden Markov Bilingual Topic AdMixture (HM-BiTAM) model is proposed by Zhao and Xing (2008), which constructs a generative model in which words from a target language are sampled from a mixture of topics drawn from a Dirichlet distribution.",
+                    "sid": 32,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Foreign words are sampled via alignment links from a first-order Markov process and a topic specific translation lexicon.",
+                    "sid": 33,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While HM-BiTAM has been used for bilingual topic extraction and topic-specific lexicon mapping in the context of SMT, Zhao and Xing (2008) note that HM-BiTAM can generate unigram language models for both the source and target language and thus can be used for language model adaptation through MDI in a similar manner as outlined in Federico (2002).",
+                    "sid": 34,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another bilingual LSA approach is proposed by Tam et al. (2007), which consists of two hierarchical LDA models, constructed from parallel document corpora.",
+                    "sid": 35,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A one-to-one correspondence between LDA models is enforced by learning the hyperparameters of the variational Dirichlet posteriors in one LDA model and bootstrapping the second model by fixing the hyperparameters.",
+                    "sid": 36,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The technique is based on the assumption that the topic distributions of the source and target documents are identical.",
+                    "sid": 37,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is shown by Tam et al. (2007) that the bilingual LSA framework is also capable of adapting the translation model.",
+                    "sid": 38,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their work is extended in Tam and Schultz (2009) by constructing parallel document clusters formed by monolingual documents using M parallel seed documents.",
+                    "sid": 39,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, Gong et al. (2010) propose translation model adaptation via a monolingual LDA training.",
+                    "sid": 40,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A monolingual LDA model is trained from either the source or target side of the training corpus and each phrase pair is assigned a phrase-topic distribution based on: where Mj is the topic distribution of document j and wk is the number of occurrences of phrase pair Xk in document j. Mimno et al. (2009) extend the original concept of LDA to support polylingual topic models (PLTM), both on parallel (such as EuroParl) and partly comparable documents (such as Wikipedia articles).",
+                    "sid": 41,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Documents are grouped into tuples w = (w1, , wL) for each language l = \ufffd, \ufffd\ufffd\ufffd, L. Each document wl in tuple w is assumed to have the same topic distribution, drawn from an asymmetric Dirichlet prior.",
+                    "sid": 42,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tuple-specific topic distributions are learned using LDA with distinct topic-word concentration parameters ,(jl.",
+                    "sid": 43,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mimno et al. (2009) show that PLTM sufficiently aligns topics in parallel corpora.",
+                    "sid": 44,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 topic modeling",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The original idea of LSA is to map documents to a latent semantic space, which reduces the dimensionality by means of singular value decomposition (Deerwester et al., 1990).",
+                    "sid": 45,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A word-document matrix A is decomposed by the formula A = UEVt, where U and V are orthogonal matrices with unit-length columns and E is a diagonal matrix containing the singular values of A. LSA approximates E by casting all but the largest k singular values in E to zero.",
+                    "sid": 46,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PLSA is a statistical model based on the likelihood principle that incorporates mixing proportions of latent class variables (or topics) for each observation.",
+                    "sid": 47,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the context of topic modeling, the latent class variables z \u2208 Z = {z1, ..., zk} correspond to topics, from which we can derive probabilistic distributions of words w \u2208 W = {w1, ..., wm} in a document d \u2208 D = {d1, ..., dn} with k << n. Thus, the goal is to learn P(z  |d) and P(w|z) by maximizing the log-likelihood function: (4) where Oz,d' = P(z  |d').",
+                    "sid": 48,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) can be maximized by performing Expectation Maximization on document d' by keeping fixed the word-topic distributions already estimated on the training data.",
+                    "sid": 49,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, a word-document distribution can be inferred by applying the mixture model (3) (see Federico, 2002 for details).",
+                    "sid": 50,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 mdi adaptation",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "An n-gram language model approximates the probability of a sequence of words in a text W1T = w1, ..., wT drawn from a vocabulary V by the following equation: L(W, D) = wEW 1 words preceding wi.",
+                    "sid": 51,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a training corpus B, dED we can compute the probability of a n-gram from a smoothed model via interpolation as: where n(w, d) is the term frequency of w in d. Using Bayes\u2019 formula, the conditional probability Using the Expectation Maximization (EM) algorithm (Dempster et al., 1977), we estimate the parameters P(z|d) and P(w|z) via an iterative process that alternates two steps: (i) an expectation step (E) in which posterior probabilities are computed for each latent topic z; and (ii) a maximization (M) step, in which the parameters are updated for the posterior probabilities computed in the previous E-step.",
+                    "sid": 52,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Details of how to efficiently implement the re-estimation formulas can be found in Federico (2002).",
+                    "sid": 53,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Iterating the E- and M-steps will lead to a convergence that approximates the maximum likelihood equation in (2).",
+                    "sid": 54,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A document-topic distribution B can be inferred on a new document d' by maximizing the following where fB(w|h) is the discounted frequency of sequence hw, h' is the lower order history, where |h|\u22121 = |h'|, and AB(h) is the zero-frequency probability of h, defined as: Federico (1999) has shown that MDI Adaptation is useful to adapt a background language model with a small adaptation text sample A, by assuming to have only sufficient statistics on unigrams.",
+                    "sid": 55,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, we can reliably estimate PA(w) constraints on the marginal distribution of an adapted language model PA(h, w) which minimizes the KullbackLeibler distance from B, i.e.",
+                    "sid": 56,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": The joint distribution in (7) can be computed using Generalized Iterative Scaling (Darroch and Ratcliff, 1972).",
+                    "sid": 57,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under the unigram constraints, the GIS algorithm reduces to the closed form: PA(h, w) = PB(h, w)\u03b1(w), (8) where In order to estimate the conditional distribution of the adapted LM, we rewrite (8) and simplify the equation to: The adaptation model can be improved by smoothing the scaling factor in (9) by an exponential where 0 < \u03b3 < 1.",
+                    "sid": 58,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Empirically, \u03b3 values less than one decrease the effect of the adaptation ratio to reduce the bias.",
+                    "sid": 59,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As outlined in Federico (2002), the adapted language model can also be written in an interpolation which permits to efficiently compute the normalization term for high order n-grams recursively and by just summing over observed n-grams.",
+                    "sid": 60,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The recursion ends with the following initial values for the empty history E: MDI adaptation is one of the adaptation methods provided by the IRSTLM toolkit and was applied as explained in the following section.",
+                    "sid": 61,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 bilingual latent semantic models",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Similar to the treatment of documents in HMBiTAM (Zhao and Xing, 2008), we combine parallel texts into a document-pair (E, F) containing n parallel sentence pairs (ei, fi), 1 < i < n, corresponding to the source and target languages, respectively.",
+                    "sid": 62,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the assumption that the topics in a parallel text share the same semantic meanings across languages, the topics are sampled from the same topicdocument distribution.",
+                    "sid": 63,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make the additional assumption that stop-words and punctuation, although having high word frequencies in documents, will generally have a uniform topic distribution across documents; therefore, it is not necessary to remove them prior to model training, as they will not adversely affect the overall topic distribution in each document.",
+                    "sid": 64,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to ensure the uniqueness between word tokens between languages, we annotate E with special characters.",
+                    "sid": 65,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We perform PLSA training, as described in Section 3.1 and receive wordtopic distributions P(w|z), w E VE U VF Given an untranslated text \u02c6E, we split E\u02c6 into a sequence of documents D. For each document di E D, we infer a full word-document distribution by learning \u03b8\u02c6 via (4).",
+                    "sid": 66,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Via (3), we can generate the full word-document distribution P(w  |d) for w E VF.",
+                    "sid": 67,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then convert the word-document probabilities into pseudo-counts via a scaling function: where \u0394 is a scaling factor to raise the probability ratios above 1.",
+                    "sid": 68,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our goal is to generate a unigram language model on the target language for adaptation, we remove the source words generated in (17) prior to building the language model.",
+                    "sid": 69,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From our newly generated unigram language model, we perform MDI adaptation on the background LM to yield an adapted LM for translating the source document used for the PLSA inference step.",
+                    "sid": 70,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 experiments",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Our experiments were done using the TED Talks collection, used in the IWSLT 2010 evaluation task1. we didn \u2019t have money, so we had a cheap, little ad , but we wanted college students for a study of prison life .",
+                    "sid": 71,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "75 people volunteered , took personality tests . we did interviews . picked two dozen : the most normal , the most healthy .",
+                    "sid": 72,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We perform MDI adaptation with each of the unigram language models to update the background TED language model.",
+                    "sid": 73,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We configure the adaptation rate parameter y to 0.3, as recommended in Federico (2002).",
+                    "sid": 74,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline LM is replaced with each adapted LM, corresponding to the document to be translated.",
+                    "sid": 75,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then calculate the mean perplexity of the adapted LMs and the baseline, respectively.",
+                    "sid": 76,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The perplexity scores are shown in Table 2.",
+                    "sid": 77,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe a 15.3% relative improvement in perplexity score over the baseline.",
+                    "sid": 78,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We perform MT experiments on the IWSLT 2010 evaluation set to compare the baseline and adapted LMs.",
+                    "sid": 79,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the evaluation, we notice a 0.85 improvement in BLEU (%), yielding a 3% improvement over the baseline.",
+                    "sid": 80,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same performance trend in NIST is observed with a 2.4% relative improvement compared to the unadapted baseline.",
+                    "sid": 81,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our PLSA and MDI-based adaptation method not only improves fluency but also improves adequacy: the topicbased adaptation approach is attempting to suggest more appropriate words based on increased unigram probabilities than that of the baseline LM.",
+                    "sid": 82,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 demonstrates a large improvement in unigram selection for the adapted TED model in terms of the individual contribution to the NIST score, with diminishing effects on larger n-grams.",
+                    "sid": 83,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The majority of the overall improvements are on individual word selection.",
+                    "sid": 84,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples of improved fluency and adequacy are shown in Figure 3.",
+                    "sid": 85,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 285 shows an example of a translation that doesn\u2019t provide much of an n-gram improvement, but demonstrates more fluent output, due to the deletion of the first comma and the movement of the second comma to the end of the clause.",
+                    "sid": 86,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While \u201cinstallation\u201d remains an inadequate noun in this clause, the adapted model reorders the root words \u201crehab\u201d and \u201cinstallation\u201d (in comparison with the baseline) and improves the grammaticality of the sentence; however, the number does not match between the determiner and the noun phrase.",
+                    "sid": 87,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 597 demonstrates a perfect phrase translation with respect to the reference translation using semantic paraphrasing.",
+                    "sid": 88,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline phrase \u201cd\u2019origine\u201d is transformed and attributed to the noun.",
+                    "sid": 89,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of translating \u201coriginal\u201d as a phrase for \u201chome\u201d, the adapted model captures the original meaning of the word in the translation.",
+                    "sid": 90,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 752 demonstrates an improvement in adequacy through the replacement of the word \u201cquelque\u201d with \u201cautre.\u201d Additionally, extra words are removed.",
+                    "sid": 91,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These lexical changes result in the improvement in translation quality due to topic-based adaptation via PLSA.",
+                    "sid": 92,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusions",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "An alternative approach to bilingual topic modeling has been presented that integrates the PLSA framework with MDI adaptation that can effectively adapt a background language model when given a document in the source language.",
+                    "sid": 93,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than training two topic models and enforcing a one-to-one correspondence for translation, we use the assumption that parallel texts refer to the same topics and have a very similar topic distribution.",
+                    "sid": 94,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Preliminary experiments show a reduction in perplexity and an overall improvement in BLEU and NIST scores on speech translation.",
+                    "sid": 95,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also note that, unlike previous works involving topic modeling, we did not remove stop words and punctuation, but rather assumed that these features would have a relatively uniform topic distribution.",
+                    "sid": 96,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One downside to the MDI adaptation approach is that the computation of the normalization term z(h) is expensive and potentially prohibitive during continuous speech translation tasks.",
+                    "sid": 97,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further investigation is needed to determine if there is a suitable approximation that avoids computing probabilities across all n-grams.",
+                    "sid": 98,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "This work was supported by the T4ME network of excellence (IST-249119), funded by the DG INFSO of the European Commission through the Seventh Framework Programme.",
+                    "sid": 99,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first author received a grant under the Erasmus Mundus Language & Communication Technologies programme.",
+                    "sid": 100,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

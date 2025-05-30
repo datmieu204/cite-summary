@@ -1,0 +1,1079 @@
+{
+    "ID": "P04-1013",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Discriminative Training Of A Neural Network Statistical Parser",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discriminative methods have shown significant improvements over traditional generative methods in many machine learning applications, but there has been difficulty in extending them to natural language parsing.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One problem is that much of the work on discriminative methods conflates changes to the learning method with changes to the parameterization of the problem.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show how a parser can be trained with a discriminative learning method while still parameterizing the problem according to a generative probability model.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present three methods for training a neural network to estimate the probabilities for a statistical parser, one generative, one discriminative, and one where the probability model is generative but the training criteria is discriminative.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The latter model outperforms the previous two, achieving state-ofthe-art levels of performance (90.1% F-measure on constituents).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Much recent work has investigated the application of discriminative methods to NLP tasks, with mixed results.",
+                    "sid": 6,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Klein and Manning (2002) argue that these results show a pattern where discriminative probability models are inferior to generative probability models, but that improvements can be achieved by keeping a generative probability model and training according to a discriminative optimization criteria.",
+                    "sid": 7,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show how this approach can be applied to broad coverage natural language parsing.",
+                    "sid": 8,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our estimation and training methods successfully balance the conflicting requirements that the training method be both computationally tractable for large datasets and a good approximation to the theoretically optimal method.",
+                    "sid": 9,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser which uses this approach outperforms both a generative model and a discriminative model, achieving state-of-the-art levels of performance (90.1% F-measure on constituents).",
+                    "sid": 10,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compare these different approaches, we use a neural network architecture called Simple Synchrony Networks (SSNs) (Lane and Henderson, 2001) to estimate the parameters of the probability models.",
+                    "sid": 11,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SSNs have the advantage that they avoid the need to impose hand-crafted independence assumptions on the learning process.",
+                    "sid": 12,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training an SSN simultaneously trains a finite representations of the unbounded parse history and a mapping from this history representation to the parameter estimates.",
+                    "sid": 13,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The history representations are automatically tuned to optimize the parameter estimates.",
+                    "sid": 14,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This avoids the problem that any choice of hand-crafted independence assumptions may bias our results towards one approach or another.",
+                    "sid": 15,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The independence assumptions would have to be different for the generative and discriminative probability models, and even for the parsers which use the generative probability model, the same set of independence assumptions may be more appropriate for maximizing one training criteria over another.",
+                    "sid": 16,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By inducing the history representations specifically to fit the chosen model and training criteria, we avoid having to choose independence assumptions which might bias our results.",
+                    "sid": 17,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each complete parsing system we propose consists of three components, a probability model for sequences of parser decisions, a Simple Synchrony Network which estimates the parameters of the probability model, and a procedure which searches for the most probable parse given these parameter estimates.",
+                    "sid": 18,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper outlines each of these components, but more details can be found in (Henderson, 2003b), and, for the discriminative model, in (Henderson, 2003a).",
+                    "sid": 19,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also present the training methods, and experiments on the proposed parsing models.",
+                    "sid": 20,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 two history-based probability models",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "As with many previous statistical parsers (Ratnaparkhi, 1999; Collins, 1999; Charniak, 2000), we use a history-based model of parsing.",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Designing a history-based model of parsing involves two steps, first choosing a mapping from the set of phrase structure trees to the set of parses, and then choosing a probability model in which the probability of each parser decision is conditioned on the history of previous decisions in the parse.",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the same mapping for both our probability models, but we use two different ways of conditioning the probabilities, one generative and one discriminative.",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we will show in section 6, these two different ways of parameterizing the probability model have a big impact on the ease with which the parameters can be estimated.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To define the mapping from phrase structure trees to parses, we use a form of left-corner parsing strategy (Rosenkrantz and Lewis, 1970).",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a left-corner parse, each node is introduced after the subtree rooted at the node\u2019s first child has been fully parsed.",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then the subtrees for the node\u2019s remaining children are parsed in their left-to-right order.",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parsing a constituent starts by pushing the leftmost word w of the constituent onto the stack with a shift(w) action.",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parsing a constituent ends by either introducing the constituent\u2019s parent nonterminal (labeled Y ) with a project(Y) action, or attaching to the parent with an attach action.1 A complete parse consists of a sequence of these actions, d1,..., dm, such that performing d1,..., dm results in a complete phrase structure tree.",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because this mapping from phrase structure trees to sequences of decisions about parser actions is one-to-one, finding the most probable phrase structure tree is equivalent to finding the parse d1,..., dm which maximizes P(d1,..., dm|w1,..., wn).",
+                    "sid": 30,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This probability is only nonzero if yield(d1,..., dm) = w1,..., wn, so we can restrict attention to only those parses which actually yield the given sentence.",
+                    "sid": 31,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this restriction, it is equivalent to maximize P(d1,..., dm), as is done with our first probability model.",
+                    "sid": 32,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first probability model is generative, because it specifies the joint probability of the input sentence and the output tree.",
+                    "sid": 33,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This joint probability is simply P(d1,..., dm), since the 'More details on the mapping to parses can be found in (Henderson, 2003b). probability of the input sentence is included in the probabilities for the shift(wi) decisions included in d1,..., dm.",
+                    "sid": 34,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability model is then defined by using the chain rule for conditional probabilities to derive the probability of a parse as the multiplication of the probabilities of each decision di conditioned on that decision\u2019s prior parse history d1,..., di\u22121.",
+                    "sid": 35,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parameters of this probability model are the P (di|d1,..., di\u22121).",
+                    "sid": 36,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generative models are the standard way to transform a parsing strategy into a probability model, but note that we are not assuming any bound on the amount of information from the parse history which might be relevant to each parameter.",
+                    "sid": 37,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second probability model is discriminative, because it specifies the conditional probability of the output tree given the input sentence.",
+                    "sid": 38,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More generally, discriminative models try to maximize this conditional probability, but often do not actually calculate the probability, as with Support Vector Machines (Vapnik, 1995).",
+                    "sid": 39,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take the approach of actually calculating an estimate of the conditional probability because it differs minimally from the generative probability model.",
+                    "sid": 40,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this form, the distinction between our two models is sometimes referred to as \u201cjoint versus conditional\u201d (Johnson, 2001; Klein and Manning, 2002) rather than \u201cgenerative versus discriminative\u201d (Ng and Jordan, 2002).",
+                    "sid": 41,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As with the generative model, we use the chain rule to decompose the entire conditional probability into a sequence of probabilities for individual parser decisions, where yield(dj,..., dk) is the sequence of words wi from the shift(wi) actions in dj,..., dk.",
+                    "sid": 42,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that d1,..., di\u22121 specifies yield(d1,..., di\u22121), so it is sufficient to only add yield(di,..., dm) to the conditional in order for the entire input sentence to be included in the conditional.",
+                    "sid": 43,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will refer to the string yield(di,..., dm) as the lookahead string, because it represents all those words which have not yet been reached by the parse at the time when decision di is chosen.",
+                    "sid": 44,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parameters of this model differ from those of the generative model only in that they include the lookahead string in the conditional.",
+                    "sid": 45,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although maximizing the joint probability is the same as maximizing the conditional probability, the fact that they have different parameters means that estimating one can be much harder than estimating the other.",
+                    "sid": 46,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general we would expect that estimating the joint probability would be harder than estimating the conditional probability, because the joint probability contains more information than the conditional probability.",
+                    "sid": 47,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, the probability distribution over sentences can be derived from the joint probability distribution, but not from the conditional one.",
+                    "sid": 48,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the unbounded nature of the parsing problem means that the individual parameters of the discriminative model are much harder to estimate than those of the generative model.",
+                    "sid": 49,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parameters of the discriminative model include an unbounded lookahead string in the conditional.",
+                    "sid": 50,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because these words have not yet been reached by the parse, we cannot assign them any structure, and thus the estimation process has no way of knowing what words in this string will end up being relevant to the next decision it needs to make.",
+                    "sid": 51,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The estimation process has to guess about the future role of an unbounded number of words, which makes the estimate quite difficult.",
+                    "sid": 52,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the parameters of the generative model only include words which are either already incorporated into the structure, or are the immediate next word to be incorporated.",
+                    "sid": 53,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus it is relatively easy to determine the significance of each word.",
+                    "sid": 54,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 estimating the parameters with a neural network",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The most challenging problem in estimating P(di|d1,...,di\u22121, yield(di,...,dm)) and P(di|d1,..., di\u22121) is that the conditionals include an unbounded amount of information.",
+                    "sid": 55,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both the parse history d1,..., di\u22121 and the lookahead string yield(di,..., dm) grow with the length of the sentence.",
+                    "sid": 56,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to apply standard probability estimation methods, we use neural networks to induce finite representations of both these sequences, which we will denote h(d1,..., di\u22121) and l(yield(di,..., dm)), respectively.",
+                    "sid": 57,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The neural network training methods we use try to find representations which preserve all the information about the sequences which are relevant to estimating the desired probabilities.",
+                    "sid": 58,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the previous work on using neural networks for parsing natural language, by far the most empirically successful has been the work using Simple Synchrony Networks.",
+                    "sid": 59,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like other recurrent network architectures, SSNs compute a representation of an unbounded sequence by incrementally computing a representation of each prefix of the sequence.",
+                    "sid": 60,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At each position i, representations from earlier in the sequence are combined with features of the new position i to produce a vector of real valued features which represent the prefix ending at i.",
+                    "sid": 61,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This representation is called a hidden representation.",
+                    "sid": 62,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is analogous to the hidden state of a Hidden Markov Model.",
+                    "sid": 63,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As long as the hidden representation for position i \u2212 1 is always used to compute the hidden representation for position i, any information about the entire sequence could be passed from hidden representation to hidden representation and be included in the hidden representation of that sequence.",
+                    "sid": 64,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When these representations are then used to estimate probabilities, this property means that we are not making any a priori hard independence assumptions (although some independence may be learned from the data).",
+                    "sid": 65,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between SSNs and most other recurrent neural network architectures is that SSNs are specifically designed for processing structures.",
+                    "sid": 66,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When computing the history representation h(d1,..., di\u22121), the SSN uses not only the previous history representation h(d1,..., di\u22122), but also uses history representations for earlier positions which are particularly relevant to choosing the next parser decision di.",
+                    "sid": 67,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This relevance is determined by first assigning each position to a node in the parse tree, namely the node which is on the top of the parser\u2019s stack when that decision is made.",
+                    "sid": 68,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then the relevant earlier positions are chosen based on the structural locality of the current decision\u2019s node to the earlier decisions\u2019 nodes.",
+                    "sid": 69,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, the number of representations which information needs to pass through in order to flow from history representation i to history representation j is determined by the structural distance between i\u2019s node and j\u2019s node, and not just the distance between i and j in the parse sequence.",
+                    "sid": 70,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This provides the neural network with a linguistically appropriate inductive bias when it learns the history representations, as explained in more detail in (Henderson, 2003b).",
+                    "sid": 71,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When computing the lookahead representation l(yield(di,..., dm)), there is no structural information available to tell us which positions are most relevant to choosing the decision di.",
+                    "sid": 72,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proximity in the string is our only indication of relevance.",
+                    "sid": 73,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore we compute l(yield(di,...,dm)) by running a recurrent neural network backward over the string, so that the most recent input is the first word in the lookahead string, as discussed in more detail in (Henderson, 2003a).",
+                    "sid": 74,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once it has computed h(d1,..., di\u22121) and (for the discriminative model) l(yield(di,..., dm)), the SSN uses standard methods (Bishop, 1995) to estimate a probability distribution over the set of possible next decisions di given these representations.",
+                    "sid": 75,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This involves further decomposing the distribution over all possible next parser actions into a small hierarchy of conditional probabilities, and then using log-linear models to estimate each of these conditional probability distributions.",
+                    "sid": 76,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The input features for these loglinear models are the real-valued vectors computed by h(d1,..., di\u22121) and l(yield(di,..., dm)), as explained in more detail in (Henderson, 2003b).",
+                    "sid": 77,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the full neural network consists of a recurrent hidden layer for h(d1,...,di\u22121), (for the discriminative model) a recurrent hidden layer for l(yield(di,..., dm)), and an output layer for the log-linear model.",
+                    "sid": 78,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training is applied to this full neural network, as described in the next section.",
+                    "sid": 79,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 three optimization criteria and their training methods",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "As with many other machine learning methods, training a Simple Synchrony Network involves first defining an appropriate learning criteria and then performing some form of gradient descent learning to search for the optimum values of the network\u2019s parameters according to this criteria.",
+                    "sid": 80,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all the parsing models investigated here, we use the on-line version of Backpropagation to perform the gradient descent.",
+                    "sid": 81,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This learning simultaneously tries to optimize the parameters of the output computation and the parameters of the mappings h(d1,...,di\u22121) and l(yield(di,..., dm)).",
+                    "sid": 82,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With multi-layered networks such as SSNs, this training is not guaranteed to converge to a global optimum, but in practice a network whose criteria value is close to the optimum can be found.",
+                    "sid": 83,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The three parsing models differ in the criteria the neural networks are trained to optimize.",
+                    "sid": 84,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two of the neural networks are trained using the standard maximum likelihood approach of optimizing the same probability which they are estimating, one generative and one discriminative.",
+                    "sid": 85,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the generative model, this means maximizing the total joint probability of the parses and the sentences in the training corpus.",
+                    "sid": 86,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the discriminative model, this means maximizing the conditional probability of the parses in the training corpus given the sentences in the training corpus.",
+                    "sid": 87,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To make the computations easier, we actually minimize the negative log of these probabilities, which is called cross-entropy error.",
+                    "sid": 88,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Minimizing this error ensures that training will converge to a neural network whose outputs are estimates of the desired probabilities.2 For each parse in the training corpus, Backpropagation training involves first computing the probability which the current network assigns to that parse, then computing the first derivative of (the negative log of) this probability with respect to each of the network\u2019s parameters, and then updating the parameters proportionately to this derivative.3 The third neural network combines the advantages of the generative probability model with the advantages of the discriminative optimization criteria.",
+                    "sid": 89,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The structure of the network and the set of outputs which it computes are exactly the same as the above network for the generative model.",
+                    "sid": 90,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But the training procedure is designed to maximize the conditional probability of the parses in the training corpus given the sentences in the training corpus.",
+                    "sid": 91,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The conditional probability for a sentence can be computed from the joint probability of the generative model by normalizing over the set of all parses d\ue18b1,..., d\ue18bm\ue18c for the sentence.",
+                    "sid": 92,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So, with this approach, we need to maximize this normalized probability, and not the probability computed by the network.",
+                    "sid": 93,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difficulty with this approach is that there are exponentially many parses for the sentence, so it is not computationally feasible to compute them all.",
+                    "sid": 94,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We address this problem by only computing a small set of the most probable parses.",
+                    "sid": 95,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remainder of the sum is estimated using a combination of the probabilities from the best parses and the probabilities 2Cross-entropy error ensures that the minimum of the error function converges to the desired probabilities as the amount of training data increases (Bishop, 1995), so the minimum for any given dataset is considered an estimate of the true probabilities. from the partial parses which were pruned when searching for the best parses.",
+                    "sid": 96,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabilities of pruned parses are estimated in such a way as to minimize their effect on the training process.",
+                    "sid": 97,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each decision which is part of some unpruned parses, we calculate the average probability of generating the remainder of the sentence by these un-pruned parses, and use this as the estimate for generating the remainder of the sentence by the pruned parses.",
+                    "sid": 98,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this estimate we can calculate the sum of the probabilities for all the pruned parses which originate from that decision.",
+                    "sid": 99,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach gives us a slight overestimate of the total sum, but because this total sum acts simply as a weighting factor, it has little effect on learning.",
+                    "sid": 100,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What is important is that this estimate minimizes the effect of the pruned parses\u2019 probabilities on the part of the training process which occurs after the probabilities of the best parses have been calculated.",
+                    "sid": 101,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After estimating P(d1,..., dm|w1,..., wn), training requires that we estimate the first derivative of (the negative log of) this probability with respect to each of the network\u2019s parameters.",
+                    "sid": 102,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contribution to this derivative of the numerator in the above equation is the same as in the generative case, just scaled by the denominator.",
+                    "sid": 103,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between the two learning methods is that we also need to account for the contribution to this derivative of the denominator.",
+                    "sid": 104,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here again we are faced with the problem that there are an exponential number of derivations in the denominator, so here again we approximate this calculation using the most probable parses.",
+                    "sid": 105,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To increase the conditional probability of the correct parse, we want to decrease the total joint probabilities of the incorrect parses.",
+                    "sid": 106,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Probability mass is only lost from the sum over all parses because shift(wi) actions are only allowed for the correct wi.",
+                    "sid": 107,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we can decrease the total joint probability of the incorrect parses by making these parses be worse predictors of the words in the sentence.4 The combination of training the correct parses to be good predictors of the words and training the incorrect parses to be bad predictors of the words results in prediction prob4Non-prediction probability estimates for incorrect parses can make a small contribution to the derivative, but because pruning makes the calculation of this contribution inaccurate, we treat this contribution as zero when training.",
+                    "sid": 108,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This means that non-prediction outputs are trained to maximize the same criteria as in the generative case. abilities which are not accurate estimates, but which are good at discriminating correct parses from incorrect parses.",
+                    "sid": 109,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is this feature which gives discriminative training an advantage over generative training.",
+                    "sid": 110,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The network does not need to learn an accurate model of the distribution of words.",
+                    "sid": 111,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The network only needs to learn an accurate model of how words disambiguate previous parsing decisions.",
+                    "sid": 112,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we apply discriminative training only to the most probable incorrect parses, we train the network to discriminate between the correct parse and those incorrect parses which are the most likely to be mistaken for the correct parse.",
+                    "sid": 113,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this sense our approximate training method results in optimizing the decision boundary between correct and incorrect parses, rather than optimizing the match to the conditional probability.",
+                    "sid": 114,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Modifying the training method to systematically optimize the decision boundary (as in large margin methods such as Support Vector Machines) is an area of future research.",
+                    "sid": 115,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 searching for the most probable parse",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The complete parsing system uses the probability estimates computed by the SSN to search for the most probable parse.",
+                    "sid": 116,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The search incrementally constructs partial parses d1,..., di by taking a parse it has already constructed d1,..., di\u22121 and using the SSN to estimate a probability distribution P(di|d1,..., di\u22121, ...) over possible next decisions di.",
+                    "sid": 117,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These probabilities are then used to compute the probabilities for d1,..., di.",
+                    "sid": 118,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, the partial parse with the highest probability is chosen as the next one to be extended, but to perform the search efficiently it is necessary to prune the search space.",
+                    "sid": 119,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main pruning is that only a fixed number of the most probable derivations are allowed to continue past the shifting of each word.",
+                    "sid": 120,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Setting this post-word beam width to 5 achieves fast parsing with reasonable performance in all models.",
+                    "sid": 121,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the parsers with generative probability models, maximum accuracy is achieved with a post-word beam width of 100.",
+                    "sid": 122,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 the experiments",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We used the Penn Treebank (Marcus et al., 1993) to perform empirical experiments on the proposed parsing models.",
+                    "sid": 123,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each case the input to the network is a sequence of tag-word pairs.5 We report results for three different vocabulary sizes, varying in the frequency with which tagword pairs must occur in the training set in order to be included explicitly in the vocabulary.",
+                    "sid": 124,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A frequency threshold of 200 resulted in a vocabulary of 508 tag-word pairs, a threshold of 20 resulted in 4215 tag-word pairs, and a threshold of 5 resulted in 11,993 tag-word pairs For the generative model we trained networks for the 508 (\u201cGSSN-Freq>200\u201d) and 4215 (\u201cGSSN-Freq>20\u201d) word vocabularies.",
+                    "sid": 125,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The need to calculate word predictions makes training times for the 11,993 word vocabulary very long, and as of this writing no such network training has been completed.",
+                    "sid": 126,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The discriminative model does not need to calculate word predictions, so it was feasible to train networks for the 11,993 word vocabulary (\u201cDSSN-Freq>5\u201d).",
+                    "sid": 127,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous results (Henderson, 2003a) indicate that this vocabulary size performs better than the smaller ones, as would be expected.",
+                    "sid": 128,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the networks trained with the discriminative optimization criteria and the generative probability model, we trained networks for the 508 (\u201cDGSSN-Freq>200\u201d) and 4215 (\u201cDGSSNFreq>20\u201d) word vocabularies.",
+                    "sid": 129,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this training, we need to select a small set of the most probable incorrect parses.",
+                    "sid": 130,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we tried using only the network being trained to choose these top parses, training times were very long and the resulting networks did not outperform their generative counterparts.",
+                    "sid": 131,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the experiments reported here, we provided the training with a list of the top 20 parses found by a network of the same type which had been trained with the generative criteria.",
+                    "sid": 132,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The network being trained was then used to choose its top 10 parses from this list, and training was performed on these 10 parses and the correct parse.6 This reduced the time necessary to choose the top parses during training, and helped focus the early stages of training on learning relevant discriminations.",
+                    "sid": 133,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the training of these networks was complete, we tested both their ability to parse on their own and their ability to re-rank the top We determined appropriate training parameters and network size based on intermediate validation results and our previous experience.7 We trained several networks for each of the GSSN models and chose the best ones based on their validation performance.",
+                    "sid": 134,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then trained one network for each of the DGSSN models and for the DSSN model.",
+                    "sid": 135,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best post-word beam width was determined on the validation set, which was 5 for the DSSN model and 100 for the other models.",
+                    "sid": 136,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To avoid repeated testing on the standard testing set, we first compare the different models with their performance on the validation set.",
+                    "sid": 137,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Standard measures of accuracy are shown in table 1.8 The largest accuracy difference is between the parser with the discriminative probability model (DSSN-Freq>5) and those with the generative probability model, despite the larger vocabulary of the former.",
+                    "sid": 138,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This demonstrates the difficulty of estimating the parameters of a discriminative probability model.",
+                    "sid": 139,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is also a clear effect of vocabulary size, but there is a slightly larger effect of training method.",
+                    "sid": 140,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When tested in the same way as they were trained (for reranking), the parsers which were trained with a discriminative criteria achieve a 7% and 8% reduction in error rate over their respective parsers with the same generative probability model.",
+                    "sid": 141,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When tested alone, these DGSSN parsers perform only slightly better than their respective GSSN parsers.",
+                    "sid": 142,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initial experiments on giving these networks exposure to parses outside the top 20 parses of the GSSN parsers at the very end of training did not result in any improvement on this task.",
+                    "sid": 143,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that at least some of the advantage of the DSSN models is due to the fact that re-ranking is a simpler task than parsing from scratch.",
+                    "sid": 144,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But additional experimental work would be necessary to make any definite conclusions about this issue.",
+                    "sid": 145,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison to previous results, table 2 lists the results for our best model (DGSSNFreq>20, rerank)9 and several other statistical parsers (Ratnaparkhi, 1999; Collins, 1999; Collins and Duffy, 2002; Charniak, 2000; Collins, 2000; Bod, 2003) on the entire testing set.",
+                    "sid": 146,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our best performing model is more accurate than all these previous models except (Bod, 2003).",
+                    "sid": 147,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This DGSSN parser achieves this result using much less lexical knowledge than other approaches, which mostly use at least the words which occur at least 5 times, plus morphological features of the remaining words.",
+                    "sid": 148,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the fact that the DGSSN uses a large-vocabulary tagger (Ratnaparkhi, 1996) as a preprocessing stage may compensate for its smaller vocabulary.",
+                    "sid": 149,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, the main reason for using a smaller vocabulary is the computational complexity of computing probabilities for the shift(wi) actions on-line, which other models do not require.",
+                    "sid": 150,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 related work",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "Johnson (2001) investigated similar issues for parsing and tagging.",
+                    "sid": 151,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "His maximal conditional likelihood estimate for a PCFG takes the same approach as our generative model trained with a discriminative criteria.",
+                    "sid": 152,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While he shows a non-significant increase in performance over the standard maximal joint likelihood estimate on a small dataset, because he did not have a computationally efficient way to train this model, he was not able to test it on the standard datasets.",
+                    "sid": 153,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other models he investigates conflate changes in the probability models with changes in the training criteria, and the discriminative probability models do worse.",
+                    "sid": 154,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the context of part-of-speech tagging, Klein and Manning (2002) argue for the same distinctions made here between discriminative models and discriminative training criteria, and come to the same conclusions.",
+                    "sid": 155,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, their arguments are made in terms of independence assumptions.",
+                    "sid": 156,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results show that these generalizations also apply to methods which do not rely on independence assumptions.",
+                    "sid": 157,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While both (Johnson, 2001) and (Klein and Manning, 2002) propose models which use the parameters of the generative model but train to optimize a discriminative criteria, neither proposes training algorithms which are computationally tractable enough to be used for broad coverage parsing.",
+                    "sid": 158,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our proposed training method succeeds in being both tractable and effective, demonstrating both a significant improvement over the equivalent generative model and state-of-the-art accuracy.",
+                    "sid": 159,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins (2000) and Collins and Duffy (2002) also succeed in finding algorithms for training discriminative models which balance tractability with effectiveness, showing improvements over a generative model.",
+                    "sid": 160,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both these methods are limited to reranking the output of another parser, while our trained parser can be used alone.",
+                    "sid": 161,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Neither of these methods use the parameters of a generative probability model, which might explain our better performance (see table 2).",
+                    "sid": 162,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "8 conclusions",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "This article has investigated the application of discriminative methods to broad coverage natural language parsing.",
+                    "sid": 163,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We distinguish between two different ways to apply discriminative methods, one where the probability model is changed to a discriminative one, and one where the probability model remains generative but the training method optimizes a discriminative criteria.",
+                    "sid": 164,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that the discriminative probability model is much worse than the generative one, but that training to optimize the discriminative criteria results in improved performance.",
+                    "sid": 165,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance of the latter model on the standard test set achieves 90.1% F-measure on constituents, which is the second best current accuracy level, and only 0.6% below the current best (Bod, 2003).",
+                    "sid": 166,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper has also proposed a neural network training method which optimizes a discriminative criteria even when the parameters being estimated are those of a generative probability model.",
+                    "sid": 167,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This training method successfully satisfies the conflicting constraints that it be computationally tractable and that it be a good approximation to the theoretically optimal method.",
+                    "sid": 168,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach contrasts with previous approaches to scaling up discriminative methods to broad coverage natural language parsing, which have parameterizations which depart substantially from the successful previous generative models of parsing.",
+                    "sid": 169,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

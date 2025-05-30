@@ -1,0 +1,1787 @@
+{
+    "ID": "E12-1020",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "The well-studied supervised Relation Extraction algorithms require training data that is accurate and has good coverage.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To obtain such a gold standard, the common practice is to do independent double annotation followed by adjudication.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This takes significantly more human effort than annotation done by a single annotator.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do a detailed analysis on a snapshot of the ACE 2005 annotation files to understand the differences between single-pass annotation and the more expensive nearly three-pass process, and then propose an algorithm that learns from the much cheaper single-pass annotation and achieves a performance on a par with the extractor trained on multi-pass annotated data.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we show that given the same amount of human labor, the better way to do relation annotation is not to annotate with high-cost quality assurance, but to annotate more.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Relation Extraction aims at detecting and categorizing semantic relations between pairs of entities in text.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is an important NLP task that has many practical applications such as answering factoid questions, building knowledge bases and improving web search.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Supervised methods for relation extraction have been studied extensively since rich annotated linguistic resources, e.g. the Automatic Content Extraction1 (ACE) training corpus, were released.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will give a summary of related methods in section 2.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Those methods rely on accurate and complete annotation.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To obtain high quality annotation, the common wisdom is to let 1 http://www.itl.nist.gov/iad/mig/tests/ace/ two annotators independently annotate a corpus, and then asking a senior annotator to adjudicate the disagreements 2.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This annotation procedure roughly requires 3 passes3 over the same corpus.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore it is very expensive.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ACE 2005 annotation on relations is conducted in this way.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we analyzed a snapshot of ACE training data and found that each annotator missed a significant fraction of relation mentions and annotated some spurious ones.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that it is possible to separate most missing examples from the vast majority of true-negative unlabeled examples, and in contrast, most of the relation mentions that are adjudicated as incorrect contain useful expressions for learning a relation extractor.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on this observation, we propose an algorithm that purifies negative examples and applies transductive inference to utilize missing examples during the training process on the single-pass annotation.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results show that the extractor trained on single-pass annotation with the proposed algorithm has a performance that is close to an extractor trained on the 3-pass annotation.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further show that the proposed algorithm trained on a single-pass annotation on the complete set of documents has a higher performance than an extractor trained on 3-pass annotation on 90% of the documents in the same corpus, although the effort of doing a single-pass annotation over the entire set costs less than half that of doing 3 passes over 90% of the documents.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the perspective of learning a high-performance relation extractor, it suggests that a better way to do relation annotation is not to annotate with a high-cost quality assurance, but to annotate more.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the senior annotator also found some missing examples as. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "shown in figure 1.",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a similar cost compared to each of the two first-passes.",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The adjudicator may not have to look at as many sentences as an annotator, but he is required to review all instances found by both annotators.",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, he has to be more skilled and may have to spend more time on each instance to be able to resolve disagreements.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "194 Proceedings of the 13th Conference of the European Chapter of the Association for Computational Linguistics, pages 194\u2013203, Avignon, France, April 2327 2012.",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "c\ufffd2012 Association for Computational Linguistics 2.",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Background.",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Supervised Relation Extraction.",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of the most studied relation extraction tasks is the ACE relation extraction evaluation sponsored by the U.S. government.",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ACE 2005 defined 7 major entity types, such as PER (Person), LOC (Location), ORG (Organization).",
+                    "sid": 30,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A relation in ACE is defined as an ordered pair of entities appearing in the same sentence which expresses one of the predefined relations.",
+                    "sid": 31,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ACE 2005 defines 7 major relation types and more than 20 subtypes.",
+                    "sid": 32,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following previous work, we ignore sub-types in this paper and only evaluate on types when reporting relation classification performance.",
+                    "sid": 33,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Types include General-affiliation (GENAFF), Part-whole (PART-WHOLE), Person-social (PER-SOC), etc. ACE provides a large corpus which is manually annotated with entities (with coreference chains between entity mentions annotated), relations, events and values.",
+                    "sid": 34,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each mention of a relation is tagged with a pair of entity mentions appearing in the same sentence as its arguments.",
+                    "sid": 35,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More details about the ACE evaluation are on the ACE official website.",
+                    "sid": 36,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a sentence s and two entity mentions arg1 and arg2 contained in s, a candidate relation mention r with argument arg1 preceding arg2 is defined as r=(s, arg1, arg2).",
+                    "sid": 37,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal of Relation Detection and Classification (RDC) is to determine whether r expresses one of the types defined.",
+                    "sid": 38,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If so, classify it into one of the types.",
+                    "sid": 39,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Supervised learning treats RDC as a classification problem and solves it with supervised Machine Learning algorithms such as MaxEnt and SVM.",
+                    "sid": 40,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two commonly used learning strategies (Sun et al., 2011).",
+                    "sid": 41,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given an annotated corpus, one could apply a flatlearning strategy, which trains a single multi class classifier on training examples labeled as one of the relation types or not-a-relation, and apply it to determine its type or output not-a relation for each candidate relation mention during testing.",
+                    "sid": 42,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The examples of each type are the relation mentions that are tagged as instances of that type, and the not-a-relation examples are constructed from pairs of entities that appear in the same sentence but are not tagged as any of the types.",
+                    "sid": 43,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alternatively, one could apply a hierarchical learning strategy, which trains two classifiers, a binary classifier RD for relation detection and the other a multi-class classifier RC for relation classification.",
+                    "sid": 44,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RD is trained by grouping tagged relation mentions of all types as positive instances and using all the not-a-relation cases (same as described above) as negative examples.",
+                    "sid": 45,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RC is trained on the annotated examples with their tagged types.",
+                    "sid": 46,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During testing, RD is applied first to identify whether an example expresses some relation, then RC is applied to determine the most likely type only if it is detected as correct by RD. State-of-the-art supervised methods for relation extraction also differ from each other on data representation.",
+                    "sid": 47,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a relation mention, feature-based methods (Miller et al., 2000; Kambhatla, 2004; Boschee et al., 2005; Grishman et al., 2005; Zhou et al., 2005; Jiang and Zhai, 2007; Sun et al., 2011) extract a rich list of structural, lexical, syntactic and semantic features to represent it; in contrast, the kernel based methods (Zelenko et al., 2003; Bunescu and Mooney, 2005a; Bunescu and Mooney, 2005b; Zhao and Grishman, 2005; Zhang et al., 2006a; Zhang et al., 2006b; Zhou et al., 2007; Qian et al., 2008) represent each instance with an object such as augmented token sequences or a parse tree, and used a carefully designed kernel function, e.g. subsequence kernel (Bunescu and Mooney, 2005b) or convolution tree kernel (Collins and Duffy, 2001), to calculate their similarity.",
+                    "sid": 48,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These objects are usually augmented with features such as semantic features.",
+                    "sid": 49,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we use the hierarchical learning strategy since it simplifies the problem by letting us focus on relation detection only.",
+                    "sid": 50,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relation classification stage remains unchanged and we will show that it benefits from improved detection.",
+                    "sid": 51,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For experiments on both relation detection and relation classification, we use SVM4 (Vapnik 1998) as the learning algorithm since it can be extended to support transductive inference as discussed in section 4.3.",
+                    "sid": 52,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, for the analysis in section 3.2 and the purification preprocess steps in section 4.2, we use a MaxEnt5 model since it outputs probabilities6 for its predictions.",
+                    "sid": 53,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the choice of features, we use the full set of features from Zhou et al.",
+                    "sid": 54,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) since it is reported to have a state-of-the-art performance (Sun et al., 2011).",
+                    "sid": 55,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 ACE 2005 annotation.",
+                    "sid": 56,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ACE 2005 training data contains 599 articles 4 SVM-Light is used.",
+                    "sid": 57,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "http://svmlight.joachims.org/.",
+                    "sid": 58,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 OpenNLP MaxEnt package is used..",
+                    "sid": 59,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "http://maxent.sourceforge.net/about.html 6 SVM also outputs a value associated with each prediction..",
+                    "sid": 60,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this value cannot be interpreted as probability.",
+                    "sid": 61,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "195 from newswire, broadcast news, weblogs, usenet newsgroups/discussion forum, conversational telephone speech and broadcast conversations.",
+                    "sid": 62,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The annotation process is conducted as follows: two annotators working independently annotate each article and complete all annotation tasks (entities, values, relations and events).",
+                    "sid": 63,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After two annotators both finished annotating a file, all discrepancies are then adjudicated by a senior annotator.",
+                    "sid": 64,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This results in a high-quality annotation file.",
+                    "sid": 65,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More details can be found in the documentation of ACE 2005 Multilingual Training Data V3.0.",
+                    "sid": 66,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the final release of the ACE training corpus only contains the final adjudicated annotations, in which all the traces of the two first-pass annotations are removed, we use a snapshot of almost-finished annotation, ACE 2005 Multilingual Training Data V3.0, for our.",
+                    "sid": 67,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "analysis.",
+                    "sid": 68,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the remainder of this paper, we will call the two independent first-passes of annotation fp1 and fp2.",
+                    "sid": 69,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The higher-quality data done by merging fp1 and fp2 and then having disagreements adjudicated by the senior annotator is called adj.",
+                    "sid": 70,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From this corpus, we removed the files that have not been completed for all three passes.",
+                    "sid": 71,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the final corpus consisting of 511 files, we can differentiate the annotations on which the three annotators have agreed and disagreed.",
+                    "sid": 72,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A notable fact of ACE relation annotation is that it is done with arguments from the list of annotated entity mentions.",
+                    "sid": 73,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in a relation mention tyco&apos;s ceo and president dennis kozlowski which expresses an EMPORG relation, the two arguments tyco and dennis kozlowski must have been tagged as entity mentions previously by the annotator.",
+                    "sid": 74,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since fp1 and fp2 are done on all tasks independently, their disagreement on entity annotation will be propagated to relation annotation; thus we need to deal with these cases specifically.",
+                    "sid": 75,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "analysis of data annotation. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 General statistics.",
+                    "sid": 76,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As discussed in section 2, relation mentions are annotated with entity mentions as arguments, and the lists of annotated entity mentions vary in fp1, fp2 and adj.",
+                    "sid": 77,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To estimate the impact propagated from entity annotation, we first calculate the ratio of overlapping entity mentions between entities annotated in fp1/fp2 with adj.",
+                    "sid": 78,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that fp1/fp2 each agrees with adj on around 89% of the entity mentions.",
+                    "sid": 79,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following up, we checked the relation mentions7 from fp1 and fp2 against the adjudicated list of entity mentions from adj and found that 682 and 665 relation mentions respectively have at least one argument which doesn\u2019t appear in the list of adjudicated entity mentions.",
+                    "sid": 80,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the list of relation mentions with both arguments appearing in the list of adjudicatedentity mentions, figure 1 shows the inter annotator agreement of the ACE 2005 relation annotation.",
+                    "sid": 81,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this figure, the three circles represent the list of relation mentions in fp1, fp2 and adj, respectively.",
+                    "sid": 82,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "47 645 538 fp1 fp2 3065 1486 1525 383 adj Figure 1.",
+                    "sid": 83,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inter-annotator agreement of ACE 2005 relation annotation.",
+                    "sid": 84,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Numbers are the distinct relation mentions whose both arguments are in the list of adjudicated entity mentions.",
+                    "sid": 85,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It shows that each annotator missed a significant number of relation mentions annotated by the other.",
+                    "sid": 86,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering that we removed 682/665 relation mentions from fp1/fp2 because we generate this figure based on the list of adjudicated entity mentions, we estimate that fp1 and fp2 both missed around 18.328.5%8 of the relation mentions.",
+                    "sid": 87,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This clearly shows that both of the annotators missed a significant fraction of the relation mentions.",
+                    "sid": 88,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also annotated some spurious relation mentions (as adjudicated in adj), although the fraction is smaller (close to 10% of all relation mentions in adj).",
+                    "sid": 89,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ACE 2005 relation annotation guidelines (ACE English Annotation Guidelines for Relations, version 5.8.3) defined 7 syntactic classes and the other class.",
+                    "sid": 90,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plot the distribution of syntactic classes of the annotated 7 This is done by selecting the relation mentions whose both.",
+                    "sid": 91,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "arguments are in the list of adjudicated entity mentions.",
+                    "sid": 92,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 We calculate the lower bound by assuming that the 682.",
+                    "sid": 93,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "relation mentions removed from fp1 are found in fp2, although with different argument boundary and headword tagged.",
+                    "sid": 94,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The upper bound is calculated by assuming that they are all irrelevant and erroneous relation mentions.",
+                    "sid": 95,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "196 relations in figure 2 (3 of the classes, accounting together for less than 10% of the cases, are omitted) and the other class.",
+                    "sid": 96,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It seems that it is generally easier for the annotators to find and agree on relation mentions of the type Preposition/PreMod/Possessives but harder to find and agree on the ones belonging to Verbal and Other.",
+                    "sid": 97,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The definition and examples of these syntactic classes can be found in the annotation guidelines.",
+                    "sid": 98,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the following sections, we will show the analysis on fp1 and adj since the result is similar for fp2.",
+                    "sid": 99,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "examples that are not annotated in adj, and use it to make predictions on the mixed pool of correct examples, missing examples and spurious ones.",
+                    "sid": 100,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To illustrate how distinguishable the missing examples (false negatives) are from the true negative ones, 1) we apply the MaxEnt model on both false negatives and true negatives, 2) putthem together and rank them by the model predicted probabilities of being positive, 3) calculate their relative rank in this pool.",
+                    "sid": 101,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We plot the Cumulative distribution of frequency (CDF) of the ranks (as percentages in the mixed pools) of false negatives in figure 3.",
+                    "sid": 102,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We took similar steps for the spurious ones (false positives) and plot them in figure 3 as well (However, they are ranked by model-predicted probabilities of being negative).",
+                    "sid": 103,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2.",
+                    "sid": 104,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Percentage of examples of major syntactic classes.",
+                    "sid": 105,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Why the differences?.",
+                    "sid": 106,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand what causes the missing annotations and the spurious ones, we need methods to find how similar/different the false positives are to true positives and also how similar/different the false negatives (missing annotations) are to true negatives.",
+                    "sid": 107,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we adopt a good similarity metric, which captures the structural, lexical and semantic similarity between relation mentions, this analysis will help us to understand the similarity/difference from an extraction perspective.",
+                    "sid": 108,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a state-of-the-art feature space (Zhou et al., 2005) to represent examples (including all correct examples, erroneous ones and untagged examples) and use MaxEnt as the weight learning model since it shows competitive performance in relation extraction (Jiang and Zhai, 2007) and outputs probabilities associated with each prediction.",
+                    "sid": 109,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train a MaxEnt model for relation detection on true positives and true negatives, which respectively are the subset of correct examples annotated by fp1 (and adjudicated as correct ones) and negative Figure 3: cumulative distribution of frequency (CDF) of the relative ranking of model-predicted probability of being positive for false negatives in a pool mixed of false negatives and true negatives; and the CDF of the relative ranking of model-predicted probability of being negative for false positives in a pool mixed of false positives and true positives.",
+                    "sid": 110,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For false negatives, it shows a highly skewed distribution in which around 75% of the false negatives are ranked within the top 10%.",
+                    "sid": 111,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That means the missing examples are lexically, structurally or semantically similar to correct examples, and are distinguishable from the true negative examples.",
+                    "sid": 112,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the distribution of false positives (spurious examples) is close to uniform (flat curve), which means they are generally indistinguishable from the correct examples.",
+                    "sid": 113,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Categorize annotation errors.",
+                    "sid": 114,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The automatic method shows that the errors (spurious annotations) are very similar to the correct examples but provides little clue as to why that is the case.",
+                    "sid": 115,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand their causes, we sampled 65 examples from fp1 (10% of the 645 errors), read the sentences containing these 197 Category Percentage Example Relation Sampled text of spurious examples in fp1 Notes (examples are similar Type ones in adj for comparison) Duplicate u ORGAFF his budding friendship with US President ... his budding friendship relation 49.2% with US President George mention for coreferential entity mentions George W. Bush in the face of ... ge W. Bush in the face of ...",
+                    "sid": 116,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Correct 20% PHYS Hundreds of thousands of demonstrators took to the streets in Britain...",
+                    "sid": 117,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PER-SOC The dead included the quack doctor, 55-year-old (Symmetric relation) Nityalila Naotia, his teenaged son and...",
+                    "sid": 118,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dead included the quack doctor, 55-year-old Nityalila Naotia, his teenaged son Argument not 15.4% PER-SOC Putin had even secretly invited British Prime in list Minister Tony Blair, Bush&apos;s staunchest backer in the war on Iraq...",
+                    "sid": 119,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Violate 6.2% PHYS &amp;quot;The amazing thing is they are going to turn reasonable San Francisco into ground zero for every criminal reader rule who wants to profit at their chosen profession&amp;quot;, Paredes said.",
+                    "sid": 120,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Errors 6.1% PART- ...a likely candidate to run Vivendi Universal&apos;s Arguments are tagged WHOLE reversed entertainment unit in the United States...",
+                    "sid": 121,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PART- Khakamada argued that the United Relation type error WHOLE States would also need Russia&apos;s help &amp;quot;to make the new Iraqi government seem legitimate.",
+                    "sid": 122,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "illegal &amp;quot;o % PHYS Up to 20,000 protesters thronged the plazas and Up to 20,000 protesters promotion streets of San Francisco, where... thronged the plazas and \u201cblocthrouked\u201d 3 categories streets of San Francisco, where...",
+                    "sid": 123,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1.",
+                    "sid": 124,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Categories of spurious relation mentions in fp1 (on a sample of 10% of relation mentions), ranked by the percentage of the examples in each category.",
+                    "sid": 125,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the sample text, red text (also marked with dotted underlines) shows head words of the first arguments and the underlined text shows head words of the second arguments.",
+                    "sid": 126,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "erroneous relation mentions and compared them to the correct relation mentions in the same sentence; we categorized these examples and show them in table 1.",
+                    "sid": 127,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most common type of error is duplicate relation mention for coreferential entity mentions.",
+                    "sid": 128,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first row in table 1 shows an example, in which there is a relation ORGAFF tagged between US and George W. Bush in adj.",
+                    "sid": 129,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because President and George W. Bush are coreferential, the example &lt;US, President &gt; from fp1 is adjudicated as incorrect.",
+                    "sid": 130,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This shows that if a relation is expressed repeatedly across relation mentions whose arguments are coreferential, the adjudicator only tags one of the relation mentions as correct, although the other is correct too.",
+                    "sid": 131,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This shared the same principle with another type of error illegal promotion through \u201cblocked\u201d categories 9 as defined in the annotation guideline.",
+                    "sid": 132,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second largest category is correct, by which we mean the example is a correct relation mention and the adjudicator made a 9 For example, in sentence Smith went to a hotel in Brazil,.",
+                    "sid": 133,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Smith, hotel) is a taggable PHYS Relation but (Smith, Brazil) is not, because to get the second relationship, one would have to \u201cpromote\u201d Brazil through hotel.",
+                    "sid": 134,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the precise definition of annotation rules, please refer to ACE (Automatic Content Extraction) English Annotation Guidelines for Relations, version 5.8.3.",
+                    "sid": 135,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "mistake.",
+                    "sid": 136,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The third largest category is argument not in list, by which we mean that at least one of the arguments is not in the list of adjudicated entity mentions.",
+                    "sid": 137,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on Table 1, we can see that as many as 72%-88% of the examples which are adjudicated as incorrect are actually correct if viewed from a relation learning perspective, since most of them contain informative expressions for tagging relations.",
+                    "sid": 138,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The annotation guideline is designed to ensure high quality while not imposing too much burden on human annotators.",
+                    "sid": 139,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reduce annotation effort, it defined rules such as illegal promotion through \u201cblocked\u201d categories.",
+                    "sid": 140,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The annotators\u2019 practice suggests that they are following another rule not to annotate duplicate relation mention for coreferential entity mentions.",
+                    "sid": 141,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This follows the similar principle of reducing annotation effort but is not explicitly stated in the guideline: to avoid propagation of a relation through a coreference chain.",
+                    "sid": 142,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these examples are useful for learning more ways to express a relation.",
+                    "sid": 143,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, even for the erroneous examples (as shown in table 1 as violate reasonable reader rule and errors), most of them have some level of similar structures or semantics to the targeted relation.",
+                    "sid": 144,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, it is very hard to distinguish them without human proofreading.",
+                    "sid": 145,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "198 Exp # Training Testing Detection (%) Classification (%) data data Precision Recall F1 Precision Recall F1 1 fp1 adj 83.4 60.4 70.0 75.7 54.8 63.6 2 fp2 adj 83.5 60.5 70.2 76.0 55.1 63.9 3 adj adj 80.4 69.7 74.6 73.4 63.6 68.2 Table 2.",
+                    "sid": 146,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance of RDC trained on fp1/fp2/adj, and tested on adj.",
+                    "sid": 147,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.4 Why missing annotations and how.",
+                    "sid": 148,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "many examples are missing?",
+                    "sid": 149,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the large number of missing annotations, there are a couple of possible reasons.",
+                    "sid": 150,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One reason is that it is generally easier for a humanannotator to annotate correctly given a well defined guideline, but it is hard to ensure completeness, especially for a task like relation extraction.",
+                    "sid": 151,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the ACE 2005 annotation guideline defines more than 20 relation subtypes.",
+                    "sid": 152,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These many subtypes make it hard for an annotator to keep all of them in mind while doing the annotation, and thus it is inevitable that some examples are missed.",
+                    "sid": 153,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we proceed to approximate the number of missing examples given limited knowledge.",
+                    "sid": 154,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let each annotator annotate n examples and assume that each pair of annotators agrees on a certain fraction p of the examples.",
+                    "sid": 155,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assuming the examples are equally likely to be found by an annotator, therefore the total number of unique examples found by k annotators is Ek 0(1 \u2212 p) `n. If we had an infinite number of annotators (k -+ oo), the total number of unique examples will be &amp;quot; , which is the upper bound of the total \ufffd number of examples.",
+                    "sid": 156,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case of the ACE 2005 relation mention annotation, since the two annotators annotate around 4500 examples and they agree on 2/3 of them, the total number of all positive examples is around 6750.",
+                    "sid": 157,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is close to the number of relation mentions in the adjudicated list: 6459.",
+                    "sid": 158,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we assume the adjudicator is doing a more complex task than an annotator, resolving the disagreements and completing the annotation (as shown in figure 1).",
+                    "sid": 159,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The assumption of the calculation is a little crude but reasonable given the limited number of passes of annotation we have.",
+                    "sid": 160,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent research (Ji et al, 2010) shows that, by adding annotators for IE tasks, the merged annotation tends to converge after having 5 annotators.",
+                    "sid": 161,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand the annotation behavior better, in particular whether annotation will converge after adding a few annotators, more passes of annotation need to be collected.",
+                    "sid": 162,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave this as future work.",
+                    "sid": 163,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "relation extraction with low-cost. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "annotation 4.1 Baseline algorithm.",
+                    "sid": 164,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To see whether a single-pass annotation is useful for relation detection and classification, we did 5-fold cross validation (5-fold CV) with each of fp1, fp2 and adj as the training set, and tested on adj.",
+                    "sid": 165,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experiments are done with the same 511 documents we used for the analysis.",
+                    "sid": 166,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in table 2, we did 5-fold CV on adj for experiment 3.",
+                    "sid": 167,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For fairness, we use settings similar to 5-fold.",
+                    "sid": 168,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CV for experiment 1 and 2.",
+                    "sid": 169,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Take experiment 1 as an example: we split both of fp1 and adj into 5 folds, use 4 folds from fp1 as training data, and 1fold from adj as testing data and does one train test cycle.",
+                    "sid": 170,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We rotate the folds (both training and testing) and repeat 5 times.",
+                    "sid": 171,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final results are averaged over the 5 runs.",
+                    "sid": 172,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiment 2 was conducted similarly.",
+                    "sid": 173,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the reminder of the paper, 5-fold CV experiments are all conducted in this way.",
+                    "sid": 174,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows that a relation tagger trained on the single-pass annotated data fp1 performs worse than the one trained on merged and adjudicated data adj, with 4.6 points lower F measure in relation detection, and 4.6 points lower relation classification.",
+                    "sid": 175,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For detection, precision on fp1 is 3 points higher than on adj but recall is much lower (close to 10 points).",
+                    "sid": 176,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The recall difference shows that the missing annotations contain expressions that can help to find more correct examples during testing.",
+                    "sid": 177,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The small precision difference indirectly shows that the spurious ones in fp1 (as adjudicated) do not hurt precision.",
+                    "sid": 178,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance on classification shows a similar trend because the relation classifier takes the examples predicted by the detector as correct as its input.",
+                    "sid": 179,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, if there is an error, it gets propagated to this stage.",
+                    "sid": 180,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 also shows similar performance differences between fp2 and adj.",
+                    "sid": 181,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the remainder of this paper, we will discuss a few algorithms to improve a relation tagger trained on single-pass annotated data10.",
+                    "sid": 182,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we 10 We only use fp1 and adj in the following experiments.",
+                    "sid": 183,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "because we observed that fp1 and fp2 are similar in general in the analysis, though a fraction of the annotation in fp1 199 already showed that most of the spurious annotations are not actually errors from an extraction perspective and table 2 shows that they do not hurt precision, we will only focus on utilizing the missing examples, in other words, training with an incomplete annotation.",
+                    "sid": 184,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Purify the set of negative examples.",
+                    "sid": 185,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As discussed in section 2, traditional supervised methods find all pairs of entity mentions that appear within a sentence, and then use the pairs that are not annotated as relation mentions as the negative examples for the purpose of training a relation detector.",
+                    "sid": 186,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It relies on the assumption that the annotators annotated all relation mentions and missed no (or very few) examples.",
+                    "sid": 187,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this is not true for training on a single-pass annotation, in which a significant portion of relation mentions are left not annotated.",
+                    "sid": 188,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If this scheme is applied, all of the correct pairs which the annotators missed belong to this \u201cnegative\u201d category.",
+                    "sid": 189,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we need a way to purify the \u201cnegative\u201d set of examples obtained by this conventional approach.",
+                    "sid": 190,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Li and Liu (2003) focuses on classifying documents with only positive examples.",
+                    "sid": 191,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their algorithm initially sets all unlabeled data to be negative and trains a Rocchio classifier, selects negative examples which are closer to the negative centroid than positive centroid as the purified negative examples, and then retrains the model.",
+                    "sid": 192,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their algorithm performs well for text classification.",
+                    "sid": 193,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is based on the assumption that there are fewer unannotated positive examples than negative ones in the unlabeled set, so true negative examples still dominate the set of noisy \u201cnegative\u201d examples in the purification step.",
+                    "sid": 194,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the same assumption, our purification process consists of the following steps: 1) Use annotated relation mentions as positive examples; construct all possible relation mentions that are not annotated, and initially set them to be negative.",
+                    "sid": 195,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call this noisy data set D. 2) Train a MaxEnt relation detection model Mdet on D. 3) Apply Mdet on all unannotatedexamples, and rank them by the model predicted probabilities of being positive, 4) Remove the top I examples from D. These preprocessing steps result in a purified data set Dpur\ud835\udc52.",
+                    "sid": 196,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can use Dpur\ud835\udc52 for the normal and fp2 is different.",
+                    "sid": 197,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, algorithms trained on them show similar performance.",
+                    "sid": 198,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "training process of a supervised relation extraction algorithm.",
+                    "sid": 199,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm is similar to Li and Liu 2003.",
+                    "sid": 200,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, we drop a few noisy examples instead of choosing a small purified subset since we have relatively few false negatives compared to the entire set of unannotated examples.",
+                    "sid": 201,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, after step 3, most false negatives are clustered within the small region of top ranked examples which has a high model-predicated probability of being positive.",
+                    "sid": 202,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The intuition is similar to what we observed from figure 3 for false negatives since we also observed very similar distribution using the model trained with noisy data.",
+                    "sid": 203,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we can purify negatives by removing examples in this noisy subset.",
+                    "sid": 204,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the false negatives are still mixed with true negatives.",
+                    "sid": 205,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, still slightly more than half of the top 2000 examples are true negatives.",
+                    "sid": 206,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we cannot simply flip their labels and use them as positive examples.",
+                    "sid": 207,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the following section, we will use them in the form of unlabeled examples to help train a better model.",
+                    "sid": 208,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Transductive inference on unlabeled.",
+                    "sid": 209,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "examples Transductive SVM (Vapnik, 1998; Joachims, 1999) is a semi-supervised learning method which learns a model from a data set consisting of both labeled and unlabeled examples.",
+                    "sid": 210,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to its popular antecedent SVM, it also learns a maximum margin classification hyperplane, but additionally forces it to separate a set of unlabeled data with large margin.",
+                    "sid": 211,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The optimization function of Transductive SVM (TSVM) is the following: Figure 4.",
+                    "sid": 212,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TSVM optimization function for non-separable case (Joachims, 1999) TSVM can leverage an unlabeled set of examples to improve supervised learning.",
+                    "sid": 213,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in section 3, a significant number ofrelation mentions are missing from the single pass annotation data.",
+                    "sid": 214,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although it is not possible to find all missing annotations without human effort, we can improve the model by further 200 utilizing the fact that some unannotated examples should have been annotated.",
+                    "sid": 215,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The purification process discussed in the previous section removes I examples which have a high density of false negatives.",
+                    "sid": 216,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further utilize the I examples as follows: 1) Construct a training corpus Dhybrid fromDpure by taking a random sample11 of I*(1 p)/p (p is the ratio of annotated examples to all examples; p=0.05 in fp1) negatively labeled examples in Dpure and setting them to be unlabeled.",
+                    "sid": 217,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the I examples removed by the purification process are added back as unlabeled examples.",
+                    "sid": 218,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2) Train TSVM on Dhybrid.",
+                    "sid": 219,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second step trained a model which replaced the detection model in the hierarchical detection-classification learning scheme we used.",
+                    "sid": 220,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will show in the next section that this improves the model.",
+                    "sid": 221,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Experiments were conducted over the same set of documents on which we did analysis: the 511 documents which have completed annotation in all of the fp1, fp2 and adj from the ACE 2005 Multilingual Training Data V3.0.",
+                    "sid": 222,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To reemphasize, we apply the hierarchical learning scheme and we focus on improving relation detection while keeping relation classification unchanged (results show that its performance is improved because of the improved detection).",
+                    "sid": 223,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use SVM as our learning algorithm with the full feature set from Zhou et al.",
+                    "sid": 224,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005).",
+                    "sid": 225,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Baseline algorithm: The relation detector is unchanged.",
+                    "sid": 226,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We follow the common practice, which is to use annotated examples as positive ones and all possible untagged relation mentions as negative ones.",
+                    "sid": 227,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We sub-sampled the negative data by 1/2 since that shows better performance.",
+                    "sid": 228,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+purify: This algorithm adds an additional purification preprocessing step (section 4.2) before the hierarchical learning RDC algorithm.",
+                    "sid": 229,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After purification, the RDC algorithm is trained on the positive examples and purified negative examples.",
+                    "sid": 230,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set I=200012 in all experiments.",
+                    "sid": 231,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "11 We included this large random sample so that the balance.",
+                    "sid": 232,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of positive to negative examples in the unlabeled set would be similar to that of the labeled data.",
+                    "sid": 233,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test data is not included in the unlabeled set.",
+                    "sid": 234,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12 We choose 2000 because it is close to the number of.",
+                    "sid": 235,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "relations missed from each single-pass annotation.",
+                    "sid": 236,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, it contains more than 70% of the false negatives, and it is less than 10% of the unannotated examples.",
+                    "sid": 237,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To estimate how many examples are missing (section 3.4), one +tSVM: First, the same purification process of +purify is applied.",
+                    "sid": 238,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we follow the steps described in section 4.3 to construct the set of unlabeled examples, and set all the rest of purified negative examples to be negative.",
+                    "sid": 239,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we train TSVM on both labeled and unlabeled data and replace the relation detection in the RDC algorithm.",
+                    "sid": 240,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relation classification is unchanged.",
+                    "sid": 241,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows the results.",
+                    "sid": 242,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All experiments are done with 5-fold cross validation13 using testing data from adj.",
+                    "sid": 243,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first three rows show experiments trained on fp1, and the last row (ADJ) shows the unmodified RDC algorithm trained on adj for comparison.",
+                    "sid": 244,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The purification of negative examples shows significant performance gain, 3.7% F1 on relation detection and 3.4% on relation classification.",
+                    "sid": 245,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The precision decreases but recall increases substantially since the missing examples are not treated as negatives.",
+                    "sid": 246,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiment shows that the purification process removes more than 60% of the false negatives.",
+                    "sid": 247,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transductive SVM further improved performance by a relatively small margin.",
+                    "sid": 248,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This shows that the latent positive examples can help refine the model.",
+                    "sid": 249,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results also show that transductive inference can find around 17% of missing relation mentions.",
+                    "sid": 250,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We notice that the performance of relation classification is improved since by improving relation detection, some examples that do not express a relation are removed.",
+                    "sid": 251,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The classification performance on single-pass annotation is close to the one trained on adj due to the help from a better relation detector trained with our algorithm.",
+                    "sid": 252,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also did 5-fold cross validation with a model trained on a fraction of the 4/5 (4 folds) of adj data (each experiment shown in table 4 uses 4 folds of adj documents for training since one fold is left for cross validation).",
+                    "sid": 253,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The documents are sampled randomly.",
+                    "sid": 254,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 shows results for varying training data size.",
+                    "sid": 255,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to the results shown in the \u201c+tSVM\u201d row of table 3, we can see that our best model trained on single-pass annotation outperforms SVM trained on 90% of the dual-pass, adjudicated data in both relation detection and classification, although it costs less than half the 3-pass annotation.",
+                    "sid": 256,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that given the same amount of human effort for should perform multiple passes of independent annotation on a small dataset and measure inter-annotator agreements.",
+                    "sid": 257,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "13 Details about the settings for 5-fold cross validation are in. section 4.1.",
+                    "sid": 258,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "201 Algorithm Detection (%) Classification (%) Precision Recall F1 Precision Recall F1 Baseline 83.4 60.4 70.0 75.7 54.8 63.6 +purify 76.8 70.9 73.7 69.8 64.5 67.0 +tSVM 76.4 72.1 74.2 69.4 65.2 67.2 ADJ (on adj) 80.4 69.7 74.6 73.4 63.6 68.2 Table 3.",
+                    "sid": 259,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5-fold cross-validation results.",
+                    "sid": 260,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All are trained on fp1 (except the last row showing the unchanged algorithm trained on adj for comparison), and tested on adj.",
+                    "sid": 261,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McNemar&apos;s test show that the improvement from +purify to +tSVM, and from +tSVM to ADJ are statistically significant (with p&lt;0.05).",
+                    "sid": 262,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Percentage of Detection (%) Classification (%) adj used Precision Recall F1 Precision Recall F1 60% \u00d7 4/5 86.9 41.2 55.8 78.6 37.2 50.5 70% \u00d7 4/5 85.5 51.3 64.1 77.7 46.6 58.2 80% \u00d7 4/5 83.3 58.1 68.4 75.8 52.9 62.3 90% \u00d7 4/5 82.0 64.9 72.5 74.9 59.4 66.2 Table 4.",
+                    "sid": 263,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance with SVM trained on a fraction of adj.",
+                    "sid": 264,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It shows 5 fold cross validation results.",
+                    "sid": 265,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "relation annotation, annotating more documents with single-pass offers advantages over annotating less data with high quality assurance (dual passes and adjudication).",
+                    "sid": 266,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Dligach et al.",
+                    "sid": 267,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) studied WSD annotation from a cost-effectiveness viewpoint.",
+                    "sid": 268,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They showed empirically that, with same amount of annotation dollars spent, single-annotation is better than dual-annotation and adjudication.",
+                    "sid": 269,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The common practice for quality control of WSD annotation is similar to Relation annotation.",
+                    "sid": 270,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the task of WSD annotation is very different from relation annotation.",
+                    "sid": 271,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WSD requires that every example must be assigned some tag, whereas that is not required for relation tagging.",
+                    "sid": 272,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, relation tagging requires identifying two arguments and correctly categorizing their types.",
+                    "sid": 273,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The purified approach applied in this paper is related to the general framework of learning from positive and unlabeled examples.",
+                    "sid": 274,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Li and Liu (2003) initially set all unlabeled data to be negative and train a Rocchio classifier, then select negative examples which are closer to the negative centroid than positive centroid as the purified negative examples.",
+                    "sid": 275,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We share a similar assumption with Li and Liu (2003) but we use a different method to select negative examples since the false negative examples show a very skewed distribution, as described in section 5.2.",
+                    "sid": 276,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transductive SVM was introduced by Vapnik (1998) and later refined in Joachims (1999).",
+                    "sid": 277,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A few related methods were studied on the subtask of relation classification (the second stage of the hierarchical learning scheme) in Zhang (2005).",
+                    "sid": 278,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chan and Roth (2011) observed the similar phenomenon that ACE annotators rarely duplicate a relation link for coreferential mentions.",
+                    "sid": 279,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use an evaluation scheme to avoid being penalized by the relation mentions which are not annotated because of this behavior.",
+                    "sid": 280,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We analyzed a snapshot of the ACE 2005relation annotation and found that each single pass annotation missed around 1828% of relation mentions and contains around 10% spurious mentions.",
+                    "sid": 281,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A detailed analysis showed that it is possible to find some of the false negatives, and that most spurious cases are actually correct examples from a system builder\u2019s perspective.",
+                    "sid": 282,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By automatically purifying negative examples and applying transductive inference on suspicious examples, we can train a relation classifier whose performance iscomparable to a classifier trained on the dual annotated and adjudicated data.",
+                    "sid": 283,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, weshow that single-pass annotation is more cost effective than annotation with high quality assurance.",
+                    "sid": 284,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "Supported by the Intelligence Advanced Research Projects Activity (IARPA) via Air Force Research Laboratory (AFRL) contract number FA865010-C-7058.",
+                    "sid": 285,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The U.S. Government is authorized to reproduce and distribute reprints for Governmental purposes notwithstanding any copyright annotation thereon.",
+                    "sid": 286,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The views and conclusions contained herein are those of the authors and should not be interpreted as necessarily representing the official policies or endorsements, either expressed or implied, of IARPA, AFRL, or the U.S. Government.",
+                    "sid": 287,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "202",
+                    "sid": 288,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

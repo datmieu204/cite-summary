@@ -1,0 +1,1457 @@
+{
+    "ID": "W06-1634",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper presents a method of automatically constructing information extraction patterns on predicate-argument structures (PASs) obtained by full parsing from a smaller training corpus.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because PASs represent generalized structures for syntactical variants, patterns on PASs are expected to be more generalized than those on surface words.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, patterns are divided into components to improve recall and we introduce a Support Vector Machine to learn a prediction model using pattern matching results.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present experimental results and analyze them on how well protein-protein interactions were extracted from MEDLINE abstracts.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results demonstrated that our method improved accuracy compared to a machine learning approach using surface word/part-of-speech patterns.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "One primitive approach to Information Extraction (IE) is to manually craft numerous extraction patterns for particular applications and this is presently one of the main streams of biomedical IE (Blaschke and Valencia, 2002; Koike et al., 2003).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although such IE attempts have demonstrated near-practical performance, the same sets of patterns cannot be applied to different kinds of information.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A real-world task requires several kinds of IE, thus manually engineering extraction Current Af\ufb01liation: \u2020 FUJITSU LABORATORIES LTD. \u2021 Faculty of Informatics, Kogakuin University patterns, which is tedious and time-consuming process, is not really practical.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Techniques based on machine learning (Zhou et al., 2005; Hao et al., 2005; Bunescu and Mooney, 2006) are expected to alleviate this problem in manually crafted IE.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in most cases, the cost of manually crafting patterns is simply transferred to that for constructing a large amount of training data, which requires tedious amount of manual labor to annotate text.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To systematically reduce the necessary amount of training data, we divided the task of constructing extraction patterns into a subtask that general natural language processing techniques can solve and a subtask that has speci\ufb01c properties according to the information to be extracted.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The former subtask is of full parsing (i.e. recognizing syntactic structures of sentences), and the latter subtask is of constructing speci\ufb01c extraction patterns (i.e. \ufb01nding clue words to extract information) based on the obtained syntactic structures.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopted full parsing from various levels of parsing, because we believe that it offers the best utility to generalize sentences into normalized syntactic relations.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also divided patterns into components to improve recall and we introduced machine learning with a Support Vector Machine (SVM) to learn a prediction model using the matching results of extraction patterns.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an actual IE task, we extracted pairs of interacting protein names from biomedical text.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "full parsing. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "2.1 Necessity for Full Parsing.",
+                    "sid": 16,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A technique that many previous approaches have used is shallow parsing (Koike et al., 2003; Yao et al., 2004; Zhou et al., 2005).",
+                    "sid": 17,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their assertion is 284 Proceedings of the 2006 Conference on Empirical Methods in Natural Language Processing (EMNLP 2006), pages 284\u2013292, Sydney, July 2006.",
+                    "sid": 18,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2006 Association for Computational Linguistics Distance Count (%) Sum (%) \u22121 0 1 2\u20135 6\u201310 11\u2013 54 8 170 337 267 248 5.0 0.7 15.7 31.1 24.6 22.9 5.0 5.7 21.4 52.5 77.1 100.0 Distance \u22121 means protein word has been annotated as interacting with itself (e.g. \u201cactin polymerization\u201d).",
+                    "sid": 19,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Distance 0 means words of the interacting proteins are directly next to one another.",
+                    "sid": 20,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Multi-word protein names are concatenated as long as they do not cross tags to annotate proteins.",
+                    "sid": 21,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1: Distance between Interacting Proteins that shallow parsers are more robust and would be suf\ufb01cient for IE.",
+                    "sid": 22,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, their claims that shallow parsers are suf\ufb01cient, or that full parsers do not contribute to application tasks, have not been fully proved by experimental results.",
+                    "sid": 23,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhou et al.",
+                    "sid": 24,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) argued that most information useful for IE derived from full parsing was shallow.",
+                    "sid": 25,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they only used dependency trees and paths on full parse trees in their experiment.",
+                    "sid": 26,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such structures did not include information of semantic subjects/objects, which full parsing can recognize.",
+                    "sid": 27,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, most relations they extracted from the ACE corpus (Linguistic Data Consortium, 2005) on broadcasts and newswires were within very short word-distance (70% where two entities are embedded in each other or separated by at most one word), and therefore shallow information was bene\ufb01cial.",
+                    "sid": 28,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, Table 1 shows that the word distance is long between interacting protein names annotated on the AImed corpus (Bunescu and Mooney, 2004), and we have to treat long-distance relations for information like protein-protein interactions.",
+                    "sid": 29,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Full parsing is more effective for acquiring generalized data from long-length words than shallow parsing.",
+                    "sid": 30,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The sentences at left in Figure 1 exemplify the advantages of full parsing.",
+                    "sid": 31,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gerund \u201cactivating\u201d in the last sentence takes a non-local semantic subject \u201cENTITY1\u201d, and shallow parsing cannot recognize this relation because \u201cENTITY1\u201d and \u201cactivating\u201d are in different phrases.",
+                    "sid": 32,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Full parsing, on the other hand, can identify both the subject of the whole sentence and the semantic subject of \u201cactivating\u201d have been shared.",
+                    "sid": 33,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Predicate-argument Structures.",
+                    "sid": 34,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We applied Enju (Tsujii Laboratory, 2005a) as a full parser which outputs predicate-argument structures (PASs).",
+                    "sid": 35,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PASs are well normalized forms that represent syntactic relations.",
+                    "sid": 36,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Enju is based on Head-driven Phrase Structure Grammar (Sag and Wasow, 1999), and it has been trained on the Penn Treebank (PTB) (Marcus et al., 1994) and a biomedical corpus, the GENIA Treebank (GTB) (Tsujii Laboratory, 2005b).",
+                    "sid": 37,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a part-of-speech (POS) tagger trained on the GENIA corpus (Tsujii Laboratory, 2005b) as a preprocessor for Enju.",
+                    "sid": 38,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On predicate-argument relations, Enju achieved 88.0% precision and 87.2% recall on PTB, and 87.1% precision and 85.4% recall on GTB.",
+                    "sid": 39,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The illustration at right in Figure 1 is a PAS example, which represents the relation between \u201cactivate\u201d, \u201cENTITY1\u201d and \u201cENTITY2\u201d of all sentences to the left.",
+                    "sid": 40,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The predicate and its arguments are words converted to their base forms, augmented by their POSs.",
+                    "sid": 41,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The arrows denote the connections from predicates to their arguments and the types of arguments are indicated as arrow labels, i.e., ARGn (n = 1, 2, . . .), MOD.",
+                    "sid": 42,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the semantic subject of a transitive verb is ARG1 and the semantic object is ARG2.",
+                    "sid": 43,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What is important here is, thanks to the strong normalization of syntactic variations, that we can expect that the construction algorithm for extracting patterns that works on PASs will need a much smaller training corpus than those working on surface-word sequences.",
+                    "sid": 44,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, because of the reduced diversity of surface-word sequences at the PAS level, any IE system at this level should demonstrate improved recall.",
+                    "sid": 45,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Sudo et al.",
+                    "sid": 46,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2003), Culotta and Sorensen (2004) and Bunescu and Mooney (2005) acquired substructures derived from dependency trees as extraction patterns for IE in general domains.",
+                    "sid": 47,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their approaches were similar to our approach using PASs derived from full parsing.",
+                    "sid": 48,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, one problem with their systems is that they could not treat non-local dependencies such as semantic subjects of gerund constructions (discussed in Section 2), and thus rules acquired from the constructions were partial.",
+                    "sid": 49,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bunescu and Mooney (2006) also learned extraction patterns for protein-protein interactions by SVM with a generalized subsequence kernel.",
+                    "sid": 50,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their patterns are sequences of words, POSs, entity types, etc., and they heuristically restricted length and word positions of the patterns.",
+                    "sid": 51,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Al ENTITY1 recognizes and activates ENTITY2.",
+                    "sid": 52,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ENTITY2 activated by ENTITY1 are not well characterized.",
+                    "sid": 53,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The herpesvirus encodes a functional ENTITY1 that activates human ENTITY2.",
+                    "sid": 54,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ENTITY1 can functionally cooperate to synergistically activate ENTITY2.",
+                    "sid": 55,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ENTITY1 plays key roles by activating ENTITY2.",
+                    "sid": 56,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ENTITY1/NANRGac1tivate/VABRGEN2TITY2/NN though they achieved about 60% precision and SentepTnrITcYtee1inininTtrearaincitnsgwCithorppoulsymorphicregionsofMEHNCTIIITY.2 Figure 1: Syntactical Variations of \u201cactivate\u201d about 40% recall, these heuristic restrictions could for protein-protein interactions as sequences of CPDaE4rNsingResult CD4p0NNprotepin/NNinterpact/VBwitph/INpolymorphic/JJregiopn/NNof/pINMHCpII/NN not be guaranteed to be applied to other IE tasks.",
+                    "sid": 57,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 2 3",
+                    "sid": 58,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5\t6",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Hao et al.",
+                    "sid": 59,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) learned extraction patterns words, POSs, entity tags and gaps by dynamic ENTITY1 ARG1 ENTITY2 RawPMaOttDern ARG1 ARG1 ARG2 ARG1 ARG2 programming, and reduced/merged them using a minimum description length-based algorithm.",
+                    "sid": 60,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although they achieved 79.8% precision and 59.5% recall, sentences in their test corpus have too many positive instances and some of the patterns they claimed to have been successfully constructed went against linguistic or biomedical intuition.",
+                    "sid": 61,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(e.g. \u201cENTITY1 and interacts with ENTITY2\u201d should be replaced by a more general pattern because they aimed to reduce the number of patterns.)",
+                    "sid": 62,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Method.",
+                    "sid": 63,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We automatically construct patterns to extract protein-protein interactions from an annotated training corpus.",
+                    "sid": 64,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corpus needs to be tagged to denote which protein words are interacting pairs.",
+                    "sid": 65,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We follow \ufb01ve steps in constructing extraction patterns from the training corpus.",
+                    "sid": 66,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) Sentences in the training corpus are parsed into PASs and we extract raw patterns from the PASs.",
+                    "sid": 67,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) We divide the raw patterns to generate both combination and fragmental patterns.",
+                    "sid": 68,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because obtained patterns include inappropriate ones (wrongly generated or too general), (3) we apply both kinds of patterns to PASs of sentences in the training corpus, (4) calculate the scores for matching results of combination patterns, and (5) make a prediction model with SVM using these matching results and scores.",
+                    "sid": 69,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extract pairs of interacting proteins from a target text in the actual IE phase, in three steps.",
+                    "sid": 70,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) Sentences in the target corpus are parsed into PASs.",
+                    "sid": 71,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) We apply both kinds of extraction patterns to these PASs and (3) calculate scores for combination pattern matching.",
+                    "sid": 72,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) We use the prediction model to predict interacting pairs.",
+                    "sid": 73,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ENTITY1/NNprotein/NNinteract/VBwith/IN region/NNof/INENTITY2/NN Figure 2: Extraction of Raw Pattern 4.1 Full Parsing and Extraction of.",
+                    "sid": 74,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Raw Patterns As the \ufb01rst step in both the construction phase and application phase of extraction patterns, we parse sentences into PASs using Enju.1 We label all PASs of the protein names as protein PASs.",
+                    "sid": 75,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After parsing, we extract the smallest set of PASs, which connect words that denote interacting proteins, and make it a raw pattern.",
+                    "sid": 76,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We take the same method to extract and re\ufb01ne raw patterns as Yakushiji et al.",
+                    "sid": 77,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005).",
+                    "sid": 78,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Connecting means we can trace predicate argument relations from one protein word to the other in an interacting pair.",
+                    "sid": 79,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The procedure to obtain a raw pattern (p0 , . . .",
+                    "sid": 80,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", pn) is as follows: predicate(p): PASs that have p as their argument argument(p): PASs that p has as its arguments 1.",
+                    "sid": 81,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "pi = p0 is the PAS of a word correspondent to one of interacting proteins, and we obtain candidates of the raw pattern as follows: 11.",
+                    "sid": 82,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If pi is of the word of the other interacting protein, (p0, . . .",
+                    "sid": 83,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", pi) is a candidate of the raw pattern.",
+                    "sid": 84,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12.",
+                    "sid": 85,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If not, make pattern candidates for each pi+1 \u2208 predicate(pi) \u222a argument(pi) \u2212 {p0, . . .",
+                    "sid": 86,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", pi } by returning to 11.",
+                    "sid": 87,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 88,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Select the pattern candidate of the.",
+                    "sid": 89,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "smallest set as the raw pattern.",
+                    "sid": 90,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 Before parsing, we concatenate each multi-word protein name into the one word as long as the concatenation does not cross name boundaries.",
+                    "sid": 91,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 92,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Substitute variables (ENTITY1, ENTITY2) for.",
+                    "sid": 93,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the predicates of PASs correspondent to the interacting proteins.",
+                    "sid": 94,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RawPattern ENTITY1/NNprotein/NN$Xinteract/VBwith/INregion/NNof/INENTITY2/NN CombinationPattern The lower part of Figure 2 shows an example of the extraction of a raw pattern.",
+                    "sid": 95,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cCD4\u201d and\u201cMHCII\u201d are words representing interacting pro */NNARinGte1ract/VMBain Main teins.",
+                    "sid": 96,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we set the PAS of \u201cCD4\u201d as p0.",
+                    "sid": 97,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= ARG1 ARG1ARG2 Prep argument(p0) includes the PAS of \u201cprotein\u201d, and MObD*/NN $X*/VBE*/VBwith/IN*/NNANRNGo1f/INARENGT2ITY/NN ENTITY/NN Entity Main Mntaitiyn Entity ion/ we set it as p1 (in other words, tracing the arrow (1)).",
+                    "sid": 98,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, predicate(p1) includes the PAS of \u201cinteract\u201d (tracing the arrow (2) back), so we set it protein/ENnNtity Entity as p2.",
+                    "sid": 99,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We continue similarly until we reach the PAS of \u201cMHCII\u201d (p6 ).",
+                    "sid": 100,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The result of the extracted raw pattern is the set of p0 , . . .",
+                    "sid": 101,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ", p6 with substituting variables ENTITY1 and ENTITY2 for \u201cCD4\u201d and \u201cMHCII\u201d.",
+                    "sid": 102,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are some cases where an extracted raw pattern is not appropriate and we need to re- \ufb01ne it.",
+                    "sid": 103,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One case is when unnecessary coordi- nations/parentheses are included in the pattern, e.g. two interactions are described in a combined representation (\u201cENTITY1 binds this protein and ENTITY2\u201d).",
+                    "sid": 104,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another is when two interacting proteins are connected directly by a conjunction or only one protein participates in an interaction.",
+                    "sid": 105,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such cases, we re\ufb01ne patterns by unfolding of coordinations/parentheses and extension of patterns, respectively.",
+                    "sid": 106,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have omitted detailed explanations because of space limitations.",
+                    "sid": 107,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The details are described in the work of Yakushiji et al.",
+                    "sid": 108,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005).",
+                    "sid": 109,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Division of Patterns.",
+                    "sid": 110,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Division for generating combination patterns is based on observation of Yakushiji et al.",
+                    "sid": 111,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005) that there are many cases where combinations of verbs and certain nouns form IE patterns.",
+                    "sid": 112,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the work of Yakushiji et al.",
+                    "sid": 113,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005), we divided only patterns that include only one verb.",
+                    "sid": 114,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have extended the division process to also treat nominal patterns or patterns that include more than one verb.",
+                    "sid": 115,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Combination patterns are not appropriate for utilizing individual word information because they are always used in rather strictly combined ways.",
+                    "sid": 116,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore we have newly introduced fragmental patterns which consist of independent PASs from raw patterns, in order to use individual word information for higher recall.",
+                    "sid": 117,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2.1 Division for Generating Combination Patterns Raw patterns are divided into some components and the components are combined to conFigure 3: Division of Raw Pattern into Combina tion Pattern Components (Entity-Main-Entity) struct combination patterns according to types of the division.",
+                    "sid": 118,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are three types of division of raw patterns for generating combination patterns.",
+                    "sid": 119,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are: (a) Two-entity Division (a-1) Entity-Main-Entity Division (a-2) Main-Entity-Entity Division (b) Single-entity Division, and (c) No Division (Naive Patterns).",
+                    "sid": 120,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most raw patterns, where entities are at both ends of the patterns, are divided into Entity-Main- Entity.",
+                    "sid": 121,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Main-Entity-Entity are for the cases where there are PASs other than entities at the ends of the patterns (e.g. \u201cinteraction between ENTITY1 and ENTITY2\u201d).",
+                    "sid": 122,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Single-entity is a special Main- Entity-Entity for interactions with only one participant (e.g. \u201cENTITY1 dimerization\u201d).",
+                    "sid": 123,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is an example of Entity-Main-Entity division in Figure 3.",
+                    "sid": 124,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the main component from the raw pattern is the syntactic head PAS of the raw pattern.",
+                    "sid": 125,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the raw pattern corresponds to a sentence, the syntactic head PAS is the PAS of the main verb.",
+                    "sid": 126,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We underspecify the arguments of the main component, to enable them to unify with the PASs of any words with the same POSs.",
+                    "sid": 127,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, if there are PASs of prepositions connecting to the main component, they become prep components.",
+                    "sid": 128,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If there is no PAS of a preposition next to the main component on the connecting link from the main component to an entity, we make the pseudo PAS of a null preposition the prep component.",
+                    "sid": 129,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The left prep component ($X) in Figure 3 is a pseudo PAS of a null preposition.",
+                    "sid": 130,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also underspecify the arguments of prep components.",
+                    "sid": 131,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the remaining two parts, which are typically noun phrases, of the raw pattern become entity components.",
+                    "sid": 132,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "PASs corresponding to the entities of the original pair are labeled as only uni\ufb01able with the entities of other pairs.",
+                    "sid": 133,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Main-Entity-Entity division is similar, except we distinguish only one prep component as a double-prep component and the PAS of the coordinate conjunction between entities becomes the coord component.",
+                    "sid": 134,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Single-entity division is similar to Main-Entity-Entity division and the difference is that single-entity division produces no coord and one entity component.",
+                    "sid": 135,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Naive patterns are patterns without division, where no division can be applied (e.g. \u201cENTITY1/NN in/IN complexes/NN with/IN ENTITY2/NN \u201d).",
+                    "sid": 136,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All PASs on boundaries of components are labeled to determine which PAS on a boundary of another component can be uni\ufb01ed.",
+                    "sid": 137,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Labels are represented by subscriptions in Figure 3.",
+                    "sid": 138,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These restrictions on component connection are used in the step of constructing combination patterns.",
+                    "sid": 139,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Constructing combination patterns by combining components is equal to reconstructing original raw patterns with the original combination of components, or constructing new raw patterns with new combinations of components.",
+                    "sid": 140,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, an Entity-Main-Entity pattern is constructed by combination of any main, any two prep and any two entity components.",
+                    "sid": 141,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Actually, this construction process by combination is executed in the pattern matching step.",
+                    "sid": 142,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, we do not off-line construct all possible combination patterns from the components and only construct the combination patterns that are able to match the target.",
+                    "sid": 143,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2.2 Division for Generating Fragmental Patterns A raw pattern is splitted into individual PASs and each PAS becomes a fragmental pattern.",
+                    "sid": 144,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also prepare underspeci\ufb01ed patterns where one or more of the arguments of the original are under- speci\ufb01ed, i.e., are able to match any words of the same POSs and the same label of protein/not- protein.",
+                    "sid": 145,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We underspecify the PASs of entities in fragmental patterns to enable them to unify with 4.3 Pattern Matching.",
+                    "sid": 146,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Matching of combination patterns is executed as a process to match and combine combination pattern components according to their division types (Entity-Main-Entity, Main-Entity-Entity, Single- entity and No Division).",
+                    "sid": 147,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fragmental matching is matching all fragmental patterns to PASs derived from sentences.",
+                    "sid": 148,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.4 Scoring for Combination Matching.",
+                    "sid": 149,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We next calculate the score of each combination matching to estimate the adequacy of the combination of components.",
+                    "sid": 150,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because new combination of components may form inadequate patterns.",
+                    "sid": 151,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(e.g. \u201cENTITY1 be ENTITY2\u201d can be formed of components from \u201cENTITY1 be ENTITY2 receptor\u201d.)",
+                    "sid": 152,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scores are derived from the results of combination matching to the source training corpus.",
+                    "sid": 153,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply the combination patterns to the training corpus, and count pairs of True Positives (TP) and False Positives (FP).",
+                    "sid": 154,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The scores are calculated basically by the following formula: Score = T P /(T P + F P ) + \u03b1 \u00d7 T P This formula is based on the precision of the pattern on the training corpus, i.e., an estimated precision on a test corpus.",
+                    "sid": 155,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03b1 works for smoothing, that is, to accept only patterns of large T P when F P = 0.",
+                    "sid": 156,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03b1 is set as 0.01 empirically.",
+                    "sid": 157,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The formula is similar to the Apriori algorithm (Agrawal and Srikant, 1995) that learns association rules from a database.",
+                    "sid": 158,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \ufb01rst term corresponds to the con\ufb01- dence of the algorithm, and the second term corresponds to the support.",
+                    "sid": 159,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For patterns where T P = F P = 0, which are not matched to PASs in the training corpus (i.e., newly produced by combinations of components), we estimates T P \u2032 and F P \u2032 by using the con\ufb01dence of the main and entity components.",
+                    "sid": 160,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because main and entity components tend to contain pattern meanings, whereas prep, double-prep and coord components are rather functional.",
+                    "sid": 161,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The formulas to calculate the scores for all cases are: any PASs with the same POSs and a protein label, although in combination patterns we retain the PASs of entities as only uni\ufb01able with entities of 8T P /(T P + F P ) + \u03b1 > (T P + F P \u0338= 0) Score = < P \u2032 /(T P \u2032 + F P \u2032 ) \u00d7 T Ppairs.",
+                    "sid": 162,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because fragmental patterns are de signed to be less strict than combination patterns.",
+                    "sid": 163,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "> (T P = F P = 0, T P \u2032 + F P \u2032 \u0338= 0) :0 (T P = F P = T P \u2032 = F P \u2032 = 0) Co mb ina tio n Pat ter n (1) Combination of components in combination m a t c h i n g ( 2 ) M a i n c o m p o n e n t i n c o m b i n a t i o n m a t c h i n g ( 3 ) E n t i t y c o m p o n e n t s i n c o m b i n a t i o n m a t c h i n g ( 4 ) S c o r e f o r c o m b i n a t i o n m a t c h i n g ( S C O R E ) Fra gm ent al Pat ter n (5) Matched fragmental patterns (6 ) N u m b e r o f P A S s o f e x a m p l e t h a t a r e n o t m a t c h e d i n f r a g m e n t a l m a t c h i n g Ra w Pat ter n (7) Length of raw pattern derived from example Table 2: Features for SVM Learning of Prediction Model 1 0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 ALL SCORE ERK 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1 Recall Figure 4: Results of IE Experiment FGF2/NN bindwelltoFGFR1butinteract/VBpoorly/RB with/INKGFR/NN 8T P \u2032 + T P \u2032 (+T P \u2032 ) ENTITY1 ENTITY2 <> main entity1 entity2 T P \u2032 =(for Two entity, Single entity) >:0 (for Naive) F P \u2032 = (similar to T P \u2032 but T P \u2032 is replaced by F P \u2032 ) x x 8T Pmain:two /(T Pmain:two + F Pmain:two ) > T Pmain:two + F Pmain:two \u0338= 0, ! > for Two-entity > Figure 5: Example Demonstrating Advantages of Full Parsing \u2032 main < Pmain:s ingle > /(T P main:singl e + F P main:singl e ! )5 Re sults and Discus sion > T Pmain:single + F Pmain:single \u0338= 0, > for Single-entity >:0 (other cases) 8T Pentityi /(T Pentityi + F Pentityi ) 5.1 Experimental Results on the AImed.",
+                    "sid": 164,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Corpus To evaluate extraction patterns automatically con > entityi = \u201c T P entityi + F P entityi \u201d \u0338= 0 structed with our method, we used the AImed cor >:0 (other cases) \u201e similar to T P \u2032 but T P \u2032 in the \u00ab pus, which consists of 225 MEDLINE (U.S. Na tional Library of Medicine, 2006) abstracts (1969 sentences) annotated with protein names and F P \u2032 = x y x numerators is replaced by F P \u2032 \u2022 T P : number of TPs by the combination of components \u2022 T Pmain:two : sum of TPs by two-entity combinations that include the same main component \u2022 T Pmain:single : sum of TPs by single-entity combinations that include the same main component \u2022 T Pentityi : sum of TPs by combinations that include the same entity component which is not the straight entity component \u2022 F Px : similar to T Px but TP is replaced by FP The entity component \u201cENTITY/NN \u201d, which only consists of the PAS of an entity, adds no information to combinations of components.",
+                    "sid": 165,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call this component a straight entity component and exclude its effect from the scores.",
+                    "sid": 166,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.5 Construction of Prediction Model.",
+                    "sid": 167,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use an SVM to learn a prediction model to determine whether a new protein pair is interacting.",
+                    "sid": 168,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used SV M light (Joachims, 1999) with an rbf kernel, which is known as the best kernel for most tasks.",
+                    "sid": 169,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The prediction model is based on the features of Table 2.",
+                    "sid": 170,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "protein-protein interactions, for the training/test corpora.",
+                    "sid": 171,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used tags for the protein names given.",
+                    "sid": 172,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We measured the accuracy of the IE task using the same criterion as Bunescu and Mooney (2006), who used an SVM to construct extraction patterns on word/POS/type sequences from the AImed corpus.",
+                    "sid": 173,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, an extracted interaction from an abstract is correct if the proteins are tagged as interacting with each other somewhere in that abstract (document-level measure).",
+                    "sid": 174,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 plots our 10-fold cross validation and the results of Bunescu and Mooney (2006).",
+                    "sid": 175,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The line ALL represents results when we used all features for SVM learning.",
+                    "sid": 176,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The line SCORE represents results when we extracted pairs with higher combination matching scores than various threshold values.",
+                    "sid": 177,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And the line ERK represents results by Bunescu and Mooney (2006).",
+                    "sid": 178,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The line ALL obtained our best overall F- measure 57.3%, with 71.8% precision and 48.4% recall.",
+                    "sid": 179,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method was signi\ufb01cantly better than Bunescu and Mooney (2006) for precision be tween 50% and 80%.",
+                    "sid": 180,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It also needs to be noted that SCORE, which did not use SVM learning and only used the combination patterns, achieved performance comparable to that by Bunescu and Mooney (2006) for the precision range from 50% to 80%.",
+                    "sid": 181,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And for this range, introducing the frag- mental patterns with SVM learning raised the recall.",
+                    "sid": 182,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This range of precision is practical for the IE task, because precision is more important than recall for signi\ufb01cant interactions that tend to be described in many abstracts (as shown by the next experiment), and too-low recall accompanying too-high precision requires an excessively large source text.",
+                    "sid": 183,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows the advantage of introducing full parsing.",
+                    "sid": 184,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u201cFGF2\u201d and \u201cKGFR\u201d is an interacting protein pair.",
+                    "sid": 185,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pattern \u201cENTITY1 interact with ENTITY2\u201d based on PASs successfully extracts this pair.",
+                    "sid": 186,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is dif\ufb01cult to extract this pair with patterns based on surface words, because there are 5 words between \u201cFGF2\u201d and \u201cinteract\u201d.",
+                    "sid": 187,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MEDLINE We also conducted an experiment to extract interacting protein pairs from a large amount of biomedical text, i.e. about 14 million titles and 8 million abstracts in MEDLINE.",
+                    "sid": 188,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We constructed combination patterns from all 225 abstracts of the AImed corpus, and calculated a threshold value of combination scores that produced about 70% precision and 30% recall on the training corpus.",
+                    "sid": 189,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extracted protein pairs with higher combination scores than the threshold value.",
+                    "sid": 190,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We excluded single-protein interactions to reduce time consumption and we used a protein name recognizer in this experiment2.",
+                    "sid": 191,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared the extracted pairs with a manually curated database, Reactome (JoshiTope et al., 2005), which published 16,564 human protein interaction pairs as pairs of Entrez Gene IDs (U.S. National Library of Medicine, 2006).",
+                    "sid": 192,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We converted our extracted protein pairs into pairs of Entrez Gene IDs by the protein name recognizer.3 Because there may be pairs missed by Re 2 Because protein names were recognized after the parsing, multi-word protein names were not concatenated.",
+                    "sid": 193,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Although the same protein names are used for humans and other species, these are considered to be human proteins without checking the context.",
+                    "sid": 194,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a fair assumption because Reactome itself infers human interaction events from experiments on model organisms such as mice.",
+                    "sid": 195,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tot al 8 9 Par sin g Err or/ Fai lur e ( R e l a t e d t o c o o r d i n a t i o n s ) 3 5 (1 4) La ck of Co mb ina tio n Pat ter n Co mp on ent 3 3 Re qui rin g An ap hor a Re sol uti on 9 Err or in Pre dic tio n Mo del 8 Re qui rin g Att rib uti ve Ad jec tiv es 5 Ot her s 1 0 More than one cause can occur in one error, thus the sum of all causes is larger than the total number of False Negatives.",
+                    "sid": 196,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3: Causes of Error for FNs actome or pairs that our processed text did not include, we excluded extracted pairs of IDs that are not included in Reactome and excluded Reactome pairs of IDs that do not co-occur in the sentences of our processed text.",
+                    "sid": 197,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After this postprocessing, we found that we had extracted 7775 human protein pairs.",
+                    "sid": 198,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of them, 155 pairs were also included in Reactome ([a] pseudo TPs) and 7620 pairs were not included in Reac- tome ([b] pseudo FPs).",
+                    "sid": 199,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "947 pairs of Reactome were not extracted by our system ([c] pseudo False Negatives (FNs)).",
+                    "sid": 200,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these results included pairs that Reactome missed or those that only co- occurred and were not interacting pairs in the text.",
+                    "sid": 201,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There may also have been errors with ID assignment.",
+                    "sid": 202,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To determine such cases, a biologist investigated 100 pairs randomly selected from pairs of pseudo TPs, FPs and FNs retaining their ratio of numbers.",
+                    "sid": 203,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "She also checked correctness of the assigned IDs.",
+                    "sid": 204,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 pairs were selected from pseudo TPs, 88 pairs were from pseudo FPs and 10 pairs were from pseudo FNs.",
+                    "sid": 205,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The biologist found that 57 pairs were actual TPs (2 pairs of pseudo TPs and 55 pairs of pseudo FPs) and 32 pairs were actual FPs of the pseudo FPs.",
+                    "sid": 206,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, the precision was 64.0% in this sample set.",
+                    "sid": 207,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, even if we assume that all pseudo FNs are actual FNs, the recall can be estimated by actual TPs / (actual TPs + pseudo FNs) \u00d7 100 = 83.8%.These results mean that the recall of an IE sys tem for interacting proteins is improved for a large amount of text even if it is low for a small corpus.",
+                    "sid": 208,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, this justi\ufb01es our assertion that a high degree of precision in the low-recall range is important.",
+                    "sid": 209,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tables 3 and 4 list causes of error for FNs/FPs on a test set of the AImed corpus using the prediction model with the best F-measure with all the 0.55 0.5 Table 4: Causes of Error for FPsfeatures.",
+                    "sid": 210,
+                    "ssid": 152,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different to Subsection 5.1, we individ 0.45 0.4 0.35 0 50 100 150 200 Training Corpus Size (Number of Abstracts) ually checked each occurring pair of interacting proteins.",
+                    "sid": 211,
+                    "ssid": 153,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The biggest problems were parsing error/failure, lack of necessary patterns and learning of inappropriate patterns.",
+                    "sid": 212,
+                    "ssid": 154,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of these were caused by differences in the characteristics of the PTB/GTB, the training corpora for Enju, and the AImed Corpus.",
+                    "sid": 213,
+                    "ssid": 155,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Enju failed to obtain the correct structure for \u201cthe ENTITY1 / ENTITY1 complex\u201d because words in the PTB/GTB are not segmented with \u201c/\u201d and Enju could not be trained on such a case.",
+                    "sid": 214,
+                    "ssid": 156,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One method to solve this problem is to avoid segmenting words with \u201c/\u201d and introducing extraction patterns based on surface characters, such as \u201cENTITY1/ENTITY2 complex\u201d.",
+                    "sid": 215,
+                    "ssid": 157,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parsing errors are intrinsic problems to IE methods using parsing.",
+                    "sid": 216,
+                    "ssid": 158,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, from Table 3, we can conclude that the key to gaining better accuracy is re\ufb01ning of the method with which the PAS patterns are constructed (there were 46 related FNs) rather than improving parsing (there were 35 FNs).",
+                    "sid": 217,
+                    "ssid": 159,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Effect of Training Corpus Size To investigate whether the training corpus was large enough to maximize IE accuracy, we conducted experiments on training corpora of various sizes.",
+                    "sid": 218,
+                    "ssid": 160,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 plots Figure 6: Effect of Training Corpus Size (1) 600 500 400 300 200 100 0 0 50 100 150 200 Training Corpus Size (Number of Abstracts) Raw Patterns (before division) Main Component Entity Component Other Component Naive Pattern Figure 7: Effect of Training Corpus Size (2) is not large enough.",
+                    "sid": 219,
+                    "ssid": 161,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus increasing corpus size will further improve IE accuracy.",
+                    "sid": 220,
+                    "ssid": 162,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Limitation of the Present Pattern Construction The limitations with our pattern construction method are revealed by the fact that we could not achieve a high precision like Bunescu and Mooney (2006) within the high-recall range.",
+                    "sid": 221,
+                    "ssid": 163,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to theirs, one of our problems is that our method could not handle attributives.",
+                    "sid": 222,
+                    "ssid": 164,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One example is \u201cbinding property of ENTITY1 to ENTITY2\u201d.",
+                    "sid": 223,
+                    "ssid": 165,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We could not obtain \u201cbinding\u201d because the smallest set of PASs connecting \u201cENTITY1\u201d and \u201cENTITY2\u201d includes only the PASs of \u201cproperty\u201d, \u201cof\u201d and \u201cto\u201d.",
+                    "sid": 224,
+                    "ssid": 166,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To handle these attributives, we need distinguish necessary attributives from those that are general4 by semantic analysis or bootstrapping.",
+                    "sid": 225,
+                    "ssid": 167,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another approach to improve our method is to include local information in sentences, such as surface words between protein names.",
+                    "sid": 226,
+                    "ssid": 168,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhao and Grishman (2005) reported that adding local information to deep syntactic information improved IE results.",
+                    "sid": 227,
+                    "ssid": 169,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach is also applicable to IE in other domains, where related entities are in a short graphs of F-measures by SCORE and Figure 7 4 Consider the case where a source sentence for a pattern is. plots the number of combination patterns on train ing corpora of various sizes.",
+                    "sid": 228,
+                    "ssid": 170,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From Figures 6 and 7, the training corpus (207 abstracts at a maximum) \u201cENTITY1 is an important homodimeric protein.\u201d (\u201chomodimeric\u201d represents that two molecules of \u201cENTITY1\u201d interact with each other.)",
+                    "sid": 229,
+                    "ssid": 171,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "distance like the work of Zhou et al.",
+                    "sid": 230,
+                    "ssid": 172,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005).",
+                    "sid": 231,
+                    "ssid": 173,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 Conclusion.",
+                    "sid": 232,
+                    "ssid": 174,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We proposed the use of PASs to construct patterns as extraction rules, utilizing their ability to abstract syntactical variants with the same relation.",
+                    "sid": 233,
+                    "ssid": 175,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we divided the patterns for generalization, and used matching results for SVM learning.",
+                    "sid": 234,
+                    "ssid": 176,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In experiments on extracting of protein- protein interactions, we obtained 71.8% precision and 48.4% recall on a small corpus and 64.0% precision and 83.8% recall estimated on a large text, which demonstrated the obvious advantages of our method.",
+                    "sid": 235,
+                    "ssid": 177,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgement",
+            "number": "",
+            "sents": [
+                {
+                    "text": "This work was partially supported by Grant-in-Aid for Scienti\ufb01c Research on Priority Areas \u201cSystems Genomics\u201d (MEXT, Japan) and Solution- Oriented Research for Science and Technology (JST, Japan).",
+                    "sid": 236,
+                    "ssid": 178,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

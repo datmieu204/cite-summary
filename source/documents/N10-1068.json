@@ -1,0 +1,1421 @@
+{
+    "ID": "N10-1068",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We describe a Bayesian inference algorithm that can be used to train any cascade of weighted finite-state transducers on end-to- end data.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also investigate the problem of automatically selecting from among multiple training runs.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments on four different tasks demonstrate the genericity of this framework, and, where applicable, large improvements in performance over EM.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also show, for unsupervised part-of-speech tagging, that automatic run selection gives a large improvement over previous Bayesian approaches.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "In this paper, we investigate Bayesian inference for weighted finite-state transducers (WFSTs).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many natural language models can be captured by weighted finite-state transducers (Pereira et al., 1994; Sproat et al., 1996; Knight and AlOnaizan, 1998; Clark, 2002; Kolak et al., 2003; Mathias and Byrne, 2006), which offer several benefits:\u2022 WFSTs provide a uniform knowledge represen tation.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Complex problems can be broken down into a cascade of simple WFSTs.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Input- and output-epsilon transitions allow compact designs.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Generic algorithms exist for doing inferenceswith WFSTs.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These include best-path de coding, k-best path extraction, composition, \u2217The authors are listed in alphabetical order.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Please direct correspondence to Sujith Ravi (sravi@isi.edu).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was supported by NSF grant IIS0904684 and DARPA contract HR001106-C0022.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "intersection, minimization, determinization, forward-backward training, forward-backward pruning, stochastic generation, and projection.\u2022 Software toolkits implement these generic al gorithms, allowing designers to concentrate on novel models rather than problem-specific inference code.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This leads to faster scientific experimentation with fewer bugs.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weighted tree transducers play the same role for problems that involve the creation and transformation of tree structures (Knight and Graehl, 2005).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, many problems do not fit either the finite- state string or tree transducer framework, but in this paper, we concentrate on those that do.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bayesian inference schemes have become popular recently in natural language processing for their ability to manage uncertainty about model parameters and to allow designers to incorporate prior knowledge flexibly.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Task-accuracy results have generally been favorable.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it can be time- consuming to apply Bayesian inference methods to each new problem.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Designers typically build custom, problem-specific sampling operators for exploring the derivation space.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They may factor their programs to get some code reuse from one problem to the next, but highly generic tools for string and tree processing are not available.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we marry the world of finite-state machines with the world of Bayesian inference, and we test our methods across a range of natural language problems.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our contributions are: \u2022 We describe a Bayesian inference algorithm that can be used to train any cascade of WFSTs on end-to-end data.\u2022 We propose a method for automatic run selec 447 Human Language Technologies: The 2010 Annual Conference of the North American Chapter of the ACL, pages 447\u2013455, Los Angeles, California, June 2010.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2010 Association for Computational Linguistics tion, i.e., how to automatically select among multiple training runs in order to achieve the best possible task accuracy.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a:A b:B A:D A:C B:E The natural language applications we consider in this paper are: (1) unsupervised part-of-speech (POS) tagging (Merialdo, 1994; Goldwater and Griffiths, 2007), (2) letter substitution decipher = a: :D a: :C :E b: ment (Peleg and Rosenfeld, 1979; Knight et al., 2006; Ravi and Knight, 2008), (3) segmentation of space-free English (Goldwater et al., 2009), and (4) Japanese/English phoneme alignment (Knight and Graehl, 1998; Ravi and Knight, 2009a).",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 shows how each of these problems can be represented as a cascade of finite-state acceptors (FSAs) and finite-state transducers (FSTs).",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "generic em training. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We first describe forward-backward EM training for a single FST M. Given a string pair (v, w) from our training data, we transform v into an FST Mv that just maps v to itself, and likewise transform w into an FST Mw.",
+                    "sid": 27,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we compose Mv with M, and compose the result with Mw.",
+                    "sid": 28,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This composition follows Pereira and Riley (1996), treating epsilon input and output transitions correctly, especially with regards to their weighted interleaving.",
+                    "sid": 29,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This yields a derivation lattice D, each of whose paths transforms v into w.1 Each transition in D corresponds to some transition in the FST M. We run the forward-backward algorithm over D to collect fractional counts for the transitions in M. After we sum fractional counts for all examples, we normalize with respect to competing transitions in M, assign new probabilities to M, and iterate.",
+                    "sid": 30,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transitions in M compete with each other if they leave the same state with the same input symbol, which may be empty (E).",
+                    "sid": 31,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to train an FSA on observed string data, we convert the FSA into an FST by adding an input- epsilon to every transition.",
+                    "sid": 32,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then convert each training string v into the string pair (E, v).",
+                    "sid": 33,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After running the above FST training algorithm, we can remove all input-E from the trained machine.",
+                    "sid": 34,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is straightforward to modify generic training to support the following controls: 1 Throughout this paper, we do not assume that lattices are acyclic; the algorithms described work on general graphs.",
+                    "sid": 35,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2: Composition of two FSTs maintaining separate transitions.",
+                    "sid": 36,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Maximum iterations and early stopping.",
+                    "sid": 37,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We specify a maximum number of iterations, and we halt early if the ratio of log P(data) from one iteration to the next exceeds a threshold (such as 0.99999).",
+                    "sid": 38,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initial point.",
+                    "sid": 39,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any probabilities supplied on the pre- trained FST are interpreted as a starting point for EM\u2019s search.",
+                    "sid": 40,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If no probabilities are supplied, EM begins with uniform probabilities.",
+                    "sid": 41,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Random restarts.",
+                    "sid": 42,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can request n random restarts, each from a different, randomly-selected initial point.",
+                    "sid": 43,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Locking and tying.",
+                    "sid": 44,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transitions on the pre-trained FST can be marked as locked, in which case EM will not modify their supplied probabilities.",
+                    "sid": 45,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Groups of transitions can be tied together so that their fractional counts are pooled, and when normalization occurs, they all receive the same probability.",
+                    "sid": 46,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Derivation lattice caching.",
+                    "sid": 47,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If memory is available, training can cache the derivation lattices computed in the first EM iteration for all training pairs.",
+                    "sid": 48,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subsequent iterations then run much faster.",
+                    "sid": 49,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we observe an average 10-fold speedup with caching.",
+                    "sid": 50,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next we turn to training a cascade of FSTs on end-to-end data.",
+                    "sid": 51,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm takes as input: (1) a sequence of FSTs, and (2) pairs of training strings (v, w), such that v is accepted by the first FST in the cascade, and w is produced by the last FST.",
+                    "sid": 52,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm outputs the same sequence of FSTs, but with trained probabilities.",
+                    "sid": 53,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To accomplish this, we first compose the supplied FSTs, taking care to keep the transitions from different machines separate.",
+                    "sid": 54,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 illustrates this with a small example.",
+                    "sid": 55,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may thus happen that a single transition in an input FST is represented multiple times in the composed device, in which case their prob 1.",
+                    "sid": 56,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unsupervised part-of-speech tagging with constrained dictionary.",
+                    "sid": 57,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IN:at NN ! NN JJ JJ ! JJ POS Tag sequence NN:fish DT:a VB:fish SYM:a Observed word sequence VB ! tag bigram model constrai ned tag!wo rd substitut ion model 2.",
+                    "sid": 58,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Decipherment of letter-substitution cipher.",
+                    "sid": 59,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "a ! a b b ! English b letter a:A a:B a:C Observed enciphered c ! letter bigram model, sequence b:C b:B b:A text learned separately 26 x 26 table",
+                    "sid": 60,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "re-spacing of english text written without spaces. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "AREY:a A AR !:r !:e !:y Observed AREYO AREY ARE Word sequence REY:r ABCD:a !:b !:c !:d letter sequence w/o spaces unigram model over !:!",
+                    "sid": 61,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "words and non-words deterministic spell-out",
+                    "sid": 62,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "alignment of japanese/english phoneme sequences. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "English phoneme sequence AE:!",
+                    "sid": 63,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "!:S !:U !:S J a p a n e s e k a t a k a n a p h o n e m e mapping from each English phoneme to each Japanese phoneme sequence of length 1 to 3 sequence Figure 1: Finite-state cascades for five natural language problems.",
+                    "sid": 64,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "abilities are tied together.",
+                    "sid": 65,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we run FST training on the end-to-end data.",
+                    "sid": 66,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This involves creating derivation lattices and running forward-backward on them.",
+                    "sid": 67,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After FST training, we decompose the trained device back into a cascade of trained machines.",
+                    "sid": 68,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the cascade\u2019s first machine is an FSA, rather than an FST, then the entire cascade is viewed as a generator of strings rather than a transformer of strings.",
+                    "sid": 69,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such a cascade is trained on observed strings rather than string pairs.",
+                    "sid": 70,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By again treating the first FSA as an FST with empty input, we can train using the FST-cascade training algorithm described in the previous paragraph.",
+                    "sid": 71,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once we have our trained cascade, we can apply it to new data, obtaining (for example) the k-best out 3.",
+                    "sid": 72,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Choose word w1 according to P0(w1 | t1).",
+                    "sid": 73,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 74,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i \u2190 i + 1",
+                    "sid": 75,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "choose tag ti according to. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "\u03b1P0(ti | ti\u22121) + ci\u22121(ti\u22121, ti) \u03b1 + ci\u22121(ti\u22121)",
+                    "sid": 76,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "choose word wi according to. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "\u03b2P0(wi | ti) + ci\u22121(ti, wi) \u03b2 + ci\u22121",
+                    "sid": 77,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "with probability pquit , quit; else go to 4.. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "(1) (2) put strings for an input string.",
+                    "sid": 78,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Generic Bayesian Training.",
+                    "sid": 79,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bayesian learning is a wide-ranging field.",
+                    "sid": 80,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focus on training using Gibbs sampling (Geman and Ge- man, 1984), because it has been popularly applied in the natural language literature, e.g., (Finkel et al., 2005; DeNero et al., 2008; Blunsom et al., 2009).",
+                    "sid": 81,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our overall plan is to give a generic algorithm for Bayesian training that is a \u201cdrop-in replacement\u201d for EM training.",
+                    "sid": 82,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, we input an FST cascade and data and output the same FST cascade with trained weights.",
+                    "sid": 83,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an approximation to a purely Bayesian setup (where one would always integrate over all possible weightings), but one which makes it easy to deploy FSTs to efficiently decode new data.",
+                    "sid": 84,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Likewise, we do not yet support non- parametric approaches\u2014to create a drop-in replacement for EM, we require that all parameters be specified in the initial FST cascade.",
+                    "sid": 85,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We return to this issue in Section 5.",
+                    "sid": 86,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Particular Case.",
+                    "sid": 87,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We start with a well-known application of Bayesian inference, unsupervised POS tagging (Goldwater and Griffiths, 2007).",
+                    "sid": 88,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Raw training text is provided, and each potential corpus tagging corresponds to a hidden derivation of that data.",
+                    "sid": 89,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Derivations are created and probabilistically scored as follows: 1.",
+                    "sid": 90,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i \u2190 1 2.",
+                    "sid": 91,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Choose tag t1 according to P0(t1).",
+                    "sid": 92,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This defines the probability of any given derivation.",
+                    "sid": 93,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The base distribution P0 represents prior knowledge about the distribution of tags and words, given the relevant conditioning context.",
+                    "sid": 94,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ci\u22121 are the counts of events occurring before word i in the derivation (the \u201ccache\u201d).",
+                    "sid": 95,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When \u03b1 and \u03b2 are large, tags and words are essentially generated according to P0.",
+                    "sid": 96,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When \u03b1 and \u03b2 are small, tags and words are generated with reference to previous decisions inside the cache.",
+                    "sid": 97,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use Gibbs sampling to estimate the distribution of tags given words.",
+                    "sid": 98,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key to efficient sampling is to define a sampling operator that makes some small change to the overall corpus derivation.",
+                    "sid": 99,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With such an operator, we derive an incremental formula for re-scoring the probability of an entire new derivation based on the probability of the old derivation.",
+                    "sid": 100,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exchangeability makes this efficient\u2014 we pretend like the area around the small change occurs at the end of the corpus, so that both old and new derivations share the same cache.",
+                    "sid": 101,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goldwater and Griffiths (2007) choose the re-sampling operator \u201cchange the tag of a single word,\u201d and they derive the corresponding incremental scoring formula for unsupervised tagging.",
+                    "sid": 102,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For other problems, designers develop different sampling operators and derive different incremental scoring formulas.",
+                    "sid": 103,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Generic Case.",
+                    "sid": 104,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to develop a generic algorithm, we need to abstract away from these problem-specific design choices.",
+                    "sid": 105,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In general, hidden derivations correspond to paths through derivation lattices, so we first and are computed in this way: \u03b1P0(r | q) + c(q, r) P(r | q) = (3) \u03b1 + c(q) Figure 3: Changing a decision in the derivation lattice.",
+                    "sid": 106,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All paths generate the observed data.",
+                    "sid": 107,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bold path represents the current sample, and the dotted path represents a sidetrack in which one decision is changed.",
+                    "sid": 108,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "compute derivation lattices for our observed training data through our cascade of FSTs.",
+                    "sid": 109,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A random path through these lattices constitutes the initial sample, and we calculate its derivation probability directly.",
+                    "sid": 110,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One way to think about a generic small change operator is to consider a single transition in the current sample.",
+                    "sid": 111,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This transition will generally compete with other transitions.",
+                    "sid": 112,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible small change is to \u201csidetrack\u201d the derivation to a competing derivation.",
+                    "sid": 113,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 shows how this works.",
+                    "sid": 114,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the sidetrack path quickly rejoins the old derivation path, then an incremental score can be computed.",
+                    "sid": 115,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, sidetracking raises knotty questions.",
+                    "sid": 116,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, what is the proper path continuation after the sidetracking transition is selected?",
+                    "sid": 117,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Should the path attempt to rejoin the old derivation as soon as possible, and if so, how is this efficiently done?",
+                    "sid": 118,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, how can we compute new derivation scores for all possible sidetracks, so that we can choose a new sample by an appropriate weighted coin flip?",
+                    "sid": 119,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, would such a sampler be reversible?",
+                    "sid": 120,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to satisfy theoretical conditions for Gibbs sampling, if we move from sample A to sample B, we must be able to immediately get back to sample A. We take a different tack here, moving from point- wise sampling to blocked sampling.",
+                    "sid": 121,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gao and Johnson (2008) employed blocked sampling for POS tagging, and the approach works nicely for arbitrary derivation lattices.",
+                    "sid": 122,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We again start with a random derivation for each example in the corpus.",
+                    "sid": 123,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then choose a training example and exchange its entire derivation lattice to the end of the corpus.",
+                    "sid": 124,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We cre where q and r are states of the derivation lattice, and the c(\u00b7) are counts collected from the corpus minus the entire training example being resampled.",
+                    "sid": 125,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is an approximation because we are ignoring the fact that P(r | q) in general depends on choices madeearlier in the lattice.",
+                    "sid": 126,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approximation can be cor rected using the Metropolis-Hastings algorithm, in which the sample drawn from the proposal lattice is accepted only with a certain probability \u03b1; but Gao and Johnson (2008) report that \u03b1 > 0.99, so we skip this step.",
+                    "sid": 127,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Choosing the best derivations.",
+                    "sid": 128,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After the sampling run has finished, we can choose the best derivations using two different methods.",
+                    "sid": 129,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, if we want to find the MAP derivations of the training strings, then following Goldwater and Griffiths (2007), we can use annealing: raise the probabilities in the sampling distribution to the 1 power, where T is a temperature parameter, decrease T towards zero, and take a single sample.",
+                    "sid": 130,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But in practice one often wants to predict the MAP derivation for a new string wt not contained in the training data.",
+                    "sid": 131,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To approximate the distribution of derivations of wt given the training data, we aver age the transition counts from all the samples (after burn-in) and plug the averaged counts into (3) to obtain a single proposal lattice.2 The predicted derivation is the Viterbi path through this lattice.",
+                    "sid": 132,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Call this method averaging.",
+                    "sid": 133,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An advantage of this approach is that the trainer, taking a cascade of FSAs as input, outputs a weighted version of the same cascade, and this trained cascade can be used on unseen examples without having to rerun training.",
+                    "sid": 134,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.4 Implementation.",
+                    "sid": 135,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That concludes the generic Bayesian training algorithm, to which we add the following controls: ate a weighted version of this lattice, called the pro- 2 A better approximation might have been to build a proposal posal lattice, such that we can approximately sample whole paths by stochastic generation.",
+                    "sid": 136,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabilities are based on the event counts from the rest of the sample (the cache), and on the base distribution, lattice for each sample (after burn-in), and then construct a single FSA that computes the average of the probability distributions computed by all the proposal lattices.",
+                    "sid": 137,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But this FSA would be rather large.",
+                    "sid": 138,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Number of Gibbs sampling iterations.",
+                    "sid": 139,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We execute the full number specified.",
+                    "sid": 140,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Base distribution.",
+                    "sid": 141,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any probabilities supplied on the pre-trained FST are interpreted as base distribution probabilities.",
+                    "sid": 142,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If no probabilities are supplied, then the base distribution is taken to be uniform.",
+                    "sid": 143,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hyperparameters.",
+                    "sid": 144,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We supply a distinct \u03b1 for each machine in the FST cascade.",
+                    "sid": 145,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not yet support different \u03b1 values for different states within a single FST.",
+                    "sid": 146,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Random restarts.",
+                    "sid": 147,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can request multiple runs from different, randomly-selected initial samples.",
+                    "sid": 148,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "EM-based initial point.",
+                    "sid": 149,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If random initial samplesare undesirable, we can request that the Gibbs sampler be initialized with the Viterbi path using param 0.9 0.85 0.8 0.75 EM (random start) EM (uniform start) -log P(data) eter values obtained by n iterations of EM.",
+                    "sid": 150,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Annealing schedule.",
+                    "sid": 151,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If annealing is used, it follows a linear annealing schedule with starting and stop ping temperature specified by the user.",
+                    "sid": 152,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "EM and Bayesian training for arbitrary FST cascades are both implemented in the finite-state toolkit Carmel, which is distributed with source code.3 All controls are implemented as command- line switches.",
+                    "sid": 153,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use Carmel to carry out the experiments in the next section.",
+                    "sid": 154,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Run Selection.",
+                    "sid": 155,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For both EM and Bayesian methods, different training runs yield different results.",
+                    "sid": 156,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "EM\u2019s objective function (probability of observed data) is very bumpy for the unsupervised problems we work on\u2014different initial points yield different trained WFST cascades, with different task accuracies.",
+                    "sid": 157,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Averaging task accuracies across runs is undesirable, because we want to deploy a particular trained cascade in the real world, and we want an estimate of its performance.",
+                    "sid": 158,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Selecting the run with the best task accuracy is illegal in an unsupervised setting.",
+                    "sid": 159,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With EM, we have a good alternative: select the run that maximizes the objective function, i.e., the likelihood of the observed training data.",
+                    "sid": 160,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find a decent correlation between this value and task accuracy, and we are generally able to improve accuracy using this run selection method.",
+                    "sid": 161,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 shows a scatterplot of 1000 runs for POS tagging.",
+                    "sid": 162,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A single run with a uniform start yields 81.8% 3 http://www.isi.edu/licensed-sw/carmel Figure 4: Multiple EM restarts for POS tagging.",
+                    "sid": 163,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each point represents one random restart; the y-axis is tagging accuracy and the x-axis is EM\u2019s objective function, \u2212 log P(data).",
+                    "sid": 164,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "accuracy, while automatic selection from 1000 runs yields 82.4% accuracy.",
+                    "sid": 165,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gibbs sampling runs also yield WFST cascades with varying task accuracies, due to random initial samples and sampling decisions.",
+                    "sid": 166,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, the variation is even larger than what we find with EM.",
+                    "sid": 167,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is natural to ask whether we can do automatic run selection for Gibbs sampling.",
+                    "sid": 168,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we are using annealing, it makes sense to use the probability of the final sample, which is supposed to approximate the MAP derivation.",
+                    "sid": 169,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When using averaging, however, choosing the final sample would be quite arbitrary.",
+                    "sid": 170,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we propose choosing the run that has the highest average log-probability (that is, the lowest entropy) after burn-in.",
+                    "sid": 171,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The rationale is that the runs that have found their way to high-probability peaks are probably more representative of the true distribution, or at least capture a part of the distribution that is of greater interest to us.",
+                    "sid": 172,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find that this method works quite well in practice.",
+                    "sid": 173,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 illustrates 1000 POS tagging runs for annealing with automatic run selection, yielding 84.7% accuracy.",
+                    "sid": 174,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When using averaging, however, automatic selection from 1000 runs (Figure 6) produces a much higher accuracy of 90.7%.",
+                    "sid": 175,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is better than accuracies reported previously using 0.9 Bayesian run (with annealing) 0.9 Bayesian run (using averaging) 0.85 0.85 0.8 0.8 0.75 0.75 -log P(derivation) for final sample -log P(derivation) averaged over all post-burnin samples Figure 5: Multiple Bayesian learning runs (using annealing with temperature decreasing from 2 to 0.08) for POS tagging.",
+                    "sid": 176,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each point represents one run; the y-axis is tag ging accuracy and the x-axis is the \u2212 log P(derivation) of the final sample.",
+                    "sid": 177,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6: Multiple Bayesian learning runs (using averaging) for POS tagging.",
+                    "sid": 178,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each point represents one run; the y-axis is tagging accuracy and the x-axis is the average \u2212 log P(derivation) over all samples after burn-in.",
+                    "sid": 179,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bayesian methods (85.2% from Goldwater and Griffiths (2007), who use a trigram model) and close to the best accuracy reported on this task (91.8% from Ravi and Knight (2009b), who use an integer linear program to minimize the model directly).",
+                    "sid": 180,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Experiments and Results.",
+                    "sid": 181,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We run experiments for various natural language applications and compare the task accuracies achieved by the EM and Bayesian learning methods.",
+                    "sid": 182,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tasks we consider are: Unsupervised POS tagging.",
+                    "sid": 183,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopt the common problem formulation for this task described by Merialdo (1994), in which we are given a raw 24,115-word sequence and a dictionary of legal tags for each word type.",
+                    "sid": 184,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tagset consists of 45 distinct grammatical tags.",
+                    "sid": 185,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the same modeling approach as as Goldwater and Griffiths (2007), using a probabilistic tag bigram model in conjunction with a tag-to-word model.",
+                    "sid": 186,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Letter substitution decipherment.",
+                    "sid": 187,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, the task is to decipher a 414-letter substitution cipher and uncover the original English letter sequence.",
+                    "sid": 188,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task accuracy is defined as the percent of ciphertext to kens that are deciphered correctly.",
+                    "sid": 189,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We work on the same standard cipher described in previous literature (Ravi and Knight, 2008).",
+                    "sid": 190,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model consists of an English letter bigram model, whose probabilities are fixed and an English-to-ciphertext channel model, which is learnt during training.",
+                    "sid": 191,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Segmentation of space-free English.",
+                    "sid": 192,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a space-free English text corpus (e.g., iwalkedtothe...), the task is to segment the text into words (e.g., i walked to the ...).",
+                    "sid": 193,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our input text corpus consists of 11,378 words, with spaces removed.",
+                    "sid": 194,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As illustrated in Figure 1, our method uses a unigram FSA that models every letter sequence seen in the data, which includes both words and non-words (at most 10 letters long) composed with a deterministic spell-out model.",
+                    "sid": 195,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to evaluate the quality of our segmented output, we compare it against the gold segmentation and compute the word token f-measure.",
+                    "sid": 196,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Japanese/English phoneme alignment.",
+                    "sid": 197,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the problem formulation of Knight and Graehl (1998).",
+                    "sid": 198,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given an input English/Japanese katakana phoneme sequence pair, the task is to produce an alignment that connects each English M L E E M B a y e s i a n p r i o r V B E M G i b b s P O S ta gg in g Le tte r de ci ph er m en t Re sp aci ng E ng lis h Ali gn in g ph on e m e str in gs \u2217 8 2 . 4 8 3 . 6 0 . 9 10 0 \u03b1 = 10 \u22122, \u03b2 = 10 \u22121 84.1 90.7 \u03b1 = 1 06 , \u03b2 = 10 \u22122 83.6 88.9 \u03b1 = 10 \u22128 , \u03b2 = 1 0 4 0.8 42.8 \u03b1 = 1 0 \u2212 2 9 9 . 9 9 9 . 1 Table 1: Gibbs sampling for Bayesian inference outperforms both EM and Variational Bayesian EM.",
+                    "sid": 199,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2217The output of EM alignment was used as the gold standard.",
+                    "sid": 200,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "phoneme to its corresponding Japanese sounds (a sequence of one or more Japanese phonemes).",
+                    "sid": 201,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, given a phoneme sequence pair ((AH B AW T) \u2192 (a b a u t o)), we have to produce the alignments ((AH \u2192 a), (B \u2192 b), (AW \u2192 a u), (T \u2192 t o)).",
+                    "sid": 202,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The input data consists of 2,684 English/Japanese phoneme sequence pairs.",
+                    "sid": 203,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a model that consists of mappings from each English phoneme to Japanese phoneme sequences (of length up to 3), and the mapping probabilities are learnt during training.",
+                    "sid": 204,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We manually analyzed the alignments produced by the EM method for this task and found them to be nearly perfect.",
+                    "sid": 205,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, for the purpose of this task we treat the EM alignments as our gold standard, since there are no gold alignments available for this data.",
+                    "sid": 206,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all the experiments reported here, we run EM for 200 iterations and Bayesian for 5000 iterations (the first 2000 for burn-in).",
+                    "sid": 207,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply automatic run selection using the objective function value for EM and the averaging method for Bayesian.",
+                    "sid": 208,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows accuracy results for our four tasks, using run selection for both EM and Bayesian learning.",
+                    "sid": 209,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the Bayesian runs, we compared two inference methods: Gibbs sampling, as described above, and Variational Bayesian EM (Beal and Ghahramani, 2003), both of which are implemented in Carmel.",
+                    "sid": 210,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the hyperparameters (\u03b1, \u03b2) as shown in the table.",
+                    "sid": 211,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Setting a high value yields a final distribution that is close to the original one (P0).",
+                    "sid": 212,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in letter decipherment we want to keep the language model probabilities fixed during training, and hence we set the prior on that model to be very strong (\u03b1 = 106).",
+                    "sid": 213,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows that the Bayesian methods consistently outperform EM for all the tasks (except phoneme alignment, where EM was taken as the gold standard).",
+                    "sid": 214,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each iteration of Gibbs sampling was 2.3 times slower than EM for POS tagging, and in general about twice as slow.",
+                    "sid": 215,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 Discussion.",
+                    "sid": 216,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have described general training algorithms for FST cascades and their implementation, and examined the problem of run selection for both EM and Bayesian training.",
+                    "sid": 217,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work raises several interesting points for future study.",
+                    "sid": 218,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, is there an efficient method for performing pointwise sampling on general FSTs, and would pointwise sampling deliver better empirical results than blocked sampling across a range of tasks?",
+                    "sid": 219,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, can generic methods similar to the ones described here be developed for cascades of tree transducers?",
+                    "sid": 220,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is straightforward to adapt our methods to train a single tree transducer (Graehl et al., 2008), but as most types of tree transducers are not closed under composition (Ge\u00b4cseg and Steinby, 1984), the compose/decompose method cannot be directly applied to train cascades.",
+                    "sid": 221,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Third, what is the best way to extend the FST formalism to represent non-parametric Bayesian models?",
+                    "sid": 222,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the English re-spacing application.",
+                    "sid": 223,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We currently take observed (un-spaced) data and build a giant unigram FSA that models every letter sequence seen in the data of up to 10 letters, both words and non-words.",
+                    "sid": 224,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This FSA has 207,253 transitions.",
+                    "sid": 225,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also define P0 for each individual transition, which allows a preference for short words.",
+                    "sid": 226,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This setup works fine, but in a nonparametric approach, P0 is defined more compactly and without a word- length limit.",
+                    "sid": 227,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An extension of FSTs along the lines of recursive transition networks may be appropriate, but we leave details for future work.",
+                    "sid": 228,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

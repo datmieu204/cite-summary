@@ -1,0 +1,1643 @@
+{
+    "ID": "P08-1090",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Hand-coded scripts were used in the 197080s as knowledge backbones that enabled inference and other NLP tasks requiring deep semantic knowledge.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose unsupervised induction of similar schemata called narrative event chains from raw newswire text.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A narrative event chain is a partially ordered set of events related by a common protagonist.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe a three step process to learning narrative event chains.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first uses unsupervised distributional methods to learn narrative relations between events sharing corefer- ring arguments.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second applies a temporal classifier to partially order the connected events.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the third prunes and clusters self-contained chains from the space of events.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We introduce two evaluations: the narrative cloze to evaluate event relatedness, and an order coherence task to evaluate narrative order.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show a 36% improvement over baseline for narrative prediction and 25% for temporal coherence.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "This paper induces a new representation of structured knowledge called narrative event chains (or narrative chains).",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Narrative chains are partially ordered sets of events centered around a common protagonist.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are related to structured sequences of participants and events that have been called scripts (Schank and Abelson, 1977) or Fillmorean frames.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These participants and events can be filled in and instantiated in a particular text situation to draw inferences.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chains focus on a single actor to facili tate learning, and thus this paper addresses the three tasks of chain induction: narrative event induction, temporal ordering of events and structured selection (pruning the event space into discrete sets).",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning these prototypical schematic sequences of events is important for rich understanding of text.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scripts were central to natural language understanding research in the 1970s and 1980s for proposed tasks such as summarization, coreference resolution and question answering.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Schank and Abelson (1977) proposed that understanding text about restaurants required knowledge about the Restaurant Script, including the participants (Customer, Waiter, Cook, Tables, etc.), the events constituting the script (entering, sitting down, asking for menus, etc.), and the various preconditions, ordering, and results of each of the constituent actions.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider these two distinct narrative chains.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "accused X W joined X claimed W served X argued W oversaw dismissed X W resigned It would be useful for question answering or textual entailment to know that \u2018X denied \u2019 is also a likely event in the left chain, while \u2018 replaces W\u2019 temporally follows the right.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Narrative chains (such as Firing of Employee or Executive Resigns) offer the structure and power to directly infer these new subevents by providing critical background knowledge.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In part due to its complexity, automatic induction has not been addressed since the early non- statistical work of Mooney and DeJong (1985).",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first step to narrative induction uses an entity- based model for learning narrative relations by fol 789 Proceedings of ACL08: HLT, pages 789\u2013797, Columbus, Ohio, USA, June 2008.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2008 Association for Computational Linguistics lowing a protagonist.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a narrative progresses through a series of events, each event is characterized by the grammatical role played by the protagonist, and by the protagonist\u2019s shared connection to surrounding events.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm is an unsupervised distributional learning approach that uses core- ferring arguments as evidence of a narrative relation.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show, using a new evaluation task called narrative cloze, that our protagonist-based method leads to better induction than a verb-only approach.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next step is to order events in the same narrative chain.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply work in the area of temporal classification to create partial orders of our learned events.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show, using a coherence-based evaluation of temporal ordering, that our partial orders lead to better coherence judgements of real narrative instances extracted from documents.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the space of narrative events and temporal orders is clustered and pruned to create discrete sets of narrative chains.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "previous work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "While previous work hasn\u2019t focused specifically on learning narratives1, our work draws from two lines of research in summarization and anaphora resolution.",
+                    "sid": 31,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In summarization, topic signatures are a set of terms indicative of a topic (Lin and Hovy, 2000).",
+                    "sid": 32,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are extracted from hand-sorted (by topic) sets of documents using log-likelihood ratios.",
+                    "sid": 33,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These terms can capture some narrative relations, but the model requires topic-sorted training data.",
+                    "sid": 34,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bean and Riloff (2004) proposed the use of caseframe networks as a kind of contextual role knoweldge for anaphora resolution.",
+                    "sid": 35,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A case- frame is a verb/event and a semantic role (e.g. <patient> kidnapped).",
+                    "sid": 36,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Caseframe networks are relations between caseframes that may represent synonymy (<patient> kidnapped and <patient> abducted) or related events (<patient> kidnapped and <patient> released).",
+                    "sid": 37,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bean and Riloff learn these networks from two topic-specific texts and apply them to the problem of anaphora resolution.",
+                    "sid": 38,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our work can be seen as an attempt to generalize the intuition of caseframes (finding an entire set of events 1 We analyzed FrameNet (Baker et al., 1998) for insight, but found that very few of the frames are event sequences of the type characterizing narratives and scripts.",
+                    "sid": 39,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "rather than just pairs of related frames) and apply it to a different task (finding a coherent structured narrative in non-topic-specific text).",
+                    "sid": 40,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More recently, Brody (2007) proposed an approach similar to caseframes that discovers high- level relatedness between verbs by grouping verbs that share the same lexical items in subject/object positions.",
+                    "sid": 41,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "He calls these shared arguments anchors.",
+                    "sid": 42,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Brody learns pairwise relations between clusters of related verbs, similar to the results with caseframes.",
+                    "sid": 43,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A human evaluation of these pairs shows an improvement over baseline.",
+                    "sid": 44,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This and previous case- frame work lend credence to learning relations from verbs with common arguments.",
+                    "sid": 45,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also draw from lexical chains (Morris and Hirst, 1991), indicators of text coherence from word overlap/similarity.",
+                    "sid": 46,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a related notion of protagonist overlap to motivate narrative chain learning.",
+                    "sid": 47,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Work on semantic similarity learning such as Chklovski and Pantel (2004) also automatically learns relations between verbs.",
+                    "sid": 48,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use similar dis- tributional scoring metrics, but differ with our use of a protagonist as the indicator of relatedness.",
+                    "sid": 49,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also use typed dependencies and the entire space of events for similarity judgements, rather than only pairwise lexical decisions.",
+                    "sid": 50,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, Fujiki et al.",
+                    "sid": 51,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2003) investigated script acquisition by extracting the 41 most frequent pairs of events from the first paragraph of newswire articles, using the assumption that the paragraph\u2019s textual order follows temporal order.",
+                    "sid": 52,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model, by contrast, learns entire event chains, uses more sophisticated probabilistic measures, and uses temporal ordering models instead of relying on document order.",
+                    "sid": 53,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "the narrative chain model. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 Definition.",
+                    "sid": 54,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model is inspired by Centering (Grosz et al., 1995) and other entity-based models of coherence (Barzilay and Lapata, 2005) in which an entity is in focus through a sequence of sentences.",
+                    "sid": 55,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose to use this same intuition to induce narrative chains.",
+                    "sid": 56,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume that although a narrative has several participants, there is a central actor who characterizes a narrative chain: the protagonist.",
+                    "sid": 57,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Narrative chains are thus structured by the protagonist\u2019s grammatical roles in the events.",
+                    "sid": 58,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, narrative events are ordered by some theory of time.",
+                    "sid": 59,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper describes a partial ordering with the before (no overlap) relation.",
+                    "sid": 60,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our task, therefore, is to learn events that constitute narrative chains.",
+                    "sid": 61,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, a narrative chain is a partially ordered set of narrative events that share a common actor.",
+                    "sid": 62,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A narrative event is a tuple of an event (most simply a verb) and its participants, represented as typed dependencies.",
+                    "sid": 63,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we are focusing on a single actor in this study, a narrative event is thus a tuple of the event and the typed dependency of the protagonist: (event, dependency).",
+                    "sid": 64,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A narrative chain is a set of narrative events {e1, e2, ..., en}, where n is the size of the chain, and a relation B(ei, ej ) that is true if narrative event ei occurs strictly before ej in time.",
+                    "sid": 65,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 The Protagonist.",
+                    "sid": 66,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "learning narrative relations. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Our first model learns basic information about a narrative chain: the protagonist and the constituent subevents, although not their ordering.",
+                    "sid": 67,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this we need a metric for the relation between an event and a narrative chain.",
+                    "sid": 68,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pairwise relations between events are first extracted unsupervised.",
+                    "sid": 69,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A distributional score based on how often two events share grammatical arguments (using pointwise mutual information) is used to create this pairwise relation.",
+                    "sid": 70,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, a global narrative score is built such that all events in the chain provide feedback on the event in question (whether for inclusion or for decisions of inference).",
+                    "sid": 71,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a list of observed verb/dependency counts, we approximate the pointwise mutual information (PMI) by: The notion of a protagonist motivates our approach to narrative learning.",
+                    "sid": 72,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make the following as pmi(e(w, d), e(v, g)) = log P (e(w, d), e(v, g)) P (e(w, d))P (e(v, g)) (1) sumption of narrative coherence: verbs sharing coreferring arguments are semantically connected by virtue of narrative discourse structure.",
+                    "sid": 73,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A single document may contain more than one narrative (or where e(w, d) is the verb/dependency pair w and d (e.g. e(push,subject)).",
+                    "sid": 74,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The numerator is defined by: P (e(w, d), e(v, g)) = C (e(w, d), e(v, g))topic), but the narrative assumption states that a se x,y d,f C (e(x, d), e(y, f )) (2)ries of argument-sharing verbs is more likely to par ticipate in a narrative chain than those not sharing.",
+                    "sid": 75,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the narrative approach captures grammatical constraints on narrative coherence.",
+                    "sid": 76,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Simple distributional learning might discover that the verb push is related to the verb fall, but narrative learning can capture additional facts about the participants, specifically, that the object or patient of the push is the subject or agent of the fall.",
+                    "sid": 77,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each focused protagonist chain offers one perspective on a narrative, similar to the multiple perspectives on a commercial transaction event offered by buy and sell.",
+                    "sid": 78,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Partial Ordering.",
+                    "sid": 79,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A narrative chain, by definition, includes a partial ordering of events.",
+                    "sid": 80,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Early work on scripts included where C (e(x, d), e(y, f )) is the number of times the two events e(x, d) and e(y, f ) had a coreferring entity filling the values of the dependencies d and f . We also adopt the \u2018discount score\u2019 to penalize low occuring words (Pantel and Ravichandran, 2004).",
+                    "sid": 81,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the debate over appropriate metrics for dis- tributional learning, we also experimented with the t-test.",
+                    "sid": 82,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments found that PMI outperforms the t-test on this task by itself and when interpolated together using various mixture weights.",
+                    "sid": 83,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once pairwise relation scores are calculated, a global narrative score can then be built such that all events provide feedback on the event in question.",
+                    "sid": 84,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, given all narrative events in a document, we can find the next most likely event to occur by maximizing: n ordering constraints with more complex preconditions and side effects on the sequence of events.",
+                    "sid": 85,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This max j:0<j<m pmi(ei , fj ) (3) i=0 paper presents work toward a partial ordering and leaves logical constraints as future work.",
+                    "sid": 86,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focus on the before relation, but the model does not preclude advanced theories of temporal order.",
+                    "sid": 87,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where n is the number of events in our chain and ei is the ith event.",
+                    "sid": 88,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "m is the number of events f in our training corpus.",
+                    "sid": 89,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A ranked list of guesses can be built from this summation and we hypothesize that Known events: (pleaded subj), (admits subj), (convicted obj) Likely Events: New York Times Editorial Figure 1: Three narrative events and the six most likely events to include in the same chain.",
+                    "sid": 90,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the more events in our chain, the more informed our ranked output.",
+                    "sid": 91,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of a chain with 3 events and the top 6 ranked guesses is given in figure 1.",
+                    "sid": 92,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Evaluation Metric: Narrative Cloze.",
+                    "sid": 93,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The cloze task (Taylor, 1953) is used to evaluate a system (or human) for language proficiency by removing a random word from a sentence and having Figure 2: One of the 69 test documents, containing 10 narrative events.",
+                    "sid": 94,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The protagonist is President Bush.",
+                    "sid": 95,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "but rather assert it as a comparative measure to evaluate narrative knowledge.",
+                    "sid": 96,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Narrative Cloze Experiment.",
+                    "sid": 97,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use years 19942004 (1,007,227 documents) of the Gigaword Corpus (Graff, 2002) for training2.",
+                    "sid": 98,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We parse the text into typed dependency graphs with the Stanford Parser (de Marneffe et al., 2006)3, recording all verbs with subject, object, or preposi 4 the system attempt to fill in the blank (e.g. I forgot to the waitress for the good service).",
+                    "sid": 99,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on the type of word removed, the test can evaluate syntactic knowledge as well as semantic.",
+                    "sid": 100,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Deyes (1984) proposed an extended task, discourse cloze, to evaluate discourse knowledge (removing phrases that are recoverable from knowledge of discourse relations like contrast and consequence).",
+                    "sid": 101,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a new cloze task that requires narrative knowledge to solve, the narrative cloze.",
+                    "sid": 102,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The narrative cloze is a sequence of narrative events in a document from which one event has been removed.",
+                    "sid": 103,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is to predict the missing verb and typed dependency.",
+                    "sid": 104,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Take this example text about American football with McCann as the protagonist: 1.",
+                    "sid": 105,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McCann threw two interceptions early..",
+                    "sid": 106,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 107,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Toledo pulled McCann aside and told him he\u2019d start..",
+                    "sid": 108,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 109,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "McCann quickly completed his first two passes..",
+                    "sid": 110,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These clauses are represented in the narrative model as five events: (threw subject), (pulled object), (told object), (start subject), (completed subject).",
+                    "sid": 111,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These verb/dependency events make up a narrative tional typed dependencies.",
+                    "sid": 112,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the OpenNLP coreference engine to resolve the entity mentions.",
+                    "sid": 113,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each document, the verb pairs that share core- ferring entities are recorded with their dependency types.",
+                    "sid": 114,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Particles are included with the verb.",
+                    "sid": 115,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used 10 news stories from the 1994 section of the corpus for development.",
+                    "sid": 116,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The stories were hand chosen to represent a range of topics such as business, sports, politics, and obituaries.",
+                    "sid": 117,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used 69 news stories from the 2001 (year selected randomly) section of the corpus for testing (also removed from training).",
+                    "sid": 118,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test set documents were randomly chosen and not preselected for a range of topics.",
+                    "sid": 119,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From each document, the entity involved in the most events was selected as the protagonist.",
+                    "sid": 120,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this evaluation, we only look at verbs.",
+                    "sid": 121,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All verb clauses involving the protagonist are manually extracted and translated into the narrative events (verb,dependency).",
+                    "sid": 122,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exceptions that are not included are verbs in headlines, quotations (typically not part of a narrative), \u201cbe\u201d properties (e.g. john is happy), modifying verbs (e.g. hurried to leave, only leave is used), and multiple instances of one event.",
+                    "sid": 123,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The original test set included 100 documents, but cloze model.",
+                    "sid": 124,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We could remove (threw subject) and use the remaining four events to rank this missing event.",
+                    "sid": 125,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Removing a single such pair to be filled in automatically allows us to evaluate a system\u2019s knowledge of narrative relations and coherence.",
+                    "sid": 126,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not claim this cloze task to be solvable even by humans, 2 The document count does not include duplicate news sto-.",
+                    "sid": 127,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ries.",
+                    "sid": 128,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found up to 18% of the corpus are duplications, mostly AP reprints.",
+                    "sid": 129,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We automatically found these by matching the first two paragraphs of each document, removing exact matches.",
+                    "sid": 130,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 http://nlp.stanford.edu/software/lex-parser.shtml 4 http://opennlp.sourceforge.net those without a narrative chain at least five events in length were removed, leaving 69 documents.",
+                    "sid": 131,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the removed documents were not stories, but genres such as interviews and cooking recipes.",
+                    "sid": 132,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example of an extracted chain is shown in figure 2.",
+                    "sid": 133,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evalute with Narrative Cloze using leave-one- out cross validation, removing one event and using the rest to generate a ranked list of guesses.",
+                    "sid": 134,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test dataset produces 740 cloze tests (69 narratives with 740 events).",
+                    "sid": 135,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After generating our ranked guesses, the position of the correct event is averaged over all 740 tests for the final score.",
+                    "sid": 136,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We penalize unseen events by setting their ranked position to the length 3000 2500 2000 1500 1000 500 0 Narrative Cloze Test Baseline Protagonist Typed Deps of the guess list (ranging from 2k to 15k).",
+                    "sid": 137,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 is an example of a ranked guess list for a short chain of three events.",
+                    "sid": 138,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the original document contained (fired obj), this cloze test would score 3.",
+                    "sid": 139,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2.1 Baseline We want to measure the utility of the protagonist and the narrative coherence assumption, so our baseline learns relatedness strictly based upon verb cooccurence.",
+                    "sid": 140,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The PMI is then defined as between all occurrences of two verbs in the same document.",
+                    "sid": 141,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This baseline evaluation is verb only, as dependencies require a protagonist to fill them.",
+                    "sid": 142,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After initial evaluations, the baseline was performing very poorly due to the huge amount of data involved in counting all possible verb pairs (using a protagonist vastly reduces the number).",
+                    "sid": 143,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented with various count cutoffs to remove rare occurring pairs of verbs.",
+                    "sid": 144,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final results use a baseline where all pairs occurring less than 10 times in the training data are removed.",
+                    "sid": 145,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the verb-only baseline does not use typed dependencies, our narrative model cannot directly compare to this abstracted approach.",
+                    "sid": 146,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thus modified the narrative model to ignore typed dependencies, but still count events with shared arguments.",
+                    "sid": 147,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, we calculate the PMI across verbs that share arguments.",
+                    "sid": 148,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach is called Protagonist.",
+                    "sid": 149,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The full narrative model that includes the grammatical dependencies is called Typed Deps.",
+                    "sid": 150,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2.2 Results Experiments with varying sizes of training data are presented in figure 3.",
+                    "sid": 151,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each ranked list of candidate verbs for the missing event in Base 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 Training Data from 1994!X Figure 3: Results with varying sizes of training data.",
+                    "sid": 152,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Year 2003 is not explicitly shown because it has an unusually small number of documents compared to other years.",
+                    "sid": 153,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "line/Protagonist contained approximately 9 thousand candidates.",
+                    "sid": 154,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the 740 cloze tests, 714 of the removed events were present in their respective list of guesses.",
+                    "sid": 155,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is encouraging as only 3.5% of the events are unseen (or do not meet cutoff thresholds).",
+                    "sid": 156,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When all training data is used (19942004), the average ranked position is 1826 for Baseline and 1160 for Protagonist (1 being most confident).",
+                    "sid": 157,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Baseline performs better at first (years 19945), but as more data is seen, the Baseline worsens while the Protagonist improves.",
+                    "sid": 158,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This verb-only narrative model shows a 36.5% improvement over the baseline trained on all years.",
+                    "sid": 159,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results from the full Typed Deps model, not comparable to the baseline, parallel the Protagonist results, improving as more data is seen (average ranked position of 1908 with all the training data).",
+                    "sid": 160,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also ran the experiment without OpenNLP coreference, and instead used exact and substring matching for coreference resolution.",
+                    "sid": 161,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This showed a 5.7% decrease in the verb-only results.",
+                    "sid": 162,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results show that a protagonist greatly assists in narrative judgements.",
+                    "sid": 163,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "ordering narrative events. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The model proposed in the previous section is designed to learn the major subevents in a narrative chain, but not how these events are ordered.",
+                    "sid": 164,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section we extend the model to learn a partial temporal ordering of the events.",
+                    "sid": 165,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are a number of algorithms for determining the temporal relationship between two events (Mani et al., 2006; Lapata and Lascarides, 2006; Chambers et al., 2007), many of them trained on the Time- Bank Corpus (Pustejovsky et al., 2003) which codes events and their temporal relationships.",
+                    "sid": 166,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The currently highest performing of these on raw data is the model of temporal labeling described in our previous work (Chambers et al., 2007).",
+                    "sid": 167,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other approaches have depended on hand tagged features.",
+                    "sid": 168,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chambers et al.",
+                    "sid": 169,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) shows 59.4% accuracy on the classification task for six possible relations between pairs of events: before, immediately-before, included-by, simultaneous, begins and ends.",
+                    "sid": 170,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focus on the before relation because the others are less relevant to our immediate task.",
+                    "sid": 171,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We combine immediately-before with before, and merge the other four relations into an other category.",
+                    "sid": 172,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the binary task of determining if one event is before or other, we achieve 72.1% accuracy on Timebank.",
+                    "sid": 173,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The above approach is a two-stage machine learning architecture.",
+                    "sid": 174,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first stage, the model uses supervised machine learning to label temporal attributes of events, including tense, grammatical aspect, and aspectual class.",
+                    "sid": 175,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This first stage classifier relies on features such as neighboring part of speech tags, neighboring auxiliaries and modals, and WordNet synsets.",
+                    "sid": 176,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use SVMs (Chambers et al.",
+                    "sid": 177,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007) uses Naive Bayes) and see minor performance boosts on Timebank.",
+                    "sid": 178,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These imperfect classifications, combined with other linguistic features, are then used in a second stage to classify the temporal relationship between two events.",
+                    "sid": 179,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other features include event-event syntactic properties such as the syntactic dominance relations between the two events, as well as new bigram features of tense, aspect and class (e.g. \u201cpresent past\u201d if the first event is in the present, and the second past), and whether the events occur in the same or different sentences.",
+                    "sid": 180,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Training a Temporal Classifier.",
+                    "sid": 181,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the entire Timebank Corpus as supervised training data, condensing the before and immediately-before relations into one before relation.",
+                    "sid": 182,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remaining relations are merged into other.",
+                    "sid": 183,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vast majority of potential event pairs in Time- bank are unlabeled.",
+                    "sid": 184,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These are often none relations (events that have no explicit relation) or as is of ten the case, overlap relations where the two events have no Timebank-defined ordering but overlap in time.",
+                    "sid": 185,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even worse, many events do have an ordering, but they were not tagged by the human annota- tors.",
+                    "sid": 186,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This could be due to the overwhelming task of temporal annotation, or simply because some event orderings are deemed more important than others in understanding the document.",
+                    "sid": 187,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider all un- tagged relations as other, and experiment with including none, half, and all of them in training.",
+                    "sid": 188,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Taking a cue from Mani et al.",
+                    "sid": 189,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2006), we also increased Timebank\u2019s size by applying transitivity rules to the hand labeled data.",
+                    "sid": 190,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following is an example of the applied transitive rule: if run BEFORE fall and fall BEFORE injured then run BEFORE injured This increases the number of relations from 37519 to 45619.",
+                    "sid": 191,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps more importantly for our task, of all the added relations, the before relation is added the most.",
+                    "sid": 192,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experimented with original vs. expanded Timebank and found the expanded performed slightly worse.",
+                    "sid": 193,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decline may be due to poor transitivity additions, as several Timebank documents contain inconsistent labelings.",
+                    "sid": 194,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All reported results are from training without transitivity.",
+                    "sid": 195,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Temporal Classifier in Narrative Chains.",
+                    "sid": 196,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We classify the Gigaword Corpus in two stages, once for the temporal features on each event (tense, grammatical aspect, aspectual class), and once between all pairs of events that share arguments.",
+                    "sid": 197,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This allows us to classify the before/other relations between all potential narrative events.",
+                    "sid": 198,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first stage is trained on Timebank, and the second is trained using the approach described above, varying the size of the none training relations.",
+                    "sid": 199,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each pair of events in a gigaword document that share a coreferring argument is treated as a separate ordering classification task.",
+                    "sid": 200,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We count the resulting number of labeled before relations between each verb/dependency pair.",
+                    "sid": 201,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Processing the entire corpus produces a database of event pair counts where confidence of two generic events A and B can be measured by comparing how many before labels have been seen versus their inverted order B and A5.",
+                    "sid": 202,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Note that we train with the before relation, and so transposing two events is similar to classifying the after relation.",
+                    "sid": 203,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Temporal Evaluation.",
+                    "sid": 204,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We want to evaluate temporal order at the narrative level, across all events within a chain.",
+                    "sid": 205,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We envision narrative chains being used for tasks of coherence, among other things, and so it is desired to evaluate temporal decisions within a coherence framework.",
+                    "sid": 206,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Along these lines, our test set uses actual narrative chains from documents, hand labeled for a partial ordering.",
+                    "sid": 207,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate coherence of these true chains against a random ordering.",
+                    "sid": 208,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is thus deciding which of the two chains is most coherent, the original or the random (baseline 50%)?",
+                    "sid": 209,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We generated up to 300 random orderings for each test document, averaging the accuracy across all.",
+                    "sid": 210,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our evaluation data is the same 69 documents used in the test set for learning narrative relations.",
+                    "sid": 211,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The chain from each document is hand identified and labeled for a partial ordering using only the before relation.",
+                    "sid": 212,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ordering was done by the authors and all attempts were made to include every before relation that exists in the document, or that could be deduced through transitivity rules.",
+                    "sid": 213,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 4 shows an example and its full reversal, although the evaluation uses random orderings.",
+                    "sid": 214,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each edge is a distinct before relation and is used in the judgement score.The coherence score for a partially ordered nar rative chain is the sum of all the relations that our classified corpus agrees with, weighted by how certain we are.",
+                    "sid": 215,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the gigaword classifications disagree, a weighted negative score is given.",
+                    "sid": 216,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Confidence is based on a logarithm scale of the difference between the counts of before and after classifications.",
+                    "sid": 217,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Formally, the score is calculated as the following: \uf8f1 log(D(x, y)) if x\u03b2y and B(x, y) > B(y, x) \uf8f4\uf8f2 \u2212log(D(x, y)) if x\u03b2y and B(y, x) > B(x, y) E:x,y \uf8f4 \u2212log(D(x, y)) if !x\u03b2y & !y\u03b2x & D(x, y) > 0 \uf8f3 0 otherwise where E is the set of all event pairs, B(i, j) is how many times we classified events i and j as before in Gigaword, and D(i, j) = |B(i, j) \u2212 B(j, i)|.",
+                    "sid": 218,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relation i\u03b2j indicates that i is temporally before j. 5.4 Results.",
+                    "sid": 219,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Out approach gives higher scores to orders that coincide with the pairwise orderings classified in our gigaword training data.",
+                    "sid": 220,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are shown in figure 5.",
+                    "sid": 221,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of the 69 chains, 6 did not have any ordered events and were removed from the evaluation.",
+                    "sid": 222,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We Figure 4: A narrative chain and its reverse order.",
+                    "sid": 223,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Al l \u2265 6 \u2265 10 co rre ct 80 86 75 % 7603 78% 6307 89% inc orr ec t 17 38 1493 619 tie 93 1 627 160 Figure 5: Results for choosing the correct ordered chain.",
+                    "sid": 224,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(\u2265 10) means there were at least 10 pairs of ordered events in the chain.",
+                    "sid": 225,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "generated (up to) 300 random orderings for each of the remaining 63.",
+                    "sid": 226,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report 75.2% accuracy, but 22 of the 63 had 5 or fewer pairs of ordered events.",
+                    "sid": 227,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 therefore shows results from chains with more than 5 pairs, and also 10 or more.",
+                    "sid": 228,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we would hope, the accuracy improves the larger the ordered narrative chain.",
+                    "sid": 229,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieve 89.0% accuracy on the 24 documents whose chains most progress through time, rather than chains that are difficult to order with just the before relation.",
+                    "sid": 230,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training without none relations resulted in high recall for before decisions.",
+                    "sid": 231,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perhaps due to data sparsity, this produces our best results as reported above.",
+                    "sid": 232,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discrete narrative event chains. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Up till this point, we have learned narrative relations across all possible events, including their temporal order.",
+                    "sid": 233,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the discrete lists of events for which Schank scripts are most famous have not yet been constructed.",
+                    "sid": 234,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We intentionally did not set out to reproduce explicit self-contained scripts in the sense that the \u2018restaurant script\u2019 is complete and cannot include other events.",
+                    "sid": 235,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The name narrative was chosen to imply a likely order of events that is common in spoken and written retelling of world events.",
+                    "sid": 236,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discrete sets have the drawback of shutting out unseen and un Figure 6: An automatically learned Prosecution Chain.",
+                    "sid": 237,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Arrows indicate the before relation.",
+                    "sid": 238,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "likely events from consideration.",
+                    "sid": 239,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is advantageous to consider a space of possible narrative events and the ordering within, not a closed list.",
+                    "sid": 240,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is worthwhile to construct discrete narrative chains, if only to see whether the combination of event learning and ordering produce script- like structures.",
+                    "sid": 241,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is easily achievable by using the PMI scores from section 4 in an agglomerative clustering algorithm, and then applying the ordering relations from section 5 to produce a directed graph.",
+                    "sid": 242,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figures 6 and 7 show two learned chains after clustering and ordering.",
+                    "sid": 243,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each arrow indicates a before relation.",
+                    "sid": 244,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Duplicate arrows implied by rules of transitivity are removed.",
+                    "sid": 245,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 is remarkably accurate, and figure 7 addresses one of the chains from our introduction, the employment narrative.",
+                    "sid": 246,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The core employment events are accurate, but clustering included life events (born, died, graduated) from obituaries of which some temporal information is incorrect.",
+                    "sid": 247,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Timebank corpus does not include obituaries, thus we suffer from sparsity in training data.",
+                    "sid": 248,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We have shown that it is possible to learn narrative event chains unsupervised from raw text.",
+                    "sid": 249,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not only do our narrative relations show improvements over a baseline, but narrative chains offer hope for many other areas of NLP.",
+                    "sid": 250,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inference, coherence in summarization and generation, slot filling for question answering, and frame induction are all potential areas.We learned a new measure of similarity, the nar Figure 7: An Employment Chain.",
+                    "sid": 251,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Dotted lines indicate incorrect before relations.",
+                    "sid": 252,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "rative relation, using the protagonist as a hook to extract a list of related events from each document.",
+                    "sid": 253,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 37% improvement over a verb-only baseline shows that we may not need presorted topics of documents to learn inferences.",
+                    "sid": 254,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we applied state of the art temporal classification to show that sets of events can be partially ordered.",
+                    "sid": 255,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Judgements of coherence can then be made over chains within documents.",
+                    "sid": 256,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further work in temporal classification may increase accuracy even further.",
+                    "sid": 257,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we showed how the event space of narrative relations can be clustered to create discrete sets.",
+                    "sid": 258,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While it is unclear if these are better than an uncon- strained distribution of events, they do offer insight into the quality of narratives.",
+                    "sid": 259,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An important area not discussed in this paper is the possibility of using narrative chains for semantic role learning.",
+                    "sid": 260,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A narrative chain can be viewed as defining the semantic roles of an event, constraining it against roles of the other events in the chain.",
+                    "sid": 261,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An argument\u2019s class can then be defined as the set of narrative arguments in which it appears.",
+                    "sid": 262,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe our model provides an important first step toward learning the rich causal, temporal and inferential structure of scripts and frames.",
+                    "sid": 263,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Acknowledgment: This work is funded in part by DARPA through IBM and by the DTO Phase III Program for AQUAINT through Broad Agency Announcement (BAA) N6133906-R-0034.",
+                    "sid": 264,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thanks to the reviewers for helpful comments and the suggestion for a non-full-coreference baseline.",
+                    "sid": 265,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

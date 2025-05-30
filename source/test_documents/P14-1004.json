@@ -1,0 +1,1193 @@
+{
+    "ID": "P14-1004",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Discovering Latent Structure in Task-Oriented Dialogues",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A key challenge for computational conversation models is to discover latent structure in task-oriented dialogue, since it provides a basis for analysing, evaluating, and building conversational systems.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose three new unsupervised models to discover latent structures in task-oriented dialogues.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our methods synthesize hidden Markov models (for underlying state) and topic models (to connect words to states).",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply them to two real, non-trivial datasets: human-computer spoken dialogues in bus query service, and humanhuman text-based chats from a live technical support service.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show that our models extract meaningful state representations and dialogue structures consistent with human annotations.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Quantitatively, we show our models achieve superior performance on held-out log likelihood evaluation and an ordering task.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Modeling human conversation is a fundamental scientific pursuit.",
+                    "sid": 7,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to yielding basic insights into human communication, computational models of conversation underpin a host of real-world applications, including interactive dialogue systems (Young, 2006), dialogue summarization (Murray et al., 2005; Daum\u00b4e III and Marcu, 2006; Liu et al., 2010), and even medical applications such as diagnosis of psychological conditions (DeVault et al., 2013).",
+                    "sid": 8,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computational models of conversation can be broadly divided into two genres: modeling and control.",
+                    "sid": 9,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Control is concerned with choosing actions in interactive settings\u2014for example to maximize task completion\u2014using reinforcement learn\u2217Work done at Microsoft Research. ing (Levin et al., 2000), supervised learning (Hurtado et al., 2010), hand-crafted rules (Larsson and Traum, 2000), or mixtures of these (Henderson and Lemon, 2008).",
+                    "sid": 10,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, modeling\u2014the genre of this paper\u2014is concerned with inferring a phenomena in an existing corpus, such as dialogue acts in two-party conversations (Stolcke et al., 2000) or topic shifts in multi-party dialogues (Galley et al., 2003; Purver et al., 2006; Hsueh et al., 2006; Banerjee and Rudnicky, 2006).",
+                    "sid": 11,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many past works rely on supervised learning or human annotations, which usually requires manual labels and annotation guidelines (Jurafsky et al., 1997).",
+                    "sid": 12,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It constrains scaling the size of training examples, and application domains.",
+                    "sid": 13,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, unsupervised methods operate only on the observable signal (e.g. words) and are estimated without labels or their attendant limitations (Crook et al., 2009).",
+                    "sid": 14,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are particularly relevant because conversation is a temporal process where models are trained to infer a latent state which evolves as the dialogue progresses (Bangalore et al., 2006; Traum and Larsson, 2003).",
+                    "sid": 15,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our basic approach is to assume that each utterance in the conversation is in a latent state, which has a causal effect on the words the conversants produce.",
+                    "sid": 16,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inferring this model yields basic insights into the structure of conversation and also has broad practical benefits, for example, speech recognition (Williams and Balakrishnan, 2009), natural language generation (Rieser and Lemon, 2010), and new features for dialogue policy optimization (Singh et al., 2002; Young, 2006).",
+                    "sid": 17,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There has been limited past work on unsupervised methods for conversation modeling.",
+                    "sid": 18,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chotimongkol (2008) studies task-oriented conversation and proposed a model based on a hidden Markov model (HMM).",
+                    "sid": 19,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ritter et al. (2010) extends it by introducing additional word sources, and applies to non-task-oriented conversations\u2014 social interactions on Twitter, where the subjects discussed are very diffuse.",
+                    "sid": 20,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The additional word sources capture the subjects, leaving the statespecific models to express common dialogue flows such as question/answer pairs.",
+                    "sid": 21,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we retain the underlying HMM, but assume words are emitted using topic models (TM), exemplified by latent Dirichlet allocation (Blei et al., 2003, LDA).",
+                    "sid": 22,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LDA assumes each word in an utterance is drawn from one of a set of latent topics, where each topic is a multinomial distribution over the vocabulary.",
+                    "sid": 23,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key idea is that the set of topics is shared across all states, and each state corresponds to a mixture of topics.",
+                    "sid": 24,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose three model variants that link topics and states in different ways.",
+                    "sid": 25,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sharing topics across states is an attractive property in task-oriented dialogue, where a single concept can be discussed at many points in a dialogue, yet different topics often appear in predictable sequences.",
+                    "sid": 26,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to past works, the decoupling of states and topics gives our models more expressive power and the potential to be more data efficient.",
+                    "sid": 27,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Empirically, we find that our models outperform past approaches on two realworld corpora of task-oriented dialogues.",
+                    "sid": 28,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper is organized as follows: Section 2 introduces two task-oriented domains and corpora; Section 3 details three new unsupervised generative models which combine HMMs and LDA and efficient inference schemes; Section 4 evaluates our models qualitatively and quantitatively, and finally conclude in Section 5.",
+                    "sid": 29,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 data",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "To test the generality of our models, we study two very different datasets: a set of human-computer spoken dialogues in quering bus timetable (BusTime), and a set of human-human text-based dialogues in the technical support domain (TechSupport).",
+                    "sid": 30,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In BusTime, the conversational structure is known because the computer followed a deterministic program (Williams, 2012), making it possible to directly compare an inferred model to ground truth on this corpus.1 In TechSupport, there is no known flowchart,2 making this a realistic application of unsupervised methods.",
+                    "sid": 31,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BusTime This corpus consists of logs of telephone calls between a spoken dialogue system and real bus users in Pittsburgh, USA (Black et al., 2010).",
+                    "sid": 32,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the user side, the words logged are the words recognized by the automatic speech recognizer.",
+                    "sid": 33,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The vocabulary of the recognizer was constrained to the bus timetable task, so only words known to the recognizer in advance are output.",
+                    "sid": 34,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even so, the word error rate is approximately 3040%, due to the challenging audio conditions of usage\u2014with traffic noise and extraneous speech.",
+                    "sid": 35,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system asked users sequentially for a bus route, origin and destination, and optionally date and time.",
+                    "sid": 36,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system confirmed low-confidence speech recognition results.",
+                    "sid": 37,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to the speech recognition channel, system and user turns always alternate.",
+                    "sid": 38,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example dialogue is given below: We discard dialogues with fewer than 20 utterances.",
+                    "sid": 39,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also map all named entities (e.g., \u201cdowntown\u201d and \u201c28X\u201d) to their semantic types (resp.",
+                    "sid": 40,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(location) and (bus-route)) to reduce vocabulary size.",
+                    "sid": 41,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corpus we use consists of approximately 850 dialogue sessions or 30, 000 utterances.",
+                    "sid": 42,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It contains 370, 000 tokens (words or semantic types) with vocabulary size 250.",
+                    "sid": 43,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TechSupport This corpus consists of logs of real web-based human-human text \u201cchat\u201d conversations between clients and technical support agents at a large corporation.",
+                    "sid": 44,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Usually, clients and agents first exchange names and contact information; after that, dialogues are quite free-form, as agents ask questions and suggest fixes.",
+                    "sid": 45,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most dialogues ultimately end when the client\u2019s issue has been resolved; some clients are provided with a reference number for future follow-up.",
+                    "sid": 46,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example dialogue is given below: \u201cEnter\u201d on a keyboard.",
+                    "sid": 47,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, clients\u2019 input and agents\u2019 responses do not necessarily alternate different states.",
+                    "sid": 48,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the second block tm of client inputs clearly comes from two different states which should not be merged together.",
+                    "sid": 49,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discard dialogues with fewer than 30 utterances.",
+                    "sid": 50,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We map named entities to their semantic types, apply stemming, and remove stop words.3 The corpus we use contains approximately 2, 000 dialogue sessions or 80, 000 conversation utterances.",
+                    "sid": 51,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It consists of 770, 000 tokens, with a a vocabulary size of 6,600.",
+                    "sid": 52,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 latent structure in dialogues",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "In this work, our goal is to infer latent structure presented in task-oriented conversation.",
+                    "sid": 53,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume that the structure can be encoded in a probabilistic state transition diagram, where the dialogue is in one state at each utterance, and states have a causal effect on the words observed.",
+                    "sid": 54,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume the boundaries between utterances are given, which is trivial in many corpora.",
+                    "sid": 55,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest formulation we consider is an HMM where each state contains a unigram language model (LM), proposed by Chotimongkol (2008) for task-oriented dialogue and originally developed for discourse analysis by Barzilay and Lee (2004).",
+                    "sid": 56,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call it LM-HMM as in Figure 1(a).",
+                    "sid": 57,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a corpus of M dialogues, the m-th dialogue contains n utterances, each of which contains Nn words (we omit index m from terms because it will be clear from context).",
+                    "sid": 58,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At n-th utterance, we assume the dialogue is in some latent state sn.",
+                    "sid": 59,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Words in n-th utterance wn,1, ... , wn,Nn are generated (independently) according to the LM.",
+                    "sid": 60,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When an utterance is complete, the next state is drawn ri r1i according to HMM, i.e., P(s'|s).",
+                    "sid": 61,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While LM-HMM captures the basic intuition of conversation structure, it assumes words are conditioned only on state.",
+                    "sid": 62,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ritter et al. (2010) extends every word in an utterance, first draw a source indicator r from \u03c0, and then generate the word from the corresponding source.",
+                    "sid": 63,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call it LM-HMMS (Figure 1(b)).",
+                    "sid": 64,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ritter et al. (2010) finds these alternate sources are important in non-task-oriented domains, where events are diffuse and fleeting.",
+                    "sid": 65,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example,Twitter exchanges often focus on a help to distinguish conversational states in social media.",
+                    "sid": 66,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also explore similar variants.",
+                    "sid": 67,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, these two models form our baselines.",
+                    "sid": 68,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all models, we use Markov chain Monte Carlo (MCMC) inference (Neal, 2000) to find latent variables that best fit observed data.",
+                    "sid": 69,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also assume symmetric Dirichlet priors on all multinomial distributions and apply collapsed Gibbs sampling.",
+                    "sid": 70,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the rest of this section, we present our models and their inference algorithms in turn.",
+                    "sid": 71,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach is to modify the emission probabilities of states to be distributions over topics rather than distributions over words.",
+                    "sid": 72,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, instead of generating words via a LM, we generate words from a topic model (TM), where each state maps to a mixture of topics.",
+                    "sid": 73,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key benefit of this additional layer of abstraction is to enable states to express higher-level concepts through pooling of topics across states.",
+                    "sid": 74,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, topics might be inferred for content like \u201cbus-route\u201d or \u201clothen be combinations of these, e.g., a state might express \u201caskbus route\u201d or \u201cconfirm location\u201d. ics from the number of states.",
+                    "sid": 75,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Throughout this padialogues in the same ways as baseline models.",
+                    "sid": 76,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We develop three generative models.",
+                    "sid": 77,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first variant (TM-HMM, Figure 2(a)), we assume every states), akin to the LM-HMMS model.",
+                    "sid": 78,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TM-HMM generates a dialogue as following: over topicsz93n conditioned on sn, then generate word w from the topic-specified distribuWe assume \u03b8\u2019s and \u03c6\u2019s are drawn from correwhere \u03b1, \u03b2, \u03b3 are symmetric Dirichlet priors on distribution \u03c6t\u2019s and state transition multinomials, respectively.",
+                    "sid": 79,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All probabilities can be computed gk using collapsed Gibbs sampler for LDA (Griffiths and Steyvers, 2004) and HMM (Goldwater and dialogue.",
+                    "sid": 80,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, the topic distribution is often stable throughout,the entire dialogue, and does not vary from turn to turn.",
+                    "sid": 81,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the troubleshooting domain, dialogues about each dialogue and selects the expected fraction of words generated from different sources.",
+                    "sid": 82,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, we impose Dirichlet priors on distributions over topics \u03b8\u2019s and distributions over words \u03c6\u2019s as in LDA.",
+                    "sid": 83,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also assume the distributions over sources \u03c4\u2019s are governed by a Beta distribution.",
+                    "sid": 84,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The session-wide topics is slightly different from that used in LM-HMMS: LM-HMMS was developed for social chats on Twitter where topics are very diffuse and unlikely to repeat; hence often unique to each dialogue.",
+                    "sid": 85,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By contrast, our models are designed for task-oriented dialogues which pertain to a given domain where topics are more tightly clustered; thus, in TM-HMMS session-wide topics are shared across the corpus.",
+                    "sid": 86,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The posterior distributions of state assignment sn, word source rn,i and topic assignment zn,i are where \u03c0 is a symmetric Dirichlet prior on sessionwise word source distribution \u03c4m\u2019s, and other symbols are defined above.",
+                    "sid": 87,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All these probabilities are Dirichlet-multinomial distributions and therefore can be computed efficiently.",
+                    "sid": 88,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The TM-HMMSS (Figure 2(c)) model modifies TM-HMMS to re-sample the distribution over word sources \u03c4 at every utterance, instead of once at the beginning of each session.",
+                    "sid": 89,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This modification allows the fraction of words drawn from the session-wide topics to vary over the course of the dialogue.",
+                    "sid": 90,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is attractive in task-oriented dialogue, where some sections of the dialogue always follow a similar script, regardless of session topic\u2014for example, the opening, closing, or asking the user if they will take a survey.",
+                    "sid": 91,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To support these patterns, TM-HMMSS conditions the source generator distribution on the current state.",
+                    "sid": 92,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generative story of TM-HMMSS is very similar to TM-HMMS, except the distribution over word sources \u03c4\u2019s are sampled at every state.",
+                    "sid": 93,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A dialogue is generated as following: As in TM-HMMS, we assume multinomial distributions \u03b8\u2019s and \u03c6\u2019s are drawn from Dirichlet priors; and \u03c4\u2019s are governed by Beta distributions.",
+                    "sid": 94,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The inference for TM-HMMSS is exactly same as the inference for TM-HMMS, except the posterior distributions over word source rn,i is now where the first term is integrated over all sessions and conditioned on the state assignment.",
+                    "sid": 95,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our primary focus is task-oriented dialogues between two parties, we assume every word source is associated with two sets of LMs\u2014 one for system/agent and another for user/client.",
+                    "sid": 96,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This configuration is similar to PolyLDA (Mimno et al., 2009) or LinkLDA (Yano et al., 2009), such that utterances from different parties are treated as different languages or blog-post and comments pairs.",
+                    "sid": 97,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, we implement all models under this setting, but omit details in plate diagrams for the sake of simplicity.",
+                    "sid": 98,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In settings where the agent and client always alternate, each state emits both text before transitioning to the next state.",
+                    "sid": 99,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the case in the BusTime dataset, where the spoken dialogue system enforces strict turn-taking.",
+                    "sid": 100,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In settings where agents or client may produce more than one utterance in a row, each state emits either agent text or client text, then transitions to the next state.",
+                    "sid": 101,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the case in the TechSupport corpus, where either conversant may send a message at any time.",
+                    "sid": 102,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To evaluate performance across different models, we compute the likelihood on held-out test set.",
+                    "sid": 103,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For TM-HMM model, there are no local dependencies, and we therefore compute the marginal likelihood using the forward algorithm.",
+                    "sid": 104,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, for TM-HMMS and TM-HMMSS models, the latent topic distribution \u03b8 creates local dependencies, rendering computation of marginal likelihoods intractable.",
+                    "sid": 105,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, we use a Chib-style estimator (Wallach et al., 2009).",
+                    "sid": 106,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although it is computationally more expensive, it gives less biased approximation of marginal likelihood, even for finite samples.",
+                    "sid": 107,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This ensures likelihood measurements are comparable across models.",
+                    "sid": 108,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In this section, we examine the effectiveness of our models.",
+                    "sid": 109,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first evaluate our models qualitatively by exploring the inferred state diagram.",
+                    "sid": 110,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then perform quantitative analysis with log likelihood measurements and an ordering task on a held-out test set.",
+                    "sid": 111,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train all models with 80% of the entire dataset and use the rest for testing.",
+                    "sid": 112,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We run the Gibbs samplers for 1000 iterations and update all hyper-parameters using slice sampling (Neal, 2003; Wallach, 2008) every 10 iterations.",
+                    "sid": 113,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training likelihood suggest all models converge within 500\u2212800 iterations.",
+                    "sid": 114,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all Chib-style estimators, we collect 100 samples along the Markov chain to approximate the marginal likelihood.",
+                    "sid": 115,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 shows the state diagram for BusTime corpus inferred by TM-HMM without any supervision.5 Every dialogue is opened by asking the user to say a bus route, or to say \u201cI\u2019m not sure.\u201d It then transits to a state about location, e.g., origin and destination.",
+                    "sid": 116,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both these two states may continue to a confirmation step immediately after.",
+                    "sid": 117,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After verifying all the necessary information, the system asks if the user wants \u201cthe next few buses\u201d.6 Otherwise, the system follows up with the user on the particular date and time information.",
+                    "sid": 118,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After system reads out bus times, the user has options to \u201crepeat\u201d or ask for subsequent schedules.",
+                    "sid": 119,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we also include the humanannotated dialogue flow in Figure 4 for reference (Williams, 2012).",
+                    "sid": 120,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It only illustrates the most common design of system actions, without showing edge cases.",
+                    "sid": 121,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing these two figures, the dialogue flow inferred by our model along the most probable path (highlighted in bold red in Figure 3) is consistent with underlying design.",
+                    "sid": 122,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, our models are able to capture edge cases\u2014omitted for space\u2014through a more general and probabilistic fashion.",
+                    "sid": 123,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In summary, our models yield a very similar flowchart to the underlying design in a completely unsupervised way.7 Figure 5 shows part of the flowchart for the TechSupport corpus, generated by the TMHMMSS model.8 A conversation usually starts with a welcome message from a customer support agent.",
+                    "sid": 124,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, clients sometimes report a problem; otherwise, the agent gathers the client\u2019s identity.",
+                    "sid": 125,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After these preliminaries, the agent usually checks the system version or platform settings.",
+                    "sid": 126,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, information about the problem is exchanged, and a cycle ensues where agents propose solutions, and clients attempt them, reporting results.",
+                    "sid": 127,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Usually, a conversation loops among these states until either the problem is resolved (as the case shown in the figure) or the client is left with a reference number for future follow-up (not shown due to space limit).",
+                    "sid": 128,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although technical support is taskoriented, the scope of possible issues is vast and not prescribed.",
+                    "sid": 129,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The table in Figure 5 lists the top ranked words of selected topics\u2014the categories clients often report problems in.",
+                    "sid": 130,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It illustrates that, qualitatively, TM-HMMSS discovers both problem categories and conversation structures on our data.",
+                    "sid": 131,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As one of the baseline model, we also include a part of flowchart generated by LM-HMM model with similar settings of T = 20 states.",
+                    "sid": 132,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Illustrated by the highlighted states in 6, LM-HMM model conflates interactions that commonly occur at the beginning and end of a dialogue\u2014i.e., \u201cacknowledge agent\u201d and \u201cresolve problem\u201d, since their underlying language models are likely to produce similar probability distributions over words.",
+                    "sid": 133,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By incorporating topic information, our proposed models (e.g., TM-HMMSS in Figure 5) are able to enforce the state transitions towards more frequent flow patterns, which further helps to overcome the weakness of language model.",
+                    "sid": 134,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we evaluate our models using log likelihood and an ordering task on a held-out test set.",
+                    "sid": 135,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both evaluation metrics measure the predictive power of a conversation model. state: ask for bus route state: read out bus timetables Log Likelihood The likelihood metric measures the probability of generating the test set under a specified model.",
+                    "sid": 136,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in Figure 7, our models yield as good or better likelihood than LM-HMM and LM-HMMS models on both datasets under all settings.",
+                    "sid": 137,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our proposed models, TM-HMMS and TM-HMMSS perform better than TM-HMM on TechSupport, but not necessarily on BusTime.",
+                    "sid": 138,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we notice that the marginal benefit of TM-HMMSS over TM-HMM is greater on TechSupport dataset, where each dialogue focuses on one of many possible tasks.",
+                    "sid": 139,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This coincides with our belief that topics are more conversation dependent and shared across the entire corpus in customer support data\u2014i.e., different clients in different sessions might ask about similar issues.",
+                    "sid": 140,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ordering Test Ritter et al. (2010) proposes an evaluation based on rank correlation coefficient, which measures the degree of similarity between any two orderings over sequential data.",
+                    "sid": 141,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They use Kendall\u2019s r as evaluation metric, which is based on the agreement between pairwise orderings of two sequences (Kendall, 1938).",
+                    "sid": 142,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It ranges from \u22121 to +1, where +1 indicates an identical ordering and \u22121 indicates a reverse ordering.",
+                    "sid": 143,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea is to generate all permutations of the utterances in a dialogue (including true ordering), and compute the log likelihood for each under the model.",
+                    "sid": 144,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, Kendall\u2019s r is computed between the most probable permutation and true ordering.",
+                    "sid": 145,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The result is the average of r values for all dialogues in test corpus.",
+                    "sid": 146,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ritter et al. (2010) limits their dataset by choosing Twitter dialogues containing 3 to 6 posts (utterances), making it tractable to enumerate all permutations.",
+                    "sid": 147,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, our datasets are much larger, and enumerating all possible permutations of dialogues with more than 20 or 30 utterances is infeasible.",
+                    "sid": 148,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we incrementally build up the permutation set by adding one random permutation at a time, and taking the most probable permutation after each addition.",
+                    "sid": 149,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If this process were continued (intractably!) until all permutations are enumerated, the true value of Kendall\u2019s r test would be reached.",
+                    "sid": 150,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, the value appears to plateau after a few dozen measurements.",
+                    "sid": 151,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present our results in Figure 8.",
+                    "sid": 152,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our models consistently perform as good or better than Agent: conversation opening + identity check help, answer, desk, may, <agent-name>, welcom, name, number, phone, ... e.g.",
+                    "sid": 153,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": welcome to answer desk, i'm <agentname>, how can i help you, may i have tri, get, comput, cant, window, message, error, problem, instal, say, ... e.g.",
+                    "sid": 154,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": get problem in windows, cant install on computer, it says error message thank, minut, pleas, let, <client-name>, check, give, moment, ok, wait, ... e.g.",
+                    "sid": 155,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": thank you, <client-name>, please thank, answer, desk, <client-name>, contact, help, chat, day, welcom, ... e.g.",
+                    "sid": 156,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": thank you for contacting answer desk, you are welcome, have a nice day Agent: conversation closure thank, ok, help, great, good, much, <agent-name>, ye(s), day, bye, ... e.g.",
+                    "sid": 157,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": great, thanks <agent-name> so much for your help, good day, bye instal, comput, program, tri, issu, system, file, work, run, see, ... e.g.",
+                    "sid": 158,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": try to install file or run program and see the issue goes away Agent: acknowledge problem error, messag, see, issu, sorri, help, get, thank, <client-name>, oh, ... e.g.",
+                    "sid": 159,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": sorry to hear that, thanks for error message, i see, let me help you on issue Agent: conversation opening + identity check answer, desk, help, <agent-name>, welcom, today, may, name, number, ... e.g.",
+                    "sid": 160,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": welcome to answer desk, i'm <agentname>, how can i help you, may i have your name, case/phone number, account?",
+                    "sid": 161,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Client: confirm identity call, number, phone, case, <time>, would, <agent-name>, pleas, <phone>, time, ... e.g.",
+                    "sid": 162,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": <agent-time>, my phone number is <phone>. would you pleas call number... give, minut, pleas, check, let, thank, moment, 3, one, 5, ... e.g.",
+                    "sid": 163,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": thanks, one moment please, give me 3 minutes, let me check Agent: conversation closure anyth, els, welcom, help, <client-name>, today, assist, question, would, answer, ... e.g.",
+                    "sid": 164,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": you are welcome, anything else today i would help/assist you, <client-name>?",
+                    "sid": 165,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Client: report problem updat, window, install, <agent-name>, hello, error, get, problem, download, message, ... e.g.",
+                    "sid": 166,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": hello, <agent-name>, i get problem/error when install/update/download in windows Client: acknowledge agent / resolved problem thank, ok, help, much, good, great, <agent-name>, day, appreci, bye, ... e.g.",
+                    "sid": 167,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": ok, thanks, great, <agent-name> appreciate your help, good day, bye 0.14 Agent: conversation closure answer, desk, thank, contact, day, chat, great, session, com, help, ... e.g.",
+                    "sid": 168,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": thank you for contacting answer desk, you are welcome, have a nice day Agent: acknowledge problem issu, sorri, call, help, number, suport, concern, <client-name>, <phone>, best, ... e.g.",
+                    "sid": 169,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ": sorry to hear that, let me help with your concern, <client-name> state 085 user responses.",
+                    "sid": 170,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In every block, the upper state 19 0 (4, pay) 0 cell shows the top ranked words, and the 19 iss) 0.0736645 (4 #doaramt# lower cell shows example word sequences (19, troubleshoot) 0.0553393 (4, dont) 0",
+                    "sid": 171,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 fi",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "or string patterns of that state.",
+                    "sid": 172,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Transition (, suport) 0.07 ( step 564 p is highlighted,which seems to conflate ( help) 0035826 (4 cost) 0 the \u201cacknowledge agent\u201d and \u201cresolve (19, reso 0.0285103 (4, issu) 0. problem\u201d states, and TM-HMMSS model (19, vanc) 00240787 (4 money) has properly disentangled (Figure 5).",
+                    "sid": 173,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(19, option) 0.0230008 the baseline models.",
+                    "sid": 174,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For BusTime data, all models perform relatively well except LM-HMM which only indicates weak correlations.",
+                    "sid": 175,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TMHMM out-performs all other models under all settings.",
+                    "sid": 176,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is also true for TechSupport dataset.",
+                    "sid": 177,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LM-HMMS, TM-HMMS and TM-HMMSS models perform considerably well on BusTime, but not on TechSupport data.",
+                    "sid": 178,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These three models allow words to be generated from additional sources other than states.",
+                    "sid": 179,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although this improves log likelihood, it is possible these models encode less information about the state sequences, at least in the more diffuse TechSupport data.",
+                    "sid": 180,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In summary, under both quantitative evaluation measures, our models advance state-of-the-art, however which of our models is best depends on the application.",
+                    "sid": 181,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 conclusion and future work",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We have presented three new unsupervised models to discover latent structures in task-oriented dialogues.",
+                    "sid": 182,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluated on two very different corpora\u2014logs from spoken, human-computer dialogues about bus time, and logs of textual, humanhuman dialogues about technical support.",
+                    "sid": 183,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have shown our models yield superior performance both qualitatively and quantitatively.",
+                    "sid": 184,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possible avenue for future work is scalability.",
+                    "sid": 185,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parallelization (Asuncion et al., 2012) or online learning (Doucet et al., 2001) could significantly speed up inference.",
+                    "sid": 186,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition to MCMC, another class of inference method is variational Bayesian analysis (Blei et al., 2003; Beal, 2003), which is inherently easier to distribute (Zhai et al., 2012) and online update (Hoffman et al., 2010).",
+                    "sid": 187,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We would like to thank anonymous reviewers and Jordan Boyd-Graber for their valuable comments.",
+                    "sid": 188,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are also grateful to Alan Ritter and Bill Dolan for their helpful discussions; and Kai (Anthony) Lui for providing TechSupport dataset.",
+                    "sid": 189,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1103 @@
+{
+    "ID": "N06-1022",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Multilevel Coarse-To-Fine PCFG Parsing",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a PCFG parsing algorithm that uses a multilevel coarse-to-fine (mlctf) scheme to improve the efficiency of search for the best parse.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach requires the user to specify a sequence of nested partitions or equivalence classes of the PCFG nonterminals.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a sequence of PCFGs corresponding to each partition, where the nonterminals of each PCFG are clusters of nonterminals of the original source PCFG.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the results of parsing at a coarser level (i.e., grammar defined in terms of a coarser partition) to prune the next finer level.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present experiments showing that with our algorithm the work load (as measured by the total number of constituents processed) is decreased by a factor of ten with no decrease in parsing accuracy compared to standard CKY parsing with the original PCFG.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We suggest that the search space over mlctf algorithms is almost totally unexplored so that future work should be able to improve significantly on these results.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Reasonably accurate constituent-based parsing is fairly quick these days, if fairly quick means about a second per sentence.",
+                    "sid": 7,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, this is still too slow for many applications.",
+                    "sid": 8,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In some cases researchers need large quantities of parsed data and do not have the hundreds of machines necessary to parse gigaword corpora in a week or two.",
+                    "sid": 9,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More pressingly, in real-time applications such as speech recognition, a parser would be only a part of a much larger system, and the system builders are not keen on giving the parser one of the ten seconds available to process, say, a thirty-word sentence.",
+                    "sid": 10,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even worse, some applications require the parsing of multiple candidate strings per sentence (Johnson and Charniak, 2004) or parsing from a lattice (Hall and Johnson, 2004), and in these applications parsing efficiency is even more important.",
+                    "sid": 11,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present here a multilevel coarse-to-fine (mlctf) PCFG parsing algorithm that reduces the complexity of the search involved in finding the best parse.",
+                    "sid": 12,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It defines a sequence of increasingly more complex PCFGs, and uses the parse forest produced by one PCFG to prune the search of the next more complex PCFG.",
+                    "sid": 13,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We currently use four levels of grammars in our mlctf algorithm.",
+                    "sid": 14,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest PCFG, which we call the level-0 grammar, contains only one nontrivial nonterminal and is so simple that minimal time is needed to parse a sentence using it.",
+                    "sid": 15,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nonetheless, we demonstrate that it identifies the locations of correct constituents of the parse tree (the \u201cgold constituents\u201d) with high recall.",
+                    "sid": 16,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our level-1 grammar distinguishes only argument from modifier phrases (i.e., it has two nontrivial nonterminals), while our level-2 grammar distinguishes the four major phrasal categories (verbal, nominal, adjectival and prepositional phrases), and level 3 distinguishes all of the standard categories of the Penn treebank. first appearance of this idea we are aware of is in Maxwell and Kaplan (1993), where a covering CFG is automatically extracted from a more detailed unification grammar and used to identify the possible locations of constituents in the more detailed parses of the sentence.",
+                    "sid": 17,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Maxwell and Kaplan use their covering CFG to prune the search of their unification grammar parser in essentially the same manner as we do here, and demonstrate significant performance improvements by using their coarse-to-fine approach.",
+                    "sid": 18,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The basic theory of coarse-to-fine approximations and dynamic programming in a stochastic framework is laid out in Geman and Kochanek (2001).",
+                    "sid": 19,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper describes the multilevel dynamic programming algorithm needed for coarse-to-fine analysis (which they apply to decoding rather than parsing), and show how to perform exact coarse-to-fine computation, rather than the heuristic search we perform here.",
+                    "sid": 20,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A paper closely related to ours is Goodman (1997).",
+                    "sid": 21,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our terminology, Goodman\u2019s parser is a two-stage ctf parser.",
+                    "sid": 22,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second stage is a standard tree-bank parser while the first stage is a regular-expression approximation of the grammar.",
+                    "sid": 23,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, the second stage is constrained by the parses found in the first stage.",
+                    "sid": 24,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Neither stage is smoothed.",
+                    "sid": 25,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser of Charniak (2000) is also a two-stage ctf model, where the first stage is a smoothed Markov grammar (it uses up to three previous constituents as context), and the second stage is a lexicalized Markov grammar with extra annotations about parents and grandparents.",
+                    "sid": 26,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second stage explores all of the constituents not pruned out after the first stage.",
+                    "sid": 27,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Related approaches are used in Hall (2004) and Charniak and Johnson (2005).",
+                    "sid": 28,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A quite different approach to parsing efficiency is taken in Caraballo and Charniak (1998) (and refined in Charniak et al. (1998)).",
+                    "sid": 29,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here efficiency is gained by using a standard chartparsing algorithm and pulling constituents off the agenda according to (an estimate of) their probability given the sentence.",
+                    "sid": 30,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This probability is computed by estimating Equation 1: The nonterminal categories in these grammars can be regarded as clusters or equivalence classes of the original Penn treebank nonterminal categories.",
+                    "sid": 31,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(In fact, we obtain these grammars by relabeling the node labels in the treebank and extracting a PCFG from this relabelled treebank in the standard fashion, but we discuss other approaches below.)",
+                    "sid": 32,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We require that the partition of the nonterminals defined by the equivalence classes at level l + 1 be a refinement of the partition defined at level l. This means that each nonterminal category at level l+1 is mapped to a unique nonterminal category at level l (although in general the mapping is many to one, i.e., each nonterminal category at level l corresponds to several nonterminal categories at level l + 1).",
+                    "sid": 33,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the correspondence between categories at different levels to prune possible constituents.",
+                    "sid": 34,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A constituent is considered at level l + 1 only if the corresponding constituent at level l has a probability exceeding some threshold..",
+                    "sid": 35,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus parsing a sentence proceeds as follows.",
+                    "sid": 36,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first parse the sentence with the level-0 grammar to produce a parse forest using the CKY parsing algorithm.",
+                    "sid": 37,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then for each level l + 1 we reparse the sentence with the level l + 1 grammar using the level l parse forest to prune as described above.",
+                    "sid": 38,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we demonstrate, this leads to considerable efficiency improvements.",
+                    "sid": 39,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The paper proceeds as follows.",
+                    "sid": 40,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We next discuss previous work (Section 2).",
+                    "sid": 41,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 outlines the algorithm in more detail.",
+                    "sid": 42,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 presents some experiments showing that the work load (as measured by the total number of constituents processed) is decreased by a factor of ten over standard CKY parsing at the final level.",
+                    "sid": 43,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also discuss some fine points of the results therein.",
+                    "sid": 44,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally in section 5 we suggest that because the search space of mlctf algorithms is, at this point, almost totally unexplored, future work should be able to improve significantly on these results.",
+                    "sid": 45,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 previous research",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Coarse-to-fine search is an idea that has appeared several times in the literature of computational linguistics and related areas.",
+                    "sid": 46,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The It must be estimated because during the bottom-up chart-parsing algorithm, the true outside probability cannot be computed.",
+                    "sid": 47,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results cited in Caraballo and Charniak (1998) cannot be compared directly to ours, but are roughly in the same equivalence class.",
+                    "sid": 48,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Those presented in Charniak et al. (1998) are superior, but in Section 5 below we suggest that a combination of the techniques could yield better results still.",
+                    "sid": 49,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Klein and Manning (2003a) describe efficient A* for the most likely parse, where pruning is accomplished by using Equation 1 and a true upper bound on the outside probability.",
+                    "sid": 50,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While their maximum is a looser estimate of the outside probability, it is an admissible heuristic and together with an A* search is guaranteed to find the best parse first.",
+                    "sid": 51,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One question is if the guarantee is worth the extra search required by the looser estimate of the true outside probability.",
+                    "sid": 52,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tsuruoka and Tsujii (2004) explore the framework developed in Klein and Manning (2003a), and seek ways to minimize the time required by the heap manipulations necessary in this scheme.",
+                    "sid": 53,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They describe an iterative deepening algorithm that does not require a heap.",
+                    "sid": 54,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also speed computation by precomputing more accurate upper bounds on the outside probabilities of various kinds of constituents.",
+                    "sid": 55,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are able to reduce by half the number of constituents required to find the best parse (compared to CKY).",
+                    "sid": 56,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most recently, McDonald et al. (2005) have implemented a dependency parser with good accuracy (it is almost as good at dependency parsing as Charniak (2000)) and very impressive speed (it is about ten times faster than Collins (1997) and four times faster than Charniak (2000)).",
+                    "sid": 57,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It achieves its speed in part because it uses the Eisner and Satta (1999) algorithm for n3 bilexical parsing, but also because dependency parsing has a much lower grammar constant than does standard PCFG parsing \u2014 after all, there are no phrasal constituents to consider.",
+                    "sid": 58,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The current paper can be thought of as a way to take the sting out of the grammar constant for PCFGs by parsing first with very few phrasal constituents and adding them only Level: 0 1 2 3 after most constituents have been pruned away.",
+                    "sid": 59,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 multilevel course-to-fine parsing",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We use as the underlying parsing algorithm a reasonably standard CKY parser, modified to allow unary branching rules.",
+                    "sid": 60,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complete nonterminal clustering is given in Figure 1.",
+                    "sid": 61,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not cluster preterminals.",
+                    "sid": 62,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These remain fixed at all levels to the standard Penn-tree-bank set Marcus et al. (1993).",
+                    "sid": 63,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Level-0 makes two distinctions, the root node and everybody else.",
+                    "sid": 64,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At level 1 we make one further distinction, between phrases that tend to be heads of constituents (NPs, VPs, and Ss) and those that tend to be modifiers (ADJPs, PPs, etc.).",
+                    "sid": 65,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Level-2 has a total of five categories: root, things that are typically headed by nouns, those headed by verbs, things headed by prepositions, and things headed by classical modifiers (adjectives, adverbs, etc.).",
+                    "sid": 66,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, level 3 is the classical tree-bank set.",
+                    "sid": 67,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an example, Figure 2 shows the parse for the sentence \u201cHe ate at the mall.\u201d at levels 0 to 3.",
+                    "sid": 68,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training we create four grammars, one for each level of granularity.",
+                    "sid": 69,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So, for example, at level 1 the tree-bank rule S \u2192NP VP . would be translated into the rule HP \u2192HP HP .",
+                    "sid": 70,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, each constituent type found in \u201cS \u2192NP VP .\u201d is mapped into its generalization at level 1.",
+                    "sid": 71,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probabilities of all rules are computed using maximum likelihood for constituents at that level.",
+                    "sid": 72,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The grammar used by the parser can best be described as being influenced by four components: The first of these has already been covered.",
+                    "sid": 73,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We discuss the other three in turn.",
+                    "sid": 74,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In anticipation of eventually lexicalizing the grammar we binarize from the head out.",
+                    "sid": 75,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, consider the rule A \u2192a b c d e where c is the head constituent.",
+                    "sid": 76,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We binarize this as follows: Grammars induced in this way tend to be too specific, as the binarization introduce a very large number of very specialized phrasal categories (the Ai).",
+                    "sid": 77,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following common practice Johnson (1998; Klein and Manning (2003b) we Markovize by replacing these nonterminals with ones that remember less of the immediate rule context.",
+                    "sid": 78,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our version we keep track of only the parent, the head constituent and the constituent immediately to the right or left, depending on which side of the constituent we are processing.",
+                    "sid": 79,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With this scheme the above rules now look like this: A \u2192Ad,c e Ad,c \u2192Aa,c d Aa,c \u2192a Ab,c Ab,c \u2192b c So, for example, the rule \u201cA \u2192Ad,c e\u201d would have a high probability if constituents of type A, with c as their head, often have d followed by e at their end.",
+                    "sid": 80,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lastly, we add parent annotation to phrasal categories to improve parsing accuracy.",
+                    "sid": 81,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we assume that in this case we are expanding a rule for an A used as a child of Q, and a, b, c, d, and e are all phrasal categories, then the above rules become: Once we have parsed at a level, we evaluate the probability of a constituent p(nki,j  |s) according to the standard inside-outside formula of Equation 1.",
+                    "sid": 82,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this equation nki,j is a constituent of type k spanning the words i to j, and \u03b1(\u00b7) and \u03b2(\u00b7) are the outside and inside probabilities of the constituent, respectively.",
+                    "sid": 83,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because we prune at the end each granularity level, we can evaluate the equation exactly; no approximations are needed (as in, e.g., Charniak et al. (1998)).",
+                    "sid": 84,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During parsing, instead of building each constituent allowed by the grammar, we first test if the probability of the corresponding coarser constituent (which we have from Equation 1 in the previous round of parsing) is greater than a threshold.",
+                    "sid": 85,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(The threshold is set empirically based upon the development data.)",
+                    "sid": 86,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If it is below the threshold, we do not put the constituent in the chart.",
+                    "sid": 87,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, before we can use a NP and a VP to create a S (using the rule above), we would first need to check that the probability in the coarser grammar of using the same span HP and HP to create a HP is above the threshold.",
+                    "sid": 88,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the standard inside-outside formula to calculate this probability (Equation 1).",
+                    "sid": 89,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The empirical results below justify our conjecture that there are thresholds that allow significant pruning while leaving the gold constituents untouched.",
+                    "sid": 90,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 results",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In all experiments the system is trained on the Penn tree-bank sections 2-21.",
+                    "sid": 91,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 23 is used for testing and section 24 for development.",
+                    "sid": 92,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The input to the parser are the gold-standard parts of speech, not the words.",
+                    "sid": 93,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The point of parsing at multiple levels of granularity is to prune the results of rough levels before going on to finer levels.",
+                    "sid": 94,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, it is necessary for any pruning scheme to retain the true (gold-standard WSJ) constituents in the face of the pruning.",
+                    "sid": 95,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To gain an idea of what is possible, consider Figure 3.",
+                    "sid": 96,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to the graph, at the zeroth level of parsing and a the pruning level 10\u22124 the probability that a gold constituent is deleted due to pruning is slightly more than 0.001 (or 0.1%).",
+                    "sid": 97,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At level three it is slightly more that 0.01 (or 1.0%).",
+                    "sid": 98,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The companion figure, Figure 4 shows the retention rate of the non-gold (incorrect) constituents.",
+                    "sid": 99,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Again, at pruning level 10\u22124 and parsing level 0 we retain about .3 (30%) of the bad constituents (so we pruned 70%), whereas at level 3 we retain about .004 (0.4%).",
+                    "sid": 100,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in the current paper we do not actually prune at level 3, instead return the Viterbi parse.",
+                    "sid": 101,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We include pruning results here in anticipation of future work in which level 3 would be a precursor to still more fine-grained parsing.",
+                    "sid": 102,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As noted in Section 2, there is some (implicit) debate in the literature on using estimates of the outside probability in Equation 1, or instead computing the exact upper bound.",
+                    "sid": 103,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea is that an exact upper bound gives one an admissible search heuristic but at a cost, since it is a less accurate estimator of the true outside probability.",
+                    "sid": 104,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Note that even the upper bound does not, in general, keep all of the gold constituents, since a non-perfect model will assign some of them low probability.)",
+                    "sid": 105,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is clear from Figure 3, the estimate works very well indeed.",
+                    "sid": 106,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the basis of this graph, we set the lowest allowable constituent probability at > 5 \u00b7 10\u22124, > 10\u22125, and > 10\u22124 for levels 0,1, and 2, respectively.",
+                    "sid": 107,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No pruning is done at level 3, since there is no level 4.",
+                    "sid": 108,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After setting the pruning parameters on the development set we proceed to parse the test set (WSJ section 23).",
+                    "sid": 109,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows the resulting pruning statistics.",
+                    "sid": 110,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The total number of constituents created at level 0, for all sentences combined, is 8.82 \u00b7 106.",
+                    "sid": 111,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of those 7.55 \u00b7 106 (or 86.5%) are pruned before going on to level 1.",
+                    "sid": 112,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At level 1, the 1.3 million left over from level 0 expanded to a total of 9.18 \u00b7 106.",
+                    "sid": 113,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "70.8% of these in turn are pruned, and so forth.",
+                    "sid": 114,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The percent pruned at, e.g., level 1 in Figure 3 is much higher than that shown here because it considers all of the possible level-1 constituents, not just those left unpruned after level 0.",
+                    "sid": 115,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is no pruning at level 3.",
+                    "sid": 116,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There we simply return the Viterbi parse.",
+                    "sid": 117,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also show that with pruning we generate a total of 40.4 \u00b7 106 constituents.",
+                    "sid": 118,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For comparison exhaustively parsing using the tree-bank grammar yields a total of 392\u00b7106 constituents.",
+                    "sid": 119,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is the factor-of-10 Level Time for Level Running Total There are two points of interest.",
+                    "sid": 120,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first is that each level of pruning is worthwhile.",
+                    "sid": 121,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not get most of the effect from one or the other level.",
+                    "sid": 122,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second point is that we get significant pruning at level 0.",
+                    "sid": 123,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reader may remember that level 0 distinguishes only between the root node and the rest.",
+                    "sid": 124,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We initially expected that it would be too coarse to distinguish good from bad constituents at this level, but it proved as useful as the other levels.",
+                    "sid": 125,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The explanation is that this level does use the full treebank preterminal tags, and in many cases these alone are sufficient to make certain constituents very unlikely.",
+                    "sid": 126,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, what is the probability of any constituent of length two or greater ending in a preposition?",
+                    "sid": 127,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The answer is: very low.",
+                    "sid": 128,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly for constituents of length two or greater ending in modal verbs, and determiners.",
+                    "sid": 129,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not quite so improbable, but nevertheless less likely than most, would be constituents ending in verbs, or ending just short of the end of the sentence.",
+                    "sid": 130,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 6 shows how much time is spent at each level of the algorithm, along with a running total of the time spent to that point.",
+                    "sid": 131,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(This is for all sentences in the test set, length G 100.)",
+                    "sid": 132,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number for the unpruned parser is again about ten times that for the pruned version, but the number for the standard CKY version is probably too high.",
+                    "sid": 133,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because our CKY implementation is quite slow, we ran the unpruned version on many machines and summed the results.",
+                    "sid": 134,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all likelihood at least some of these machines were overloaded, a fact that our local job distributer would not notice.",
+                    "sid": 135,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We suspect that the real number is significantly lower, though still much higher than the pruned version.",
+                    "sid": 136,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally Figure 7 shows that our pruning is accomplished without loss of accuracy.",
+                    "sid": 137,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results with pruning include four sentences that did not receive any parses at all.",
+                    "sid": 138,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These sentences received zeros for both precision and recall and presumably lowered the results somewhat.",
+                    "sid": 139,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We allowed ourselves to look at the first of these, which turned out to contain the phrase: (NP ... (INTJ (UH oh) (UH yes)) ...) The training data does not include interjections consisting of two \u201cUH\u201ds, and thus a gold parse cannot be constructed.",
+                    "sid": 140,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that a different binarization scheme (e.g. the one used in Klein and Manning (2003b) would have smoothed over this problem.",
+                    "sid": 141,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our case the unpruned version is able to patch together a lot of very unlikely constituents to produce a parse, but not a very good one.",
+                    "sid": 142,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus we attribute the problem not to pruning, but to binarization.",
+                    "sid": 143,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also show the results for the most similar Klein and Manning (2003b) experiment.",
+                    "sid": 144,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results are slightly better.",
+                    "sid": 145,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We attribute the difference to the fact that we have the gold tags and they do not, but their binarization scheme does not run into the problems that we encountered.",
+                    "sid": 146,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 conclusion and future research",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We have presented a novel parsing algorithm based upon the coarse-to-fine processing model.",
+                    "sid": 147,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several aspects of the method recommend it.",
+                    "sid": 148,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, unlike methods that depend on best-first search, the method is \u201cholistic\u201d in its evaluation of constituents.",
+                    "sid": 149,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, consider the impact of parent labeling.",
+                    "sid": 150,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It has been repeatedly shown to improve parsing accuracy (Johnson, 1998; Charniak, 2000; Klein and Manning, 2003b), but it is difficult if not impossible to integrate with best-first search in bottom-up chart-parsing (as in Charniak et al. (1998)).",
+                    "sid": 151,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason is that when working bottom up it is difficult to determine if, say, ssbar is any more or less likely than ss, as the evidence, working bottom up, is negligible.",
+                    "sid": 152,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since our method computes the exact outside probability of constituents (albeit at a coarser level) all of the top down information is available to the system.",
+                    "sid": 153,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Or again, another very useful feature in English parsing is the knowledge that a constituent ends at the right boundary (minus punctuation) of a string.",
+                    "sid": 154,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be included only in an ad-hoc way when working bottom up, but could be easily added here.",
+                    "sid": 155,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many aspects of the current implementation that are far from optimal.",
+                    "sid": 156,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It seems clear to us that extracting the maximum benefit from our pruning would involve taking the unpruned constituents and specifying them in all possible ways allowed by the next level of granularity.",
+                    "sid": 157,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What we actually did is to propose all possible constituents at the next level, and immediately rule out those lacking a corresponding constituent remaining at the previous level.",
+                    "sid": 158,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was dictated by ease of implementation.",
+                    "sid": 159,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before using mlctf parsing in a production parser, the other method should be evaluated to see if our intuitions of greater efficiency are correct.",
+                    "sid": 160,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also possible to combine mlctf parsing with queue reordering methods.",
+                    "sid": 161,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best-first search method of Charniak et al. (1998) estimates Equation 1.",
+                    "sid": 162,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Working bottom up, estimating the inside probability is easy (we just sum the probability of all the trees found to build this constituent).",
+                    "sid": 163,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All the cleverness goes into estimating the outside probability.",
+                    "sid": 164,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Quite clearly the current method could be used to provide a more accurate estimate of the outside probability, namely the outside probability at the coarser level of granularity.",
+                    "sid": 165,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is one more future-research topic to add before we stop, possibly the most interesting of all.",
+                    "sid": 166,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The particular tree of coarser to finer constituents that governs our mlctf algorithm (Figure 1) was created by hand after about 15 minutes of reflection and survives, except for typos, with only two modifications.",
+                    "sid": 167,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is no reason to think it is anywhere close to optimal.",
+                    "sid": 168,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It should be possible to define \u201coptimal\u201d formally and search for the best mlctf constituent tree.",
+                    "sid": 169,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This would be a clustering problem, and, fortunately, one thing statistical NLP researchers know how to do is cluster.",
+                    "sid": 170,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "This paper is the class project for Computer Science 241 at Brown University in fall 2005.",
+                    "sid": 171,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The faculty involved were supported in part by DARPA GALE contract HR0011-06-2-0001.",
+                    "sid": 172,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The graduate students were mostly supported by Brown University fellowships.",
+                    "sid": 173,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The undergraduates were mostly supported by their parents.",
+                    "sid": 174,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our thanks to all.",
+                    "sid": 175,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

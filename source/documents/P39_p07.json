@@ -1,0 +1,647 @@
+{
+    "ID": "P39_p07",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Hypergraphs are used in several syntax\u00ad inspired methods of machine translation to compactly encode exponentially many trans\u00ad lation hypotheses.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hypotheses closest to given reference translations therefore cannot be found via brute force, particularly for pop\u00ad ular measures of closeness such as BLEU.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We develop a dynamic program for extracting the so called oracle-best hypothesis from a hyper\u00ad graph by viewing it as the problem of finding the most likely hypothesis under an n-gram language model trained from only the refer\u00ad ence translations.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We further identify and re\u00ad move massive redundancies in the dynamic program state due to the sparsity of n-grams present in the reference translations, resulting in a very efficient program.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present run\u00ad time statistics for this program, and demon\u00ad strate successful application of the hypothe\u00ad ses thus found as the targets for discriminative training of translation system components.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "A hypergraph, as demonstrated by Huang and Chi\u00ad ang (2007), is a compact data-structure that can en\u00ad code an exponential number of hypotheses gener\u00ad ated by a regular phrase-based machine translation (MT) system (e.g., Koehn et al.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2003)) or a syntax\u00ad based MT system (e.g., Chiang (2007)).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While the hypergraph represents a very large set of transla\u00ad tions, it is quite possible that some desired transla\u00ad tions (e.g., the reference translations) are not con\u00ad tained in the hypergraph, due to pruning or inherent deficiency of the translation model.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, one is often required to find the translation(s) in the hy\u00ad pergraph that are most similar to the desired transla\u00ad tions, with similarity computed via some automatic metric such as BLEU (Papineni et al., 2002).",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such maximally similar translations will be called oracle\u00ad best translations, and the process of extracting them oracle extraction.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Oracle extraction is a nontrivial task because computing the similarity of any one hypothesis requires information scattered over many items in the hypergraph, and the exponentially large number of hypotheses makes a brute-force linear search intractable.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, efficient algorithms that can exploit the structure of the hypergraph are required.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present an efficient oracle extraction algo\u00ad rithm, which involves two key ideas.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, we view the oracle extraction as a bottom-up model scoring process on a hypergraph, where the model is \"trained\" on the reference translation(s).",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is sim\u00ad ilar to the algorithm proposed for a lattice by Dreyer et al.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007).",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their algorithm, however, requires maintaining a separate dynamic programming state for each distinguished sequence of \"state\" words and the number of such sequences can be huge, mak\u00ad ing the search very slow.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, therefore, we present a novel look-ahead technique, called equiv\u00ad alent oracle-state maintenance, to merge multiple states that are equivalent for similarity computation.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments show that the equivalent oracle\u00ad state maintenance technique significantly speeds up (more than 40 times) the oracle extraction.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Efficient oracle extraction has at least three im\u00ad portant applications in machine translation.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Discriminative Training: In discriminative train\u00ad ing, the objective is to tune the model parameters, e.g. weights of a perceptron model or conditional random field, such that the reference translations are preferred over competitors.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the reference translations may not be reachable by the translation system, in which case the oracle-best hypotheses should be substituted in training.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 Proceedings of NAACL HLT 2009: Short Papers, pages 912, Boulder, Colorado, June 2009.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "@2009 Association for Computational Linguistics System Combination: In a typical system combi\u00ad nation task, e.g. Rosti et al.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2007), each compo\u00ad nent system produces a set of translations, which are then grafted to form a confusion network.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The confusion network is then rescored, often employ\u00ad ing additional (language) models, to select the fi\u00ad nal translation.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When measuring the goodness of a hypothesis in the confusion network, one requires its score under each component system.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, some translations in the confusion network may not be reachable by some component systems, in which case a system's score for the most similar reachable translation serves as a good approximation.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Multi-source Translation: In a multi-source translation task (Och and Ney, 2001) the input is given in multiple source languages.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This leads to a situation analogous to system combination, except that each component translation system now corresponds to a specific source language.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "oracle extraction on a hypergraph. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "In this section, we present the oracle extraction al\u00ad gorithm: it extracts one or more translations in a hy\u00ad pergraph that have the maximum BLEU score1 with respect to the corresponding reference translation(s).",
+                    "sid": 31,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU score of a hypothesis h relative to a reference r may be expressed in the log domain as, logBLEU(r,h) =min[111 ,o]+ logpn.",
+                    "sid": 32,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first component is the brevity penalty when I hI< I r I, while the second component corresponds to the geometric mean of n-gram precisions Pn (with clipping).",
+                    "sid": 33,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While BLEU is normally defined at the corpus level, we use the sentence-level BLEU for the purpose of oracle extraction.",
+                    "sid": 34,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two key ideas for extracting the oracle-best hy\u00ad pothesis from a hypergraph are presented next.",
+                    "sid": 35,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Oracle Extraction as Model Scoring.",
+                    "sid": 36,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our first key idea is to view the oracle extraction as a bottom-up model scoring process on the hy\u00ad pergraph.",
+                    "sid": 37,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we train a 4-gram language model (LM) on only the reference translation( s ), 1We believe our method is general and can be extended to other metrics capturing only n-gram dependency and other com\u00ad pact data structures, e.g. lattices.",
+                    "sid": 38,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "and use this LM as the only model to do a Viterbi search on the hypergraph to find the hypothesis that has the maximum (oracle) LM score.",
+                    "sid": 39,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Essentially, the LM is simply a table memorizing the counts of n-grams found in the reference translation(s), and the LM score is the log-BLEU value (instead oflog\u00ad probability, as in a regular LM).",
+                    "sid": 40,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During the search, the dynamic programming (DP) states maintained at each item include the left- and right-side LM context, and the length of the partial translation.",
+                    "sid": 41,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compute the n-gram precisions Pn incrementally during the search, the algorithm also memorizes at each item a vector of maximum numbers of n-gram matches between the partial translation and the ref\u00ad erence(s).",
+                    "sid": 42,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note however that the oracle state of an item (which decides the uniqueness of an item) de\u00ad pends only on the LM contexts and span lengths, not on this vector of n-gram match counts.",
+                    "sid": 43,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The computation of BLEU also requires the brevity penalty, but since there is no explicit align\u00ad ment between the source and the reference(s), we cannot get the exact reference length lrl at an inter\u00ad mediate item.",
+                    "sid": 44,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The exact value of brevity penalty is thus not computable.",
+                    "sid": 45,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We approximate the true refer\u00ad ence length for an item with a product between the length of the source string spanned by that item and a ratio (which is between the lengths of the whole reference and the whole source sentence).",
+                    "sid": 46,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another approximation is that we do not consider the effect of clipping, since it is a global feature, making the strict computation intractable.",
+                    "sid": 47,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This does not signifi\u00ad cantly affect the quality of the oracle-best hypothesis as shown later.",
+                    "sid": 48,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows an example how the BLEU scores are computed in the hypergraph.",
+                    "sid": 49,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The process above may be used either in a first\u00ad stage decoding or a hypergraphrescoring stage.",
+                    "sid": 50,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the latter case, if the hypergraph generated by the first-stage decoding does not have a set of DP states that is a superset of the DP states required for ora\u00ad cle extraction, we need to split the items of the first\u00ad stage hypergraph and create new items with suffi\u00ad ciently detailed states.",
+                    "sid": 51,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is worth mentioning that if the hypergraph items contain the state information necessary for extract\u00ad ing the oracle-best hypothesis, it is straightforward to further extract the k-best hypotheses in the hyper\u00ad graph (according to BLEU) for any k 2: 1 using the algorithm of Huang and Chiang (2005).",
+                    "sid": 52,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I Item I lhl I lrl matches I log BLEU I Ite m A lte m B 5 1 0 6.",
+                    "sid": 53,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 9.",
+                    "sid": 54,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 ( 3 , 2 , 2 , 1 ) ( 8 , 7 , 6 , 5 ) 0 . 8 2 0 . 2 7 lte m C 1 7 18 .3 (1 2, 10 , 9, 6) 0 . 6 2 Table 1: Example computation when items A and B are combined by a rule to produce item c. lrl is the approxi\u00ad mated reference length as described in the text.",
+                    "sid": 55,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Equivalent Oracle State Maintenance.",
+                    "sid": 56,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The process above, while able to extract the oracle\u00ad best hypothesis from a hypergraph, is very slow due to the need to maintain a dedicated item for each or\u00ad acle state (i.e., a combination ofleftLM state, right\u00ad LM state, and hypothesis length).",
+                    "sid": 57,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is especially true if the baseline system uses a LM whose order is smaller than four, since we need to split the items in the original hypergraph into many sub-items during the search.",
+                    "sid": 58,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To speed up the extraction, our second key idea is to maintain an equivalent oracle state.",
+                    "sid": 59,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Roughly speaking, instead of maintaining a dif\u00ad ferent state for different language model words, we collapse them into a single state whenever it does not affect BLEU.",
+                    "sid": 60,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if we have two left-side LM states a b c and a b d, and we know that the reference(s) do not have any n-gram ending with them, then we can reduce them both to a band ig\u00ad nore the last word.",
+                    "sid": 61,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because the combination of neither left-side LM state (a b cor a b d) can contribute an n-gram match to the BLEU computa\u00ad tion, regardless of which prefix in the hypergraph they combine with.",
+                    "sid": 62,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, if we have two right\u00ad side LM states a b c and d b c, and if we know that the reference(s) do not have any n-gram starting with either, then we can ignore the first word and re\u00ad duce them both to b c. We can continue this reduc\u00ad tion recursively as shown in Figures 1 and 2, where IS-A-PREFIX( ei) (or IS-A-SUFFIX(ef)) checks if ei (resp.",
+                    "sid": 63,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ei) is a prefix (suffix) of any n-gram in the reference translation(s).",
+                    "sid": 64,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For BLEU, 1 :::; n :::; 4.",
+                    "sid": 65,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This equivalent oracle state maintenance tech\u00ad nique, in practice, dramatically reduces the number of distinct items preserved in the hypergraph for or\u00ad acle extraction.",
+                    "sid": 66,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand this, observe that if all hypotheses in the hypergraph together contain m unique n-grams, for any fixed n, then the total num\u00ad ber of equivalent items takes a multiplicative factor that is O(m2 ) due to left- and right-side LM state EQ-L-STATE (ef) 1 els +- ef 2 for i+- m to 1 C> right to left 3 if IS-A-SUFFIX(ei) 4 break C> stop reducing e1s 5 else 6 els +- ei1 C> reduce state 7 return els Figure 1: Equivalent Left LM State Computation.",
+                    "sid": 67,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "EQ-R-STATE (ef) 1 ers +- ef 2 for i+- 1 to m C> left to right 3 if IS-A-PREFIX (ei) 4 break C> stop reducing e r s 5 else 6 ers +- eH-1 C> reduce state 7 return ers Figure 2: Equivalent Right LM State Computation.",
+                    "sid": 68,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "maintenance of Section 2.1.",
+                    "sid": 69,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This multiplicative fac\u00ad tor under the equivalent state maintenance above is O(m2 ), where m is the number of unique n-grams in the reference translations.",
+                    "sid": 70,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly, m \u00ab m by several orders of magnitude, leading to effectively much fewer items to process in the chart.",
+                    "sid": 71,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One may view this idea of maintaining equivalent states more generally as an outside look-ahead dur\u00ad ing bottom-up inside parsing.",
+                    "sid": 72,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The look-ahead uses some external information, e.g. IS-A-SUFFIX(\u00b7), to anticipate whether maintaining a detailed state now will be of consequence later; if not then the in\u00ad side parsing eliminates or collapses the state into a coarser state.",
+                    "sid": 73,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The technique proposed by Li and Khudanpur (2008a) for decoding with large LMs is a special case of this general theme.",
+                    "sid": 74,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experimental results. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We report experimental results on a Chinese to En\u00ad glish task, for a system that is trained using a similar pipeline and data resource as in Chiang (2007).",
+                    "sid": 75,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Goodness of the Oracle-Best Translations.",
+                    "sid": 76,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 reports the average speed (seconds/sentence) for oracle extraction.",
+                    "sid": 77,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hypergraphs were generated with a trigram LM and expanded on the fly for 4- gram BLEU computation.",
+                    "sid": 78,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Basic DP Collapse equiv.",
+                    "sid": 79,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "states speedup 25.4 sec/sent 0.6 sec/sent X 42 Table 2: Speed of oracle extraction from hypergraphs.",
+                    "sid": 80,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The basic dynamic program (Sec.",
+                    "sid": 81,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1) improves signifi\u00ad cantly by collapsing equivalent oracle states (Sec.",
+                    "sid": 82,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2).",
+                    "sid": 83,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 reports the goodness of the oracle-best hy\u00ad potheses on three standard data sets.",
+                    "sid": 84,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The highest achievable BLEU score in a hypergraph is clearly much higher than in the 500-best unique strings.",
+                    "sid": 85,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This shows that a hypergraph provides a much better basis, e.g., for reranking than an n-best list.",
+                    "sid": 86,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As mentioned in Section 2.1, we use several ap\u00ad proximations in computing BLEU (e.g., no clipping and approximate reference length).",
+                    "sid": 87,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To justify these approximations, we first extract 500-best unique or\u00ad acles from the hypergraph, and then rerank the ora\u00ad cles based on the true sentence-level BLEU.",
+                    "sid": 88,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last row of Table 3 reports the reranked one-best oracle BLEU scores.",
+                    "sid": 89,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly, the approximations do not hurt the oracle BLEU very much.",
+                    "sid": 90,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I Hypothesis space I MT'04 I MT'05 I MT'06 I I 1-best (Baseline) I 35.7 I 32.6 I 28.3 I I 500-unique-best I 44.0 I 41.2 I 35.1 I Hypergraph 500-best oracles Table 3: Baseline and oracle-best 4-gram BLEU scores with 4 references for NIST ChineseEnglish MT datasets.",
+                    "sid": 91,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Discriminative HypergraphReranking.",
+                    "sid": 92,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Oracle extraction is a critical component for hypergraph-based discriminative reranking, where millions of model parameters are discriminatively tuned to prefer the oracle-best hypotheses over oth\u00ad ers.",
+                    "sid": 93,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hypergraphreranking in MT is similar to the forest-reranking for monolingual parsing (Huang, 2008).",
+                    "sid": 94,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, once the oracle-best hypothesis is identified, discriminative models may be trained on hypergraphs in the same way as on n-best lists (cf e.g. Li and Khudanpur (2008b)).",
+                    "sid": 95,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results in Table 4 demonstrate that hypergraphreranking with a discriminative LM or TM improves upon the base\u00ad line models on all three test sets.",
+                    "sid": 96,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Jointly training both the LM and TM likely suffers from over-fitting.",
+                    "sid": 97,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I Test Set I MT'04 I MT'05 I MT'06 I I Baseline 1 35.7 1 32.6 1 28.3 1 D is cr i m . L M D is cr i m . T M D is cr i m . T M + L M 3 5 . 9 3 6 . 1 3 6 . 0 3 3 . 0 3 3 . 2 3 3 . 1 2 8 . 2 2 8 . 7 2 8 . 6 Table 4: BLEU scores after discriminative hypergraph\u00ad reranking.",
+                    "sid": 98,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only the language model (LM) or the transla\u00ad tion model (TM) or both (LM+TM) may be discrimina\u00ad tively trained to prefer the oracle-best hypotheses.",
+                    "sid": 99,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We have presented an efficient algorithm to extract the oracle-best translation hypothesis from a hyper\u00ad graph.",
+                    "sid": 100,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To this end, we introduced a novel technique for equivalent oracle state maintenance, which sig\u00ad nificantly speeds up the oracle extraction process.",
+                    "sid": 101,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm has clear applications in diverse tasks such as discriminative training, system combination and multi-source translation.",
+                    "sid": 102,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

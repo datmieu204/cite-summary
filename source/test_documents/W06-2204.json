@@ -1,0 +1,1229 @@
+{
+    "ID": "W06-2204",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Transductive Pattern Learning For Information Extraction",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The requirement for large labelled training corpora is widely recognized as a key bottleneck in the use of learning algorithms for extraction.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present a semi-supervised learning algorithm for information extraction that can acquire extraction patterns from a small amount of labelled text in conjunction with a large amount of unlabelled text.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to previous work, two novel features.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the algorithm does not require redundancy in the fragments to be extracted, but only redundancy of the extraction patterns themselves.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, most bootstrapping methods identify the highest quality fragments in the unlabelled data and then assume that they are as reliable as manually labelled data in subsequent iterations. contrast, scoring mechanism prevents errors from snowballing by recording the reliability of fragments extracted from unlabelled data.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments with several demonstrate that usually competitive with various fully-supervised algorithms when very little labelled training data is available.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Information extraction is a form of shallow text analysis that involves identifying domain-specific fragments within natural language text.",
+                    "sid": 7,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most recent research has focused on learning algorithms that automatically acquire extraction patterns from manually labelled training data (e.g., (Riloff, 1993; Califf and Mooney, 1999; Soderland, 1999; Freitag and Kushmerick, 2000; Ciravegna, 2001; Finn and Kushmerick, 2004)).",
+                    "sid": 8,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This training data takes the form of the original text, annotated with the fragments to be extracted.",
+                    "sid": 9,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to the expense and tedious nature of this labelling process, it is widely recognized that a key bottleneck in deploying such algorithms is the need to create a sufficiently large training corpus for each new domain.",
+                    "sid": 10,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In response to this challenge, many researchers have investigated semi-supervised learning algorithms that learn from a (relatively small) set of labelled texts in conjunction with a (relatively large) set of unlabelled texts (e.g., (Riloff, 1996; Brin, 1998; Yangarber et al., 2002)).",
+                    "sid": 11,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present TPLEX, a semi-supervised algorithm for learning information extraction patterns.",
+                    "sid": 12,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key idea is to exploit the following recursive definitions: good patterns extract good fragments, and good fragments are extracted by good patterns.",
+                    "sid": 13,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To operationalize this recursive definition, we initialize the pattern and fragment scores with labelled data, and then iterate until the scores have converged.",
+                    "sid": 14,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most prior semi-supervised approaches to information extraction assume that fragments are essentially named entities, so that there will be many occurrences of any given fragment.",
+                    "sid": 15,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, for the task of discovering diseases (\u201cinfluenza\u201d, \u201cEbola\u201d, etc), prior algorithms assume that each disease will be mentioned many times, and that every occurrence of such a disease in unlabelled text should be extracted.",
+                    "sid": 16,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it may not be the case that fragments to be extracted occur more than once in the corpus, or that every occurrence of a labelled fragment should be extracted.",
+                    "sid": 17,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the well-known CMU Seminars corpus, any given person usually gives just one seminar, and a fragment such as \u201c3pm\u201d sometimes indicates the start time, other occurrences indicate the end time, and some occurrence should not be extracted at all.",
+                    "sid": 18,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than relying on redundancy of the fragments, TPLEX exploits redundancy of the learned extraction patterns.",
+                    "sid": 19,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX is a transductive algorithm (Vapnik, 1998), in that the goal is to perform extraction from a given unlabelled corpus, given a labelled corpus.",
+                    "sid": 20,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is in contrast to the typical machine learning framework, where the goal is a set of extraction patterns (which can of course then be applied to new unlabelled text).",
+                    "sid": 21,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a side-effect, TPLEX does generate a set of extraction patterns which may be a useful in their own right, depending on the application.",
+                    "sid": 22,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have compared TPLEX with various competitors on a variety of real-world extraction tasks.",
+                    "sid": 23,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have observed that TPLEX\u2019s performance matches or exceeds these in several benchmark tasks.",
+                    "sid": 24,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remainder of this paper is organized as follows.",
+                    "sid": 25,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After describing related work in more detail (Sec.",
+                    "sid": 26,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2), we describe the TPLEX algorithm (Sec.",
+                    "sid": 27,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3).",
+                    "sid": 28,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then discuss a series of experiments to compare TPLEX with various supervised algorithms (Sec.",
+                    "sid": 29,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4).",
+                    "sid": 30,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude with a summary of observations made during the evaluation, and a discussion of future work (Sec.",
+                    "sid": 31,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5).",
+                    "sid": 32,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 related work",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "A review of machine learning for information extraction is beyond the scope of this paper; see e.g.",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Cardie, 1997; Kushmerick and Thomas, 2003).",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A number of researchers have previously developed bootstrapping or semi-supervised approaches to information extraction, named entity recognition, and related tasks (Riloff, 1996; Brin, 1998; Riloff and Jones, 1999; Agichtein et al., 2001; Yangarber et al., 2002; Stevenson and Greenwood, 2005; Etzioni et al., 2005).",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Several approaches for learning from both labeled and unlabeled data have been proposed (Yarowsky, 1995; Blum and Mitchell, 1998; Collins and Singer, 1999) where the unlabeled data is utilised to boost the performance of the algorithm.",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In (Collins and Singer, 1999) Collins and Singer show that unlabeled data can be used to reduce the level of supervision required for named entity classification.",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, their approach is reliant on the presence of redundancy in the named entities to be identified.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX is most closely related to the NOMEN algorithm (Yangarber et al., 2002).",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NOMEN has a very simple iterative structure: at each step, a very small number of high-quality new fragments are extracted, which are treated in the next step as equivalent to seeds from the labeled documents.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NOMEN has a number of parameters which must be carefully tuned to ensure that it does not over-generalise.",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Erroneous additions to the set of trusted fragments can lead to a snowballing of errors.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, NOMEN uses a binary scoring mechanism, which works well in dense corpora with substantial redundancy.",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, many information extraction tasks feature sparse corpora with little or no redundancy.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have extended NOMEN by allowing it to make finergrained (as opposed to binary) scoring decisions at each iteration.",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead of definitively assigning a position to a given field, we calculate the likelihood that it belongs to the field over multiple iterations.",
+                    "sid": 46,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 the tplex algorithm",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The goal of the algorithm is to identify the members of the target fields within unlabelled texts by generalizing from seed examples in labelled training texts.",
+                    "sid": 47,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieve this by generalizing boundary detecting patterns and scoring them with a recursive scoring function.",
+                    "sid": 48,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in Fig.",
+                    "sid": 49,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1, TPLEX bootstraps the learning process from a seed set of labelled examples.",
+                    "sid": 50,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The examples are used to populate initial pattern sets for each target field, with patterns that match the start and end positions of the seed fragments.",
+                    "sid": 51,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each pattern is then generalised to produce more patterns, which are in turn Figure 1: An overview of TPLEX.",
+                    "sid": 52,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A key idea of the algorithm is the following recursive scoring method: pattern scores are a function of the scores of the positions they extract, and position scores are a function of the scores of the patterns that extract them. applied to the corpus in order to identify more base patterns.",
+                    "sid": 53,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This process iterates until no more patterns can be learned.",
+                    "sid": 54,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX employs a recursive scoring metric in which good patterns reinforce good positions, and good positions reinforce good patterns.",
+                    "sid": 55,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we calculate confidence scores for positions and patterns.",
+                    "sid": 56,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our scoring mechanism calculates the score of a pattern as a function of the scores of the positions that it matches, and the score of a position as a function of the scores of the patterns that extract it.",
+                    "sid": 57,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX is a multi-field extraction algorithm in that it extracts multiple fields simultaneously.",
+                    "sid": 58,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By doing this, information learned for one field can be used to constrain patterns learned for others.",
+                    "sid": 59,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, our scoring mechanism ensures that if a pattern scores highly for one field, its score for all other fields is reduced.",
+                    "sid": 60,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the remainder of this section, we describe the algorithm by formalizing the space of learned patterns, and then describing TPLEX\u2019s scoring mechanism.",
+                    "sid": 61,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX extracts fragments of text by identifying probable fragment start and end positions, which are then assembled into complete fragments.",
+                    "sid": 62,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX\u2019s patterns are therefore boundary detectors which identify one end of a fragment or the other.",
+                    "sid": 63,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX learns patterns to identify the start and end of target occurrences independently of each other.",
+                    "sid": 64,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This strategy has previously been employed successfully (Freitag and Kushmerick, 2000; Ciravegna, 2001; Yangarber et al., 2002; Finn and Kushmerick, 2004).",
+                    "sid": 65,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX\u2019s boundary detectors are similar to those learned by BWI (Freitag and Kushmerick, 2000).",
+                    "sid": 66,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A boundary detector has two parts, a left pattern and a right pattern.",
+                    "sid": 67,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each of these patterns is a sequence of tokens, where each is either a literal or a generalized token.",
+                    "sid": 68,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the boundary detector [will be <punc>][<caps> <fname>] would correctly find the start of a name in an utterance such as \u201cwill be: Dr Robert Boyle\u201d and \u201cwill be, Sandra Frederick\u201d, but it will fail to identify the start of the name in \u201cwill be Dr. Robert Boyle\u201d.",
+                    "sid": 69,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The boundary detectors that find the beginnings of fragments are called the pre-patterns, and the detectors that find the ends of fragments are called the post-patterns.",
+                    "sid": 70,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As input, TPLEX requires a set of tagged seed documents for training, and an untagged corpus for learning.",
+                    "sid": 71,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The seed documents are used to initialize the pre-pattern and post-pattern sets for each of the target fields.",
+                    "sid": 72,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Within the seed documents each occurrence of a fragment belonging to any of the target categories is surrounded by a set of special tags that denote the field to which it belongs.",
+                    "sid": 73,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm parses the seed documents and identifies the tagged fragments in each document.",
+                    "sid": 74,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It then generates patterns for the start and end positions of each fragment based on the surrounding tokens.",
+                    "sid": 75,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each pattern varies in length from 2 to n tokens.",
+                    "sid": 76,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given pattern length f, the patterns can then overlap the position by zero to f tokens.",
+                    "sid": 77,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, a pre-pattern of length four with an overlap of one will match the three tokens immediately preceeding the start position of a fragment, and the one token immediately following that position.",
+                    "sid": 78,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, we generate En i=2(i + 1) patterns from each seed position.",
+                    "sid": 79,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we set the maximum pattern length to be n = 4.",
+                    "sid": 80,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX then grows these initial sets for each field by generalizing the initial patterns generated for each seed position.",
+                    "sid": 81,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employ eight different generalization tokens when generalizing the literal tokens of the initial patterns.",
+                    "sid": 82,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The wildcard token <*> matches every literal.",
+                    "sid": 83,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second type of generalization is <punc>, which matches punctuation such as commas and periods.",
+                    "sid": 84,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, the token <caps> matches literals with an initial capital letter, <num> matches a sequence of digits, <alpha num> matches a literal consisting of letters followed by digits, and <num alpha> matches a literal consisting of digits followed by letters.",
+                    "sid": 85,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final two generalisations are <fname> and <lname>, which match literals that appear in a list of first and last names (respectively) taken from US Census data.",
+                    "sid": 86,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All patterns are then applied to the entire corpus, including the seed documents.",
+                    "sid": 87,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When a pattern matches a new position, the tokens at that position are converted into a maximally-specialized pattern, which is added to the pattern set.",
+                    "sid": 88,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Patterns are repeatedly generalized until only one literal token remains.",
+                    "sid": 89,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This whole process iterates until no new patterns are discovered.",
+                    "sid": 90,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not generalize the new maximally-specialized patterns discovered in the unlabelled data.",
+                    "sid": 91,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This ensures that all patterns are closely related to the seed data.",
+                    "sid": 92,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(We experimented with generalizing patterns from the unlabelled data, but this rapidly leads to overgeneralization.)",
+                    "sid": 93,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The locations in the corpus where the patterns match are regarded as potential target positions.",
+                    "sid": 94,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pre-patterns indicate potential start positions for target fragments while post-patterns indicate end positions.",
+                    "sid": 95,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When all of the patterns have been matched against the corpus, each field will have a corresponding set of potential start and end positions.",
+                    "sid": 96,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Positions are denoted by r, and patterns are denoted by p. Formally, a pattern is equivalent to the set of positions that it extracts.The notation p \u2192 r indicates that pattern p matches position r. Fields are denoted by f, and F is the set of all fields.",
+                    "sid": 97,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The labelled training data consists of a set of positions R = {..., r,...}, and a labelling function T : R \u2192 F \u222a {X} for each such position.",
+                    "sid": 98,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T (r) = f indicates that position r is labelled with field f in the training data.",
+                    "sid": 99,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T (r) = X means that r is not labelled in the training data (i.e. r is a negative example for all fields).",
+                    "sid": 100,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The unlabelled test data consists of an additional set of positions U.",
+                    "sid": 101,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given this notation, the learning task can be stated concisely as follows: extend the domain of T to U, i.e. generalize from T (r) for r \u2208 R, to T (r) for r \u2208 U.",
+                    "sid": 102,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the patterns and positions for the fields have been identified we must score them.",
+                    "sid": 103,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Below we will describe in detail the recursive manner in which we define scoref(r) in terms of scoref(p), and vice versa.",
+                    "sid": 104,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given that definition, we want to find fixed-point values for scoref(p) and scoref(r).",
+                    "sid": 105,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To achieve this, we initialize the scores, and then iterate through the scoring process (i.e. calculate scores at step t + 1 from scores at step t).",
+                    "sid": 106,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This process repeats until convergence.",
+                    "sid": 107,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initialization.",
+                    "sid": 108,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the scores of the patterns and positions of a field are recursively dependant, we must assign initial scores to one or the other.",
+                    "sid": 109,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initially the only elements that we can classify with certainty are the seed fragments.",
+                    "sid": 110,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We initialise the scoring function by assigning scores to the positions for each of the fields.",
+                    "sid": 111,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way it is then possible to score the patterns based on these initial scores.",
+                    "sid": 112,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From the labelled training data, we derive the prior probability \u03c0(f) that a randomly selected position belongs to field f \u2208 F: Note that 1 \u2212 E f \u03c0(f) is simply the prior probability that a randomly selected position should not be extracted at all; typically this value is close to 1.",
+                    "sid": 113,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the priors \u03c0(f), we score each potential posiThe first case handles positions in the unlabelled documents; at this point we don\u2019t know anything about them and so fall back to the prior probabilities.",
+                    "sid": 114,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second and third cases handle positions in the seed documents, for which we have complete information.",
+                    "sid": 115,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Iteration.",
+                    "sid": 116,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After initializing the scores of the positions, we begin the iterative process of scoring the patterns and the positions.",
+                    "sid": 117,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compute the score of a pattern p for field f we compute a positive score, posf(p); a negative score, negf(p); and an unknown score, unk(p). posf(p) can be thought of as a measure of the benefit of p to f, while negf(p) measures the harm of p to f, and unk(p) measures the uncertainty about the field with which p is associated.",
+                    "sid": 118,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These quantities are defined as follows: posf(p) is the average score for field f of positions extracted by p. We first compute: where Zp = P P f(r) is a normalizing constant to ensure that P p\u2192r scoret f f posf(p) = 1.",
+                    "sid": 119,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each field f and pattern p, negf(p) is the extent to which p extracts positions whose field is not f: Finally, unk(p) measures the degree to which p extract positions whose field is unknown: where unk(r) measures the degree to which position r is unknown.",
+                    "sid": 120,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To be completely ignorant of a position\u2019s field is to fall back on the prior field probabilities \u03c0(f).",
+                    "sid": 121,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we calculate unk(r) by computing the sum of squared differences between scoret f(r) and \u03c0(f): The normalization constant Z ensures that unk(r) = 0 for the position r whose scores are the most different from the priors\u2014ie, r is the \u201cleast unknown\u201d position.",
+                    "sid": 122,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each field f and pattern p, scoretf(p) is defined in terms of posf(p), negf(p) and unk(p) as follows: This definition penalizes patterns that are either inaccurate or have low coverage.",
+                    "sid": 123,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we complete the iterative step by calculating a revised score for each position: where min = minf,p\u2192r p\u2192r scoretf(p) and max = maxf,p\u2192r p\u2192r scoretf(p), are used to normalize the scores to ensure that the scores of unlabelled positions never exceed the scores of labelled positions.",
+                    "sid": 124,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first case in the function for scoret+1 f (r) handles positive and negative seeds (i.e. positions in labelled texts), the second case is for unlabelled positions.",
+                    "sid": 125,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We iterate this procedure until the scores of the patterns and positions converge.",
+                    "sid": 126,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we stop when In our experiments, we fixed \u03b8 = 1.",
+                    "sid": 127,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to the nature of the pattern generation strategy, many more candidate positions will be identified than there are targets in the corpus.",
+                    "sid": 128,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before we can proceed with matching start and end positions to form fragments, we filter the positions to remove the weaker candidates.",
+                    "sid": 129,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We rank all of positions for each field according to their score.",
+                    "sid": 130,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then select positions with a score above a threshold \u03b2 as potential positions.",
+                    "sid": 131,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way we reduce the number of candidate positions from tens of thousands to a few hundred.",
+                    "sid": 132,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next step in the process is to identify complete fragments within the corpus by matching pre-positions with post-positions.",
+                    "sid": 133,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To do this we compute the length probabilities for the fragments of field f based on the lengths of the seed fragments of f. Suppose that position r1 has been identified as a possible start for field f, and position r2 has been identified as a possible field f end, and let Pf(f) be the fraction of field f seed fragments with length f. Then the fragment e = (r1, r2) is assigned a score Despite these measures, overlapping fragments still occur.",
+                    "sid": 134,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the correct fragments can not overlap, we know that if two extracted fragments overlap, at least one must be wrong.",
+                    "sid": 135,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We resolve overlapping fragments by calculating the set of non-overlapping fragments that maximises the total score while also accounting for the expected rate of occurrence of fragments from each field in a given document.",
+                    "sid": 136,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In more detail, let E be the set of all fragments extracted from some particular document D. We are interested in the score of some subset G C E of D\u2019s fragments.",
+                    "sid": 137,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let score(G) be the chance that G is the correct set of fragments for D. Assuming that the correctness of the fragments can be determined independently given that the correct number of fragments have been identified for each field, then score(G) can be defined zero if \u2203 (r1, r1), (s2, r2) \u2208 G such that (s1, r1) overlaps (s2, r2), and score(G) = Qf score(Gf) otherwise, where Gf \u2286 G is the fragments in G for field f. The score of Gf = {e1, e2, ...} is defined as score(Gf) = Pr(|Gf|)\u00b7Qj score(ej), where Pr(|Gf|) is the fraction of training documents that have |Gf |instances of field f. It is infeasible to enumerate all subsets G \u2286 E, so we perform a heuristic search.",
+                    "sid": 138,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The states in the search space are pairs of the form (G, P), where G is a list of good fragments (i.e. fragments that have been accepted), and P is a list of pending fragments (i.e. fragments that haven\u2019t yet been accepted or rejected).",
+                    "sid": 139,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The search starts in the state ({}, E), and states of the form (G, {}) are terminal states.",
+                    "sid": 140,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The children of state (G, P) are all ways to move a single fragment from P to G. When forming a child\u2019s pending set, the moved fragment along with all fragments that it overlaps are removed (meaning that the moved fragment is selected and all fragments with which it overlaps are rejected).",
+                    "sid": 141,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More precisely, the children of state (G, P) are: The search proceeds as follows.",
+                    "sid": 142,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We maintain a set S of the best K non-terminal states that are to be expanded, and the best terminal state B encountered so far.",
+                    "sid": 143,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initially, S contains just the initial state.",
+                    "sid": 144,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, the children of each state in S are generated.",
+                    "sid": 145,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If there are no such children, the search halts and B is returned as the best set of fragments.",
+                    "sid": 146,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, B is updated if appropriate, and S is set to the best K of the new children.",
+                    "sid": 147,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that K = \u221e corresponds to an exhaustive search.",
+                    "sid": 148,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we used K = 5.",
+                    "sid": 149,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 experiments",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "To evaluate the performance of our algorithm we conducted experiments with four widely used corpora: the CMU seminar set, the Austin jobs set, the Reuters acquisition set [www.isi.edu/info-agents/RISE], and the MUC-7 named entity corpus [www.ldc.upenn.edu].",
+                    "sid": 150,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We randomly partitioned each of the datasets into two evenly sized subsets.",
+                    "sid": 151,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then used these as labeled and unlabeled sets.",
+                    "sid": 152,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each experiment the algorithm was presented with a document set comprised of the test set and a randomly selected percentage of the documents from the training set.",
+                    "sid": 153,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if an experiment involved providing the algorithm with a 5% seed set, then 5% of the documents in the training set (2.5% of the documents in the entire dataset) would be selected at random and used in conjunction with the documents in the test set.",
+                    "sid": 154,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each training set size, we ran five iterations with a randomly selected subset of the documents used for training.",
+                    "sid": 155,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we are mainly motivated by scenarios with very little training data, we varied the size of the training set from 1\u201310% (1\u201316% for MUC-7NE) of the available documents.",
+                    "sid": 156,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision, recall and F1 were calculated using the BWI (Freitag and Kushmerick, 2000) scorer.",
+                    "sid": 157,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used all occurrences mode, which records a match in the case where we extract all of the valid fragments in a given document, but we get no credit for partially correct extractions.",
+                    "sid": 158,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared TPLEX to BWI (Freitag and Kushmerick, 2000), LP2 (Ciravegna, 2001), ELIE (Finn and Kushmerick, 2004), and an approach based on conditional random fields (Lafferty et al., 2001).",
+                    "sid": 159,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data for BWI was obtained using the TIES implementation [tcc.itc.it/research/textec/toolsresources/ties.html].",
+                    "sid": 160,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data for the LP2 learning curve was obtained from (Ciravegna, 2003).",
+                    "sid": 161,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results for ELIE were generated by the current implementation [http://smi.ucd.ie/aidan/Software.html].",
+                    "sid": 162,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the CRF results, we used MALLET\u2019s SimpleTagger (McCallum, 2002), with each token encoded with a set of binary features (one for each observed literal, as well as the eight token generalizations).",
+                    "sid": 163,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results in Fig.",
+                    "sid": 164,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 indicate that in Acquisitions dataset, our algorithm substantially outperforms the competitors at all points on the learning curve.",
+                    "sid": 165,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the other datasets, the results are mixed.",
+                    "sid": 166,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For SA and Jobs, TPLEX is the second best algorithm at the low end of the learning curve, and steadily loses ground as more labelled data is available.",
+                    "sid": 167,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX is the least accurate algorithm for the MUC data.",
+                    "sid": 168,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Sec.",
+                    "sid": 169,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5, we discuss a variety of modifications to the TPLEX algorithm that we anticipate may improve its performance.",
+                    "sid": 170,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the graph in Fig.",
+                    "sid": 171,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 compares TPLEX for the SA dataset, in two configurations: with a combination of labelled and unlabelled documents as usual, and with only labelled documents.",
+                    "sid": 172,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In both instances the algorithm was given the same seed and testing documents.",
+                    "sid": 173,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first case the algorithm learned patterns using both the labeled and unlabeled documents.",
+                    "sid": 174,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in the second case, only the labeled documents were used to generate the patterns.",
+                    "sid": 175,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These data confirm that TPLEX is indeed able to improve performance from unlabelled data.",
+                    "sid": 176,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 discussion",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We have described TPLEX, a semi-supervised algorithm for learning information extraction patterns.",
+                    "sid": 177,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key idea is to exploit the following recursive definition: good patterns are those that extract good fragments, and good fragments are those that are extracted by good patterns.",
+                    "sid": 178,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This definition allows TPLEX to perform well with very little training data in domains where other approaches that assume fragment redundancy would fail.",
+                    "sid": 179,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conclusions.",
+                    "sid": 180,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From our experiments we have observed that our algorithm is particularly competitive in scenarios where very little labelled training data is available.",
+                    "sid": 181,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We contend that this is a result of our algorithm\u2019s ability to use the unlabelled test data to validate the patterns learned from the training data.",
+                    "sid": 182,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have also observed that the number of fields that are being extracted in the given domain affects the performance of our algorithm.",
+                    "sid": 183,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TPLEX extracts all fields simultaneously and uses the scores from each of the Figure 3: F1 averaged across all fields, for the Seminar dataset trained on only labeled data and trained on labeled and unlabeled data patterns that extract a given position to determine the most likely field for that position.",
+                    "sid": 184,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With more fields in the problem domain there is potentially more information on each of the candidate positions to constrain these decisions.",
+                    "sid": 185,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Future work.",
+                    "sid": 186,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are currently extending TPLEX in several directions.",
+                    "sid": 187,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, position filtering is currently performed as a distinct post-processing step.",
+                    "sid": 188,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It would be more elegant (and perhaps more effective) to incorporate the filtering heuristics directly into the position scoring mechanism.",
+                    "sid": 189,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, so far we have focused on a BWI-like pattern language, but we speculate that richer patterns permitting (for example) optional or reordered tokens may well deliver substantial increases in accuracy.",
+                    "sid": 190,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are also exploring ideas for semi-supervised learning from the machine learning community.",
+                    "sid": 191,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, probabilistic finite-state methods such hidden Markov models and conditional random fields have been shown to be competitive with more traditional pattern-based approaches to information extraction (Fuchun and McCallum, 2004), and these methods can exploit the Expectation Maximization algorithm to learn from a mixture of labelled and unlabelled data (Lafferty et al., 2004).",
+                    "sid": 192,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It remains to be seen whether this approach would be effective for information extraction.",
+                    "sid": 193,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another possibility is to explore semi-supervised extensions to boosting (d\u2019Alch\u00b4e Buc et al., 2002).",
+                    "sid": 194,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Boosting is a highly effective ensemble learning technique, and BWI uses boosting to tune the weights of the learned patterns, so if we generalize boosting to handle unlabelled data, then the learned weights may well be more effective than those calculated by TPLEX.",
+                    "sid": 195,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Acknowledgements.",
+                    "sid": 196,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This research was supported by grants SFI/01/F.1/C015 from Science Foundation Ireland, and N00014-03-1-0274 from the US Office of Naval Research.",
+                    "sid": 197,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

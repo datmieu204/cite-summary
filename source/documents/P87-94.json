@@ -1,0 +1,647 @@
+{
+    "ID": "P87-94",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We present an approximative IBM Model 4 for word alignment.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Di\ufb00erent with the most widely-used word aligner GIZA++, which implements all the 5 IBM models and HMM model in the framework of Expectation Maximum (EM), we adopt a full Bayesian inference which integrates over all possible parameter values, rather than estimating a single parameter value.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Empirical results show promising improvements in alignment quality as well as in BLEU score for the translation performance over baselines.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Keywords : Bayesian inference; Word alignment; Statistical machine translation.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Word alignment can be de\ufb01ned as a procedure for detecting the corresponding words in a bilingual sentence pair.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of the notorious criticisms of word alignment is the inconsistence between the word alignment model to the phrase based translation model.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we have no intention to avoid mentioning this inherent weakness of word alignment, but we would say, as far as we know, word alignment is a fundamental component for most of the SMT systems.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Phrase or the other higher level translation knowledge is extracted based on the word alignment, which is called two-stage approach.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And even for approaches of so-called direct phrase alignment, they can rarely abandon word alignment thoroughly.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of the computation complexity of phrase alignment, word alignment is usually used to constrain the inference.1 DeNero proposes a relative pure joint phrase model but still uses the word alignment as initialization and smoothing, which shows the least dependency on word alignment.2 Neubig uses Bayesian methods and Inversion Transduction Grammar for joint phrase alignment,3 and the base distribution for the Dirichlet Process 5 prior is constructed by the word alignment model.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, word alignment is well worth concern.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our hope is to induce a better word alignment by \u221711-1, NojiHigashi, Kusatsu, Shiga, Japan.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "87 88 Z. Li, H. Ikeda utilizing the state-of-the-art learning technology, and establish a better baseline for the word level alignment models.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bayesian inference, the approach we adopt in this paper, has been broadly applied to various learning of latent structure.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Goldwater points out that two theoretical factors contribute to the superiority of Bayesian inference.7 First, integrating over parameter values leads to greater robustness in decision.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of the problems that trouble EM algorithm is over-\ufb01tting.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moore discusses details of how a \u201dGarbage collector\u201d is generated.11 He also suggests a number of heuristic solutions, but Bayesian inference can o\ufb00er a more principled solution.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second factor is that the integration permits the use of priors favoring sparse distributions, which proved to be more consistent with nature of natural language.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another practical advantage is that the implementation can be much easier than EM.12 In the following sections, we will have a review for IBM Model 4 in Section 2, and reformulate it into a simpler and Bayesian form in Section 3.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 gives the Bayesian inference, and Section 5 reports results of experiment.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 6 compares related research, and Section 7 concludes.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "ibm model 4. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Model 4 is a fertility-based alignment model, and can be viewed as the outstanding representative of all the IBM translation models.",
+                    "sid": 22,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model can be expressed as P (F, A|E; n, t, d) = P\u03d5 (\u03d5I |E; n)P\u03c4 (\u03c4 I |\u03d5I , E; t)P\u03c0 (\u03c0I |\u03d5I , \u03c4 I , E; d) (1) 0 0 0 I I 0 0 0 I \u03d5i 1 I \u03d5i = n0 (\u03d50 | \u2211 \u03d5i ) \u220f n(\u03d5i |ei ) \u220f \u220f t(\u03c4ik |ei ) \u03d50 ! \u220f \u220f pik (\u03c0ik ) where i=1 I i=1 ( \u2211I i=0 k=1 ) \u2211I i=1 k=1 n0 (\u03d50 | \u2211 \u03d5i ) = i=1 i=1 \u03d5i \u03d50 p0 i=1 \u03d5i \u22122\u03d50 p1 \u03d50 (2) { d1 (j \u2212 c\u03c1i |A(e\u03c1i ), B(\u03c4i1 )) if k = 1 pik (\u03c0ik ) = d>1 (j \u2212 \u03c0 ik\u22121 |B(\u03c4ik )) if k > 1 (3) P\u03d5 , P\u03c4 and P\u03c0 denote fertility model, lexical model and distortion model respectively, and their parameters can be described as n, t, and d. More details can be found in Brown et al.4",
+                    "sid": 23,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "bayesian model. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Our Bayesian model almost repeats the same generative scenarios shown in the previous section, but puts an appropriate prior for the parameters in the model.",
+                    "sid": 24,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is, parameter will be treated as variable, which makes a signi\ufb01cant di\ufb00erence to the traditional MLE or MAP approaches.",
+                    "sid": 25,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our proposed Bayesian setting, the fertility A Fully Bayesian Inference for Word Alignment 89 \u03d5 and translation f for each target word e, both of which follow a Multinominal distribution, will be treated as a random variable with a prior, and Dirichlet distribution is a natural choice for them, since it is conjugate to the Multinominal distribution.",
+                    "sid": 26,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we can not specify the dimensions of the above distributions in advance, one solution is to take advantage of the nonparametric prior.",
+                    "sid": 27,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here we use the Dirichlet Process (DP) which can ensure that the resulting distributions concentrate their probability mass on a small number of fertilities or translation candidates while retaining reasonable probability for unseen possibilities.",
+                    "sid": 28,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ne \u223c D P ( \u03b1 , P o is s o n ( 1 , \u03d5 ) ) (4) \u03d5|e \u223c n e (5) te \u223c D P ( \u03b2 , T 0 ( f |e ) ) (6) f |e \u223c te (7) In the above distribution formulas, ne denotes the fertility distribution for e, and hyperparameter \u03b1 is a concentration parameter which a\ufb00ects the variance of the draws.",
+                    "sid": 29,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make P oisson(1, \u03d5) as the base distribution for fertility which encodes our prior knowledge about the properties of fertilities.",
+                    "sid": 30,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Namely, high fertility should be discouraged except that there is enough evidence.",
+                    "sid": 31,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03bb(e) denotes the expected fertility for e, and for simplicity, we assign 1 as the value of expected fertility for all the words.",
+                    "sid": 32,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "te is a translation distribution for e, and \u03b2 is the concentration parameter.",
+                    "sid": 33,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for base distribution T0 , shown as: T0 (f |e) = \u2211 p(et|e)p(f t|et)p(f |f t) (8) et,f t where et denotes e\u2019s Part-of-Speech (henceforth POS), and f t denotes f \u2019s POS.",
+                    "sid": 34,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p(f t|et) is a POS translation model, p(et|e) is a transition probability from word to POS, and p(f |f t) is a uniform distribution (over word types tagged with f t) for each word f . T0 encodes such a prior knowledge: POS provides clues for the alignment.",
+                    "sid": 35,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While our Bayesian model still has other free parameters, we still use p0 and p1 as parameters to model fertility for e0 as same as in IBM models, but we \ufb01x them to reasonable values in order to focus on learning for the other distributions.",
+                    "sid": 36,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for the distortion model, we simply adopt a distance penalty (not including the distortion for words generated by e0 ) shown as follows 1 p\u03c0 (A) \u221d \u03d5 ! J \u220f j=1,aj \u0338=0 { \u03c0\u03c1i \u03d5\u03c1 b|j\u2212prev(j)| (9) prev(j) = if k = 1 i \u03c0ik\u22121 if k > 1 (10) 90 Z. Li, H. Ikeda where b is a \ufb01xed value less than 1, prev(j) means the position of predecessor for fj . \u03c1i denotes the \ufb01rst position to the left of ei for which has a nonzero fertility, and \u03c0ik is the position of word \u03c4ik for permutation \u03c0.",
+                    "sid": 37,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \ufb01rst part of our distortion formula models the distortion procedure for words generated by e0 , which uses the same strategy as IBM models that all these words are positioned only after the nonempty positions have been covered.",
+                    "sid": 38,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, there are \u03d50 ! ways to order the \u03d50 words.",
+                    "sid": 39,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to the above simpli\ufb01cation for fertility model, we will see a more convenient inference in following sections.",
+                    "sid": 40,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another theoretical reason is that we do not expect a skewed distribution for the above parameters as same as the fertility and lexical models.",
+                    "sid": 41,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, it is unnecessary to put a prior for these parameters.",
+                    "sid": 42,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "bayesian inference. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "A frequent strategy to infer the posterior distribution is Gibbs sampling.12 For our concerned word alignment, instead of sampling the parameters explicitly, we sample the alignment structure directly with the parameters marginalized out.",
+                    "sid": 43,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then the Gibbs sampler is converted into a collapsed Gibbs sampler, and we have P (F, A|E; \u03b1, \u03b2) = \u222b n,t P (F, A, n, t, d|E; \u03b1, \u03b2) (11) where n comprises all the ne for each e, and t comprises all the te . d does not need integral since we do not treat this parameter as a random variable, and will be replaced by constant b in the left part of the integral formula.",
+                    "sid": 44,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Due to the collapsed sampler, we need not sample the parameters explicitly, but directly sample the latent alignment structure in condition of \ufb01xed \u03b1 and \u03b2.",
+                    "sid": 45,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our collapsed Gibbs sampler works by sampling each component of vector a alternatively.",
+                    "sid": 46,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability for a new component value when the other values are \ufb01xed can be written P (aj |aj , F, E; \u03b1, \u03b2) \u221d (12) P\u03d5 (aj |aj , F, E; \u03b1, \u03b2)P\u03c4 (aj |aj , F, E; \u03b1, \u03b2)P\u03c0 (aj |aj , F, E; \u03b1, \u03b2) where aj denotes the alignment exclude aj . P\u03d5 , P\u03c4 and P\u03c0 represent fertility, translation and distortion sub-models respectively.",
+                    "sid": 47,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability of new sample can be calculated according to the three sub-models.",
+                    "sid": 48,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This calculation is very similar with the procedure that \ufb01nds the neighbour alignments in the E-step of EM, but in a way metaphorized as Chinese Restaurant Process instead of using \ufb01xed parameters.12 First, we will investigate the translation model.",
+                    "sid": 49,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thanks to the exchangeability, we can write C ount(eaj , fj ) + \u03b2T0 (fj |eaj ) P\u03c4 (aj |aj , F, E; \u03b1, \u03b2) \u221d \u03a3f C ount(eaj (13) , f ) + \u03b2 A Fully Bayesian Inference for Word Alignment 91 where C ount(e, f ) is the number of links between word pair (e, f ) in the other part of this sentence pair and other sentence pairs in the training corpus.",
+                    "sid": 50,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for the fertility model, because of the special treatment of the fertility for e0 , two cases should be considered.",
+                    "sid": 51,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the \ufb01rst case aj ! = 0, C ount(eaj , \u03d5aj + 1) + \u03b1P oisson(1, \u03d5aj + 1) P\u03d5 (aj |aj , F, E; \u03b1, \u03b2) \u221d C ount(eaj , \u03d5aj ) + \u03b1P oisson(1, \u03d5aj (14) ) where C ount(e, \u03d5) is the frequency of cases where word e has a fertility \u03d5, and the denominator encodes the fact that the new assignment will cause an instance of word-fertility to be removed from the cache as the new word-fertility is added.",
+                    "sid": 52,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "And in the second case, aj = 0.",
+                    "sid": 53,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is described in the previous section, the fertility for empty word is not decided by itself, but decided by the number of words generated by nonempty words, which follows a binominal distribution.",
+                    "sid": 54,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So we can infer P\u03d5 (aj = 0|aj , F, E; \u03b1, \u03b2) \u221d n0 (\u03d50 + 1| \u2211I I \u03d5i ) \u2211I = i=1 \u03d5i \u2212 \u03d50 )p1 (15) n0 (\u03d50 | \u2211i=1 \u03d5i ) (\u03d50 + 1)p0 The calculation for the distortion model is more direct since it is unnecessary to consider the cache model.",
+                    "sid": 55,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of the special treatment for distortion of words aligned with the empty word, we also need to take account two cases, as for the \ufb01rst case, aj ! = 0 P\u03c0 (aj |aj , F, E; \u03b1, \u03b2) \u221d b| j\u2212prev(j)|+|next(j)\u2212j|\u2212|next(j)\u2212prev(j)| (16) where the exponent means 3 distortions are changed, and next(j) is subject to j == prev(next(j)).",
+                    "sid": 56,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the second case, where aj = 0, we just need to consider the probability of a permutation of \u03d50 words in the remained uncovered positions.",
+                    "sid": 57,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that, the fertility value changes from \u03d50 to \u03d50 + 1 after this new assignment, then we have P\u03c0 (aj = 0|aj , F, E; \u03b1, \u03b2) \u221d (\u03d5 \u03d50 ! = 0 + 1)!",
+                    "sid": 58,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03d50 1 (17) + 1 The \ufb01nal probability for the new derivation should combine all the above in- \ufb02uence factors, and the production of all the three factors as the \ufb01nal probability.",
+                    "sid": 59,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm is described in Table 1.",
+                    "sid": 60,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To accelerate the convergence, we use HMM based Viterbi alignment as an initialization.",
+                    "sid": 61,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After burn-in iterations, we begin to collect alignment counts from the samples.",
+                    "sid": 62,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "All the corpus we used is ChineseEnglish corpus in patent domain, which is released by NTCIR9.15 We select 350K sentence pairs as training corpus, and 1000 pairs as 92 Z. Li, H. Ikeda Table 1.",
+                    "sid": 63,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gibbs sampling for word alignment.",
+                    "sid": 64,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each sentence pair (E, F ) in corpus Initialize alignment For each generation For each sentence pair (E, F ) in corpus For each j in [1, |F |] For each i in [0, |E|] calculate p(aj = i|aj , F, E; \u03b1, \u03b2) Normalize p(aj |aj , F, E; \u03b1, \u03b2) Sample a new value for aj ; update the cache count If (Current generation \u2265 Burn-in) Save alignment for (E, F ) development set.",
+                    "sid": 65,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also annotate 300 word aligned sentence pairs to evaluate the quality of word alignment, and select 2000 bilingual pairs as the test set for translation.",
+                    "sid": 66,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before running our Bayesian aligner, we should estimate the parameters in T0 . We tagged the training corpus using some POS taggers, and replace each word by its POS to get a POS parallel corpus.",
+                    "sid": 67,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we ran IBM model 1 on the POS corpus to get the POS translation probabilities.",
+                    "sid": 68,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Through dividing the number of occurrences of the word-tag pair (e, et) by the number of occurrences of e, we can get p(et|e).",
+                    "sid": 69,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose word f is tagged with f t at least once in the training corpus, then p(f |f t) is equal to the result of dividing 1 by the number of unique words tagged with f t; otherwise, p(f |f t) is 0.To contrast our approach with GIZA++, we need the Viterbi alignment ex tracted from the multiple samples, and one strategy is to assign each aj as the most frequent value in the collected samples.",
+                    "sid": 70,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set 1000 as the number of total iterations and 0 as the burn-in value, and con\ufb01gure \u03b1 and \u03b2 with varying values.",
+                    "sid": 71,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We run GIZA++ in the standard con\ufb01guration (Training scheme is abbreviated as 15 H 5 33 43 ).",
+                    "sid": 72,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both of the above two approaches need run in two directions and symmetrization.",
+                    "sid": 73,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows the comparison of AER between GIZA++ (EM) and our Bayesian model.",
+                    "sid": 74,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When \u03b1 = 1 and \u03b2 = 100, our proposed approach can get the best performance, which reveals a satisfying improvement for alignment quality in terms of AER, with a reduction of 3.41% over GIZA++.",
+                    "sid": 75,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For translation experiments, we use Moses as our decoder,10 and use SRILM to train 4-grams language models on both sides of the bilingual corpus.",
+                    "sid": 76,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is shown in Table 3, we can see that the Bayesian approach outperforms EM approach in both directions, which proves the e\ufb00ectiveness of our proposed approach.",
+                    "sid": 77,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Our approach is similar with Coskun in spirit to Bayesian inference,9 where it places a prior for the model parameters and adopts a collapsed sampler, but they take Model 1 as the inference object, which we suppose somewhat harsh.",
+                    "sid": 78,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Zhao proposes a brief fertility based HMM model,8 which also decreases the complexity of Model A Fully Bayesian Inference for Word Alignment 93 Table 2.",
+                    "sid": 79,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance of Word Alignment.",
+                    "sid": 80,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Met hod A E R EM (GI ZA ++) 1 6 . 1 2 % Bay esia n(\u03b1 = 0.5, \u03b2 = 100) 1 3 . 4 3 % Bay esia n(\u03b1 = 1, \u03b2 = 100) 1 2 . 7 1 % Bay esia n(\u03b1 = 1.5, \u03b2 = 100) 1 3 . 7 4 % Bay esia n(\u03b1 = 1, \u03b2 = 50) 1 5 . 0 4 % Bay esia n(\u03b1 = 1, \u03b2 = 200) 1 2 . 9 8 % Table 3.",
+                    "sid": 81,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance of Final Translation (BLEU4).",
+                    "sid": 82,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Met hod C h i n es e E n gl is h E n gl is h C hi n es e EM (GI ZA ++) 0.",
+                    "sid": 83,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 7 6 6 0.",
+                    "sid": 84,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 9 6 4 Bay esia n(\u03b1 = 0.5, \u03b2 = 100) 0.",
+                    "sid": 85,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 7 8 7 0.",
+                    "sid": 86,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 9 9 3 Bay esia n(\u03b1 = 1, \u03b2 = 100) 0 . 2 7 9 8 0 . 3 0 1 1 Bay esia n(\u03b1 = 1.5, \u03b2 = 100) 0.",
+                    "sid": 87,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 7 8 1 0.",
+                    "sid": 88,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 9 8 6 Bay esia n(\u03b1 = 1, \u03b2 = 50) 0.",
+                    "sid": 89,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 7 7 8 0.",
+                    "sid": 90,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 9 7 8 Bay esia n(\u03b1 = 1, \u03b2 = 200) 0.",
+                    "sid": 91,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 7 9 5 0.",
+                    "sid": 92,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 0 0 3 4 but keeps the fertility as a component of modeling.",
+                    "sid": 93,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But they do not place any prior on the parameters, which can be viewed as a stochastic EM.",
+                    "sid": 94,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also assume fertility follows a Poisson distribution, while ours adopts a DP prior and Poisson distribution as the base distribution in the DP prior.",
+                    "sid": 95,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Darcey et al. use variational Bayes which closely resembles the normal form of EM algorithm to improve the performance of GIZA++, as well as the BLEU score.14",
+                    "sid": 96,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions and future work. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We have described an approximative IBM model 4 for word alignment, and adopt Bayesian inference which currently is a promising replacement for EM and already broadly applied for various tasks in the \ufb01eld of NLP.",
+                    "sid": 97,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our pilot experiment shows a higher AER for word alignment as well as a modest improved BLEU score for translation.",
+                    "sid": 98,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our current research focuses on phrase extraction and reordering from multiple alignment samples generated by our Bayesian inference, and we expect a better performance.",
+                    "sid": 99,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

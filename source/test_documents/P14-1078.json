@@ -1,0 +1,1535 @@
+{
+    "ID": "P14-1078",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Medical Relation Extraction with Manifold Models",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we present a manifold model for medical relation extraction.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model is built upon a medical corpus containing 80M sentences (11 gigabyte text) and designed to accurately and efficiently detect the key medical relations that can facilitate clinical decision making.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach integrates domain specific parsing and typing systems, and can utilize labeled as well as unlabeled examples.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To provide users with more flexibility, we also take label weight into consideration.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Effectiveness of our model is demonstrated both theoretically with a proof to show that the solution is a closed-form solution and experimentally with positive results in experiments.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "There exists a vast amount of knowledge sources and ontologies in the medical domain.",
+                    "sid": 6,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such information is also growing and changing extremely quickly, making the information difficult for people to read, process and remember.",
+                    "sid": 7,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combination of recent developments in information extraction and the availability of unparalleled medical resources thus offers us the unique opportunity to develop new techniques to help healthcare professionals overcome the cognitive challenges they face in clinical decision making.",
+                    "sid": 8,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Relation extraction plays a key role in information extraction.",
+                    "sid": 9,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using question answering as an example (Wang et al., 2012): in question analysis, the semantic relations between the question focus and each term in the clue can be used to identify the weight of each term so that better search queries can be generated.",
+                    "sid": 10,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In candidate answer generation, relations enable the background knowledge base to be used for potential candidate answer generation.",
+                    "sid": 11,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In candidate answer scoring, relation-based matching algorithms can go beyond explicit lexical and syntactic information to detect implicit semantic relations shared across the question and passages.",
+                    "sid": 12,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To construct a medical relation extraction system, several challenges have to be addressed: \u2022 The first challenge is how to identify a set of relations that has sufficient coverage in the medical domain.",
+                    "sid": 13,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this issue, we study a real-world diagnosis related question set and identify a set of relations that has a good coverage of the clinical questions.",
+                    "sid": 14,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 The second challenge is how to efficiently detect relations in a large amount of medical text.",
+                    "sid": 15,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The medical corpus underlying our relation extraction system contains 80M sentences (11 gigabytes pure text).",
+                    "sid": 16,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To extract relations from a dataset at this scale, the relation detectors have to be fast.",
+                    "sid": 17,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we speed up relation detectors through parsing adaptation and replacing non-linear classifiers with linear classifiers.",
+                    "sid": 18,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 The third challenge is that the labeled relation examples are often insufficient due to the high labeling cost.",
+                    "sid": 19,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we build a naive model to detect relations, the model tends to overfit for the labeled data.",
+                    "sid": 20,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this issue, we develop a manifold model (Belkin et al., 2006) that encourages examples (including both labeled and unlabeled examples) with similar contents to be assigned with similar scores.",
+                    "sid": 21,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model goes beyond regular regression models in that it applies constraints to those coefficients, such that the topology of the given data manifold will be respected.",
+                    "sid": 22,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Computing the optimal weights in a regression model and preserving manifold topology are conflicting objectives, we present a closed-form solution to ideally balance these two goals.",
+                    "sid": 23,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The contributions of this paper on medical relation extraction are three-fold: \u2022 The problem setup is new.",
+                    "sid": 24,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There is a \u201cfundamental\u201d difference between our problem setup and the conventional setups, like i2b2 (Uzuner et al., 2011).",
+                    "sid": 25,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In i2b2 relation extraction task, entity mentions are manually labeled, and each mention has 1 of 3 concepts: \u2018treatment\u2019, \u2018problem\u2019, and \u2018test\u2019.",
+                    "sid": 26,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To resemble real-world medical relation extraction challenges where perfect entity mentions do not exist, our new setup requires the entity mentions to be automatically detected.",
+                    "sid": 27,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most well-known tool to detect medical entity mentions is MetaMap (Aronson, 2001), which considers all terms as entities and automatically associates each term with a number of concepts from UMLS CUI dictionary (Lindberg et al., 1993) with more than 2.7 million distinct concepts (compared to 3 in i2b2).",
+                    "sid": 28,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The huge amount of entity mentions, concepts and noisy concept assignments provide a tough situation that people have to face in real-world applications.",
+                    "sid": 29,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 From the perspective of relation extraction applications, we identify \u201csuper relations\u201dthe key relations that can facilitate clinical decision making (Table 1).",
+                    "sid": 30,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also present approaches to collect training data for these relations with a small amount of labeling effort.",
+                    "sid": 31,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 From the perspective of relation extraction methodologies, we present a manifold model for relation extraction utilizing both labeled and unlabeled data.",
+                    "sid": 32,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach can also take the label weight into consideration.",
+                    "sid": 33,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experimental results show that our relation detectors are fast and outperform the state-of-theart approaches on medical relation extraction by a large margin.",
+                    "sid": 34,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also apply our model to build a new medical relation knowledge base as a complement to the existing knowledge bases.",
+                    "sid": 35,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 background",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Medical domain has a huge amount of natural language content found in textbooks, encyclopedias, guidelines, electronic medical records, and many other sources.",
+                    "sid": 36,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also growing at an extremely high speed.",
+                    "sid": 37,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Substantial understanding of the medical domain has already been included in the Unified Medical Language System (UMLS) (Lindberg et al., 1993), which includes medical concepts, relations, definitions, etc.",
+                    "sid": 38,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 2012 version of the UMLS contains information about more than 2.7 million concepts from over 160 source vocabularies.",
+                    "sid": 39,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Softwares for using this knowledge also exist: MetaMap (Aronson, 2001) is able to identify concepts in text.",
+                    "sid": 40,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SEMREP (Rindflesch and Fiszman, 2003) can detect some relations using hand-crafted rules.",
+                    "sid": 41,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To extract semantic relations from text, three types of approaches have been applied.",
+                    "sid": 42,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rule-based methods (Miller et al., 2000) employ a number of linguistic rules to capture relation patterns.",
+                    "sid": 43,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature-based methods (Kambhatla, 2004; Zhao and Grishman, 2005) transform relation instances into a large amount of linguistic features like lexical, syntactic and semantic features, and capture the similarity between these feature vectors.",
+                    "sid": 44,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent results mainly rely on kernel-based methods.",
+                    "sid": 45,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Many of them focus on using tree kernels to learn parse tree structure related features (Collins and Duffy, 2001; Culotta and Sorensen, 2004; Bunescu and Mooney, 2005).",
+                    "sid": 46,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other researchers study how different approaches can be combined to improve the extraction performance.",
+                    "sid": 47,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, by combining tree kernels and convolution string kernels, (Zhang et al., 2006) achieved the state of the art performance on ACE data (ACE, 2004).",
+                    "sid": 48,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, \u201cdistant supervision\u201d has emerged to be a popular choice for training relation extractors without using manually labeled data (Mintz et al., 2009; Jiang, 2009; Chan and Roth, 2010; Wang et al., 2011; Riedel et al., 2010; Ji et al., 2011; Hoffmann et al., 2011; Surdeanu et al., 2012; Takamatsu et al., 2012; Min et al., 2013).",
+                    "sid": 49,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Various relation extraction approaches have been adapted to the medical domain, most of which focus on designing heuristic rules targeted for diagnosis and integrating the medical ontology in the existing extraction approaches.",
+                    "sid": 50,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results of some of these approaches are reported on the i2b2 data (Uzuner et al., 2011).",
+                    "sid": 51,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 identifying key medical relations",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "The first step in building a relation extraction system for medical domain is to identify the relations that are important for clinical decision making.",
+                    "sid": 52,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Four main clinical tasks that physicians engage in are discussed in (Demner-Fushman and Lin, 2007).",
+                    "sid": 53,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are Therapy- select treatments to offer a patient, taking consideration of effectiveness, risk, cost and other factors (prevention is under the general category of Therapy), Diagnosis (including differential diagnosis based on findings and diagnostic test), Etiology- identify the factors that cause the disease and Prognosis- estimate the patient\u2019s likely course over time.",
+                    "sid": 54,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These activities can be translated into \u201csearch tasks\u201d.",
+                    "sid": 55,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the search for therapy is usually the therapy selection given a disease.",
+                    "sid": 56,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did an independent study regarding what clinical questions usually ask for on a set of 5,000 Doctor Dilemma (DD) questions from the American College of Physicians (ACP).",
+                    "sid": 57,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This set includes questions about diseases, treatments, lab tests, and general facts1.",
+                    "sid": 58,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our analysis shows that about 15% of these questions ask for treatments, preventions or contraindicated drugs for a disease or another way around, 4% are about diagnosis tests, 6% are about the causes of a disease, 1% are about the locations of a disease, 25% are about the symptoms of a disease, 8% are asking for definitions, 7% are about guidelines and the remaining 34% questions either express no relations or some relations that are not very popular.",
+                    "sid": 59,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on the analysis in (Demner-Fushman and Lin, 2007) and our own results, we decided to focus on seven key relations in the medical domain, which are described in Table 1.",
+                    "sid": 60,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call these relations \u201csuper relations\u201d, since they cover most questions in the DD question set and align well with the analysis result in (Demner-Fushman and Lin, 2007).",
+                    "sid": 61,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This section presents how we collect training data for each relation.",
+                    "sid": 62,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The overall procedure is illustrated in Figure 1.",
+                    "sid": 63,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our medical corpus has incorporated a set of medical books/journals2 and MEDLINE abstracts.",
+                    "sid": 64,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also complemented these sources with Wikipedia articles.",
+                    "sid": 65,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In total, the corpus contains 80M sentences (11 gigabyte pure text).",
+                    "sid": 66,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The UMLS 2012 Release contains more than 600 relations and 50M relation instances under around 15 categories.",
+                    "sid": 67,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The RO category (RO stands for \u201chas Relationship Other than synonymous, narrower, or broader\u201d) is the most interesting one, and covers relations like \u201cmay treat\u201d, \u201chas finding site\u201d, etc.",
+                    "sid": 68,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each relation has a certain number of Concept Unique Identifier (CUI) pairs that are known to bear that relation.",
+                    "sid": 69,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In UMLS, some relation information is redundant.",
+                    "sid": 70,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, half of these relations are simply inverse of each other (e.g. the relation \u201cmay treat\u201d and \u201cmay be treated by\u201d).",
+                    "sid": 71,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Secondly, there is a significant amount of redundancy even among non-inverse relations (e.g. the relation \u201chas manifestation\u201d and \u201cdisease has finding\u201d).",
+                    "sid": 72,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From UMLS relations, we manually chose a subset of them that are directly related to the super relations discussed in Section 3.1.",
+                    "sid": 73,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The correspondences between them are given in Table 1.",
+                    "sid": 74,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One thing to note is that super relations are more general than the UMLS relations, and one super relation might integrate multiple UMLS relations.",
+                    "sid": 75,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the CUI pairs in the UMLS relation knowl2This is a full list of the books and journals used in our corpus: ACP-Medical Knowledge Self-Assessment Program, EBSCO-Dynamed, EBSCO-Quick Lessons, EBSCOEBCS, EBSCO-Clinical Review, Wiley-Essential Evidence Plus: EBMG Guidelines, Wiley-Essential Evidence Topics, Wiley-Essential Evidence Plus: EBMG Summaries, WileyPOEMs, Wiley-The Breast Journal, New England Journal of Medicine, Journal Watch, NCCN-CME, NCCN-GUS, NCCN-Compendium, NCCN-Templates, NCCN-Guidelines for Patients, NCCN-Physician Guidelines, Merck Manual of Diagnosis and Therapy, and UpToDate.",
+                    "sid": 76,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Super Relations Argument 1 Argument 2 UMLS Sources Noise% in Annotation Data treats disease treatments may treat, treats 16% prevents disease treatments may prevent 49% contraindicates disease treatments contraindicated drug 97% diagnoses disease tests may diagnose 63% causes disease causes cause of, causative agent of 66% location of disease locations has finding site 41% disease has primary anatomic site symptom of disease symptoms disease has finding 66% disease may have finding has manifestation has definitional manifestation edge base, we associate each super relation with a set of CUI pairs.",
+                    "sid": 77,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To collect the training data for each super relation, we need to collect sentences that express the relation.",
+                    "sid": 78,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To achieve this, we parsed all 80M sentences in our medical corpus, looking for the sentences containing the terms that are associated with the CUI pairs in the knowledge base.",
+                    "sid": 79,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This (distant supervision) approach resulted in a huge amount of sentences that contain the desired relations, but also brought in a lot of noise in the form of false positives.",
+                    "sid": 80,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we know from the knowledge base that \u201cantibiotic drug\u201d may treat \u201cLyme disease\u201d.",
+                    "sid": 81,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However the sentence \u201cThis paper studies the relationship between antibiotic drug and Lyme disease\u201d contains both terms but does not express the \u201ctreats\u201d relation.",
+                    "sid": 82,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most reliable way to clean the training data is to ask annotators to go through the sentences and assign the sentences with positive/negative labels.",
+                    "sid": 83,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it will not work well when we have millions of sentences to vet.",
+                    "sid": 84,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To minimize the human labeling effort, we ran a K-medoids clustering on the sentences associated with each super relation and kept the cluster centers as the most representative sentences for annotation.",
+                    "sid": 85,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on the number of the sentences we collected for each relation, the #clusters was chosen from 3,000 - 6,000.",
+                    "sid": 86,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The similarity of two sentences is defined as the bag-of-words similarity of the dependency paths connecting arguments.",
+                    "sid": 87,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Part of the resulting data was manually vetted by our annotators, and the remaining was held as unlabeled data for further experiments.",
+                    "sid": 88,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our relation annotation task is quite straightforward, since both arguments are given and the decision is a Yes-or-No decision.",
+                    "sid": 89,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The noise rate of each relation (#sentences expressing the relation / #sentences) is reported in Table 1 based on the annotation results.",
+                    "sid": 90,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The noise rates differ significantly from one relation to another.",
+                    "sid": 91,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For \u201ctreats\u201d relation, only 16% of the sentences are false positives.",
+                    "sid": 92,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For \u201ccontraindicates\u201d relation, the noise rate is 97%.",
+                    "sid": 93,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To grow the size of the negative training set for each super relation, we also added a small amount of the most representative examples (also coming from K-medoids clustering) from each unrelated UMLS relation to the training set as negative examples.",
+                    "sid": 94,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This resulted in more than 10,000 extra negative examples for each relation.",
+                    "sid": 95,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most well-known tool to detect medical entity mentions is MetaMap (Aronson, 2001), which considers all terms as entities and automatically associates each term with a number of concepts from UMLS CUI dictionary (Lindberg et al., 1993) with 2.7 million distinct concepts.",
+                    "sid": 96,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser used in our system is MedicalESG, an adaptation of ESG (English Slot Grammar) (McCord et al., 2012) to the medical domain with extensions of medical lexicons integrated in the UMLS 2012 Release.",
+                    "sid": 97,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to MetaMap, MedicalESG is based on the same medical lexicons, 10 times faster and produces very similar parsing results.",
+                    "sid": 98,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the semantic types defined in UMLS (Lindberg et al., 1993) to categorize argument types.",
+                    "sid": 99,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The UMLS consists of a set of 133 subject categories, or semantic types, that provide a consistent categorization of more than 2M concepts represented in the UMLS Metathesaurus.",
+                    "sid": 100,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our system assigns each relation argument with one or more UMLS semantic types through a two step process.",
+                    "sid": 101,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Firstly, we use MedicalESG to process the input sentence, identify segments of text that correspond to concepts in the UMLS Metathesaurus and associate each of them with one or more UMLS CUIs (Concept Unique Identifier).",
+                    "sid": 102,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we do a CUI lookup in UMLS to find the corresponding semantic types for each CUI.",
+                    "sid": 103,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most relation arguments are associated with multiple semantic types.",
+                    "sid": 104,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the term \u201ctetracycline hydrochloride\u201d has two types: \u201cOrganic Chemical\u201d and \u201cAntibiotic\u201d.",
+                    "sid": 105,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sometimes, the semantic types are noisy due to ambiguity of terms.",
+                    "sid": 106,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the term \u201cHepatitis b\u201d is associated with both \u201cPharmacologic Substance\u201d and \u201cDisease or Syndrome\u201d based on UMLS.",
+                    "sid": 107,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason for this is that people use \u201cHepatitis b\u201d to represent both \u201cthe disease of Hepatitis b\u201d and \u201cHepatitis b vaccine\u201d, so UMLS assigns both types to it.",
+                    "sid": 108,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a concern for relation extraction, since two types bear opposite meanings.",
+                    "sid": 109,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our current strategy is to integrate all associated types, and rely on the relation detector trained with the labeled data to decide how to weight different types based upon the context.",
+                    "sid": 110,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here is an illustrative example.",
+                    "sid": 111,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the sentence: \u201cAntibiotics are the standard therapy for Lyme disease\u201d: MedicalESG first generates a dependency parse tree (Figure 2) to represent grammatical relations between the words in the sentence, and then associates the words with CUIs.",
+                    "sid": 112,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \u201cAntibiotics\u201d is associated with CUI \u201cC0003232\u201d and \u201cLyme disease\u201d is associated with two CUIs: \u201cC0024198\u201d and \u201cC0717360\u201d.",
+                    "sid": 113,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CUI lookup will assign \u201cAntibiotics\u201d with a semantic type \u201cAntibiotic\u201d, and \u201cLyme disease\u201d with three semantic types: \u201cDisease or Syndrome\u201d, \u201cPharmacologic Substance\u201d and \u201cImmunologic Factor\u201d.",
+                    "sid": 114,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This sentence expresses a \u201ctreats\u201d relation between \u201cAntibiotics\u201d and \u201cLyme disease\u201d.",
+                    "sid": 115,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 relation extraction with manifold models",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Given a few labeled examples and many unlabeled examples for a relation, we want to build a relation detector leveraging both labeled and unlabeled data.",
+                    "sid": 116,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the manifold regularization idea (Belkin et al., 2006), our strategy is to learn a function that assigns a score to each example.",
+                    "sid": 117,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scores are fit so that examples (both labeled and unlabeled) with similar content get similar scores, and scores of labeled examples are close to their labels.",
+                    "sid": 118,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Integration of the unlabeled data can help solve overfitting problems when the labeled data is not sufficient.",
+                    "sid": 119,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4.2 features",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We use 8 groups of features to represent each relation example.",
+                    "sid": 120,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features are commonly used for relation extraction. going links of both arguments.",
+                    "sid": 121,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features are useful to determine if a relation goes from argument 1 to argument 2 or vice versa.",
+                    "sid": 122,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 (5) Topic features modeling the words in the dependency path.",
+                    "sid": 123,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the example given in Figure 2, the dependency path contains the following words: \u201cbe\u201d, \u201cstandard therapy\u201d and \u201cfor\u201d.",
+                    "sid": 124,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These features as well as the features in (6) are achieved by projecting the words onto a 100 dimensional LSI topic space (Deerwester et al., 1990) constructed from our medical corpus.",
+                    "sid": 125,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "notations:",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The input dataset X = {x1, \u00b7 \u00b7 \u00b7 , xm} is represented as a feature-instance matrix.",
+                    "sid": 126,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The desired label vector Y = {y1, \u00b7 \u00b7 \u00b7 , yl} represents the labels of {x1, \u00b7 \u00b7 \u00b7 , xl}, where l < m. W is a weight matrix, where Wi,j = e\u2212kxi\u2212xjk2 models the similarity of xi and xj.",
+                    "sid": 127,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "I Ixi \u2212 xjI I stands for the Euclidean distance between xi and xj in the vector space.",
+                    "sid": 128,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "D is a diagonal matrix: Di,i = Ej Wi,j. graph Laplacian matrix.",
+                    "sid": 129,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A is a user defined l x l diagonal matrix, where Ai represents the weight of label yi. p is a weight scalar.",
+                    "sid": 130,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "()+ represents pseudo inverse.",
+                    "sid": 131,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "algorithm:",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "\u2022 (8) Bag-of-words features modeling the whole sentence.",
+                    "sid": 132,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In relation extraction, many recent approaches use non-linear kernels to get the similarity of two relation examples.",
+                    "sid": 133,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To classify a relation example, a lot of dot product computations are required.",
+                    "sid": 134,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is very time consuming and becomes a bottleneck in using relation extraction to facilitate clinical decision making.",
+                    "sid": 135,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To speed up the classifier during the apply time, we decided to use a linear classifier instead of non-linear classifiers.",
+                    "sid": 136,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We represent all features in a single feature space.",
+                    "sid": 137,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, we use a vector of 133 entries (UMLS contains 133 semantic types) to represent the types of argument 1.",
+                    "sid": 138,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If argument 1 is associated with two types: \u201cOrganic Chemical\u201d and \u201cAntibiotic\u201d, we set the two corresponding entries to 1 and all the other entries to 0.",
+                    "sid": 139,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar approaches are used to represent the other features.",
+                    "sid": 140,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The problem we want to solve is formalized as follows: given a relation dataset X = {x1, \u00b7 \u00b7 \u00b7 , xm}, and the desired label Y = {y1, \u00b7 \u00b7 \u00b7 , yl} for {x1, \u00b7 \u00b7 \u00b7 , xl}, where l < m, we want to construct a mapping function f to project any example xi to a new space, where fT xi matches xi\u2019s desired label yi.",
+                    "sid": 141,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we also want f to preserve the manifold topology of the dataset, such that similar examples (both labeled and unlabeled) get similar scores.",
+                    "sid": 142,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, the label is \u2018+1\u2019 for positive examples, and \u2018-1\u2019 for negative examples.",
+                    "sid": 143,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notations and the main algorithm to construct f for each relation are given in Figure 3.",
+                    "sid": 144,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The solution to the problem defined in Section 4.3 is given by the mapping function f to minimize the following cost function: The first term of C(f) is based on labeled examples, and penalizes the difference between the mapping result of xi and its desired label yi. \u03b1i is a user specified parameter, representing the weight of label yi.",
+                    "sid": 145,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second term of C(f) does not take label information into account.",
+                    "sid": 146,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It encourages the neighborhood relationship (geometry of the manifold) within X to be preserved in the mapping.",
+                    "sid": 147,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When xi and xj are similar, the corresponding Wi,j is big.",
+                    "sid": 148,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If f maps xi and xj to different positions, f will be penalized.",
+                    "sid": 149,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second term is useful to bound the mapping function f and prevents overfitting from happening.",
+                    "sid": 150,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here p is the weight of the second term.",
+                    "sid": 151,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When p = 0, the model disregards the unlabeled data, and the data manifold topology is not respected.",
+                    "sid": 152,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to manifold regularization (Belkin et al., 2006), we do not include the RKHS norm term.",
+                    "sid": 153,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we associate each labeled example with an extra weight for label confidence.",
+                    "sid": 154,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This weight is particularly useful when the training data comes from \u201cCrowdsourcing\u201d, where we ask multiple workers to complete the same task to correct errors.",
+                    "sid": 155,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In that scenario, weights can be assigned to labels based upon annotator agreement.",
+                    "sid": 156,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Theorem 1: f = (X(A + \u00b5L)XT)+XAV T minimizes the cost function C(f).",
+                    "sid": 157,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proof: Given the input X, we want to find the optimal mapping function f such that C(f) is minimized: Using the Lagrange multiplier trick to differentiate C(f) with respect to f, we have where \u201c+\u201d represents pseudo inverse.",
+                    "sid": 158,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm offers the following advantages:",
+                    "sid": 159,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 experiments",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "We use a cross-validation testa with the relation data generated in Section 3.2 to compare our approaches against the state-of-the-art approaches.",
+                    "sid": 160,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is to classify the examples into positive or negative for each relation.",
+                    "sid": 161,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We applied a 5-fold cross-validation.",
+                    "sid": 162,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each round of validation, we used 20% of the data for training and 80% for testing.",
+                    "sid": 163,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The F1 scores reported here are the average of all 5 rounds.",
+                    "sid": 164,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used MedicalESG to process the input text for all approaches.",
+                    "sid": 165,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This dataset includes 7 relations.",
+                    "sid": 166,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not consider the relation of \u201ccontraindicates\u201d in this test, since it has too few positive examples.",
+                    "sid": 167,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On average, each relation contains about 800 positive examples and more than 13,000 negative examples.",
+                    "sid": 168,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To eliminate the examples that are trivial to classify, we removed the negative examples that do not bear the valid argument types.",
+                    "sid": 169,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This removed the examples that can be easily classified by a type filter, resulting in 3,000 negatives on average per relation.",
+                    "sid": 170,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each relation, we also collected 5,000 unlabeled examples and put them into two sets: unlabeled set 1 and 2 (2,500 examples in each set).",
+                    "sid": 171,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "No parameter tuning was taken and no relation specific heuristic rules were applied in all tests.",
+                    "sid": 172,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all manifold models, \u00b5 = 1.",
+                    "sid": 173,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In SVM implementations, the trade-off parameter between training error and margin was set to 1 for all experiments.",
+                    "sid": 174,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare our approaches to three state-of-theart approaches including SVM with convolution tree kernels (Collins and Duffy, 2001), linear regression and SVM with linear kernels (Sch\u00a8olkopf and Smola, 2002).",
+                    "sid": 175,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To adapt the tree kernel to medical domain, we followed the approach in (Nguyen et al., 2009) to take the syntactic structures into consideration.",
+                    "sid": 176,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also added the argument types as features to the tree kernel.",
+                    "sid": 177,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the tree kernel implementation, we assigned the tree structure and the vector corresponding to the argument types 3If we take the perfect entity mentions and the associated concepts provided by i2b2 (Uzuner et al., 2011) as the input, our system can directly apply to i2b2 relation extraction data.",
+                    "sid": 178,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the i2b2 data has a tough data use agreement.",
+                    "sid": 179,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our legal team held several rounds of negotiations with the i2b2 data owner and then decided we should not use it due to the high legal risks.",
+                    "sid": 180,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are not aware of other available medical relation extraction datasets that fit for our evaluations. with equal weights.",
+                    "sid": 181,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The SVM with linear kernels and the linear regression model used the same features as the manifold models.",
+                    "sid": 182,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tested our manifold model for each relation under three different settings: ting, we gave a label estimation to all the examples in the unlabeled set 2 based on the noise rate (Noise%) from Table 1.",
+                    "sid": 183,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The label of all unlabeled examples was set to \u201c+1\u201d when 100% \u2212 2 \u00b7 Noise% > 0, or \u201c-1\u201d otherwise.",
+                    "sid": 184,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two weighting strategies were applied: combination of setting (1) and (2).",
+                    "sid": 185,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this setting, the data from unlabeled set 1 was used as unlabeled data and the data from unlabeled set 2 was used as labeled data (With Weights).",
+                    "sid": 186,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5.1.4 results",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "The results are summarized in Table 2.",
+                    "sid": 187,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tree kernel-based approach and linear regression achieved similar F1 scores, while linear SVM made a 5% improvement over them.",
+                    "sid": 188,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One thing to note is that the results from these approaches vary significantly.",
+                    "sid": 189,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason for this is that the labeled training data is not sufficient.",
+                    "sid": 190,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So the approaches that completely depend on the labeled data are likely to run into overfitting.",
+                    "sid": 191,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear SVM performed better than the other two, since the large-margin constraint together with the linear model constraint can alleviate overfitting.",
+                    "sid": 192,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By integrating unlabeled data, the manifold model under setting (1) made a 15% improvement over linear regression model on F1 score, where the improvement was significant across all relations.",
+                    "sid": 193,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under setting (2), the With Weights strategy achieved a slightly worse F1 score than the previous setting but much better result than the baseline approaches.",
+                    "sid": 194,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This tells us that estimating the label of unlabeled examples based upon the sampling result is one way to utilize unlabeled data and may help improve the relation extraction results.",
+                    "sid": 195,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results also show that the label weight is important for this setting, since the Without Weights strategy did not perform very well.",
+                    "sid": 196,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to setting (1) and (2), setting (3) made use of 2,500 more unlabeled examples, and achieved the best performance among all approaches.",
+                    "sid": 197,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On one hand, this result shows that using more unlabeled data can further improve the result.",
+                    "sid": 198,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the insignificant improvement over (1) and (2) strongly indicates that how to utilize more unlabeled data to achieve a significant improvement is non-trivial and deserves more attention.",
+                    "sid": 199,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To what extensions the unlabeled data can help the learning process is an open problem.",
+                    "sid": 200,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generally speaking, when the existing data is sufficient to characterize the dataset geometry, adding more unlabeled data will not help (Singh et al., 2008).",
+                    "sid": 201,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tested the tree kernel-based approach without integrating the medical types as well.",
+                    "sid": 202,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That resulted in very poor performance: the average F1 score was below 30%.",
+                    "sid": 203,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also applied the rules used in SEMREP (Rindflesch and Fiszman, 2003) to this dataset.",
+                    "sid": 204,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the relations detected by SEMREP rules cannot be perfectly aligned with super relations, we cannot directly compare the results.",
+                    "sid": 205,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall speaking, SEMREP rules are very conservative and detect very few relations from the same text.",
+                    "sid": 206,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The UMLS Metathesaurus (Lindberg et al., 1993) contains a large amount of manually extracted relation knowledge.",
+                    "sid": 207,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such knowledge is invaluable for people to collect training data to build new relation detectors.",
+                    "sid": 208,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One downside of using this KB is its incompleteness.",
+                    "sid": 209,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, it only contains the treatments for about 8,000 diseases, which are far from sufficient.",
+                    "sid": 210,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Further, the medical knowledge is changing extremely quickly, making people hard to understand it, and update it in the knowledge base in a timely manner.",
+                    "sid": 211,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address these challenges, we constructed our own relation KB as a complement to the UMLS relation KB.",
+                    "sid": 212,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We directly ran our relation detectors (trained with all labeled and unlabeled examples) on our medical corpus to extract relations.",
+                    "sid": 213,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we combined the results and put them in a new KB.",
+                    "sid": 214,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The new KB covers all super relations and stores the knowledge in the format of (relation name, argument 1, argument 2, confidence), where the confidence is computed based on the relation detector confidence score and relation popularity in the corpus.",
+                    "sid": 215,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most recent version of our relation KB contains 3.4 million such entries.",
+                    "sid": 216,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared this new KB against UMLS KB using an answer generation task on a set of 742 Doctor Dilemma questions.",
+                    "sid": 217,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first ran our relation detectors to detect the relation(s) in the question clue involving question focus (what the question asks for).",
+                    "sid": 218,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we searched against both KBs using the relation name and the non-focus argument for the missing argument.",
+                    "sid": 219,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The search results were then generated as potential answers.",
+                    "sid": 220,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the same relations to do KB lookup, so the results are directly comparable.",
+                    "sid": 221,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since most questions only have one correct answer, the precision number is not very important in this experiment.",
+                    "sid": 222,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we detect multiple relations in the question, and the same answer is generated from more than one relations, we sum up all those confidence scores to make such answers more preferable.",
+                    "sid": 223,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sometimes, we may generate too many answers from KBs.",
+                    "sid": 224,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if the detected relation is \u201clocation of\u201d and the non-focus argument is \u201cskin\u201d, then thousands of answers can be generated.",
+                    "sid": 225,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this scenario, we sort the answers based upon the confidence scores and only consider up to p answers for each question.",
+                    "sid": 226,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our test, we considered three numbers for p: 20, 50 and 3,000.",
+                    "sid": 227,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "From Table 3, we can see that the new KB outperforms the most popularly-used UMLS KB at all recall levels by a large margin.",
+                    "sid": 228,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result indicates that the new KB has a much better knowledge coverage.",
+                    "sid": 229,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The UMLS KB is manually created and thus more precise.",
+                    "sid": 230,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiment, the UMLS KB generated fewer answers than the new KB.",
+                    "sid": 231,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, when up to 20 answers were generated for each question, the UMLS KB generated around 4,700 answers for the whole question set, while the new KB generated about 7,600 answers.",
+                    "sid": 232,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Construction of the new KB cost 16 machines (using 4x2.8G cores per machine) 8 hours.",
+                    "sid": 233,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reported computation time is for the whole corpus with 11G pure text.",
+                    "sid": 234,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 conclusions",
+            "number": "10",
+            "sents": [
+                {
+                    "text": "In this paper, we identify a list of key relations that can facilitate clinical decision making.",
+                    "sid": 235,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also present a new manifold model to efficiently extract these relations from text.",
+                    "sid": 236,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model is developed to utilize both labeled and unlabeled examples.",
+                    "sid": 237,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It further provides users with the flexibility to take label weight into consideration.",
+                    "sid": 238,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Effectiveness of the new model is demonstrated both theoretically and experimentally.",
+                    "sid": 239,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We apply the new model to construct a relation knowledge base (KB), and use it as a complement to the existing manually created KBs.",
+                    "sid": 240,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "11",
+            "sents": [
+                {
+                    "text": "We thank Siddharth Patwardhan for help on tree kernels, Sugato Bagchi and Dr. Herbert Chase\u2019s team for categorizing the Doctor Dilemma questions.",
+                    "sid": 241,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also thank Anthony Levas, Karen Ingraffea, Mark Mergen, Katherine Modzelewski, Jonathan Hodax, Matthew Schoenfeld and Adarsh Thaker for vetting the training data.",
+                    "sid": 242,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,1475 @@
+{
+    "ID": "C08-1049",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Word Lattice Reranking for Chinese Word Segmentation and Part-of-Speech Tagging",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we describe a new rerank ing strategy named word lattice reranking,for the task of joint Chinese word segmen tation and part-of-speech (POS) tagging.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a derivation of the forest reranking for parsing (Huang, 2008), this strategy reranks on the pruned word lattice, which potentially contains much more candidates while using less storage, compared with the traditional n-best list reranking.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With aperceptron classifier trained with local features as the baseline, word lattice reranking performs reranking with non-local fea tures that can?t be easily incorporated intothe perceptron baseline.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results show that, this strategy achieves im provement on both segmentation and POS tagging, above the perceptron baseline and the n-best list reranking.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Recent work for Chinese word segmentation and POS tagging pays much attention to discriminative methods, such as Maximum Entropy Model (ME)(Ratnaparkhi and Adwait, 1996), Conditional Random Fields (CRFs) (Lafferty et al, 2001), perceptron training algorithm (Collins, 2002), etc. Com pared to generative ones such as Hidden Markov Model (HMM) (Rabiner, 1989; Fine et al, 1998),discriminative models have the advantage of flexi bility in representing features, and usually obtains almost perfect accuracy in two tasks.Originated by Xue and Shen (2003), the typ ical approach of discriminative models conducts c?",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2008.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Licensed to the Coling 2008 Organizing Com mittee for publication in Coling 2008 and for re-publishing in any form or medium.segmentation in a classification style, by assign ing each character a positional tag indicating its relative position in the word.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we extend thesepositional tags to include POS information, seg mentation and POS tagging can be performed by a single pass under a unify classification framework (Ng and Low, 2004).",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the rest of the paper, we call this operation mode Joint S&T. Experiments of Ng and Low (2004) shown that, compared with performing segmentation and POS tagging one at a time, Joint S&T can achieve higher accuracy not only on segmentation but also on POS tagging.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides the usual local features such as the character-based ones (Xue and Shen, 2003; Ng and Low, 2004), many non-local features related to POSs or words can also be employed to improveperformance.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, as such features are gener ated dynamically during the decoding procedure,incorporating these features directly into the classifier results in problems.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, the classifier?s fea ture space will grow much rapidly, which is apt to overfit on training corpus.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, the variance of non-local features caused by the model evolutionduring the training procedure will hurt the parameter tuning.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Last but not the lest, since the current predication relies on the results of prior predi cations, exact inference by dynamic programming can?t be obtained, and then we have to maintain a n-best candidate list at each considering position,which also evokes the potential risk of depress ing the parameter tuning procedure.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a result,many theoretically useful features such as higherorder word- or POS- grams can not be utilized ef ficiently.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A widely used approach of using non-local features is the well-known reranking technique, which has been proved effective in many NLP tasks, for instance, syntactic parsing and machine 385 v0 v 1 v 2 v 3 v 4 v 5 v 6 v 7 C 1 :e C 2 :?",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C 3 :U C 4 :/ C 5 :?",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C 6 :?",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C 7 :Y NN VV NN M NN NN NN NN VV NN NNFigure 1: Pruned word lattice as directed graph.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The character sequence we choose is ?e-?-U-/ ?-?-Y?.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For clarity, we represent each subsequence-POS pair as a single edge, while ignore the corresponding scores of the edges.translation (Collins, 2000; Huang, 2008), etc. Especially, Huang (2008) reranked the packed for est, which contains exponentially many parses.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inspired by his work, we propose word lattice reranking, a strategy that reranks the pruned word lattice outputted by a baseline classifier, rather than only a n-best list.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word lattice, a directed graph as shown in Figure 1, is a packed structure that can represent many possibilities of segmentation andPOS tagging.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments on the Penn Chi nese Treebank 5.0 show that, reranking on wordlattice gains obvious improvement over the base line classifier and the reranking on n-best list.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared against the baseline, we obtain an error reduction of 11.9% on segmentation, and 16.3% on Joint S&T.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "word lattice. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Formally, a word lattice L is a directed graph ?V,E?, where V is the node set, and E is the edge set.",
+                    "sid": 26,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose the word lattice is for sentence C 1:n = C 1 ..C n , node v i?",
+                    "sid": 27,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "V (i = 1..n ? 1) de notes the position between C i and C i+1 , while v 0 before C 1 is the source node, and v n after C n is the sink node.",
+                    "sid": 28,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An edge e ? E departs from v b and arrives at v e(0 ? b < e ? n), it covers a subse quence of C 1:n , which is recognized as a possible word.",
+                    "sid": 29,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering Joint S&T, we label each edge a POS tag to represent a word-POS pair.",
+                    "sid": 30,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A seriesof adjoining edges forms a path, and a path con necting the source node and the sink node is calleddiameter, which indicates a specific pattern of seg mentation and POS tagging.",
+                    "sid": 31,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a diameter d, |d| denotes the length of d, which is the count of edges contained in this diameter.",
+                    "sid": 32,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 1, the path p ? = v?",
+                    "sid": 33,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 v 3 ? v? 3 v 5 ? v? 5 v 7 is a diameter, and |p ? | is 3.",
+                    "sid": 34,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Oracle Diameter in Lattice.",
+                    "sid": 35,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a sentence s, its reference r and prunedword lattice L generated by the baseline classi fier, the oracle diameter d?",
+                    "sid": 36,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of L is define as the diameter most similar to r. With F-measure as thescoring function, we can identify d?",
+                    "sid": 37,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "using the al gorithm depicted in Algorithm 1, which is adaptedto lexical analysis from the forest oracle computa tion of Huang (2008).Before describe this algorithm in detail, we de pict the key point for finding the oracle diameter.",
+                    "sid": 38,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the system?s output y and the reference y?, using |y| and |y?| to denote word counts of them respectively, and |y ? y?| to denote matched word count of |y| and |y?|, F-measure can be computed by: F (y, y ? ) = 2PR P + R = 2|y ? y ? | |y| + |y ? | (1) Here, P = |y?y ? | |y| is precision, and R = |y?y ? | |y ? |is recall.",
+                    "sid": 39,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that F (y, y?)",
+                    "sid": 40,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "isn?t a linear func tion, we need access the largest |y ? y?| for each possible |y| in order to determine the diameter with maximum F , or another word, we should know the maximum matched word count for each possible diameter length.",
+                    "sid": 41,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm shown in Algorithm 1 works in a dynamic programming manner.",
+                    "sid": 42,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A table node T [i, j] is defined for sequence span [i, j], and it has a structure S to remember the best |y i:j ? y ? i:j | for each |y i:j |, as well as the back pointer for this best choice.",
+                    "sid": 43,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The for-loop in line 2 ? 14 processes for each node T [i, j] in a shorter-span-first order.",
+                    "sid": 44,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 3?",
+                    "sid": 45,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 initialize T [i, j] according to the reference r and the word lattice?s edge set L ?E. If there exists an edge e in L ?E covering the span [i, j], then we 386 Algorithm 1 Oracle Diameter, U la Huang (2008, Sec.",
+                    "sid": 46,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1).",
+                    "sid": 47,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1: Input: sentence s, reference r and lattice L 2: for [i, j] ? [1, |s|] in topological order do 3: if ?e ? L ? E s.t. e spans from i to j then 4: if e ? label exists in r then 5: T [i, j] ? S[1]?",
+                    "sid": 48,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 6: else 7: T [i, j] ? S[1]?",
+                    "sid": 49,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 8: for k s.t. T [i, k ? 1] and T [k, j] defined do 9: for p s.t. T [i, k ? 1] ? S[p] defined do 10: for q s.t. T [k, j] ? S[q] defined do 11: n?",
+                    "sid": 50,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T [i, k ? 1] ? S[p] + T [k, j] ? S[q] 12: if n > T [i, j] ? S[p + q] then 13: T [i, j] ? S[p + q]?",
+                    "sid": 51,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "n 14: T [i, j] ? S[p + q] ? bp?",
+                    "sid": 52,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?k, p, q?",
+                    "sid": 53,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "15: t?",
+                    "sid": 54,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "argmax t 2?T [1,|s|]?S[t] t+|r| 16: d?",
+                    "sid": 55,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tr(T [1, |s|] ? S[t].bp) 17: Output: oracle diameter: d?define T [i, j], otherwise we leave this node unde fined.",
+                    "sid": 56,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the first situation, we initialize this node?s S structure according to whether the word-POS pair of e is in the reference (line 4?7).",
+                    "sid": 57,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 8?14 update T [i, j]?s S structure using the S structures from all possible child-node pair, T [i, k ? 1] andT [k, j].",
+                    "sid": 58,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Especially, line 9?",
+                    "sid": 59,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10 enumerate all combinations of p and q, where p and q each repre sent a kind of diameter length in T [i, k ? 1] and T [k, j].",
+                    "sid": 60,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 12 ? 14 refreshes the structure S of node T [i, j] when necessary, and meanwhile, a back pointer ?k, p, q?",
+                    "sid": 61,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is also recorded.",
+                    "sid": 62,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Whenthe dynamic programming procedure ends, we se lect the diameter length t of the top node T [1, |s|], which maximizes the F-measure formula in line15, then we use function Tr to find the oracle di ameter d?",
+                    "sid": 63,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "by tracing the back pointer bp.",
+                    "sid": 64,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Generation of the Word Lattice.",
+                    "sid": 65,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can generate the pruned word lattice using the baseline classifier, with a slight modification.",
+                    "sid": 66,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The classifier conducts decoding by considering eachcharacter in a left-to-right fashion.",
+                    "sid": 67,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At each considering position i, the classifier enumerates all can didate results for subsequence C 1:i , by attaching each current candidate word-POS pair p to the tail of each candidate result at p?s prior position, as the endmost of the new generated candidate.",
+                    "sid": 68,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We give each p a score, which is the highest, among all C 1:i ?s candidates that have p as their endmost.Then we select N word-POS pairs with the high est scores, and insert them to the lattice?s edge set.",
+                    "sid": 69,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach of selecting edges implies that, for the lattice?s node set, we generate a node v i at each position i. Because N is the limitation on the count Algorithm 2 Lattice generation algorithm.",
+                    "sid": 70,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1: Input: character sequence C 1:n 2: E ? ?",
+                    "sid": 71,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3: for i?",
+                    "sid": 72,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 ..",
+                    "sid": 73,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "n do 4: cands?",
+                    "sid": 74,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5: for l?",
+                    "sid": 75,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 ..",
+                    "sid": 76,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "min(i, K) do 6: w ? C i?l+1:i 7: for t ? POS do 8: p?",
+                    "sid": 77,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?w, t?",
+                    "sid": 78,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9: p ? score?",
+                    "sid": 79,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eval(p) 10: s?",
+                    "sid": 80,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "p ? score + Best[i? l] 11: Best[i]?",
+                    "sid": 81,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "max(s,Best[i]) 12: insert ?s, p?",
+                    "sid": 82,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "into cands 13: sort cands according to s 14: E ? E ? cands[1..N ] ? p 15: Output: edge set of lattice: E of edges that point to the node at position i, we callthis pruning strategy in-degree pruning.",
+                    "sid": 83,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gen eration algorithm is shown in Algorithm 2.",
+                    "sid": 84,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 3 ? 14 consider each character C iin se quence, cands is used to keep the edges closing at position i. Line 5 enumerates the candidate words ending with C i and no longer than K, where K is 20 in our experiments.",
+                    "sid": 85,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 5 enumerates all POS tags for the current candidate word w, where POS denotes the POS tag set.",
+                    "sid": 86,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Function Eval in line 9 returns the score for word-POS pair p from the baseline classifier.",
+                    "sid": 87,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The array Best preserve the score for sequence C 1:i?s best labelling results.",
+                    "sid": 88,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After all possible word-POS pairs (or edges) consid ered, line 13?",
+                    "sid": 89,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14 select the N edges we want, and add them to edge set E. Though this pruning strategy seems relative rough ? simple pruning for edge set while no pruning for node set, we still achieve a promisingimprovement by reranking on such lattices.",
+                    "sid": 90,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We be lieve more elaborate pruning strategy will results in more valuable pruned lattice.",
+                    "sid": 91,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "reranking. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "A unified framework can be applied to describingreranking for both n-best list and pruned word lattices (Collins, 2000; Huang, 2008).",
+                    "sid": 92,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the candidate set cand(s) for sentence s, the reranker se lects the best item y?",
+                    "sid": 93,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "from cand(s): y?",
+                    "sid": 94,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "= argmax y?cand(s) w ? f(y) (2) For reranking n-best list, cand(s) is simply the set of n best results from the baseline classifier.",
+                    "sid": 95,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While for reranking word lattice, cand(s) is the set of all diameters that are impliedly built in the lattice.w ? f(y) is the dot product between a feature vec tor f and a weight vector w, its value is used to 387 Algorithm 3 Perceptron training for reranking 1: Input: Training examples{cand(s i ), y ? i } N i=1 2: w?",
+                    "sid": 96,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 3: for t?",
+                    "sid": 97,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 ..",
+                    "sid": 98,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T do 4: for i?",
+                    "sid": 99,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 ..",
+                    "sid": 100,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N do 5: y?",
+                    "sid": 101,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "argmax y?cand(s i ) w ? f(y) 6: if y?",
+                    "sid": 102,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6= y?",
+                    "sid": 103,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i then 7: w?",
+                    "sid": 104,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "w + f(y? i )?",
+                    "sid": 105,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "f(y?) 8: Output: Parameters: w Non-local Template Comment W 0 T 0 current word-POS pair W ?1 word 1-gram before W 0 T 0 T ?1 POS 1-gram before W 0 T 0 T ?2 T ?1 POS 2-gram before W 0 T 0 T ?3 T ?2 T ?1 POS 3-gram before W 0 T 0 Table 1: Non-local feature templates used for rerankingrerank cand(s).",
+                    "sid": 106,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following usual practice in pars ing, the first feature f 1 (y) is specified as the score outputted by the baseline classifier, and its value is a real number.",
+                    "sid": 107,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The other features are non-local ones such as word- and POS- n-grams extractedfrom candidates in n-best list (for n-best rerank ing) or diameters (for word lattice reranking), and they are 0 ? 1 valued.",
+                    "sid": 108,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Training of the Reranker.",
+                    "sid": 109,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We adopt the perceptron algorithm (Collins, 2002) to train the reranker.",
+                    "sid": 110,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "as shown in Algorithm 3.",
+                    "sid": 111,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weuse a simple refinement strategy of ?averaged pa rameters?",
+                    "sid": 112,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of Collins (2002) to alleviate overfittingon the training corpus and obtain more stable per formance.",
+                    "sid": 113,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every training example {cand(s i ), y ? i }, y ? i denotes the best candidate in cand(s i).",
+                    "sid": 114,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For n best reranking, the best candidate is easy to find, whereas for word lattice reranking, we should usethe algorithm in Algorithm 1 to determine the or acle diameter, which represents the best candidate result.",
+                    "sid": 115,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Non-local Feature Templates.",
+                    "sid": 116,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The non-local feature templates we use to train thereranker are listed in Table 1.",
+                    "sid": 117,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that all fea tures generated from these templates don?t contain ?future?",
+                    "sid": 118,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "words or POS tags, it means that we only use current or history word- or POS- n-grams to evaluate the current considering word-POS pair.",
+                    "sid": 119,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although it is possible to use ?future?",
+                    "sid": 120,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "information in n-best list reranking, it?s not the same when wererank the pruned word lattice.",
+                    "sid": 121,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we have to tra verse the lattice topologically, we face difficulty in Algorithm 4 Cube pruning for non-local features.",
+                    "sid": 122,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1: function CUBE(L) 2: for v ? L ? V in topological order do 3: NBEST(v) 4: return D v sink [1] 5: procedure NBEST(v) 6: heap?",
+                    "sid": 123,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7: for v?",
+                    "sid": 124,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "topologically before v do 8: ??",
+                    "sid": 125,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "all edges from v?",
+                    "sid": 126,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "to v 9: p?",
+                    "sid": 127,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "?D v ? ,??",
+                    "sid": 128,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10: ?p,1??score?",
+                    "sid": 129,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eval(p,1) 11: PUSH(?p,1?, heap) 12: HEAPIFY(heap) 13: buf ? ?",
+                    "sid": 130,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "14: while |heap| > 0 and |buf | < N do 15: item?",
+                    "sid": 131,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "POP-MAX(heap) 16: append item to buf 17: PUSHSUCC(item, heap) 18: sort buf to D v 19: procedure PUSHSUCC(?p, j?, heap) 20: p is ?vec 1 ,vec 2 ? 21: for i?",
+                    "sid": 132,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1..2 do 22: j?",
+                    "sid": 133,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "j+ bi 23: if |vec i | ? j ? i then 24: ?p, j???score?",
+                    "sid": 134,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eval(p, j?)",
+                    "sid": 135,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "25: PUSH(?p, j??, heap)utilizing the information ahead of the current con sidering node.",
+                    "sid": 136,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Reranking by Cube Pruning.",
+                    "sid": 137,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because of the non-local features such as wordand POS- n-grams, the reranking procedure is similar to machine translation decoding with inter grated language models, and should maintain alist of N best candidates at each node of the lat tice.",
+                    "sid": 138,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To speed up the procedure of obtaining the N best candidates, following Huang (2008, Sec.3.3), we adapt the cube pruning method from machine translation (Chiang, 2007; Huang and Chiang 2007) which is based on efficient k-best pars ing algorithms (Huang and Chiang, 2005).",
+                    "sid": 139,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in Algorithm 4, cube pruning workstopologically in the pruned word lattice, and main tains a list of N best derivations at each node.",
+                    "sid": 140,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When deducing a new derivation by attaching a current word-POS pair to the tail of a antecedent derivation, a function Eval is used to compute the new derivation?s score (line 10 and 24).",
+                    "sid": 141,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a max-heap heap to hold the candidates for the next-best derivation.",
+                    "sid": 142,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Line 7 ? 11 initialize heap to the set of top derivations along each deducing source, the vector pair ?D v head,??.Here, ? de notes the vector of current word-POS pairs, while D v head denotes the vector of N best derivations at ??s antecedent node.",
+                    "sid": 143,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then at each iteration, 388 Non-lexical-target Instances C n (n = ?2..2) C ?2 =e, C ?1 =?, C 0 =U, C 1 =/, C 2 =?",
+                    "sid": 144,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C n C n+1 (n = ?2..1) C ?2 C ?1 =e?, C ?1 C 0 =?U, C 0 C 1 =U/, C 1 C 2 =/?",
+                    "sid": 145,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C ?1 C 1 C ?1 C 1 =?/ Lexical-target Instances C 0 C n (n = ?2..2) C 0 C ?2 =Ue, C 0 C ?1 =U?, C 0 C 0 =UU, C 0 C 1 =U/, C 0 C 2 =U? C 0 C n C n+1 (n = ?2..1) C 0 C ?2 C ?1 =Ue?, C 0 C ?1 C 0 =U?U, C 0 C 0 C 1 =UU/, C 0 C 1 C 2 =U/?",
+                    "sid": 146,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C 0 C ?1 C 1 C 0 C ?1 C 1 = U?/ Table 2: Feature templates and instances.",
+                    "sid": 147,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose we consider the third character ?U? in the sequence ?e?U/??.",
+                    "sid": 148,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "we pop the best derivation from heap (line 15), and push its successors into heap (line 17), until we get N derivations or heap is empty.",
+                    "sid": 149,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In line 22 of function PUSHSUCC, j is a vector composed of two index numbers, indicating the two candidates?",
+                    "sid": 150,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "indexes in the two vectors of the deducing source p, where the two candidates are selected to deduce a new derivation.",
+                    "sid": 151,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "j? is a increment vector, whoseith dimension is 1, while others are 0.",
+                    "sid": 152,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As non local features (word- and POS- n-grams) are used by function Eval to compute derivation?s score, the derivations extracted from heap may be out of order.",
+                    "sid": 153,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So we use a buffer buf to keep extracted derivations (line 16), then sort buf and put its first N items to D v (line 18).",
+                    "sid": 154,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "baseline perceptron classifier. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "4.1 Joint S&T as Classification.",
+                    "sid": 155,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following Jiang et al (2008), we describe segmen tation and Joint S&T as below: For a given Chinese sentence appearing as a character sequence: C 1:n = C 1 C 2 ..",
+                    "sid": 156,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C n the goal of segmentation is splitting the sequence into several subsequences: C 1:e 1 C e 1 +1:e 2 ..",
+                    "sid": 157,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C e m?1 +1:e m While in Joint S&T, each of these subsequences is labelled a POS tag: C 1:e 1 /t 1 C e 1 +1:e 2 /t 2 ..",
+                    "sid": 158,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C e m?1 +1:e m /t m Where C i (i = 1..n) denotes a character, C l:r (l ? r) denotes the subsequence ranging from C l to C r , and t i (i = 1..m,m ? n) denotes the POS tag of C e i?1 +1:e i .If we label each character a positional tag indicating its relative position in an expected subsequence, we can obtain the segmentation result ac cordingly.",
+                    "sid": 159,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As described in Ng and Low (2004) andJiang et al (2008), we use s indicating a singlecharacter word, while b, m and e indicating the be gin, middle and end of a word respectively.",
+                    "sid": 160,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With these positional tags, the segmentation transforms to a classification problem.",
+                    "sid": 161,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Joint S&T, we expand positional tags by attaching POS to their tails as postfix.",
+                    "sid": 162,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As each tag now contains both positional- and POS- information, Joint S&T canalso be resolved in a classification style frame work.",
+                    "sid": 163,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It means that, a subsequence is a word withPOS t, only if the positional part of the tag se quence conforms to s or bm?e pattern, and each element in the POS part equals to t. For example, a tag sequence b NN m NN e NN represents a three-character word with POS tag NN . 4.2 Feature Templates.",
+                    "sid": 164,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features we use to build the classifier are gen erated from the templates of Ng and Low (2004).",
+                    "sid": 165,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For convenience of comparing with other, theydidn?t adopt the ones containing external knowl edge, such as punctuation information.",
+                    "sid": 166,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All theirtemplates are shown in Table 2.",
+                    "sid": 167,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "C denotes a character, while its subscript indicates its position rela tive to the current considering character(it has the subscript 0).",
+                    "sid": 168,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The table?s upper column lists the templates that immediately from Ng and Low (2004).",
+                    "sid": 169,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "they named these templates non-lexical-target becausepredications derived from them can predicate with out considering the current character C 0 . Tem-.",
+                    "sid": 170,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "plates called lexical-target in the column below areintroduced by Jiang et al (2008).",
+                    "sid": 171,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are gener ated by adding an additional field C 0to each nonlexical-target template, so they can carry out pred ication not only according to the context, but also according to the current character itself.",
+                    "sid": 172,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notice that features derived from the templates in Table 2 are all local features, which means allfeatures are determined only by the training instances, and they can be generated before the train ing procedure.",
+                    "sid": 173,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "389 Algorithm 5 Perceptron training algorithm.",
+                    "sid": 174,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1: Input: Training examples (x i , y i ) 2: ??",
+                    "sid": 175,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 3: for t?",
+                    "sid": 176,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 ..",
+                    "sid": 177,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "T do 4: for i?",
+                    "sid": 178,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 ..",
+                    "sid": 179,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N do 5: z i ? argmax z?GEN(x i ) ?(x i , z) ? ?",
+                    "sid": 180,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6: if z i 6= y i then 7: ??",
+                    "sid": 181,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "+?(x i , y i )??(x i , z i ) 8: Output: Parameters: ? 4.3 Training of the Classifier.",
+                    "sid": 182,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Collins (2002)?s perceptron training algorithmwere adopted again, to learn a discriminative clas sifier, mapping from inputs x ? X to outputs y ? Y . Here x is a character sequence, and y isthe sequence of classification result of each character in x. For segmentation, the classification re sult is a positional tag, while for Joint S&T, it is an extended tag with POS information.",
+                    "sid": 183,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "X denotes the set of character sequence, while Y denotes the corresponding set of tag sequence.",
+                    "sid": 184,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to Collins (2002), the function GEN(x) generates all candidate tag sequences for the character sequence x , the representation ? maps each training example (x, y) ? X ? Y to a feature vector ?(x, y) ? Rd, and the parameter vector ? ?",
+                    "sid": 185,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rd is the weight vector corresponding to the expected perceptron model?s feature space.",
+                    "sid": 186,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given input character sequence x, the mission of the classifier is to find the tag sequence F (x) satisfying: F (x) = argmax y?GEN(x) ?(x, y) ? ?",
+                    "sid": 187,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) The inner product ?(x, y) ? ?",
+                    "sid": 188,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "is the score of the result y given x, it represents how much plausibly we can label character sequence x as tag sequence y. The training algorithm is depicted in Algorithm to alleviate overfitting.",
+                    "sid": 189,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "Our experiments are conducted on the Penn Chi nese Treebank 5.0 (CTB 5.0).",
+                    "sid": 190,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following usual practice of Chinese parsing, we choose chapters1?260 (18074 sentences) as the training set, chap ters 301?",
+                    "sid": 191,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "325 (350 sentences) as the development set, and chapters 271 ? 300 (348 sentences) as the final test set.",
+                    "sid": 192,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report the performance ofthe baseline classifier, and then compare the per formance of the word lattice reranking against the 0.9 0.91 0.92 0.93 0.94 0.95 0.96 0 1 2 3 4 5 6 7 8 9 10F me as ur e number of iterations Perceptron Learning Curves Segmentation Joint ST Figure 2: Baseline averaged perceptron learning curves for segmentation and Joint S&T. n-best reranking, based on this baseline classifier.For each experiment, we give accuracies on segmentation and Joint S&T. Analogous to the situa tion in parsing, the accuracy of Joint S&T means that, a word-POS is recognized only if both the positional- and POS- tags are correctly labelled for each character in the word?s span.",
+                    "sid": 193,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Baseline Perceptron Classifier.",
+                    "sid": 194,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The perceptron classifier are trained on the train ing set using features generated from the templates in Table 2, and the development set is used to determine the best parameter vector.",
+                    "sid": 195,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows the learning curves for segmentation and Joint S&T on the development set.",
+                    "sid": 196,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We choose the averaged parameter vector after 7 iterations forthe final test, this parameter vector achieves an F measure of 0.973 on segmentation, and 0.925 on Joint S&T. Although the accuracy on segmentation is quite high, it is obviously lower on Joint S&T. Experiments of Ng and Low (2004) on CTB 3.0 also shown the similar trend, where they obtained F-measure 0.952 on segmentation, and 0.919 on Joint S&T. 5.2 Preparation for Reranking.",
+                    "sid": 197,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For n-best reranking, we can easily generate n bestresults for every training instance, by a modification for the baseline classifier to hold n best can didates at each considering point.",
+                    "sid": 198,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For word lattice reranking, we use the algorithm in Algorithm 2 to generate the pruned word lattice.",
+                    "sid": 199,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a training instance s i , its n best result list or pruned word lattice is used as a reranking instance cand(s i ),the best candidate result (of the n best list) or or acle diameter (of the pruned word lattice) is the reranking target y?",
+                    "sid": 200,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i . We find the best result of the.",
+                    "sid": 201,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "n best results simply by computing each result?s 390F-measure, and we determine the oracle diame ter of the pruned word lattice using the algorithm depicted in Algorithm 1.",
+                    "sid": 202,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All pairs of cand(s i ) and y?",
+                    "sid": 203,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i deduced from the baseline model?s training instances comprise the training set for reranking.",
+                    "sid": 204,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The development set and test set for reranking areobtained in the same way.",
+                    "sid": 205,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the reranking train ing set {cand(s i ), y ? i } N i=1 , {y ? i } N i=1 is called oracle set, and the F-measure of {y? i } N i=1against the ref erence set is called oracle F-measure.",
+                    "sid": 206,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use theoracle F-measure indicating the utmost improve ment that an reranking algorithm can achieve.",
+                    "sid": 207,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Results and Analysis.",
+                    "sid": 208,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The flows of the n-best list reranking and the pruned word lattice reranking are similar to the training procedure for the baseline classifier.",
+                    "sid": 209,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thetraining set for reranking is used to tune the param eter vector of the reranker, while the development set for reranking is used to determine the optimalnumber of iterations for the reranker?s training pro cedure.We compare the performance of the word lattice reranking against the n-best list reranking.",
+                    "sid": 210,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows the experimental results.",
+                    "sid": 211,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The upper four rows are the experimental results for n best list reranking, while the four rows below arefor word lattice reranking.",
+                    "sid": 212,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In n-best list rerank ing, with list size 20, the oracle F-measure on Joint S&T is 0.9455, and the reranked F-measure is 0.9280.",
+                    "sid": 213,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When list size grows up to 50, the oracle F-measure on Joint S&T jumps to 0.9552, whilethe reranked F-measure becomes 0.9302.",
+                    "sid": 214,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when n grows to 100, it brings tiny improvement over the situation of n = 50.",
+                    "sid": 215,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In word lat tice reranking, there is a trend similar to that inn-best reranking, the performance difference between in degree = 2 and in degree = 5 is ob vious, whereas the setting in degree = 10 doesnot obtain a notable improvement over the perfor mance of in degree = 5.",
+                    "sid": 216,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also notice that even with a relative small in degree limitation, such asin degree = 5, the oracle F-measures for seg mentation and Joint S&T both reach a quite highlevel.",
+                    "sid": 217,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This indicates the pruned word lattice con tains much more possibilities of segmentation and tagging, compared to n-best list.With the setting in degree = 5, the oracle F measure on Joint S&T reaches 0.9774, and the reranked F-measure climbs to 0.9336.",
+                    "sid": 218,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It achieves an error reduction of 16.3% on Joint S&T, and an error reduction of 11.9% on segmentation, over the n-best Ora Seg Tst Seg Ora S&T Tst S&T 20 0.9827 0.9749 0.9455 0.9280 50 0.9903 0.9754 0.9552 0.9302 100 0.9907 0.9755 0.9558 0.9305 Degree Ora Seg Rnk Seg Ora S&T Rnk S&T 2 0.9898 0.9753 0.9549 0.9296 5 0.9927 0.9774 0.9768 0.9336 10 0.9934 0.9774 0.9779 0.9337 Table 3: Performance of n-best list reranking andword lattice reranking.",
+                    "sid": 219,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "n-best: the size of the nbest list for n-best list reranking; Degree: the in de gree limitation for word lattice reranking; Ora Seg: oracle F-measure on segmentation of n-best lists or word lattices; Ora S&T: oracle F-measure on JointS&T of n-best lists or word lattices; Rnk Seg: F measure on segmentation of reranked result; Rnk S&T: F-measure on Joint S&T of reranked result baseline classifier.",
+                    "sid": 220,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While for n-best reranking with setting n = 50, the Joint S&T?s error reduction is 6.9% , and the segmentation?s error reduction is 8.9%.",
+                    "sid": 221,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can see that reranking on pruned word lattice is a practical method for segmentation andPOS tagging.",
+                    "sid": 222,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even with a much small data rep resentation, it obtains obvious advantage over the n-best list reranking.",
+                    "sid": 223,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing between the baseline and the tworeranking techniques, We find the non-local infor mation such as word- or POS- grams do improve accuracy of segmentation and POS tagging, and we also find the reranking technique is effective to utilize these kinds of information.",
+                    "sid": 224,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As even a small scale n-best list or pruned word lattice can achievea rather high oracle F-measure, reranking tech nique, especially the word lattice reranking would be a promising refining strategy for segmentation and POS tagging.",
+                    "sid": 225,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is based on this viewpoint: On the one hand, compared with the initial input character sequence, the pruned word lattice has aquite smaller search space while with a high ora cle F-measure, which enables us to conduct more precise reranking over this search space to find the best result.",
+                    "sid": 226,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, as the structure of the search space is approximately outlined by the topological directed architecture of pruned wordlattice, we have a much wider choice for feature selection, which means that we would be able to utilize not only features topologically before the cur rent considering position, just like those depictedin Table 2 in section 4, but also information topo logically after it, for example the next word W 1 or the next POS tag T 1 . We believe the pruned word.",
+                    "sid": 227,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "391lattice reranking technique will obtain higher im provement, if we develop more precise reranking algorithm and more appropriate features.",
+                    "sid": 228,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "This paper describes a reranking strategy calledword lattice reranking.",
+                    "sid": 229,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a derivation of the forest reranking of Huang (2008), it performs rerank ing on pruned word lattice, instead of on n-best list.",
+                    "sid": 230,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using word- and POS- gram information, this reranking technique achieves an error reduction of 16.3% on Joint S&T, and 11.9% on segmentation, over the baseline classifier, and it also outperformsreranking on n-best list.",
+                    "sid": 231,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It confirms that word lattice reranking can effectively use non-local infor mation to select the best candidate result, from a relative small representation structure while with aquite high oracle F-measure.",
+                    "sid": 232,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, our rerank ing implementation is relative coarse, and it must have many chances for improvement.",
+                    "sid": 233,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In futurework, we will develop more precise pruning al gorithm for word lattice generation, to further cutdown the search space while maintaining the ora cle F-measure.",
+                    "sid": 234,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will also investigate the featureselection strategy under the word lattice architec ture, for effective use of non-local information.",
+                    "sid": 235,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "AcknowledgementThis work was supported by National Natural Sci ence Foundation of China, Contracts 60736014 and 60573188, and 863 State Key Project No. 2006AA010108.",
+                    "sid": 236,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We show our special thanks to Liang Huang for his valuable suggestions.",
+                    "sid": 237,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

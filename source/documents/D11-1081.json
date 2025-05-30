@@ -1,0 +1,1595 @@
+{
+    "ID": "D11-1081",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Although discriminative training guarantees to improve statistical machine translation by incorporating a large amount of overlapping features, it is hard to scale up to large data due to decoding complexity.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose a new algorithm to generate translation forest of training data in linear time with the help of word alignment.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm also alleviates the oracle selection problem by ensuring that a forest always contains derivations that exactly yield the reference translation.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With millions of features trained on 519K sentences in 0.03 second per sentence, our system achieves significant improvement by 0.84 BLEU over the baseline system on the NIST ChineseEnglish test sets.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Discriminative model (Och and Ney, 2002) can easily incorporate non-independent and overlapping features, and has been dominating the research field of statistical machine translation (SMT) in the last decade.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent work have shown that SMT benefits a lot from exploiting large amount of features (Liang et al., 2006; Tillmann and Zhang, 2006; Watanabe et al., 2007; Blunsom et al., 2008; Chiang et al., 2009).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the training of the large number of features was always restricted in fairly small data sets.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some systems limit the number of training examples, while others use short sentences to maintain efficiency.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overfitting problem often comes when training many features on a small data (Watanabe et al., 880 2007; Chiang et al., 2009).",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Obviously, using much more data can alleviate such problem.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, large data also enables us to globally train millions of sparse lexical features which offer accurate clues for SMT.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Despite these advantages, to the best of our knowledge, no previous discriminative training paradigms scale up to use a large amount of training data.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main obstacle comes from the complexity of packed forests or n-best lists generation which requires to search through all possible translations of each training example, which is computationally prohibitive in practice for SMT.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To make normalization efficient, contrastive estimation (Smith and Eisner, 2005; Poon et al., 2009) introduce neighborhood for unsupervised log-linear model, and has presented positive results in various tasks.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Motivated by these work, we use a translation forest (Section 3) which contains both \u201creference\u201d derivations that potentially yield the reference translation and also neighboring \u201cnon-reference\u201d derivations that fail to produce the reference translation.1However, the complexity of generating this translation forest is up to O(n6), because we still need bi parsing to create the reference derivations.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, we propose a method to fast generate a subset of the forest.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The key idea (Section 4) is to initialize a reference derivation tree with maximum score by the help of word alignment, and then traverse the tree to generate the subset forest in linear time.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides the efficiency improvement, such a forest allows us to train the model without resort 1 Exactly, there are no reference derivations, since derivation is a latent variable in SMT.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call them reference derivation just for convenience.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Proceedings of the 2011 Conference on Empirical Methods in Natural Language Processing, pages 880\u2013888, Edinburgh, Scotland, UK, July 27\u201331, 2011.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2011 Association for Computational Linguistics 0,4 1 2 hyper- edge rule 0,1 5 0 1 2,4 3 2 3 4 3,4 6 4 e1 r1 X \u21d2 \u27e8X1 bei X2, X1 was X2\u27e9 e2 r2 X \u21d2 \u27e8qiangshou bei X1, t h e g u n m a n w a s X 1 \u27e9 e3 r3 X \u21d2 \u27e8jingfang X1, X1 by the police\u27e9 e4 r4 X \u21d2 \u27e8jingfang X1, police X1 \u27e9 e5 r5 X \u21d2 \u27e8qiangshou, the gunman\u27e9 e6 r6 X \u21d2 \u27e8jibi, shot dead\u27e9 Figure 1: A translation forest which is the running example throughout this paper.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reference translation is \u201cthe gunman was killed by the police\u201d.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) Solid hyperedges denote a \u201creference\u201d derivation tree t1 which exactly yields the reference translation.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) Replacing e3 in t1 with e4 results a competing non-reference derivation t2 , which fails to swap the order of X3,4 .",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) Removing e1 and e5 in t1 and adding e2 leads to another reference derivation t3 . Generally, this is done by deleting a node X0,1 . ing to constructing the oracle reference (Liang et al., 2006; Watanabe et al., 2007; Chiang et al., 2009), which is nontrivial for SMT and needs to be determined experimentally.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given such forests, we globally learn a log-linear model using stochastic gradient descend (Section 5).",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, both the generation of forests and the training algorithm are scalable, enabling us to train millions of features on large-scale data.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To show the effect of our framework, we globally quence of SCFG rules {ri}.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translation forest (Miet al., 2008; Li and Eisner, 2009) is a compact repre sentation of all the derivations for a given sentence under an SCFG (see Figure 1).",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A tree t in the forest corresponds to a derivation.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our paper, tree means the same as derivation.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More formally, a forest is a pair \u27e8V, E\u27e9, where V is the set of nodes, E is the set of hyperedge.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given source sentence f = f n, Each node v \u2208 V is in the form , which denotes the recognitiontrain millions of word level context features moti vated by word sense disambiguation (Chan et al., 2007) together with the features used in traditional SMT system (Section 6).",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training on 519K sentence pairs in 0.03 seconds per sentence, we achieve significantly improvement over the traditional pipeline by 0.84 BLEU.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "synchronous context free grammar. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We work on synchronous context free grammar (SCFG) (Chiang, 2007) based translation.",
+                    "sid": 35,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The elementary structures in an SCFG are rewrite rules of the form: X \u21d2 \u27e8\u03b3, \u03b1\u27e9where \u03b3 and \u03b1 are strings of terminals and nonter minals.",
+                    "sid": 36,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call \u03b3 and \u03b1 as the source side and the target side of rule respectively.",
+                    "sid": 37,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here a rule means a phrase translation (Koehn et al., 2003) or a translation pair that contains nonterminals.",
+                    "sid": 38,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We call a sequence of translation steps as aderivation.",
+                    "sid": 39,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In context of SCFG, a derivation is a se Xi,j of nonterminal X spanning the substring from the i through j (that is fi+1...fj ).",
+                    "sid": 40,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each hyperedge e \u2208 E connects a set of antecedent to a single consequent node and corresponds to an SCFG rule r(e).",
+                    "sid": 41,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "our translation forest. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We use a translation forest that contains both \u201creference\u201d derivations that potentially yield the reference translation and also some neighboring \u201cnon- reference\u201d derivations that fail to produce the reference translation.",
+                    "sid": 42,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, our forest only represents some of the derivations for a sentence given an SCFG rule table.",
+                    "sid": 43,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The motivation of using such a forest is efficiency.",
+                    "sid": 44,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, since this space contains both \u201cgood\u201d and \u201cbad\u201d translations, it still provides evidences for discriminative training.",
+                    "sid": 45,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First see the example in Figure 1.",
+                    "sid": 46,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The derivation tree t1 represented by solid hyperedges is a reference derivation.",
+                    "sid": 47,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can construct a non-reference derivation by making small change to t1.",
+                    "sid": 48,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By replacing the e3 of t1 with e4, we obtain a non-reference deriva tion tree t2.",
+                    "sid": 49,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering the rules in each derivation, the difference between t1 and t2 lies in r3 and r4.",
+                    "sid": 50,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although r3 has a same source side with r4, it produces a different translation.",
+                    "sid": 51,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While r3 provides a swapping translation, r4 generates a monotone translation.",
+                    "sid": 52,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, the derivation t2 fails to move the subject \u201cpolice\u201d to the behind of verb \u201cshot dead\u201d, resulting a wrong translation \u201cthe gunman was police shot dead\u201d.",
+                    "sid": 53,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given such derivations, we hope that the discriminative model is capable to explain why should use a reordering rule in this context.",
+                    "sid": 54,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generally, our forest contains all the reference derivations RT for a sentence given a rule table, and some neighboring non-reference derivations N T , which can be defined from RT . Algorithm 1 Forest Generation 1: procedure GENERATE(t) 2: list \u2190 t 3: for v \u2208 t in post order do 4: e \u2190 incoming edge of v 5: append C (t, e) to list; 6: for u \u2208 child(v) from left to right do 7: tn \u2190 OPERATE(t, u) 8: if tn \u0338= t then 9: append tn to list 10: for e\u2032 \u2208 tn \u2227 e\u2032 \u2208/ t do 11: append C (tn,e\u2032 ) to list 12: if SCORE(t) < SCORE(tn) then 13: t \u2190 tn 14: return t,list More formally, we call two hyperedges e1 and e2 are competing hyperedges, if their corresponding rules r(e1) = \u27e8\u03b31, \u03b11\u27e9 and r(e2) = \u27e8\u03b32, \u03b12\u27e9 : \u03b31 = \u03b32 \u2227 \u03b11 \u0338= \u03b12 (1) This means they give different translations for a same source side.",
+                    "sid": 55,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use C (e) to represent the set of competing hyperedges of e. Two derivations t1 = \u27e8V 1, E1\u27e9 and t2 = \u27e8V 2, E2\u27e9 are competing derivations if there exists e1 \u2208 E1 and e2 \u2208 E2: 2 V 1 = V 2 \u2227 E1 \u2212 e1 = E2 \u2212 e2 \u2227 e2 \u2208 C (e1) (2) In other words, derivations t1 and t2 only differ in e1 and e2, and these two hyperedges are competing hyperedges.",
+                    "sid": 56,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use C (t) to represent the set of competing derivations of tree t, and C (t,e) to represent the set of competing derivations of t if the competition occurs in hyperedge e in t. Given a rule table, the set of reference derivations RT for a sentence is determined.",
+                    "sid": 57,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, the set of non-reference derivations N T can be defined from RT : \u222at\u2208RT C (t) (3) Overall, our forest is the compact representation of RT and N T . 2 The definition of derivation tree is similar to forest, except.",
+                    "sid": 58,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "that the tree contains exactly one tree while forest contains exponentially trees.",
+                    "sid": 59,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In tree, the hyperedge degrades to edge.",
+                    "sid": 60,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "fast generation. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "It is still slow to calculate the entire forest defined in Section 3, therefore we use a greedy decoding for fast generating a subset of the forest.",
+                    "sid": 61,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Starting form a reference derivation, we try to slightly change the derivation into a new reference derivation.",
+                    "sid": 62,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During this process, we collect the competing derivations of reference derivations.",
+                    "sid": 63,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe the details of local operators for changing a derivation in section 4.1, and then introduce the creation of initial reference derivation with max score in Section 4.2.",
+                    "sid": 64,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, given derivation t1, we delete the node X0,1 and the related hyperedge e1 and e5.",
+                    "sid": 65,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fixing the other nodes and edges, we try to add a new edge e2 to create a new reference translation.",
+                    "sid": 66,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case, if rule r2 really exists in our rule table, we get a new reference derivation t3.",
+                    "sid": 67,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After constructing t3, we first collect the new tree and C (t3, e2).",
+                    "sid": 68,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we will move to t3, if the score of t3 is higher than t2.",
+                    "sid": 69,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notably, if r2 does not exist in the rule table, we fail to create a new reference derivation.",
+                    "sid": 70,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such case, we keep the origin derivation unchanged.",
+                    "sid": 71,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 1 shows the process of generation.3 The input is a reference derivation t, and the output is a new derivation and the generated derivations.",
+                    "sid": 72,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 For simplicity, we list all the trees, and do not compress them into a forest in practice.",
+                    "sid": 73,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is straight to extent the algorithm to get a compact forest for those generated derivations.",
+                    "sid": 74,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Actually, instead of storing the derivations, we call the generate function twice to calculate gradient of log-linear model.",
+                    "sid": 75,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0,4 0,4 0,4 0,1 2,4 2,4 0,2 2,4 Figure 2: Lexicalize and generalize operators over t1 (part) in Figure 1.",
+                    "sid": 76,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although here only shows the nodes, we also need to change relative edges actually.",
+                    "sid": 77,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) Applying lexicalize operator on the non-terminal node X0,1 in (a) results a new derivation shown in (b).",
+                    "sid": 78,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) When visiting bei in (b), the generalize operator changes the derivation into (c).",
+                    "sid": 79,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The list used for storing forest is initialized with the input tree (line 2).",
+                    "sid": 80,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We visit the nodes in t in post- order (line 3).",
+                    "sid": 81,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each node v, we first append the competing derivations C (t,e) to list, where e is incoming edge of v (lines 45).",
+                    "sid": 82,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, we apply operators on the child nodes of v from left to right (lines 613).",
+                    "sid": 83,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The operators returns a reference derivation tn (line 7).",
+                    "sid": 84,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If it is new (line 8), we collect both the tn (line 9), and also the competing derivations C (tn, e\u2032) of the new derivation on those edges e\u2032 which only occur in the new derivation (lines 1011).",
+                    "sid": 85,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, if the new derivation has a larger score, we will replace the origin derivation with new one (lines 1213).",
+                    "sid": 86,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although there is a two-level loop for visiting nodes (line 3 and 6), each node is visited only one time in the inner loops.",
+                    "sid": 87,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, the complexity is linear with the number of nodes #node.",
+                    "sid": 88,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering that the number of source word (also leaf node here) is less than the total number of nodes and is more than \u2308(#node + 1)/2\u2309, the time complexity of the process is also linear with the number of source word.",
+                    "sid": 89,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Lexicalize and Generalize.",
+                    "sid": 90,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The function OPERATE in Algorithm 1 uses two operators to change a node: lexicalize and generalize.",
+                    "sid": 91,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows the effects of the two operators.",
+                    "sid": 92,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lexicalize operator works on nonterminal nodes.",
+                    "sid": 93,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It moves away a nonterminal node and attaches the children of current node to its parent.",
+                    "sid": 94,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 2(b), the node X0,1 is deleted, requiring a more lexical- ized rule to be applied to the parent node X0,4 (one more terminal in the source side).",
+                    "sid": 95,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We constrain the lexicalize operator to apply on pre-terminal nodes whose children are all terminal nodes.",
+                    "sid": 96,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, the generalize operator works on terminal nodes and inserts a nonterminal node between current node and its parent node.",
+                    "sid": 97,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This operator generalizes over the continuous terminal sibling nodes left to the current node (including the current node).",
+                    "sid": 98,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generalizing the node bei in Figure 2(b) results Figure 2(c).",
+                    "sid": 99,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A new node X0,2 is inserted as the parent of node qiangshou and node bei.",
+                    "sid": 100,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notably, there are two steps when apply an operator.",
+                    "sid": 101,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suppose we want to lexicalize the node X0,1 in t1 of Figure 1, we first delete the node X0,1 and related edge e1 and e5, then we try to add the new edge e2.",
+                    "sid": 102,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since rule table is fixed, the second step is a process of decoding.",
+                    "sid": 103,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, sometimes we may fail to create a new reference derivation (like r2 may not exist in the rule table).",
+                    "sid": 104,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such case, we keep the origin derivation unchanged.",
+                    "sid": 105,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The changes made by the two operators are local.",
+                    "sid": 106,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering the change of rules, the lexicalize operator deletes two rules and adds one new rule, while the generalize operator deletes one rule and adds two new rules.",
+                    "sid": 107,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such local changes provide us with a way to incrementally calculate the scores of new derivations.",
+                    "sid": 108,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use this method motivated by Gibbs Sampler (Blunsom et al., 2009) which has been used for efficiently learning rules.",
+                    "sid": 109,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The different lies in that we use the operator for decoding where the rule table is fixing.",
+                    "sid": 110,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Initialize a Reference Derivation.",
+                    "sid": 111,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generation starts from an initial reference derivation with max score.",
+                    "sid": 112,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This requires bi-parsing (Dyer, 2010) over the source sentence f and the reference translation e. In practice, we may face three problems.",
+                    "sid": 113,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First is efficiency problem.",
+                    "sid": 114,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Exhaustive search over the space under SCFG requires O(|f |3|e|3).",
+                    "sid": 115,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To parse quickly, we only visit the tight consistent (Zhang et al., 2008) bi-spans with the help of word alignment a. Only visiting tight consistent spans greatly speeds up bi-parsing.",
+                    "sid": 116,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides efficiency, Algorithm 2 Training 1: procedure TRAIN(S ) 2: Training Data S = {f n, en, an N }n=1 3: Derivations T = {}N adoption of this constraint receives support from the fact that heuristic SCFG rule extraction only extracts tight consistent initial phrases (Chiang, 2007).",
+                    "sid": 117,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second is degenerate problem.",
+                    "sid": 118,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we only use the features as traditional SCFG systems, the bi- parsing may end with a derivation consists of some giant rules or rules with rare source/target sides, which is called degenerate solution (DeNero et al., 2006).",
+                    "sid": 119,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That is because the translation rules with rare source/target sides always receive a very high translation probability.",
+                    "sid": 120,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We add a prior score log(#rule) for each rule, where #rule is the number of occurrence of a rule, to reward frequent reusable rules and derivations with more rules.",
+                    "sid": 121,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we may fail to create reference derivations due to the limitation in rule extraction.",
+                    "sid": 122,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We create minimum trees for (f , e, a) using shift-reduce 4: for n = 1 to N do 5: tn \u2190 INITIAL(f n, en, an) 6: i \u2190 0 7: for m = 0 to M do 8: for n = 0 to N do 9: \u03b7 \u2190 LEARNRATE(i) 10: (\u2206L(wi, tn), tn) \u2190GENERATE(tn) 11: wi \u2190 wi + \u03b7 \u00d7 \u2206L(wi, tn) 12: i \u2190 i + 1 \u2211M N i i=1 M N This model defines the conditional probability of a derivation t and the corresponding translation e given a source sentence f as: exp \u2211i \u03bbihi(t, e, f ) (Zhang et al., 2008).",
+                    "sid": 123,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some minimum rules in the trees may be illegal according to the definition of p(t, e|f ) = (5) Z (f ) Chiang (2007).",
+                    "sid": 124,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also add these rules to the rule where the partition function is table, so as to make sure every sentence is reachable given the rule table.",
+                    "sid": 125,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A source sentence is reachable given a rule table if reference derivations exists.",
+                    "sid": 126,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer these rules as added rules.",
+                    "sid": 127,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this may Z (f ) = \u2211 \u2211 e t\u2208\u25b3(e,f ) exp \u2211 \u03bbihi(t, e, f ) (6) i introduce rules with more than two variables and increase the complexity of bi-parsing.",
+                    "sid": 128,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To tackle this problem, we initialize the chart with minimum parallel tree from the Zhang et al.",
+                    "sid": 129,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) algorithm, ensuring that the bi-parsing has at least one path to create a reference derivation.",
+                    "sid": 130,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we only need to consider the traditional rules during bi-parsing.",
+                    "sid": 131,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "training. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The partition function is approximated by our for est, which is labeled as Z\u02dc(f ), and the derivations that produce reference translation is approximated by reference derivations in Z\u02dc(f ).",
+                    "sid": 132,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We estimate the parameters in log-linear model using maximum a posteriori (MAP) estimator.",
+                    "sid": 133,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It maximizes the likelihood of the bilingual corpus S = {f , e }n=1, penalized using a gaussian prior (L2 norm) with the probability density function We use the forest to train a log-linear model with a p0(\u03bbi) \u221d exp(\u2212\u03bb2/2\u03c32 ).",
+                    "sid": 134,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We set \u03c32 to 1.0 in our latent variable as describe in Blunsom et al.(2008).",
+                    "sid": 135,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "experiments.",
+                    "sid": 136,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This results in the following gradient: The probability p(e|f ) is the sum over all possible derivations: \u2202L \u2202\u03bbi = Ep(t|e,f ) [hi] \u2212 Ep(e|f ) [hi] \u03bbi \u2212 \u03c32 (7) p(e|f ) = \u2211 t\u2208\u25b3(e,f ) p(t, e|f ) (4) We use an online learning algorithm to train the parameters.",
+                    "sid": 137,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We implement stochastic gradient de where \u25b3(e, f ) is the set of all possible derivations that translate f into e and t is one such derivation.4scent (SGD) recommended by Bottou.5 The dy namic learning rate we use is N , where N is the 0 4 Although the derivation is typically represent as d, we de-.",
+                    "sid": 138,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "notes it by t since our paper use tree to represent derivation.",
+                    "sid": 139,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 http://leon.bottou.org/projects/sgd number of training example, i is the training iteration, and i0 is a constant number used to get a initial learning rate, which is determined by calibration.",
+                    "sid": 140,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Algorithm 2 shows the entire process.",
+                    "sid": 141,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We first create an initial reference derivation for every training examples using bi-parsing (lines 45), and then online learn the parameters using SGD (lines 612).",
+                    "sid": 142,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the GENERATE function to calculate the gradient.",
+                    "sid": 143,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, instead of storing all the derivations in a list, we traverse the tree twice.",
+                    "sid": 144,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first time is calculating the partition function, and the second time calculates the gradient normalized by partition function.",
+                    "sid": 145,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training, we also change the derivations (line 10).",
+                    "sid": 146,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When training is finished after M epochs, the algorithm returns an averaged weight vector (Collins, 2002) to avoid overfitting (line 13).",
+                    "sid": 147,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a development set to select total epoch m, which is set as M = 5 in our experiments.",
+                    "sid": 148,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Our method is able to train a large number of features on large data.",
+                    "sid": 149,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use a set of word context features motivated by word sense disambiguation (Chan et al., 2007) to test scalability.",
+                    "sid": 150,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A word level context feature is a triple (f, e, f+1), which counts the number of time that f is aligned to e and f+1 occurs to the right of f . Triple (f, e, f\u22121) is similar except that f\u22121 locates to the left of f . We retain word alignment information in the extracted rules to exploit such features.",
+                    "sid": 151,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To demonstrate the importance of scaling up the size of training data and the effect of our method, we compare three types of training configurations which differ in the size of features and data.",
+                    "sid": 152,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MERT.",
+                    "sid": 153,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use MERT (Och, 2003) to training 8 features on a small data.",
+                    "sid": 154,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 8 features is the same as Chiang (2007) including 4 rule scores (direct and reverse translation scores; direct and reverse lexical translation scores); 1 target side language model score; 3 penalties for word counts, extracted rules and glue rule.",
+                    "sid": 155,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Actually, traditional pipeline often uses such configuration.",
+                    "sid": 156,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perceptron.",
+                    "sid": 157,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also learn thousands of context word features together with the 8 traditional features on a small data using perceptron.",
+                    "sid": 158,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following (Chiang et al., 2009), we only use 100 most frequent words for word context feature.",
+                    "sid": 159,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This setting use CKY de T R A I N R T R AI N D EV T E ST # S e n t . # W or d A v g . L e n . L o n . L e n . 51 9, 35 9 8 . 6 M 1 6 . 5 9 9 1 8 6, 8 1 0 1 . 3 M 7 . 3 9 5 8 7 8 2 3 K 2 6.",
+                    "sid": 160,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 7 7 3, 7 8 9 1 0 5 K 2 8 . 0 1 1 6 Table 1: Corpus statistics of Chinese side, where Sent., Avg., Lon., and Len.",
+                    "sid": 161,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "are short for sentence, longest, average, and length respectively.",
+                    "sid": 162,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "RTRAIN denotes the reachable (given rule table without added rules) subset of TRAIN data.",
+                    "sid": 163,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "coder to generate n-best lists for training.",
+                    "sid": 164,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complexity of CKY decoding limits the training data into a small size.",
+                    "sid": 165,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We fix the 8 traditional feature weights as MERT to get a comparable results as MERT.",
+                    "sid": 166,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our Method.",
+                    "sid": 167,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we use our method to train millions of features on large data.",
+                    "sid": 168,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of large data promises us to use full vocabulary of training data for the context word features, which results millions of fully lexicalized context features.",
+                    "sid": 169,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During decoding, when a context feature does not exit, we simply ignore it.",
+                    "sid": 170,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weights of 8 traditional features are fixed the same as MERT also.",
+                    "sid": 171,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We fix these weights because the translation feature weights fluctuate intensely during online learning.",
+                    "sid": 172,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main reason may come from the degeneration solution mentioned in Section 4.2, where rare rules with very high translation probability are selected as the reference derivations.",
+                    "sid": 173,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another reason could be the fact that translation features are dense intensify the fluctuation.",
+                    "sid": 174,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We leave learning without fixing the 8 feature weights to future work.",
+                    "sid": 175,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.1 Data.",
+                    "sid": 176,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We focus on the Chinese-to-English translation task in this paper.",
+                    "sid": 177,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The bilingual corpus we use contains 519, 359 sentence pairs, with an average length of 16.5 in source side and 20.3 in target side, where 186, 810 sentence pairs (36%) are reachable (without added rules in Section 4.2).",
+                    "sid": 178,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The monolingual data includes the Xinhua portion of the GIGAWORD corpus, which contains 238M English words.",
+                    "sid": 179,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the NIST evaluation sets of 2002 (MT02) as our development set, and sets of MT03/MT04/MT05 as test sets.",
+                    "sid": 180,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows the statistics of all bilingual corpus.",
+                    "sid": 181,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use GIZA++ (Och and Ney, 2003) to perform S y s t e m # D AT A # F EA T M T0 3 MT04 MT05 ALL.",
+                    "sid": 182,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "M E R T 8 7 8 8 33 .0 3 35.12 32.32 33.85 P e r c e p tr o n 8 7 8 2 . 4 K 32 .8 9 34.88 32.55 33.76 O ur M et ho d 1 8 7 K 2 . 0 M 33 .6 4 35.48 32.91* 34.41* 5 1 9 K 1 3.",
+                    "sid": 183,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 M 34 .1 9* 35.72* 33.09* 34.69* Improve ment over MERT +1 .1 6 +0.60 +0.77 +0.84 Table 2: Effect of our method comparing with MERT and perceptron in terms of BLEU.",
+                    "sid": 184,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also compare our fast generation method with different data (only reachable or full data).",
+                    "sid": 185,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "#Data is the size of data for training the feature weights.",
+                    "sid": 186,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "* means significantly (Koehn, 2004) better than MERT (p < 0.01).",
+                    "sid": 187,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "word alignment in both directions, and grow-diag- final-and (Koehn et al., 2003) to generate symmetric word alignment.",
+                    "sid": 188,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We extract SCFG rules as described in Chiang (2007) and also added rules (Section 4.2).",
+                    "sid": 189,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our algorithm runs on the entire training data, which requires to load all the rules into the memory.",
+                    "sid": 190,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To fit within memory, we cut off those composed rules which only happen once in the training data.",
+                    "sid": 191,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here a composed rule is a rule that can be produced by any other extracted rules.",
+                    "sid": 192,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A 4-grams language model is trained by the SRILM toolkit (Stolcke, 2002).",
+                    "sid": 193,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Case-insensitive NIST BLEU4 (Pa- pineni et al., 2002) is used to measure translation performance.",
+                    "sid": 194,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training data comes from a subset of the LDC data including LDC2002E18, LDC2003E07, LDC2003E14, Hansards portion of LDC2004T07, LDC2004T08 and LDC2005T06.",
+                    "sid": 195,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the rule table of the entire data is too large to be loaded to the memory (even drop one-count rules), we remove many sentence pairs to create a much smaller data yet having a comparable performance with the entire data.",
+                    "sid": 196,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The intuition lies in that if most of the source words of a sentence need to be translated by the added rules, then the word alignment may be highly crossed and the sentence may be useless.",
+                    "sid": 197,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We create minimum rules from a sentence pair, and count the number of source words in those minimum rules that are added rules.",
+                    "sid": 198,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, suppose the result minimum rules of a sentence contain r3 which is an added rule, then we count 1 time for the sentence.",
+                    "sid": 199,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the number of such source word is more than 10% of the total number, we will drop the sentence pair.",
+                    "sid": 200,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare the performances of MERT setting on three bilingual data: the entire data that contains 42.3M Chinese and 48.2M English words; 519K data that contains 8.6M Chinese and 10.6M English words; FBIS (LDC2003E14) parts that contains 6.9M Chinese and 9.1M English words.",
+                    "sid": 201,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They produce 33.11/32.32/30.47 BLEU tested on MT05 respectively.",
+                    "sid": 202,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of 519K data is comparable with that of entire data, and much higher than that of FBIS data.",
+                    "sid": 203,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.2 Result.",
+                    "sid": 204,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows the performance of the three different training configurations.",
+                    "sid": 205,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training of MERT and perceptron run on MT02.",
+                    "sid": 206,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our method, we compare two different training sets: one is trained on all 519K sentence pairs, the other only uses 186K reachable sentences.",
+                    "sid": 207,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the perceptron system exploits 2.4K features, it fails to produce stable improvements over MERT.",
+                    "sid": 208,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason may come from overfitting, since the training data for perceptron contains only 878 sentences.",
+                    "sid": 209,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, when use our method to learn the word context feature on the 519K data, we significantly improve the performance by 0.84 points on the entire test sets (ALL).",
+                    "sid": 210,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improvements range from 0.60 to 1.16 points on MT03 05.",
+                    "sid": 211,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Because we use the full vocabulary, the num-.",
+                    "sid": 212,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ber of features increased into 13.9 millions, which is impractical to be trained on the small development set.",
+                    "sid": 213,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results confirm the necessity of exploiting more features and learning the parameters on large data.",
+                    "sid": 214,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Meanwhile, such results also demonstrate that we can benefits from the forest generated by our fast method instead of traditional CKY algorithm.",
+                    "sid": 215,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not surprisingly, the improvements are smaller when only use 186K reachable sentences.",
+                    "sid": 216,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sometimes we even fail to gain significant improvement.",
+                    "sid": 217,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This verifies our motivation to guarantee all sentence 180 small) rules.",
+                    "sid": 218,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "150 120 90 60 30 0 0 10 20 30 40 50 60 70 80 90 S e n t e n c e L e n g t h 7 R e l a t e d W o r k Minimum error rate training (Och, 2003) is perhaps the most popular discrimin ative training for SMT.",
+                    "sid": 219,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it fails to scale to large number of features.",
+                    "sid": 220,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Research ers have propose many learning algorithm s to train many features: perceptro n (Shen et al., 2004; Liang et al., 2006), minimum risk (Smith and Eisner, 2006; Li et al., 2009), MIRA (Watanab e et al., 2007; Figure 3: Plot of training times (including forest generation and SGD training) versus sentence length.",
+                    "sid": 221,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We randomly select 1000 sentence from the 519K data for plotting.",
+                    "sid": 222,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "are reachable, so as to use all training data.",
+                    "sid": 223,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6.3 Speed.",
+                    "sid": 224,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "How about the speed of our framework?",
+                    "sid": 225,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method learns in 32 mlliseconds/sentence.",
+                    "sid": 226,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 shows training times (including forest generation and SGD training) versus sentence length.",
+                    "sid": 227,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The plot confirms that our training algorithm scales linearly.",
+                    "sid": 228,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If we use n-best lists which generated by CKY decoder as MERT, it takes about 3105 milliseconds/sentence for producing 100-best lists.",
+                    "sid": 229,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method accelerates the speed about 97 times (even though we search twice to calculate the gradient).",
+                    "sid": 230,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This shows the efficiency of our method.",
+                    "sid": 231,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The procedure of training includes two steps.",
+                    "sid": 232,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) Bi-parsing to initialize a reference derivation with max score.",
+                    "sid": 233,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) Training procedure which generates a set of derivations to calculate the gradient and update parameters.",
+                    "sid": 234,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Step (1) only runs once.",
+                    "sid": 235,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The average time of processing a sentence for each step is about 9.5 milliseconds and 30.2 milliseconds respectively.",
+                    "sid": 236,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity we do not compress the generated derivations into forests, therefore the size of resulting derivations is fairly small, which is about 265.8 for each sentence on average, where 6.1 of them are reference derivations.",
+                    "sid": 237,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we use lexical- ize operator more often than generalize operator (the ration between them is 1.5 to 1).",
+                    "sid": 238,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lexicalize operator is used more frequently mainly dues to that the reference derivations are initialized with reusable (thus Chiang et al., 2009), gradient descent (Blunsom et al., 2008; Blunsom and Osborne, 2008).",
+                    "sid": 239,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complexity of n-best lists or packed forests generation hamper these algorithms to scale to a large amount of data.",
+                    "sid": 240,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For efficiency, we only use neighboring derivations for training.",
+                    "sid": 241,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such motivation is same as con- trastive estimation (Smith and Eisner, 2005; Poon et al., 2009).",
+                    "sid": 242,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference lies in that the previous work actually care about their latent variables (pos tags, segmentation, dependency trees, etc), while we are only interested in their marginal distribution.",
+                    "sid": 243,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we focus on how to fast generate translation forest for training.",
+                    "sid": 244,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The local operators lexicalize/generalize are use for greedy decoding.",
+                    "sid": 245,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea is related to \u201cpegging\u201d algorithm (Brown et al., 1993) and greedy decoding (Germann et al., 2001).",
+                    "sid": 246,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such types of local operators are also used in Gibbs sampler for synchronous grammar induction (Blunsom et al., 2009; Cohn and Blunsom, 2009).",
+                    "sid": 247,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 Conclusion and Future Work.",
+                    "sid": 248,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have presented a fast generation algorithm for translation forest which contains both reference derivations and neighboring non-reference derivations for large-scale SMT discriminative training.",
+                    "sid": 249,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have achieved significantly improvement of 0.84 BLEU by incorporate 13.9M feature trained on 519K data in 0.03 second per sentence.",
+                    "sid": 250,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we define the forest based on competing derivations which only differ in one rule.",
+                    "sid": 251,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There may be better classes of forest that can produce a better performance.",
+                    "sid": 252,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It\u2019s interesting to modify the definition of forest, and use more local operators to increase the size of forest.",
+                    "sid": 253,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, since the generation of forests is quite general, it\u2019s straight to apply our forest on other learning algorithms.",
+                    "sid": 254,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we hope to exploit more features such as reordering features and syntactic features so as to further improve the performance.",
+                    "sid": 255,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgement",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We would like to thank Yifan He, Xianhua Li, Daqi Zheng, and the anonymous reviewers for their insightful comments.",
+                    "sid": 256,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The authors were supported by National Natural Science Foundation of China Contracts 60736014, 60873167, and 60903138.",
+                    "sid": 257,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

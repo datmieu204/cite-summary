@@ -1,0 +1,1055 @@
+{
+    "ID": "P03-1039",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper describes an alternative translation model based on a text chunk under the framework of statistical machine translation.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation model suggested here first performs chunking.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, each word in a chunk is translated.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, translated chunks are reordered.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under this scenario of translation modeling, we have experimented on a broad- coverage JapaneseEnglish traveling corpus and achieved improved performance.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The framework of statistical machine translation formulates the problem of translating a source sentence in a language J into a target language E as the maximization problem of the conditional probability E\u02c6 = argmaxE P(E|J).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The application of the BayesRule resulted in E\u02c6 = argmaxE P(E)P(J|E).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The for mer term P(E) is called a language model, representing the likelihood of E. The latter term P(J|E) is called a translation model, representing the generation probability from E into J.As an implementation of P(J|E), the word align ment based statistical translation (Brown et al., 1993) has been successfully applied to similar language pairs, such as French\u2013English and German\u2013 English, but not to drastically di\ufb00erent ones, such as Japanese\u2013English.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This failure has been due to the limited representation by word alignment and the weak model structure for handling complicated word correspondence.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper provides a chunk-based statistical translation as an alternative to the word alignment based statistical translation.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation process inside the translation model is structured as follows.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A source sentence is first chunked, and then each chunk is translated into target language with local word alignments.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, translated chunks are reordered to match the target language constraints.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on this scenario, the chunk-based statistical translation model is structured with several components and trained by a variation of the EM- algorithm.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A translation experiment was carried out with a decoder based on the left-to-right beam search.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It was observed that the translation quality improved from 46.5% to 52.1% in BLEU score and from 59.2% to 65.1% in subjective evaluation.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next section briefly reviews the word alignment based statistical machine translation (Brown et al., 1993).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 discusses an alternative approach, a chunk-based translation model, ranging from its structure to training procedure and decoding algorithm.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, Section 4 provides experimental results on Japanese-to-English translation in the traveling domain, followed by discussion.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "word alignment based statistical. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Translation Word alignment based statistical translation represents bilingual correspondence by the notion of word alignment A, allowing one-to-many generation from each source word.",
+                    "sid": 20,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 illustrates an example of English and Japanese sentences, E and J, with sample word alignments.",
+                    "sid": 21,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this example, \u201cshow1\u201d has generated two words, \u201cmise5 \u201d and \u201ctekudasai6\u201d.",
+                    "sid": 22,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "E = NULL0 show1 me2 the3 one4 in5 the6 window7 J = uindo1 no2 shinamono3 o4 mise5 tekudasai6 A = ( 7 0 4 0 1 1 ) show1 show show mise uindo1 me2 show NULL no no2 the3 one show tekudasai shinamono3 one4 window NULL o o4 in5 one shinamono mise5 the6 window uindo tekudasai6 Figure 1: Example of word alignment window7 Fertility n(2|E1 ) Lexicon NULL t(J5 |E1 ) Distortion d1 (1 3 \u00d7|E4 , J1 ) 5+6 n(0|E2 ) {4)p4\u22122 2 t(J6 |E1 ) d1 (3 \u2212r 2 \u00d7|E1 , J3 ) n(0|E3 ) 2 0 p1 t(J3 |E4 ) d (5 \u2212r \u00d7|NULL, J ) 1 2 5Under this word alignment assumption, the transla ...",
+                    "sid": 23,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "... d>1 (6 \u2212 5|J6 )tion model P(J|E) can be further decomposed with out approximation.",
+                    "sid": 24,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(J|E) = P(J, A|E) A 2.1 IBM Model.",
+                    "sid": 25,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During the generation process from E to J, P(J, A|E)is assumed to be structured with a couple of pro cesses, such as insertion, deletion and reorder.",
+                    "sid": 26,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A scenario for the word alignment based translation model defined by Brown et al.",
+                    "sid": 27,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1993), for instance IBM Model 4, goes as follows (refer to Figure 2).",
+                    "sid": 28,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 29,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Choose the number of words to generate for.",
+                    "sid": 30,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "each source word according to the Fertility Model.",
+                    "sid": 31,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \u201cshow\u201d was increased to 2 words, while \u201cme\u201d was deleted.",
+                    "sid": 32,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 33,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Insert NULLs at appropriate positions by the.",
+                    "sid": 34,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "NULL Generation Model.",
+                    "sid": 35,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two NULLs were inserted after each \u201cshow\u201d in Figure 2.",
+                    "sid": 36,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "translate word-by-word for each generated. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "word by looking up the Lexicon Model.",
+                    "sid": 37,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of the two \u201cshow\u201d words was translated to \u201cmise.\u201d",
+                    "sid": 38,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "reorder the translated words by referring to the. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Distortion Model.",
+                    "sid": 39,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word \u201cmise\u201d was reordered to the 5th position, and \u201cuindo\u201d was reordered to the 1st position.",
+                    "sid": 40,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Positioning is determined by the previous word\u2019s alignment to capture phrasal constraints.",
+                    "sid": 41,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the meanings of each symbol in each model, refer to Brown et al.",
+                    "sid": 42,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1993).",
+                    "sid": 43,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Problems of Word Alignment Based.",
+                    "sid": 44,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translation Model Figure 2: Word alignment based translation model P(J, A|E) (IBM Model 4) this procedure is su\ufb03cient to capture the bilingual correspondence for similar language pairs, some is sues remain for drastically di\ufb00erent pairs: Insertion/Deletion Modeling Although deletion was modeled in the Fertility Model, it merely assigns zero to each deleted word without considering context.",
+                    "sid": 45,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, inserted words are selected by the Lexical Model parameter and inserted at the positions determined by a binomial distribution.",
+                    "sid": 46,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This insertion/deletion scheme contributed to the simplicity of this representation of the translation processes, allowing a sophisticated application to run on an enormous bilingual sentence collection.",
+                    "sid": 47,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is apparent that the weak modeling of those phenomena will lead to inferior performance for language pairs such as Japanese and English.",
+                    "sid": 48,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Local Alignment Modeling The IBM Model 4 (and 5) simulates phrasal constraints, although there were implicitly implemented as its Distortion Model parameters.",
+                    "sid": 49,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the entire reordering is determined by a collection of local reorderings insu\ufb03cient to capture the long-distance phrasal con straints.",
+                    "sid": 50,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next section introduces an alternative modeling, chunk-based statistical translation, which was intended to resolve the above two issues.",
+                    "sid": 51,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Chunk-based Statistical Translation.",
+                    "sid": 52,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chunk-based statistical translation models the process of chunking for both the source and target sentences, E and J, The strategy for the word alignment based translation model is to translate each word by generating P(J|E) = J P(J, J, E|E) E multiple single words (a bag of words) and to determine the position of each translated word.",
+                    "sid": 53,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although where J and E are the chunked sentences for Jand E, respectively, defined as two-dimentional ar E = show1 me2 1 the3 one4 2 in5 the6 window7 3 (b) Associate each non-head word to a head word (Chunk Model).",
+                    "sid": 54,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each non-head mise5 tekudasai6 shinamono3 o4 uindo1 no2 word Ei is associated to a head word Eh by J = uindo1 no2 1 shinamono3 o4 2 mise5 tekudasai6 3 A = ( 3 2 1 ) A = ( [ 7, 0 ] [ 4, 0 ] [ 1, 1 ] ) Figure 3: Example of chunk-based alignment rays.",
+                    "sid": 55,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, Ji, j represents the jth word of the ith chunk.",
+                    "sid": 56,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of chunks for source and target is assumed to be equal, |J| = |E|, so that each chunk can convey a unit of meaning without added/subtracted information.",
+                    "sid": 57,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The termP(J, J, E|E) is further decomposed by chunk align ment A and word alignment for each chunk translation A. the probability \u03b7(c(Eh )|h \u2212 i, c(Ei )), where h is the position of a head word and c(E) is a function to map a word E to its word class (i.e. POS).",
+                    "sid": 58,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, \u201cthe3 \u201d is associated with the head word \u201cone4\u201d lo cated at 4 \u2212 3 = +1.",
+                    "sid": 59,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2. Select words to be translated with Deletion and.",
+                    "sid": 60,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fertility Model.",
+                    "sid": 61,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(a) Select the number of head words.",
+                    "sid": 62,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each head word Eh (\u03d5h > 0), choose fertility \u03c6h according to the Fertility Model \u03bd(\u03c6h|Eh).",
+                    "sid": 63,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume that the head word must be translated, therefore \u03c6h > 0.",
+                    "sid": 64,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, one of them is selected as a head word at P(J, J, E|E) = P(J, J, A, A, E|E) A A target position using a uniform distribution 1/\u03c6h . The notion of alignment A is the same as those found in the word alignment based translation model, which assigns a source chunk index for each target chunk.",
+                    "sid": 65,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A is a two-dimensional array which assigns a source word index for each target word per chunk.",
+                    "sid": 66,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, Figure 3 shows two-level alignments taken from the example in Figure 1.",
+                    "sid": 67,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The target chunk at position 3, J3 , \u201cmise tekudasai\u201d is aligned to the first position (A3 = 1), and both the words (b) Delete some non-head words.",
+                    "sid": 68,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each non-head word Ei (\u03d5i = 0), delete it according to the Deletion Model \u03b4(di |c(Ei ), c(Eh)), where Eh is the head word in the same chunk and di is 1 if Ei is deleted, otherwise 0.",
+                    "sid": 69,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3. Insert some words.",
+                    "sid": 70,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 4, NULLs were.",
+                    "sid": 71,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "inserted for two chunks.",
+                    "sid": 72,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each chunk Ei, select the number of spurious words \u03c6\u2217 by In\u201cmise\u201d and \u201ctekudasai\u201d are aligned to the first posi sertion Model \u03b9(\u03c6\u2217 c(E )), where E i is the head tion of the source sentence (A3,1 = 1, A3,2 = 1).",
+                    "sid": 73,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "word of Ei.",
+                    "sid": 74,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i | h h 3.1 Translation Model Structure.",
+                    "sid": 75,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The term P(J, J, A, A, E|E) is further decomposedwith approximation according to the scenario de scribed below (refer to Figure 4).",
+                    "sid": 76,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 77,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Perform chunking for source sentence E by.",
+                    "sid": 78,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(E|E).",
+                    "sid": 79,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, chunks of \u201cshow me\u201d and\u201cthe one\u201d were derived.",
+                    "sid": 80,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The process is mod eled by two steps: (a) Selection of chunk size (Head Model).",
+                    "sid": 81,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each word Ei , assign the chunk size 4.",
+                    "sid": 82,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translate word-by-word.",
+                    "sid": 83,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each source word Ei,.",
+                    "sid": 84,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "including spurious words, is translated to Jj ac cording to the Lexicon Model, \u03c4(Jj|Ei).",
+                    "sid": 85,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "reorder words.\teach word in a chunk is. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "reordered according to the Reorder Model P(A j |EA j , J j ).",
+                    "sid": 86,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The chunk reordering is taken after the Distortion Model of IBM Model 4, where the position is determined by the relative position from the head word, |A j | \u03d5i using the head model E(\u03d5i |Ei).",
+                    "sid": 87,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A word with chunk size more than 0 (\u03d5i > 0) is P(A j |EA j , J j ) = k=1 \u03c1(k \u2212 h|c(EAA j ,k ), c(J j,k)) treated as a head word, otherwise a non- head (refer to the words in bold in Figure 4).",
+                    "sid": 88,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where h is the position of a head word for the chunk Jj . For example, \u201cno\u201d is positioned \u22121 of \u201cuindo\u201d.",
+                    "sid": 89,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "show1 show show show mise mise uindo1 me2 me show show tekudasai tekudasai no2 the3 the NULL o amono shinamono3 one4 one one one shinamono o o4 in5 in mise5 the6 the NULL no uindo tekudasai6 window7 window window window uindo Chunking Deletion no Chunk & Fertility Insertion Lexicon Reorder Reorder Figure 4: Chunk-based translation model.",
+                    "sid": 90,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The words in bold are head words.",
+                    "sid": 91,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "reorder chunks.\tall of the chunks are. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "reordered according to the Chunk Reorder Model, P(A|E, J).",
+                    "sid": 92,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The chunk reordering is also similar to the Distortion Model, where the positioning is determined by the relative position from the previous alignment |J| source word, while the chunk-based model constructs a set of target words from a set of source words.",
+                    "sid": 93,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The behavior is modeled as a chunking procedure by first associating words to the head word of its chunk and then performing chunk-wise trans lation/insertion/deletion.",
+                    "sid": 94,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The complicated word alignment is handled by the determination of word positions in two stages: P(A|E, J) = j=1 Q( j \u2212 j\u2217|c(EA j \u22121,h\u2217 ), c(J j,h)) translation of chunk and chunk reordering.",
+                    "sid": 95,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The former structures local orderings while the latter conwhere j\u2217 is the chunk alignment of the the pre vious chunk aEA j \u22121 . h and h\u2217 are the head word indices for Jj and EA j \u22121, respectively.",
+                    "sid": 96,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the reordering is dependent on head words.",
+                    "sid": 97,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To summarize, the chunk-based translation model can be formulated as stitutes global orderings.",
+                    "sid": 98,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the concept of head associated with each chunk plays the central role in constraining di\ufb00erent levels of the reordering by the relative positions from heads.",
+                    "sid": 99,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Parameter Estimation.",
+                    "sid": 100,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parameter estimation for the chunk-based trans P(J|E) = E,J,A,A i E(\u03d5i |Ei) lation model relies on the EM algorithm (Dempster et al., 1977).",
+                    "sid": 101,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a large bilingual corpus the \u00d7 i:\u03d5i =0 \u00d7 i:\u03d5i >0 \u00d7 i:\u03d5i =0 \u03b7(c(Ehi )|hi \u2212 i, c(Ei )) \u03bd(\u03c6i |Ei )/\u03c6i \u03b4(di |c(Ei), c(Ehi )) conditional probability of P(J, A, A, E|J, E) = P(J, J, A, A, E|E)/ 2,J,A,A,E P(J, J, A, A, E|E) is first estimated for each pair of J and E (E-step), then each model parameters is computed based on the estimated conditional probability (M step).",
+                    "sid": 102,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The above procedure is iterated until the set of parameters converge.",
+                    "sid": 103,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u00d7 i:\u03d5i >0 \u03b9(\u03c6\u2217|c(Ei )) \u00d7 \u03c4(J j,k|EA j k j,k ) However, this naive algorithm will su\ufb00er from se vere computational problems.",
+                    "sid": 104,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The enumeration of \u00d7 P(A j |EA j , J j ) \u00d7 P(A|E, J) j . 3.2 Characteristics of chunk-based Translation.",
+                    "sid": 105,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Model The main di\ufb00erence to the word alignment based translation model is the treatment of the bag of word translations.",
+                    "sid": 106,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word alignment based translation model generates a bag of words for each all possible chunkings J and E together with word alignment A and chunk alignment A requires a sig nificant amount of computation.",
+                    "sid": 107,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, we have introduced a variation of the Inside-Outside algorithm as seen in (Yamada and Knight, 2001) for E- step computation.",
+                    "sid": 108,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The details of the procedure are described in Appendix A. In addition to the computational problem, there exists a local-maximum problem, where the EM- Algorithm converges to a maximum solution but does not guarantee finding the global maximum.",
+                    "sid": 109,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to solve this problem and to make the parameters converge quickly, IBM Model 4 parameters were used as the initial parameters for training.",
+                    "sid": 110,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We directly applied the Lexicon Model and Fertility Model to the chunk-based translation model but set other parameters as uniform.",
+                    "sid": 111,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1: Basic Travel Expression Corpus Japanese English # of sentences 171,894 3.4 Decoding.",
+                    "sid": 112,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoding algorithm employed for this chunk + weight \u00d7 j f req(EA j , J j ) based statistical translation is based on the beam search algorithm for word alignment statistical in which Ptm(J|E) and Plm (E) are translationmodel and language model probability, respec translation presented in (Tillmann and Ney, 2000), tively1 , f req(EA j , J j ) is the frequency for the which generates outputs in left-to-right order by consuming input in an arbitrary order.",
+                    "sid": 113,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decoder consists of two stages: 1.",
+                    "sid": 114,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generate possible output chunks for all possi-.",
+                    "sid": 115,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ble input chunks.",
+                    "sid": 116,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 117,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Generate hypothesized output by consuming.",
+                    "sid": 118,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "input chunks in arbitrary order and combining possible output chunks in left-to-right order.",
+                    "sid": 119,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The generation of possible output chunks is estimated through an inverted lexicon model and sequences of inserted strings (Tillmann and Ney, 2000).",
+                    "sid": 120,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, an example-based method is also introduced, which generates candidate chunks by looking up the viterbi chunking and alignment from a training corpus.",
+                    "sid": 121,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the combination of all possible chunks is computationally very expensive, we have introduced the following pruning and scoring strategies.",
+                    "sid": 122,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "beam pruning: Since the search space is enormous, we have set up a size threshold to maintain partial hypotheses for both of the above two stages.",
+                    "sid": 123,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also incorporated a threshold for scoring, which allows partial hypotheses with a certain score to be processed.",
+                    "sid": 124,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "example-based scoring: Input/output chunk pairsthat appeared in a training corpus are \u201cre warded\u201d so that they are more likely kept in the beam.",
+                    "sid": 125,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During the decoding process, when a pair of chunks appeared in the first stage, the score is boosted by using this formula in the log domain, log Ptm (J|E) + log Plm (E)pair EA j and J j appearing in the training cor pus, and weight is a tuning parameter.",
+                    "sid": 126,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Experiments.",
+                    "sid": 127,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corpus for this experiment was extracted from the Basic Travel Expression Corpus (BTEC), a collection of conversational travel phrases for Japanese and English (Takezawa et al., 2002) as seen in Table 1.",
+                    "sid": 128,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The entire corpus was split into three parts: 152,169 sentences for training, 4,846 sentences for testing, and the remaining 10,148 sentences for parameter tuning, such as the termination criteria for the training iteration and the parameter tuning for decoders.",
+                    "sid": 129,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Three translation systems were tested for comparison: model4: Word alignment based translation model, IBM Model 4 with a beam search decoder.",
+                    "sid": 130,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "chunk3: Chunk-based translation model, limiting the maximum allowed chunk size to 3.",
+                    "sid": 131,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "model3+: chunk3 with example-based chunk candidate generation.",
+                    "sid": 132,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 5 shows some examples of viterbi chunking and chunk alignment for chunk3.",
+                    "sid": 133,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translations were carried out on 510 sentences selected randomly from the test set and evaluated according to the following criteria with 16 reference sets.",
+                    "sid": 134,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "WER: Word-error-rate, which penalizes the edit distance against reference translations.",
+                    "sid": 135,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 For simplicity of notation, dependence on other variables are omitted, such as J . [ i * have ] [ the * number ] [ of my * passport ] [ * \u30d1\u30b9\u30dd\u30fc\u30c8 \u306e e][ * \u756a\u53f7 \u306e \u63a7\u3048 ] [ \u306f * \u3042\u308a \u307e\u3059 ] [ i * have ] [ a * stomach ache ][ please * give me ][ some * medicine ] [ \u304a\u8179 \u304c * \u75db\u3044 ] [ * \u306e\u3067 ] [ * \u85ac\u3092 ] [ * \u4e0b\u3055\u3044 ] [ *i ] [ * \u2019d ] [ * like ] [ a * table ] [ * for ] [ * two ] [ by the * window ][ * if possible ] [ * \u3067\u304d\u308c \u3070 ][ \u7a93\u5074 ][ \u306b * \u3042\u308b ][ * \u4e8c\u4eba \u7528 ][ \u306e * \u30c6\u30fc\u30d6\u30eb \u3092 ][ \u4e00\u3064 \u304a * \u9858\u3044 ] [ * \u3057 \u305f\u3044 ] [ * \u306e \u3067\u3059\u304c ] [ i \u2217 have ][ a \u2217 reservation ] [ \u2217 for ] [ two \u2217 nights ] [ my \u2217 name is ][ \u2217 risa kobayashi ] [ \u4e8c \u2217 \u6cca ] [ \u2217 \u306e ] [ \u4e88\u7d04 \u3092 \u2217 \u3057 ][ \u3066\u3044\u308b \u2217 \u306e \u3067\u3059 ] [ \u304c \u2217 \u540d\u524d \u306f ] [ \u5c0f\u6797 \u2217 \u30ea\u30b5 \u3067\u3059 ] Figure 5: Examples of viterbi chunking and chunk alignment for English-to-Japanese translation model.",
+                    "sid": 136,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Chunks are bracketed and the words with \u2217 to the left are head words.",
+                    "sid": 137,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2: Experimental results for Japanese\u2013English translation PER: Position independent WER, which penalizes without considering positional disfluencies.",
+                    "sid": 138,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "BLEU: BLEU score, which computes the ratio of n-gram for the translation results found in reference translations (Pa- pineni et al., 2002).",
+                    "sid": 139,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SE: Subjective evaluation ranks ranging from A to D (A:Perfect, B:Fair, C:Acceptable and D:Nonsense), judged by native speakers.",
+                    "sid": 140,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 summarizes the evaluation of Japanese-to- English translations, and Figure 6 presents some of the results by model4 and chunk3+.",
+                    "sid": 141,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As Table 2 indicates, chunk3 performs better than model4 in terms of the non-subjective evaluations, although it scores almost equally in subjective evaluations.",
+                    "sid": 142,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With the help of example-based decoding, chunk3+ was evaluated as the best among the three systems.",
+                    "sid": 143,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Discussion.",
+                    "sid": 144,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The chunk-based translation model was originally inspired by transfer-based machine translation but modeled by chunks in order to capture syntax-based correspondence.",
+                    "sid": 145,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the structures evolved into complicated modeling: The translation model involves many stages, notably chunking and two kinds of reordering, word-based and chunk-based alignments.",
+                    "sid": 146,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is directly reflected in parameter Figure 6: Translation examples by word alignment based model and chunk-based model estimation, where chunk3 took 20 days for 40 iterations, which is roughly the same amount of time required for training IBM Model 5 with pegging.",
+                    "sid": 147,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The unit of chunk in the statistical machine translation framework has been extensively discussed in the literature.",
+                    "sid": 148,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Och et al.",
+                    "sid": 149,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1999) proposed a translation template approach that computes phrasal mappings from the viterbi alignments of a training corpus.",
+                    "sid": 150,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Watanabe et al.",
+                    "sid": 151,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2002) used syntax-based phrase alignment to obtain chunks.",
+                    "sid": 152,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Marcu and Wong (2002) argued for a different phrase-based translation modeling that directly induces a phrase-by-phrase lexicon model from word-wise data.",
+                    "sid": 153,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All of these methods biasthe training and/or decoding with phrase-level ex amples obtained by preprocessing a corpus (Och et al., 1999; Watanabe et al., 2002) or by allowing a lexicon model to hold phrases (Marcu and Wong, 2002).",
+                    "sid": 154,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the chunk-based translation model holds the knowledge of how to construct a sequence of chunks from a sequence of words.",
+                    "sid": 155,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The former approach is suitable for inputs with less de viation from a training corpus, while the latter approach will be able to perform well on unseen word sequences, although chunk-based examples are also useful for decoding to overcome the limited context of a n-gram based language model.",
+                    "sid": 156,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wang (1998) presented a di\ufb00erent chunk-basedmethod by treating the translation model as a phrase to-string process.",
+                    "sid": 157,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yamada and Knight (2001) further extended the model to a syntax-to-string translation modeling.",
+                    "sid": 158,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both assume that the source part of a translation model is structured either with a sequence of chunks or with a parse tree, while our method directly models a string-to-string procedure.",
+                    "sid": 159,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is clear that the string-to-string modeling with hi- den chunk-layers is computationally more expensive than those structure-to-string models.",
+                    "sid": 160,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the structure-to-string approaches are already biased by a monolingual chunking or parsing, which, in turn, might not be able to uncover the bilingual phrasal or syntactical constraints often observed in a corpus.",
+                    "sid": 161,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Alshawi et al.",
+                    "sid": 162,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2000) also presented a two-level arranged word ordering and chunk ordering by a hierarchically organized collection of finite state trans ducers.",
+                    "sid": 163,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main di\ufb00erence from our work is that their approach is basically deterministic, while the chunk-based translation model is non-deterministic.",
+                    "sid": 164,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The former method, of course, performs more efficient decoding but requires stronger heuristics to generate a set of transducers.",
+                    "sid": 165,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the latter approach demands a large amount of decoding time and hypothesis space, it can operate on a very broad- coverage corpus with appropriate translation modeling.",
+                    "sid": 166,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "The research reported here was supported in part by a contract with the Telecommunications Advancement Organization of Japan entitled \u201cA study of speech dialogue translation technology based on a large corpus\u201d.",
+                    "sid": 167,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

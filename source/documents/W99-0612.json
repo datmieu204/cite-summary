@@ -1,0 +1,1289 @@
+{
+    "ID": "W99-0612",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Identifying and classifying personal, geographic, institutional or other names in a text is an important task for numerous applications.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper describes and evaluates a language-independent boot- strapping algorithm based on iterative learning and re-estimation of contextual and mOrphological patterns captured in hierarchically smoothed trie models.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm learns from unannotated text and achieves competitive performance when trained on a very short labelled name list with no other required language-specific information, tokenizers or tools.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The ability to determine the named entities in a text has been established as an important task for several natural language processing areas, including information retrieval, machine translation, information extraction and language understanding.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the 1995 Message Understanding Conference (MUC6), a separate named entity recognition task was developed and the best systems achieved impressive accuracy (with an F-measure approaching 95%).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "What should be underlined here is that these systems were trained for a specific domain and a particular langnage (English), typically making use of hand-coded rules, taggers, parsers and semantic lexicons.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Indeed, most named entity recognizers that have been published either use tagged text, perform syntactical and morphological analysis or use semantic information for contextual clues.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even the systems that do not make use of extensive knowledge about a particular language, such as Nominator (Choi et al., 1997), still typically use large data files containing lists of names, exceptions, personal and organizational identifiers..",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our aim has been to build a maximally langnage- independent system for both named-entity identification and classification, using minimal information about the source language.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The applicability of AI-style algorithms and supervised methods is limited in the multilingual case because of the cost of knowledge databases and manually annotated corpora.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, a much more suitable approach is to consider an EM-style bootstrapping algorithm.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In terms of world knowledge, the simplest and most relevant resource for this task is a database of known names.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each entity class to be recognized and tagged, it is assumed that the user can provide a short list (order of one hundred) of unambiguous examples (seeds).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course the more examples provided, the better the results, but what we try to prove is that even with minimal knowledge good results can be achieved.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally some basic particularities of the language should be known: capitalization (if it exists and is relevant -some languages do not make use of capitalization; in others, such as German, the capitalization is not of great help), allowable word separators (if they exist), and a few frequent exceptions (like the pronoun \"/\" in English).",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although such information can be utilised if present, it is not required, and no other assumptions are made in the general model.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.1 Word-Internal and Contextual Information.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm relies on both word internal and contextual clues as relatively independent evidence sources that drive the bootstrapping algorithm.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first category refers to the morphological structure of the word and makes use of the paradigm that for certain classes of entities some prefixes and suffixes are good indicators.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, knowing that \"Maria\", \"Marinela\" and \"Maricica\" are feminine first names in Romanian, the same classification may be a good guess for \"Mariana\", based on common prefix.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suffixes are typically even more informative, for example \"-escu\" is an almost perfect indicator of a last name in Romanian, the same applies to \"-wski\" in Polish, \"-ovic\" and \"-ivic\" in SerboCroatian, \"-son\" in English etc. Such morphological information is automatically learned during boot- strapping.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Contextual patterns (e.g. \"Mr.\", \"in\" and \"mayor of\" in left context) are also clearly crucial to named entity identification and classification, especially for names that do not follow a typical morphological pattern for their word class, are of foreign origin or polysemous (for example, many places or institutions are named after persons, such as \"Washington\" or \"Madison\", or, in some cases, vice-versa: \"Ion Popescu Topolog\" is the name of a Romanian writer, who added to his name the name of the river \"Topolog\").",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly, in many: cases, the context for only one occurrence of a new word and its morphological information is not enough to make a decision.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But, as noted in Katz (1996), a newly introduced entity will be repeated, \"if not for breaking the monotonous effect of pronoun use~ then for emphasis and clarity\".",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, he claims that the number of instances of the new entity is not associated with the document length but with the importance of the entity with regard to the subject/discourse.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use this property in conjunction with the one sense per discourse tendency noted by Gale, Church and Yarowsky (1992b), who showed that words strongly tend to exhibit only one sense in a document/discourse.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By gathering contextual information about the entity from each of its occurrences in the text and using morphological clues as well, we expect to classify entities more effectively than if they are considered in isolation, especially those that are very important with regard to the' subject.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When analyzing large texts, a segmentation phase should be considered, so that all the instances of a name in a segment have a high probability of belonging to the same class, and thus the contextual information for all instances within a segment c'an be used jointly when making a decision.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the precision of the segmentation is not critical, a language independent segmentation system like the one presented by Amithay, Richmond and Smith (1997) is adequately reliable for this task.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.2 Tokenized Text vs. Plain Text There are two basic alternatives for handling a text.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first one is to tokenize it and classify the individual tokens or group of tokens.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This alternative works for languages that use word separators (such as spaces or punctuation), where a relatively simple set of separator patterns can adequately tokenize the text.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second alternative is to classify entities simply with respect to a given starting and ending character position, without knowing the word boundaries, but just the probability (that can be learned automatically) of a boundary given the neighboring contexts.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This second alternative works for languages like Chinese, where no separators between the words are typically used.",
+                    "sid": 34,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since for the first class of languages we can define a priori probabilities for boundaries that will match the actual separators, this second approach represents a generalization of the one using tokenized text.",
+                    "sid": 35,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the first method, in which the text is tokenized, presents!",
+                    "sid": 36,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "the advantage that statistics for.",
+                    "sid": 37,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "both tokens and types can be kept and, as the results show, the statistics for types seem to be more reliable than those for tokens.",
+                    "sid": 38,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the second method, there is no single definition of \"type\", given that there are multiple possible boundaries for each token instance, but there are ways to gather statistics, such as considering what we may call \"probable types\" according to the boundary probabilities or keeping statistics on sistrings (semi-infinite strings).",
+                    "sid": 39,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some other advantages and disadvantages of the two methods will be discussed below.",
+                    "sid": 40,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 The Basic Model Before describing the algorithm, we will present a brief overview of some of its goals:.",
+                    "sid": 41,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 a language independent core model \u2022 the ability to exploit basic language-specific features \u2022 the ability to learn from small named entity lists (on the order of 100 total training names) \u2022 the capability to handle both large and small texts \u2022 good class-scalability properties (the possibility of defining as many named entity types as desired, so that for different languages or different purposes the user can choose different classes of words to be recognized) \u2022 the capability to store the information learned from each instance for further use Three important concepts are used in our model: 2.1 'rrie structures are used for both morphological and contextual information Tries provide an effective, efficient and flexible data structure for storing both contextual and morphological patterns and statistics.",
+                    "sid": 42,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, they are very compact representations.",
+                    "sid": 43,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, they support a natural hierarchical smoothing procedure for distributional class statistics.",
+                    "sid": 44,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider character- based tries, in which each node contains a probability distribution (when working with tokenized text, two distributions are considered in each node, one for tokens and one for types).",
+                    "sid": 45,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The distribution stored at each node contain the probability of each name class given the history ending at that node.",
+                    "sid": 46,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each distribution also has two standard classes, named \"questionable\" (unassigned probability mass in terms of entity classes, to be motivated below) and \"nonentity'.",
+                    "sid": 47,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To simplify the notations, we will refer to a start and end point bounded portion of text being analyzed (in order to determine if it represents a named entity or not) as a token.",
+                    "sid": 48,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two tries are used for context (left and right) and two for internal morphological patterns of tokens.",
+                    "sid": 49,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure i shows an example of a morphological prefix trie, which stores the characters of tokens from root ) ters lll2...ln, (i.e. the path in the trie is root -ll -12 - ...",
+                    "sid": 50,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "-In) the general smoothing model is: a c n # ! n r o i I I I I I e d e u c I I I I x # a # p e ! # e I # information stored in a node: character(\"#\") raw distribution: quest I nonentity I person I place I inst list of (right) context links are#a#nice# [ Figure 1: Morphological prefix trie for \"Alex and Anda are a nice couple\" left to right from given starting points (with optional word boundaries indicated by \"#\").",
+                    "sid": 51,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Suffix tries (typically more informative) have equivalent structure but reversed direction.",
+                    "sid": 52,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The left and right context tries have the same structure as well, but the list of links refers now to the tokens which have the particular context represented by the path from the root to the current node.",
+                    "sid": 53,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For right context, the letters are introduced in the trie in normal order, for left context they are considered in the reversed order (in our example, \"Anda\" has as left context \"dna#xela#\").",
+                    "sid": 54,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly, nodes of the context tries contain links to the tokens that occurred in the particular contexts defined by the paths.",
+                    "sid": 55,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two bipartite graph structures are created in this way by these links.",
+                    "sid": 56,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For reasons that will be explained later, raw counts are kept for the distributions.",
+                    "sid": 57,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability of a token/context as being in or indicating a class is computed along the whole path from the root to the terminal node of the token/context.",
+                    "sid": 58,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way, effective smoothing is realized for rare tokens or contexts.",
+                    "sid": 59,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering a token/context formed from charac- n P(class~ltll2...In ) = ~ A~P(class3111t2...li), i=1 n whereas E [O, 1]and ~Ai=l i=1 It is reasonable to expect that smaller lambdas should correspond to smaller indices, or even that A1 _< A2 _< ...",
+                    "sid": 60,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "_< An.",
+                    "sid": 61,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to keep the number of parameters low, we used the following model: F(class~llal2...ln) = ~F(class~llx ) n + ~ \u00b0tn-iF(cclassj[lll2\"\"li) i=2 where a, ~ E (0, 1), ~ having a small value The symbol F is used instead of P since we have raw distributions (frequencies) and a normalization step is needed to compute the final probability distribution.",
+                    "sid": 62,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A simpler model can use just one parameter (setting g = an), but this has limited flexibility in optimizing the hierarchical inheritance -the probability of a class given the first letter is often not very informative for some languages (such as English or Romanian) or, by contrast, may be extremely important for others (e.g. Japanese).",
+                    "sid": 63,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Beginning with some seed names for each class, the algorithm learns contextual patterns that are indicative for those classes and then iteratively learns new class members and word-internal morphological clues.",
+                    "sid": 64,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Through this cycle, probability distributions for class given token, prefix/suffix.",
+                    "sid": 65,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "or context are incrementally refined.",
+                    "sid": 66,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More details are given when describing stage 2 of the algorithm.",
+                    "sid": 67,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When faced with a highly skewed observed class distribution for which there is little confidence due to small sample size, a typical response to this uncertainty in statistical machine learning systems is to backoff or smooth to the more general class distribution, which is typically more uniform.",
+                    "sid": 68,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately, this representation is difficult to distinguish from a conditional distribution based on a very large sample (and hence estimated with confidence) that just happens to have a similar fairly uniform true distribution.",
+                    "sid": 69,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One would like a representation that does not obscure this distinction, and represents the uncertainty of the distribution separately.",
+                    "sid": 70,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We resolve this lproblem while retaining a single probability distribution over classes by adding a separate \"questi0nable\" (or unassigned) cell that reflects the uncertainty of the distribution.",
+                    "sid": 71,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Probability mass continues to be distributed among the remaining class cells proportional to the observed distribution in the :data, but with a total sum (< 1) that reflects the confidence in the distribution and is equal to 1 - P(q'uestionable).",
+                    "sid": 72,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach has the advantage of explicitly representing the uncertainty in a given class distribution, facilitating the further development of an interactive system, while retaining a single probability distribution that simplifies trie architecture and model combinatiofi.",
+                    "sid": 73,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Incremental learning essentially becomes the process of gradually shifting probability mass from questionable/uncertain to one of the primary categories.",
+                    "sid": 74,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 The Algorithm.",
+                    "sid": 75,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm can!",
+                    "sid": 76,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "be divided into five stages, which are summarized below.",
+                    "sid": 77,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stage 0: build the initial training list of class representatives Stage 1: read the text and build the left and right morphological and context tries Stage 2: introduce the training information in the tries and re-estimate the distributions by boot- strapping Stage 3: identify and classify the named entities in the text using competing classifiers Stage 4: update the entity and context training space, using the new extracted information Stage O: This stage is performed once for each langnage/task and cbnsists of defining the classes and filling in the initial class seed data with examples provided by the user.",
+                    "sid": 78,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The list of class training names should be as unambiguous as possible and (ideally) also relatively common.",
+                    "sid": 79,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also necessary to have a relatively large unannotated text for bootstrapping the contextual models and classifying new named entities.",
+                    "sid": 80,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Examples Of such training seeds and text for Romanian language are given in Tables 1 and 21 . For the primary experiments reported in this paper, we have studied a relatively difficult 3-way named entity partition between:First (given) names, Last (family) names and Place 'names.",
+                    "sid": 81,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first two tend to be relatively hard to distinguish in most languages.",
+                    "sid": 82,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A 1The text refers %0 the mayor of a small town of Alba county, who was so drunk while officiating at a wedding that he shook the bride's hand and kissed the groom.",
+                    "sid": 83,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "simpler person/place-based distinction more comparable to the MUC6 EMAMEX task is evaluated in Table 3(d).",
+                    "sid": 84,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training Data (seed wordlists): F.NAME L.NAME PLACE Andrei Iliescu Abrud Adam Popescu AlbaIulia Alexandru Ionescu Arad Aurel Nitu Bac~u Bogdan T~nase Botosani Cosmin Tudose Bucuresti Constantin Rotariu Brasov C~t~lin Ciurea Br~ila Costin Bucur Buz~u Claudiu Gherman Calafat Table h Sample training wordlists for Romanian Target Evaluation Text (labels not used for training) Primarul comunei <place> Rosia Montane </place> judetul <place> Alba </place> <fname> David </fname> <iname> Botar </iname> a intrat in legend~ datori%~ unor intimpl~ri de-a dreptul penibile, relatate in \"Evenimentul zilei\".",
+                    "sid": 85,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Practic, primul gospodar al celei mai bogate comune in aur din <place> Muntii Apuseni </place> este mai tot timpul beat-crit~, drept pentru care, la oficierea unei c~s~torii, a s~rutat mina mirelui, a strins mina miresei si a intocmit certificat de deces in locul celui de c~s~torie.",
+                    "sid": 86,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent, <fname> Andrei </fname> <iname> P~tunescu </iname> fiul poetului, a intentionat s~ achizitioneze gospod~ria unei bucurestence care se stabilise de o vreme in <place> Rosia MontanK </place> La prim~trie ~ns~, turmentatul primar 1-a trimis pe fiul lui <fname> Adrian </fname> <iname> P~unescu </iname> s~-i cumpere ceva de b~ut, pentru a se putea concentra ~ndeajuns asupra hirtiilor tranzactiei imobiliare.",
+                    "sid": 87,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "<fname> LUCIAN </fname> <iname> DOBRATER </iname> Table 2: Sample test data for Romanian Stage 1: There are two ways to start this stage, either by tokenizing the text or considering it in raw form.",
+                    "sid": 88,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When tokenization is used, each token is inserted in the two morphological tries: one that keeps the letters of the tokens in the normal (prefix) order, another that keeps the letter in the reverse (suffix) order.",
+                    "sid": 89,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each letter on the path, the raw distributions are changed by adding the a priori probability Probabilitydistributionorder: node non-n a m e ~ ~ I N 10.1,110.3810.2710.=1 0.2 I I u 10.07110.2210.5510.1210.04 [ [ A 10.07110.0410.6310.2210.04 I I c 10.051102110.7010.031 0 I [i Io.1511o.o31o.271o.551 o I I s Io.olll 0 10.99] 0 I 0 I IEloll 0 I a I0101 \u2022z~,~\u00b0\"311\u00b0\u00b0'l\u00b0sTI \u00b0 I \u00b0 I I L Io.,11 0 I 0 Io.s7[ 0 ] (\"-escu\" subtree) I E 10.99110;011 0 I 0 I 0 I I U Io.1311 0 I 0 10.87I 0 I I T10.99110.011 o l 0101 If 10.1311 0 I 0 [o.a71 0 [ (\"iulian\" subtree) I s 10.99110.011 0 I 0 I 0 I (\"sterian\" subtree) Figure 2: An example of normalized but unsmoothed distributions from the suffix morphological trie for Romanian.",
+                    "sid": 90,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The paths shown are for Iulian, a \"first name\" entity, contained in the training word list; Ster/an a \"last name\", not in the training data; and a partial path for the tokens ending in -escu.",
+                    "sid": 91,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of the token belonging to each class (language dependent information may be used here).",
+                    "sid": 92,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the case of IndoEuropean languages, if the token starts with an uppercase letter, we add 1 full count (all probability mass) to the \"questionable\" sum, as this entity is initially fully ambiguous.",
+                    "sid": 93,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the token starts with lowercase (and hence is an unlikely name) in this case we add the bulk of the probability mass 6 (e.g.6 t> 0.9) to \"nonentity\" and the remainder (15) to \"questionable\" (otherwise unassigned).",
+                    "sid": 94,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other language-specific orthographic clues could potentially affect this initial probability mass assignment.",
+                    "sid": 95,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When no tokenization is applied, we have to consider possible starting and ending points.",
+                    "sid": 96,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, the strings (which, for simplicity, we will refer as well as tokens) introduced in the prefix morphological trie and the ones introduced in the suffix trie may differ.",
+                    "sid": 97,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The left context of each token is introduced, letters in reverse order, in the left context trie, with pointers to the token in the morphlogical prefix trie; the right context of each token is introduced, in normal order, in the right context trie, keeping pointers to the token in the suffix trie.",
+                    "sid": 98,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The distributions along the paths are modified according to the a pr/- ori distribution of the targeted token.",
+                    "sid": 99,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stage 2: This stage is the core bootstrapping phase of the algorithm.",
+                    "sid": 100,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In essence, as contextual models become better estimated, they identify additional named entities with increasing confidence, allowing reestimation and improvement of the internal morphological models.",
+                    "sid": 101,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The additional training data that this yields allows the contextual models to be augmented and reestimated, and the cycle continues until convergence.",
+                    "sid": 102,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One approach to this bootstrapping process is to use a standard continuous EM (Expectation- Maximization) family of algorithms (Baum, 1972; Dempster et al., 1977).",
+                    "sid": 103,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The proposed approach outlined below is a discrete variant that is much less computationally intensive, and has the advantage of distinguishing between unknown probability distributions and those which are simply evenly distributed.",
+                    "sid": 104,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach is conservative in that it only utilizes the class estimations for newly classified data in the retraining process if the class probability passes a confidence threshold, as defined below.",
+                    "sid": 105,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The concept of confidence threshold can be captured through the following definitions of dominant and semi-dominant.",
+                    "sid": 106,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let us consider a discrete finite probability distribution P = (Pl, ...,Pn).",
+                    "sid": 107,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We say that P has a dominant if there is an i in {1...n} such that pi > 0.5, or in other words if n ~Pj <Pi-j=l 94 We say that P has an a-semi-dominant with respect to an event k, where a > 1, if it does not have k as dominant and there exist i in {1...n} such that n j:l jCk A few commentsi about these definitions are necessary: it can be .easily observed that not every distribution has a dominant, even though it has a maximum value.",
+                    "sid": 108,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second definition, of a-semi- dominant, makes sense if we consider a particular event k that is not relevant (or the result cannot be measured).",
+                    "sid": 109,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By rembving this event and normalizing the rest of the values, we obtain a new distribution (of size n-l) having i an a-dominant.",
+                    "sid": 110,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The core of stage 2 is the bootstrapping procedure.",
+                    "sid": 111,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The known names (either from the original training list or otherwise learned data) are inserted sequentially into the morphological tries, modifying the probability distributions of the nodes on the paths accordingly (the data structure is illustrated in Figures 1 and 2) . If the new distribution in one of the nodes on the path of a known token gains a dominant (for example \"placer') then the effect of this change is propagated by reestimating other node distributions given this change.",
+                    "sid": 112,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each distribution on the context paths in which that token occurred in the text is modified, by subtracting from the \"questionable\" mass a quantity proportional to the number of times the respective token was found in that context and adding it to the dominant-position (e.g. \"place\") mass. For the newly obtained distributions that gained a dominant :(in our example \"place\") in the context trie, the bootstrapping procedure is called for all tokens that Occurred in that context, and so on, recursively.",
+                    "sid": 113,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here it is very important that we consider raw distributions and not normalize them.",
+                    "sid": 114,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if word \"Mariana\" occurs x times with the right context \"merge\" (meaning \"goes\") and the distribution for \"rhariana#\" has now been identified with the dominant \"first name\", then x units from the \"questionable\" mass can be moved to \"first name\" mass along the path of \"merge#\" in the right context trie.",
+                    "sid": 115,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If semi-dominants are used instead of dominants then we have to account for the fact that the semi-dominants may change over time, so the probability mass must be moved either from \"questionable\" position Or previous semi-dominant position, if a semi-dominant state has been reached before.",
+                    "sid": 116,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may be easily observed that stage 2 has a sequential characteristic, because the updating is done after reading each name incrementally.",
+                    "sid": 117,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When using dominants the Order does not affect the process, because of the face that once a dominant state is reached, it cannot change to another dominant state in the future (probability mass is moved only from \"questionable\").",
+                    "sid": 118,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the case of semi-dominants, the data ordering in the training file does influence the learning procedure.",
+                    "sid": 119,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The more conservative strategy of using dominants rather then semi-dominants has, on the other hand, the disadvantage of cancelling or postponing the utilisation of many words.",
+                    "sid": 120,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, if both \"questionable\" and \"first name\" have 49% of the mass then subsequent reestimation iterations are not initiated for this data, even though the alternative name classes are very unlikely.",
+                    "sid": 121,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering those advantages and disadvantages, we used the less conservative semi-dominant approach as the default model.",
+                    "sid": 122,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stage 3: In this stage the text is re-analysed sequentially, and for each token (given a start-end point pair) a decision is made.",
+                    "sid": 123,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here the bipartite structure of the two pairs of tries has a central role: during stage 2, the left context and prefix tries interact with each other and so do the right context and suffix tries, but there's no interference between the two pairs during the bootstrapping stage.",
+                    "sid": 124,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, for each instance of a token in the text, four classifiers are available, a different one given by each trie.",
+                    "sid": 125,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The decision with regard to the presence of an entity and its classification is made by combining them.",
+                    "sid": 126,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparative trials indicate that higher performance is achieved by initially having the clas- sifters vote.",
+                    "sid": 127,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results indicate that the most accurate classifications are obtained from the two independently bootstrapped morphological tries (they incorporate the morphological information about the token to be classified, and, during the bootstrapping, they also incorporate information from all the contexts in which the token occurred).",
+                    "sid": 128,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the two agree (they have semi-dominants and they are the same) then the corresponding class is returned.",
+                    "sid": 129,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Otherwise, agreement is tested between other paired independent classifiers (in order of empirically measured reliability).",
+                    "sid": 130,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If no agreement is found, then a simple linear combination of all four is considered for the decision.",
+                    "sid": 131,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach yields 6% higher F-measure than the simple interpolation of classifiers for the default parameters.",
+                    "sid": 132,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Stage ~ : The newly classified tokens and contexts are saved for future use as potential seed data in subsequent named-entity classification on new texts.",
+                    "sid": 133,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 Results.",
+                    "sid": 134,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The basic measures for evaluation of this work are precision and recall.",
+                    "sid": 135,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Precision (P) represents the percentage of the entities that the system recognized which are actually correct.",
+                    "sid": 136,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall (R) represents the percentage of the correct named entities in the text that the system identified.",
+                    "sid": 137,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both measures are incorporated in the F-measure, F = 2PR/(P + R).",
+                    "sid": 138,
+                    "ssid": 138,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It would be inappropriate to compare the results of a language independent system with the ones designed for only one language.",
+                    "sid": 139,
+                    "ssid": 139,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As Day and Palmer (1997) observed, \"the fact that existing systems perform extremely well on mixed-case English newswire corpora is certainly related to the years of research and organized evaluations on this specific task in this language.",
+                    "sid": 140,
+                    "ssid": 140,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is not clear what resources are required to adapt systems to new languages.\"",
+                    "sid": 141,
+                    "ssid": 141,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is important to mention that the F-measure for the human performance on this task is about 96%, (Sundheim 1995).",
+                    "sid": 142,
+                    "ssid": 142,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments on Romanian text were consistent with this figure.",
+                    "sid": 143,
+                    "ssid": 143,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Baseline measures.",
+                    "sid": 144,
+                    "ssid": 144,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to obtain a baseline performance for this method we considered the performance of a system that tags only the examples found in one of the the original training wordlists.",
+                    "sid": 145,
+                    "ssid": 145,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider this to be a plausible lower bound measure if the training words have not been selected from the test text.",
+                    "sid": 146,
+                    "ssid": 146,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Day and Palmer (1997) showed that a baseline F- measure score for the ENAMEX task varies from 21.2% for English to 73.2% for Chinese.",
+                    "sid": 147,
+                    "ssid": 147,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is important to mention that, when they computed these figures, they trained their language independent system on large annotated corpora (e.g. the Wall Street Journal for English).",
+                    "sid": 148,
+                    "ssid": 148,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fact that the precision obtained by the baseline approach is not 100% indicates that the seed training names for each class are not completely unambiguous, and that a certain degree of ambiguity is generally unavoidable (in this case, mainly because of the interference between first names and last names).",
+                    "sid": 149,
+                    "ssid": 149,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another significant performance measure is forced classification accuracy, where the entities have been previously identified in the text and the only task is selecting their name class.",
+                    "sid": 150,
+                    "ssid": 150,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To obtain baseline performance for this measure, we considered a System that uses the original training word labels if there is an exact match, with all other entities labeled with a default \"last name\" tag, the most common class in all languages studied.",
+                    "sid": 151,
+                    "ssid": 151,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline accuracy was measured at 61.18% for Romanian.",
+                    "sid": 152,
+                    "ssid": 152,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "System accuracies range from 77.12% to 91.76% on this same data.",
+                    "sid": 153,
+                    "ssid": 153,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Evaluation of basic estimation methods.",
+                    "sid": 154,
+                    "ssid": 154,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results shown in Table 3 were obtained for a Romanian text having 12320 words, from which 438 were entities, using a training seed set of 300 names (115 first names, 125 last names, and 60 city/country names).",
+                    "sid": 155,
+                    "ssid": 155,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline measures and default system (a) are as described above.",
+                    "sid": 156,
+                    "ssid": 156,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In configuration (b), the based parameters of the system have been optimized for Romanian, using greedy search on an independent development test (devtest) set, yielding a slight increase in F-measure.",
+                    "sid": 157,
+                    "ssid": 157,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Configuration (c) used the default parameters, but the more conservative \"dominant\" criterion was utilized, clearly favoring precision at the expense of recall.",
+                    "sid": 158,
+                    "ssid": 158,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Configuration (d), which is relevant for the ENAMEX task, represents the performance of the system when classes \"first name\" and \"last name\" are combined into \"person\" (whenever two or more such entities are adjacent, we consider the whole group as a \"person\" entity).",
+                    "sid": 159,
+                    "ssid": 159,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Configuration (e) shows contrastive performance when using standard continuous EM smoothing on the same data and data structures.",
+                    "sid": 160,
+                    "ssid": 160,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.3 Evaluation by language and knowledge.",
+                    "sid": 161,
+                    "ssid": 161,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "source Table 4 shows system performance for 5 fairly diverse languages: Romanian, English, Greek, Turkish and Hindi.",
+                    "sid": 162,
+                    "ssid": 162,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The initial 4 rows provide some basic details on the training data available for each language.",
+                    "sid": 163,
+                    "ssid": 163,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that when annotators were generating the lists of 150300 seed words, they had access to a development test from which to extract samples, but they were not constrained to this text and could add additional ones from memory.",
+                    "sid": 164,
+                    "ssid": 164,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, it was quite unpredictable how many contexts would actually be found for a given word in the development texts, as some appeared several times and many did not appear at all.",
+                    "sid": 165,
+                    "ssid": 165,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the total number of contextual matches for the seed words was quite variable, from 113249, and difficult to control.",
+                    "sid": 166,
+                    "ssid": 166,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also the case that not all additional contexts bring comparable new benefit, as many secondary instances of the same word in a given related document collection tend to have similar or identical surrounding contexts to the first instance (e.g. \"Mayor of XXX\" or \"XXX said\"), so in general it is quite difficult to control the actual training information content just by the number of raw seed word types that are annotated.",
+                    "sid": 167,
+                    "ssid": 167,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each of these languages, 5 levels of information sources are evaluated.",
+                    "sid": 168,
+                    "ssid": 168,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline case is as previously described for Table 3.",
+                    "sid": 169,
+                    "ssid": 169,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The context-only case restricts system training to the two (left and right) contextual tries, ignoring the prefix/suffix morphological information.",
+                    "sid": 170,
+                    "ssid": 170,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The morphology only case, in contrast, restricts the system to only the two (prefix and suffix) morphological models.",
+                    "sid": 171,
+                    "ssid": 171,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These can be estimated from the 3 training wordlists (150300 words total), but without an independent source of information (e.g. context) via which bootstrapping can iterate, there is no available path by which these Romanian Precision Recall F-measure Accuracy Baseline: 98.67 34.02 50.58 61.18 System Performance using: (a) default settings (using semi-dominants) 76.95 64.99 70.47 78.49 (b) re-estimated smoothing parameters 80.17 62.93 70.51 78.93 (c) learning wi~h dominants 91.06 51.38 65.69 78.26 (d) ENAMEX~like \"Person\" / \"Place\" classes 82.38 69.57 75.43 91.76 (e) continuous:EM approach 74.02 60.64 66.67 77.12 Table 3: Comparison of the performance of basic estimation methods on Romaninan Language ! [ Romanian English Greek Turkish Hindi Training text siz~ 12320 15738 10445 5207 18806 Total training seed words 300 190 210 150 150 Contextual matches for seeds 149 205 113 133 249 Labeled entities for testing 438 204 210 203 303 Baseline: 98.67 ] 34.01 83.33 [ 12.25 100 [ 18.09 86.66 [ 19.21 94.42 ] 20.26 (Precision/Recal i//F-measure) 50.58 21.36 30.64 31.45 33.23 Context Only: 96.59 [ 19.45 82.35 I 6.86 87.50 I 3.33 53.331 11.82 84.21 [ 9.58 (Precision/Recal]//F-measure) 32.38 12.67 6.42 19.35 17.20 Morphology Only: 73.79 [ 52.97 84.42 [ 31.86 78.35 I 36.19 75.32 ] 28.57 89.01 I 24.25 (Precision/Recall//F-measure) 61.67 46.26 49.51 41.43 38.12 Context and Morphology: 78.381 53.09 82.95 [ 35.78 77.06 I 40.00 60.99 [ 42.36 81.37 I 24.85 (Precision/Recal!//F-measure) 63.30 50.00 52.66 50.00 38.07 Full bootstrapping: 76.95 I 64.99 83.67 ] 40.20 76.47 [ 43.33 6o.38 1 47.29 83.04 I 27.84 ( Precision/ Recall / / F-measure ) 70.47 54.30 55.32 53.04 41.70 Baseline classification accuracy 61.18 62.74 55.23 I 61.08 [ 61.79 System classification accuracy Table 4: Comparison of performance by language and knowledge source models can learn the behaviour of previously unseen is in all cases greater than for the morphology or affixes and conquer new territory.",
+                    "sid": 172,
+                    "ssid": 172,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus the model context source used alone.",
+                    "sid": 173,
+                    "ssid": 173,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, the full it- is entirely static On just the initial training data.",
+                    "sid": 174,
+                    "ssid": 174,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "erative bootstrapping clearly yields substantial im- For the same reasOns, the context only model is also provement over the static models, almost exclusively static.",
+                    "sid": 175,
+                    "ssid": 175,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case there is a possible bootstrapping in the form of increased recall (and its corresponding path using alternating left and right context to ex- boost the the F-measure).",
+                    "sid": 176,
+                    "ssid": 176,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "pand coverage to new contexts, but this tends to be Cross-language analysis yields further insight.",
+                    "sid": 177,
+                    "ssid": 177,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "not robust and wa s not pursued.",
+                    "sid": 178,
+                    "ssid": 178,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Interestingly, recall First, recall is much higher for the 4 languages for morphology only is typically much higher than in in which case is explicitly marked and is a clue the context only case.",
+                    "sid": 179,
+                    "ssid": 179,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason for this is that the for named entity identification (Romanian, English, morphology models are full hierarchically smoothed Greek and Turkish) than for a language like Hindi, character tries rather than word token tries, and where there are no case distinctions and hence any hence have much '~ denser initial statistics for small word could potentially be a named entity.",
+                    "sid": 180,
+                    "ssid": 180,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A lan- training data sets~ proving greater partial matching guage such as German would be roughly in the mid- potential for previously unseen words.",
+                    "sid": 181,
+                    "ssid": 181,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "dle, where lowercase words have low probability as In an effort to I test the contribution of the full named entities, but capitalized words are highly am- iterative boostrapping, the \"context and morpholbiguous between common and proper nouns.",
+                    "sid": 182,
+                    "ssid": 182,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Be-ogy only\" results ', are based on the combination of cause approximately 96% of words in the Hindi text all 4 tries, but w:ithout any bootstrapping.",
+                    "sid": 183,
+                    "ssid": 183,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus are not named entities, without additional ortho- they are trained ekclusively on the 150300 training graphic clues the prior probability for \"nonentity\" examples.",
+                    "sid": 184,
+                    "ssid": 184,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance for the combined sources is so strong that the morphological or contextual evi80 8O 60 --I ixlI~q\"l/, m ~B [] Precision 60 bb 40 ~m E] Recall 40 ~ F \\ x 20 /,I 15~ [] F-measure 20 F t ~'.",
+                    "sid": 185,
+                    "ssid": 185,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N '~ N F 0 t ~ lk 2k 5k 10k 40 75 150 300 Size of the raw text for Total number of seed bootstrapping (words) names Figure 3: Learning curves for Romanian dence in favor of one of the named entity classes must be very compelling to overcome this bias.",
+                    "sid": 186,
+                    "ssid": 186,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With only 50 training words per context this is difficult, and in the face of such strong odds against any of the named entity classes the conservative nature of the learning algorithm only braves an entity label (correctly) for 38% more words than the baseline model.",
+                    "sid": 187,
+                    "ssid": 187,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, its performance on entity classification rather than identification, measured by forced choice accuracy in labelling the given entities, is comparable to all the other languages, with 79% accuracy relative to the 62% baseline.",
+                    "sid": 188,
+                    "ssid": 188,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 4.4 Evaluation at different training set sizes.",
+                    "sid": 189,
+                    "ssid": 189,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 3 demonstrates that the performance of the algorithm is highly sensitive to the size of the training data.",
+                    "sid": 190,
+                    "ssid": 190,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on Romanian, the first graph shows that as the size of the raw text for bootstrapping increases, F-measure performance increases roughly logrithmically, due almost exclusively to increases in precision.",
+                    "sid": 191,
+                    "ssid": 191,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Approximately the same number of unique entities are being identified, but due to the increased number of examples of each, their classification is more accurate).",
+                    "sid": 192,
+                    "ssid": 192,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is avery encouraging trend, as the web and other online sources provides virtually unlimited raw text in most major languages, and substantial online text for virtually all languages.",
+                    "sid": 193,
+                    "ssid": 193,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So extrapolating far beyond the 10K word level is relatively low cost and very feasible.",
+                    "sid": 194,
+                    "ssid": 194,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second graph shows that F-measure performance also increases roughly logrithmically with the total length of the seed wordlists in the range 40300.",
+                    "sid": 195,
+                    "ssid": 195,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This increase is due entirely to improved recall, which doubles over this small range.",
+                    "sid": 196,
+                    "ssid": 196,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This trend sug-.",
+                    "sid": 197,
+                    "ssid": 197,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2Note again that this baseline is more competitive than typical, as it not only assigns the majority tag (\"last name\"), but when there is an exact match with the training wordlist (e.g. \"deepak\"), a common occurrence given repeated high- frequency names in the Hindi data, the training classification is used as the baseline answer gests that there is considerable benefit to be gained by additional human annotation, or seed wordlist acquisition from existing online lexicons.",
+                    "sid": 198,
+                    "ssid": 198,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, relative to case of raw text acquisition, such additional annotations tend to be much costlier, and there is a clear cost-benefit tradeoff to further investment in annotation.",
+                    "sid": 199,
+                    "ssid": 199,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In summary, however, these evaluation results are satisfying in that they (a) show clear and consistent trends across several diverse languages, (b) show clear trends for improvement as training resources grow, and (c) show that comparable (and robust) classification results can be achieved on this diversity of languages.",
+                    "sid": 200,
+                    "ssid": 200,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Future work.",
+                    "sid": 201,
+                    "ssid": 201,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For future work, natural next steps include incorporating a language independent word segmentation phase like the one proposed by Amitay, Richmond and Smith (1997), to improve the performance on large texts.",
+                    "sid": 202,
+                    "ssid": 202,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Different statistics can be pre-computed for different languages and language families and stored in external files.",
+                    "sid": 203,
+                    "ssid": 203,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the a priori probability of a named entity given the set of characteristics of its representation in the text, such as position, capitalization, and relative position of other entities (e.g.: first name followed by last name).",
+                    "sid": 204,
+                    "ssid": 204,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A further step is the implementation of a supervised active learning system based on the present algorithm, in which the most relevant words for future disambiguation is presented to the user to be classified and the feedback used for bootstrapping.",
+                    "sid": 205,
+                    "ssid": 205,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The selection of candidate examples for tagging would be based on both the unassigned probability mass and the frequency of occurrence.",
+                    "sid": 206,
+                    "ssid": 206,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Active learning strategies (Lewis and Gale, 1994) are a natural path for efficiently selecting contexts for human annotation.",
+                    "sid": 207,
+                    "ssid": 207,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conclusion of the Fifth Conference on Applied Natural Lan- This paper has presented an algorithm for the minimally supervised learning of named entity recognizers given short name lists as seed data (typically 40100 example wordS per entity class).",
+                    "sid": 208,
+                    "ssid": 208,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The algorithm uses hierarchically ismoothed trie structures for modeling morphological and contextual probabilities effectively in a language independent framework, overcoming the need for fixed token boundaries or history lengths.",
+                    "sid": 209,
+                    "ssid": 209,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Th e combination of relatively independent morphological and contextual evidence sources in an iterative bootstrapping framework converges upon a successful inamed entity recognizer, achieving a competitive 70.5%-75.4% F-measure (measuring both named entity identification and classification) when applied to Romanian text.",
+                    "sid": 210,
+                    "ssid": 210,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fixed k-way classification accuracy on given entities ranges between 73%-79% on 5 diverse languages for a difficult firstname/l~stname/place partition, and approaches 92% accuracy for the simpler person/place discrimination.",
+                    "sid": 211,
+                    "ssid": 211,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results were achieved using only unannotated training texts, with absolutely no required language-specific information, tokenizers or other tools, and requiring no more than 15 minutes total human effort in training (for short wordlist creation) The observed robust and consistent performance and very rapid, low cost rampup across 5 quite different languages shows the potential for further successful and diverse applications of this work to new languages and domains.",
+                    "sid": 212,
+                    "ssid": 212,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

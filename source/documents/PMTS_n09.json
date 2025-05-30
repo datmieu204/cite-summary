@@ -1,0 +1,1595 @@
+{
+    "ID": "PMTS_n09",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "This paper reports experiments on adapting components of a Statistical Machine Translation (SMT) system for the task of translating online user-generated forum data from Symantec.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such data is monolingual, and differs from available bitext MT training resources in a number of important respects.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, adaptation techniques are important to achieve optimal results.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We investigate the use of mixture modelling to adapt our models for this speci\ufb01c task.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Individual models, created from different in-domain and out-of-domain data sources, are combined using linear and log-linear weighting methods for the different components of an SMT system.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results show a more profound effect of language model adaptation over translation model adaptation with respect to translation quality.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Surprisingly, linear combination outperforms log-linear combination of the models.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best adapted systems provide a statistically signi\ufb01cant improvement of 1.78 absolute BLEU points (6.85% relative) and 2.73 absolute BLEU points (8.05% relative) over the baseline system for English\u2013German and English\u2013French, respectively.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "In recent years, Statistical Machine Translation (SMT) technology has been used in many online applications, concentrating on professionally edited enterprise quality online content.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the same time, very little research has gone into adapting \u2217Work done while at CNGL, School of Computing, DCUSMT technology to the translation of user generated content on the web.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While translation of online chats (Flournoy and CallisonBurch, 2000) has received some attention, there is surprisingly little work on translation of online user forum data, despite growing interest in the area (Flournoy and Rueppel, 2010).",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper we describe our efforts in building a system to address this particular application area.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments are conducted on data collected from online forums on Symantec Security tools and services.1 For a multinational company like Symantec, the primary motivation behind translation of user forum data is to enable access across language barriers to information in the forums.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Forum posts are rich in information about issues and problems with tools and services provided by the company, and often provide solutions to problems even before traditional customer-care help lines are even aware of them.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The major challenge in developing MT systems for user forum data concerns the lack of proper parallel training material.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Forum data is monolingual and hence cannot be used directly to train SMT systems.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use parallel training data in the form of Symantec Enterprise Translation Memories (TMs) from different product and service domains to train the SMT models.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an auxiliary source, we also used portions of the Europarl dataset2 (Koehn, 2005), selected according to their similarity with the forum data (Section 3.2), to supplement the TM- based training data.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Symantec TM data, being a part of enterprise documentation, is professionally 1 http://community.norton.com/ 2 http://www.statmt.org/europarl/ edited and by and large conforms to the Symantec controlled language guidelines, and is signi\ufb01cantly different in nature from the user forum data, which is loosely moderated and does not use controlled language at all.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast Europarl data is out- of-domain with respect to the forum data.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The differences between available training and test datasets necessitate the use of adaptation techniques for optimal translation.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use mixture model adaptation (Foster and Kuhn, 2007), creating individual models from different sources of data and combining them using different weights.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Monolingual forum posts were used for language modelling along with the target side of the TM training data.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A system trained only on the Symantec TM and forum data serves as the baseline system.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All our experiments are conducted on the EnglishGerman (En\u2013 De) and English-French (En\u2013Fr) language pairs with a special emphasis on translation from English.",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the sake of completeness however, we report translation scores for both directions here.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Apart from using models created from concatenation of in-domain (Symantec TM) and out-of- domain (Europarl) datasets, we used linear and log- linear combination frameworks to combine individual models.",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both translation models and language models were separately combined using the two methods and the effect of the adaptation was measured on the translation output using established automatic evaluation metrics.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments reveal that for the current task, in terms of translation quality, language model adaptation is more effective than translation model adaptation and linear combination performs slightly better than the log-linear setting.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remainder of this paper is organized as follows: Section 2 brie\ufb02y describes related work relevant to the context.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 reports the tools and algorithms used along with a description of the datasets used.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 focuses on the mixture modelling experiments and how weights are learnt in different settings.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5 presents the experiments and analysis of results, followed by conclusions and future work in Section 6.",
+                    "sid": 33,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Mixture Modelling (Hastie et al., 2001), a well- established technique for combining multiple mod els, has been extensively used for language model adaptation, especially in speech recognition.",
+                    "sid": 34,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Iyer and Ostendorf (1996) use this technique to capture topic dependencies of words across sentences within language models.",
+                    "sid": 35,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cache-based language models (Kuhn and De Mori, 1990) and dynamic adaptation of language models (Kneser and Stein- biss, 1993) for speech recognition successfully use this technique for sub-model combinations.",
+                    "sid": 36,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Langlais (2002) introduced the concept of domain adaptation in SMT by integrating domain-speci\ufb01c lexicons in the translation model, resulting in signi\ufb01cant improvement in Word Error Rate.",
+                    "sid": 37,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Eck et al.",
+                    "sid": 38,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2004) utilized information retrieval theories to propose a language model adaptation technique in SMT.",
+                    "sid": 39,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hildebrand (2005) utilized this approach to select similar sentences from available training data to adapt translation models, which improved translation performance with respect to a baseline system.",
+                    "sid": 40,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Wu et al.",
+                    "sid": 41,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008) used a combination of in-domain bilingual dictionaries and monolingual data to perform domain adaptation for SMT in a setting where in-domain bilingual data was absent.",
+                    "sid": 42,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Integrating an in-domain language model with an out-of-domain one using log-linear features of a phrase-based SMT system is reported by Koehn and Schroeder (2007).",
+                    "sid": 43,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Foster and Kuhn (2007) used mixture modelling to combine multiple models trained on different sources and learn mixture weights based on distance of the test set from the training data.",
+                    "sid": 44,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Civera and Juan (2007) further suggested a mixture adaptation approach to word alignment, generating domain- speci\ufb01c Viterbi alignments to feed a state-of-the-art phrase-based SMT system.",
+                    "sid": 45,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our work follows the line of research presented in Foster and Kuhn (2007) using mixture modelling and linear/log-linear combination frameworks, but differs in terms of the test set and development sets used for tuning and evaluation.",
+                    "sid": 46,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Foster and Kuhn (2007) used test and development sets which were essentially a combination of data from different training genres, in our case test data (user forum) are inherently different from the training data.",
+                    "sid": 47,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our methods of estimating the linear weights for language and translation models are also different to the ones proposed in Foster and Kuhn (2007).",
+                    "sid": 48,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As part of our experiments, we also resort to selecting portions of relevant bitext from out-of-domain cor pora to augment available training data as described in Hildebrand et al.",
+                    "sid": 49,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2005).",
+                    "sid": 50,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, our work is different from their approach in the use of language model perplexity as an indicator of relevance of the selected data.",
+                    "sid": 51,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, due to the differences between the training and target datasets, we selected additional data in terms of its relevance to the target domain instead of the training domain.",
+                    "sid": 52,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "datasets, pre-processing and tools. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "3.1 Symantec Datasets.",
+                    "sid": 53,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our primary training data consists of En\u2013De and En\u2013Fr bilingual datasets in the form of Symantec TMs.",
+                    "sid": 54,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Monolingual Symantec forum posts in all three languages served as language modelling data.",
+                    "sid": 55,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As the purpose of our experiments is to translate forum posts, the data for the development and the test sets were randomly selected from the monolingual English forum data.",
+                    "sid": 56,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After being translated using Google Translate,3 these datasets were manually post-edited by professional translators following guidelines4 for achieving \u2018good enough quality\u2019, in order to generate bilingual development (dev) and test sets.",
+                    "sid": 57,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The selected test data was excluded from the English forum data used to create language models in the experiments.",
+                    "sid": 58,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Da ta Se t E n \u2013 D e E n \u2013 F r Sy ma nte c T M 6 3 8 6 0 0 5 6 7 6 4 1 Eu ro par l 7056 76 (\u223c40 %) 4146 67 (\u223c23 %) De vel op me nt Set 5 0 0 5 0 0 Te st Set 6 1 2 6 1 2 En gli sh Fo ru m 1 0 6 9 4 6 4 Ge rm an Fo ru m 2 5 1 6 9 Fr en ch Fo ru m 2 2 9 3 2 Table 1: Number of Sentences for bilingual training, development and test and monolingual forum data sets Apart from the Symantec datasets, we used portions of the Europarl dataset (Section 3.2) to supplement the training data.",
+                    "sid": 59,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 presents the numbers of sentences for each of the resources used in our experiments.",
+                    "sid": 60,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 http://translate.google.com/ 4 http://www.cngl.ie/node/2542 3.2 Extracting Relevant Data from Europarl.",
+                    "sid": 61,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given that we needed additional resources to improve translation coverage, we selected the Europarl dataset, containing parallel sentences of the proceedings of the European Parliament.",
+                    "sid": 62,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, Europarl data is clearly out-of-domain given our speci\ufb01c task, but much larger in size than the Symantec TM data.",
+                    "sid": 63,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this reason, we decided to select only a portion of the Europarl data in order to balance the amount of in-domain and out-of-domain data.",
+                    "sid": 64,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to achieve this, the entire set of Europarl sentences were ranked using the sentence-level perplexity scores with respect to language models created on the monolingual forum data.",
+                    "sid": 65,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only a portion of the ranked list with scores lower than a manually chosen threshold (perplexity value of 350) were selected for our experiments.",
+                    "sid": 66,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lower perplexity scores of the included sentences indicate a closer \ufb01t (hence higher relevance) to the forum data.",
+                    "sid": 67,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This technique enables us to select the most \u2018forum-like\u2019 sentences from Europarl.",
+                    "sid": 68,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of selected Europarl sentences, as reported in Table 1, constitute about 40% and 23% of the total Europarl sentences for En\u2013 De and En\u2013Fr language pairs respectively.",
+                    "sid": 69,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.3 Preprocessing and Data Cleanup.",
+                    "sid": 70,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Re: No right click scan No i copyed the \ufb01le in stead of creating shortcut,LOL I did it with the shortcut and it works just \ufb01ne, :) Thanks 200810-19T23:14:38+00:00 Re: Norton AntiBot - possible vulnerability?",
+                    "sid": 71,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This has been answered on a separate thread: http://community.norton.com/norton/board/message?board.id= other&thread.id=2533&jump=true I am locking this thread now; avibuzz wrote:Did not work I went the highkey below and could not \ufb01nd any thing...HKEY LOCAL MACHINE\\SOFTWARE\\Microsoft\\ Windows\\CurrentVersion\\Run What did you \ufb01nd when you click on that key?",
+                    "sid": 72,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2: Few examples of the untranslatable tokens in forum posts The Symantec TM datasets and the forum posts contain many tokens unsuitable for translation including: URLs, \ufb01le paths and \ufb01le names, Windows registry entries, date and time stamps, XML and HTML tags, smilies, text-speak and garbage characters.",
+                    "sid": 73,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows a few examples of forum posts containing such tokens, which we handled in the pre-processing steps using regular expressions to replace them with unique place hold ers.",
+                    "sid": 74,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the post-processing step, the place holders were replaced with the actual tokens, except for the smilies, text-speak and garbage characters.",
+                    "sid": 75,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For entries with multiple tokens of a single type, tokens were replaced in the translation in the same order as they appeared in the source.",
+                    "sid": 76,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, prior to training, all datasets involved in the experiments were subjected to deduplication, lower casing and tokenization.",
+                    "sid": 77,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.4 Translation and Language Models.",
+                    "sid": 78,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For our translation experiments we used OpenMaTrEx (Stroppa and Way, 2006), an open source SMT system which provides a wrapper around the standard log-linear phrase-based SMT system Moses (Koehn et al., 2007).",
+                    "sid": 79,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Word alignment was performed using Giza++ (Och and Ney, 2003).",
+                    "sid": 80,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The phrase and the reordering tables were built on the word alignments using the Moses training script.",
+                    "sid": 81,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The feature weights for the log-linear combination of the feature functions were tuned using Minimum Error Rate Training (MERT) (Och, 2003) on the devset in terms of BLEU (Papineni et al., 2002).",
+                    "sid": 82,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used 5-gram language models in all our experiments created using the IRSTLM (Federico et al., 2008) language modelling toolkit using Modi- \ufb01ed KneserNey smoothing (Kneser and Ney, 1995).",
+                    "sid": 83,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learning linear mixture weights for combining multiple language models with respect to the development set was performed using the IRSTLM language model interpolation tools.",
+                    "sid": 84,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results of translations in every phase of our experiments were evaluated using BLEU and NIST (Doddington, 2002) scores.",
+                    "sid": 85,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "mixture adaptation. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "In the experiments reported in this paper, mixture adaptation is involved in creating individual models from separate data sources, learning mixture weights for each model and \ufb01nally using the weighted mixture of models to translate the forum data test set sentences.",
+                    "sid": 86,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The models were combined using linear and log-linear combination frameworks to compare the effect of the combination techniques on translation.",
+                    "sid": 87,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This section details the different aspects of the mixture adaptation.",
+                    "sid": 88,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.1 Model Combination using Linear Weights.",
+                    "sid": 89,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Individual translation or language models were linearly interpolated using the formula in (1): p(x|h) = \u03bbsps(x|h) (1) s where p(x|h) is the language model probability or the translation model probability, ps(x|h) is the par ticular model trained on the training resource s, and \u03bbs is the corresponding weight of the particular resource, all of which sum up to 1.",
+                    "sid": 90,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a linear- interpolated model, the resource weights are global weights unlike the model feature weights mentioned in Subsection 3.4.",
+                    "sid": 91,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, during tuning, the linear mixture weights do not directly participate in the log-linear combination of model features.",
+                    "sid": 92,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to set the linear mixture weights for language models, we used the Expectation- Maximization (EM) algorithm (Dempster et al., 1977) to estimate optimal weights of the individual language models with respect to the target side of the devset.",
+                    "sid": 93,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Initially all models are uniformly weighted and the EM algorithm iteratively optimizes the weights until a prede\ufb01ned convergence criterion is met.",
+                    "sid": 94,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For translation models, we used a slightly different method to estimate the mixture weights for multiple phrase tables from different resources.",
+                    "sid": 95,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the maximum phrase length for our SMT phrase-tables had been set to 7, we constructed 7-gram language models using the source side of the training data for each resource.",
+                    "sid": 96,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The mixture weights of these language models were estimated on the devset, again using the EM algorithm.",
+                    "sid": 97,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally the weights learned were used to combine different phrase tables.",
+                    "sid": 98,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weights set by the EM algorithm essentially denote the \ufb01tness of each data source with respect to the devset.",
+                    "sid": 99,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Standard algorithms like MERT cannot effectively be used in estimating linear weights for the translation models as they are designed speci\ufb01cally for \ufb02at log-linear models (Foster and Kuhn, 2007).",
+                    "sid": 100,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The phrase tables constructed from the training data using Moses feature \ufb01ve sets of scores.",
+                    "sid": 101,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 102,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inverse phrase translation probability: \u03c6(f |e).",
+                    "sid": 103,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 104,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inverse lexical weight: lex(f |e).",
+                    "sid": 105,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 106,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Direct phrase translation probabilities: \u03c6(e|f ).",
+                    "sid": 107,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.",
+                    "sid": 108,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Direct lexical weight: lex(e|f ).",
+                    "sid": 109,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "phrase penalty: (always exp(1) = 2.718). ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "where f is the source phrase and e denotes the corresponding target phrase.",
+                    "sid": 110,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linearly mixing different phrase tables required combining their phrase translation probabilities and lexical weights as per equation (1) with linear mixture weights learnt using the EM algorithm.",
+                    "sid": 111,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, only the phrase pairs common to all the phrase tables were mixed; other phrase pairs were simply added to generate a single mixture-adapted phrase table.",
+                    "sid": 112,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.2 Model Combination using Log-Linear.",
+                    "sid": 113,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weights We combine multiple models under the log-linear combination framework as described in equation (2): p(x|h) = n ps(x|h)\u03b1s (2) s where \u03b1s is the log-linear weight for the model ps(x|h) trained on the training resource s. The advantage of using the log-linear mixture of models is that it easily \ufb01ts into the log-linear framework that the SMT model is built upon.",
+                    "sid": 114,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The mixture weights were estimated by running MERT on the devset with multiple phrase tables and language models.",
+                    "sid": 115,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since MERT directly optimizes the feature function weights for each available model, simply adding the different phrase tables and/or language models to the Moses con\ufb01guration and using the multiple decoding path functionality (Koehn and Schroeder, 2007) of the decoder allowed us to estimate the log- linear mixture weights for each model.",
+                    "sid": 116,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An added advantage is the fact that the weights are optimized not in terms of \ufb01tness to the target domain, but directly in terms of translation scores for the target domain.",
+                    "sid": 117,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, using multiple phrase tables and language models greatly increases the number of features to be optimized, thus reducing the chances of successful convergence of the MERT algorithm.",
+                    "sid": 118,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 Experiments and Results.",
+                    "sid": 119,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The adaptation experiments were conducted in three separate phases with different adaptation settings for the translation models.",
+                    "sid": 120,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Within each phase, three different adaptation settings for language models were used.",
+                    "sid": 121,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conducting separate experiments for language and translation model adaptation allowed us to examine the effect of mixture modelling for the task at hand, as well as observing the effect of adaptation at each component level of an SMT system.",
+                    "sid": 122,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The details of the baseline system and each phase are described in the following sections.",
+                    "sid": 123,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Baseline: Unadapted Model.",
+                    "sid": 124,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline system used in our experiments was a vanilla Moses system trained with the different Symantec datasets we had at our disposal.",
+                    "sid": 125,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The translation models were trained on the Symantec TM data, and the language models were trained on the monolingual forum data along with the target side of the bilingual TM data.",
+                    "sid": 126,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to keep the baseline model unadapted, the selected \u2018forum-like\u2019 Europarl data was deliberately excluded in training the baseline system, since using relevant out-of-domain data for training can be considered to be a type of adaptation.",
+                    "sid": 127,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Phase-1: Language Model Adaptation with.",
+                    "sid": 128,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unadapted Translation Model In this phase of experiments our primary objective was to observe the effect of mixture adaptation on the language models for the task of forum data translation.",
+                    "sid": 129,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to keep the translation model free of any adaptation, we simply concatenated together the Symantec TM and \u2018forum-like\u2019 Europarl (TM+EP) datasets to create a single model.",
+                    "sid": 130,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For language modelling, we had three distinct data sources at our disposal: the monolingual forum posts, the target side of the Symantec TM data, and the target side of the Europarl data.",
+                    "sid": 131,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way we created the following three types of language models from the data sources and used them for translation.",
+                    "sid": 132,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 133,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "conc: a language model trained on the concatenated data sets from all three sources, monolingual forum posts, target side of Symantec TMs and target side of \u2018forum-like\u2019 sub-parts of Europarl.",
+                    "sid": 134,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 135,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "linmix: an adapted language model using linear mixture of weights.",
+                    "sid": 136,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 137,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "logmix: an adapted language model using log- linear mixture of weights.",
+                    "sid": 138,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 reports the evaluation results for all phases of experiments.",
+                    "sid": 139,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The \ufb01rst row gives the scores for the T M L M De E n E n\u2013 De Fr E n En \u2013 Fr B L E U NI ST B L E U NI ST B L E U NI ST B L E U NI ST bl T M T M +f or um 3 5.",
+                    "sid": 140,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 8 7.",
+                    "sid": 141,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 6 2 5.",
+                    "sid": 142,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 9 6.",
+                    "sid": 143,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 4 3 6.",
+                    "sid": 144,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 2 7.",
+                    "sid": 145,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 3 3 3 . 9 6.",
+                    "sid": 146,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 8 ph ase1 T M +E P co nc 3 5.",
+                    "sid": 147,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 4 7.",
+                    "sid": 148,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 2 2 6.",
+                    "sid": 149,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 4 6.",
+                    "sid": 150,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 9 3 6.",
+                    "sid": 151,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 1 7.",
+                    "sid": 152,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 9 3 5.",
+                    "sid": 153,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 4 7.",
+                    "sid": 154,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 8 T M +E P lin mi x 3 5.",
+                    "sid": 155,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 1 7.",
+                    "sid": 156,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 5 2 7.",
+                    "sid": 157,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 5 6.",
+                    "sid": 158,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 1 3 6.",
+                    "sid": 159,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 2 7 . 5 3 6.",
+                    "sid": 160,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 6 7.",
+                    "sid": 161,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 2 T M +E P log mi x 3 5.",
+                    "sid": 162,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 9 7.",
+                    "sid": 163,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 1 2 6.",
+                    "sid": 164,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 8 6 . 5 3 6.",
+                    "sid": 165,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 4 7.",
+                    "sid": 166,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 6 3 5.",
+                    "sid": 167,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 9 7.",
+                    "sid": 168,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 3 ph ase2 lin mi x co nc 3 5.",
+                    "sid": 169,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 3 7.",
+                    "sid": 170,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 7 2 6.",
+                    "sid": 171,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 8 6.",
+                    "sid": 172,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 3 3 6.",
+                    "sid": 173,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 6 7.",
+                    "sid": 174,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 1 3 5.",
+                    "sid": 175,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 9 7.",
+                    "sid": 176,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 7 lin mi x lin mi x 3 5.",
+                    "sid": 177,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 2 7.",
+                    "sid": 178,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 7 2 7.",
+                    "sid": 179,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 7 6 . 7 3 7 . 1 7.",
+                    "sid": 180,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 9 3 6.",
+                    "sid": 181,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 3 7.",
+                    "sid": 182,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 3 lin mi x log mi x 3 6.",
+                    "sid": 183,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 7 7.",
+                    "sid": 184,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 8 2 7.",
+                    "sid": 185,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 9 6.",
+                    "sid": 186,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 7 3 6.",
+                    "sid": 187,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 4 7.",
+                    "sid": 188,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 2 3 4.",
+                    "sid": 189,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 1 7.",
+                    "sid": 190,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 2 ph ase3 log mi x co nc 3 4.",
+                    "sid": 191,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 2 7.",
+                    "sid": 192,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 1 2 7.",
+                    "sid": 193,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 3 6.",
+                    "sid": 194,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 1 3 4.",
+                    "sid": 195,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 8 7.",
+                    "sid": 196,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 2 3 2.",
+                    "sid": 197,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 5 6.",
+                    "sid": 198,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 1 log mi x lin mi x 3 5.",
+                    "sid": 199,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 5 7.",
+                    "sid": 200,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 2 2 7.",
+                    "sid": 201,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 1 6 . 7 3 6.",
+                    "sid": 202,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 2 7.",
+                    "sid": 203,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 2 3 6.",
+                    "sid": 204,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 8 7 . 2 log mi x log mi x 3 4 7.",
+                    "sid": 205,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 8 2 7.",
+                    "sid": 206,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 3 6.",
+                    "sid": 207,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 4 3 6.",
+                    "sid": 208,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 9 7.",
+                    "sid": 209,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 6 3 4.",
+                    "sid": 210,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 7 6.",
+                    "sid": 211,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 4 Table 3: Evaluation results for all combinations of mixture adapted language and translation models: Baseline(bl) scores are italicized, best scores are in bold baseline system.",
+                    "sid": 212,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is evident from the table, all the phase-1 experiments improve the evaluation scores over the baseline.",
+                    "sid": 213,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Adding the Europarl data for training gives a slight improvement over the baseline, and both linear and log-linear mixture-adapted models further improve the scores.",
+                    "sid": 214,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Surprisingly, the linear mixture results are slightly better than the log- linear ones.",
+                    "sid": 215,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since MERT directly optimizes the log- linear weights on the devset BLEU scores, as compared to the linear weights which were learnt by optimizing the maximum likelihood on the target side of the devset, we expected the former to provide better results in terms of BLEU.",
+                    "sid": 216,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in the tuning phase, MERT was observed to iterate to the maximum allowable iteration limit (25) in order to complete, rather than converging automatically based on the evaluation metric criterion.",
+                    "sid": 217,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This observation con\ufb01rms previous \ufb01ndings (Chiang et al., 2009) regarding the inability of the MERT algorithm to converge on an optimal set of weights for a reasonably large number of parameters.",
+                    "sid": 218,
+                    "ssid": 109,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear mixture adaptation caused the translation scores to improve by 1.06 absolute BLEU points (4.08% relative) for En\u2013De and 2.56 absolute points (7.55% relative) for En\u2013Fr over the baseline.",
+                    "sid": 219,
+                    "ssid": 110,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For DeEn and FrEn the improvements were 0.23 absolute BLEU points (0.65% relative) and 0.5 absolute BLEU points (1.37% relative) respectively.",
+                    "sid": 220,
+                    "ssid": 111,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When translating from English the improvements were statistically signi\ufb01cant (with 97% and 99.8% reliability for En\u2013De and En\u2013Fr respectively), at the p=0.05 level using bootstrap resampling (Koehn, 2004).",
+                    "sid": 221,
+                    "ssid": 112,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is due to the fact that German and French forum data were smaller than the English corpus.",
+                    "sid": 222,
+                    "ssid": 113,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When translating into English, however, the huge amount of monolingual English forum data used for language modelling seemed to reduce the effect of adaptation, resulting in smaller statistically insigni\ufb01cant absolute improvements.",
+                    "sid": 223,
+                    "ssid": 114,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Notably, in spite of being slightly worse than the linear-mixture scores, the log-linear scores are also better than the baseline scores, indicating the effectiveness of adaptation in the current setting.",
+                    "sid": 224,
+                    "ssid": 115,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The NIST scores reported in the table also follow a similar trend to the BLEU scores, but the log- linear scores are slightly worse than the concatenated model scores.",
+                    "sid": 225,
+                    "ssid": 116,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This might be due to the fact that MERT optimizes on BLEU scores rather than NIST to learn log-linear weights.",
+                    "sid": 226,
+                    "ssid": 117,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Phase-2: Linear Mixture Adaptation of.",
+                    "sid": 227,
+                    "ssid": 118,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translation Models In the second phase of our experiments, we extended mixture adaptation to the translation models, adapting the phrase tables using linear mixture weights.",
+                    "sid": 228,
+                    "ssid": 119,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two independent phrase tables were prepared from the Symantec TMs and \u2018forum-like\u2019 Europarl datasets which were linearly combined using weights learnt according to the process elaborated in Section 4.1.",
+                    "sid": 229,
+                    "ssid": 120,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The combined phrase table was then used in combination with the different language models mentioned in Section 5.2.",
+                    "sid": 230,
+                    "ssid": 121,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The Phase-2 labelled rows in Table 3 show the results for this phase, which show very similar trends compared to Table 3 with the linear mixture-adapted language models, which resulted in best translation scores.",
+                    "sid": 231,
+                    "ssid": 122,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The log-linear mixture-adapted language model performs better only for DeEn translations.",
+                    "sid": 232,
+                    "ssid": 123,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the concatenated language model with the adapted phrase table provides slightly higher translation scores compared to the ones reported in Section 5.2, suggesting a positive effect of phrase-table adaptation.",
+                    "sid": 233,
+                    "ssid": 124,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Linear mixture adaptation on phrase tables resulted in an improvement of 1.78 absolute BLEU points (6.85% relative) for En\u2013De and 2.73 absolute BLEU points (8.05% relative) for En\u2013Fr, over the baseline, which are better than the improvements reported in the previous section.",
+                    "sid": 234,
+                    "ssid": 125,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both these improvements are statistically signi\ufb01cant with a reliability of 99.6% and 99.8% respectively.",
+                    "sid": 235,
+                    "ssid": 126,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For DeEn and FrEn, the improvements are 1.19 absolute BLEU points (3.36% relative) and 0.68 absolute BLEU points (1.87% relative), respectively.",
+                    "sid": 236,
+                    "ssid": 127,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similarly for the concatenated translation model, improvements were slightly bigger when translating from English.",
+                    "sid": 237,
+                    "ssid": 128,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The NIST scores followed the same trend as the BLEU scores in terms of relative variations.",
+                    "sid": 238,
+                    "ssid": 129,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Phase-3: Log-linear Mixture Adaptation of.",
+                    "sid": 239,
+                    "ssid": 130,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Translation Models Finally, we combined multiple translation models using a log-linear combination and used them with three different language models, as in the \ufb01rst and second phases, and obtained the set of results reported in the phase-3 section of Table 3.",
+                    "sid": 240,
+                    "ssid": 131,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The scores follow the same trend as in the two previous phases, with the linear-adapted language model providing the best scores.",
+                    "sid": 241,
+                    "ssid": 132,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The evaluation scores when translating from English were better compared to those in phase 1, but poorer than those in phase 2.",
+                    "sid": 242,
+                    "ssid": 133,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BLEU score improvements over the baseline for this adaptation model were 1.72 absolute (6.62% relative) points for En\u2013De, 2.58 absolute (7.61% relative) points for En\u2013Fr, 0.17 absolute (0.48% relative) points for DeEn and 0.1 absolute (0.28% relative) points for FrEn.",
+                    "sid": 243,
+                    "ssid": 134,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in the previous phases, the improvements are statistically signi\ufb01cant for translations from English.",
+                    "sid": 244,
+                    "ssid": 135,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The MERT algorithm is known to be unable to learn optimal weights for large parameter settings (Chiang et al., 2009).",
+                    "sid": 245,
+                    "ssid": 136,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the current scenario, two phrase tables, two reordering models and three language models resulted in a con siderable number of parameters, causing the algorithm to learn sub-optimal mixture weights leading to poorer performance.",
+                    "sid": 246,
+                    "ssid": 137,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusion and future work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "The overall trends of the results emphasize the importance of linear mixture adaptation for both language and translation models.",
+                    "sid": 247,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, comparing the scores of different translation model adaptations against those of the language models indicates that language model adaptation was slightly more significant in improving translation quality, compared to translation model adaptation, for the task at hand.",
+                    "sid": 248,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although log-linear mixture adaptation \ufb01ts well into the SMT framework, the inability of MERT to converge on optimal weights in different settings caused poor performance in terms of evaluation scores.",
+                    "sid": 249,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here the weights for linear combination of multiple phrase tables were estimated using language models.",
+                    "sid": 250,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Directly learning linear weights by optimizing translation quality in terms of the development set would be the prime direction in future.",
+                    "sid": 251,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We would also like to look into alternative tuning techniques, especially ones based on the MIRA algorithm to improve the quality of log-linear mixture adaptation in large parameter settings (Chiang et al., 2009).",
+                    "sid": 252,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Enhancing the translation quality further with third party forum data would also be another objective in this direction.",
+                    "sid": 253,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally we would also like to investigate further on different ranking schemes and empirical threshold selection for selecting relevant datasets to supplement training data for improving translation quality.",
+                    "sid": 254,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "This work is supported by Science Foundation Ireland (Grant No. 07/CE/I1142) as part of the Centre for Next Generation Localisation (www.cngl.ie) at Dublin City University.",
+                    "sid": 255,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thank the reviewers for their insightful comments.",
+                    "sid": 256,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also thank Symantec for kindly providing us with data and support.",
+                    "sid": 257,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

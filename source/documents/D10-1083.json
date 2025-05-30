@@ -1,0 +1,1559 @@
+{
+    "ID": "D10-1083",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Simple Type-Level Unsupervised POS Tagging",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Part-of-speech (POS) tag distributions are known to exhibit sparsity \u2014 a word is likely to take a single predominant tag in a corpus.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent research has demonstrated that incorporating this sparsity constraint improves tagging accuracy.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in existing systems, this expansion come with a steep increase in model complexity.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper proposes a simple and effective tagging method that directly models tag sparsity and other distributional properties of valid POS tag assignments.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, this formulation results in a dramatic reduction in the number of model parameters thereby, enabling unusually rapid training.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experiments consistently demonstrate that this model architecture yields substantial performance gains over more complex tagging counterparts.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On several languages, we report performance exceeding that of more complex state-of-the art systems.1",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Since the early days of statistical NLP, researchers have observed that a part-of-speech tag distribution exhibits \u201cone tag per discourse\u201d sparsity \u2014 words are likely to select a single predominant tag in a corpus, even when several tags are possible.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Simply assigning to each word its most frequent associated tag in a corpus achieves 94.6% accuracy on the WSJ portion of the Penn Treebank.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This distributional sparsity of syntactic tags is not unique to English 1 The source code for the work presented in this paper is available at http://groups.csail.mit.edu/rbg/code/typetagging/.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2014 similar results have been observed across multiple languages.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Clearly, explicitly modeling such a powerful constraint on tagging assignment has a potential to significantly improve the accuracy of an unsupervised part-of-speech tagger learned without a tagging dictionary.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, this sparsity constraint is difficult to incorporate in a traditional POS induction system (Me\u00b4rialdo, 1994; Johnson, 2007; Gao and Johnson, 2008; Grac\u00b8a et al., 2009; Berg-Kirkpatrick et al., 2010).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These sequence models-based approaches commonly treat token-level tag assignment as the primary latent variable.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By design, they readily capture regularities at the token-level.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, these approaches are ill-equipped to directly represent type-based constraints such as sparsity.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Previous work has attempted to incorporate such constraints into token-level models via heavy-handed modifications to inference procedure and objective function (e.g., posterior regularization and ILP decoding) (Grac\u00b8a et al., 2009; Ravi and Knight, 2009).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In most cases, however, these expansions come with a steep increase in model complexity, with respect to training procedure and inference time.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work, we take a more direct approach and treat a word type and its allowed POS tags as a primary element of the model.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model starts by generating a tag assignment for each word type in a vocabulary, assuming one tag per word.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then, token- level HMM emission parameters are drawn conditioned on these assignments such that each word is only allowed probability mass on a single assigned tag.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this way we restrict the parameterization of a Language Original case English Danish Dutch German Spanish Swedish Portuguese 94.6 96.3 96.6 95.5 95.4 93.3 95.6 Table 1: Upper bound on tagging accuracy assuming each word type is assigned to majority POS tag.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Across all languages, high performance can be attained by selecting a single tag per word type.",
+                    "sid": 23,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "token-level HMM to reflect lexicon sparsity.",
+                    "sid": 24,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This model admits a simple Gibbs sampling algorithm where the number of latent variables is proportional to the number of word types, rather than the size of a corpus as for a standard HMM sampler (Johnson, 2007).",
+                    "sid": 25,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are two key benefits of this model architecture.",
+                    "sid": 26,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, it directly encodes linguistic intuitions about POS tag assignments: the model structure reflects the one-tag-per-word property, and a type- level tag prior captures the skew on tag assignments (e.g., there are fewer unique determiners than unique nouns).",
+                    "sid": 27,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, the reduced number of hidden variables and parameters dramatically speeds up learning and inference.",
+                    "sid": 28,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We evaluate our model on seven languages exhibiting substantial syntactic variation.",
+                    "sid": 29,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On several languages, we report performance exceeding that of state-of-the art systems.",
+                    "sid": 30,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our analysis identifies three key factors driving our performance gain: 1) selecting a model structure which directly encodes tag sparsity, 2) a type-level prior on tag assignments, and 3) a straightforward na\u00a8\u0131veBayes approach to incorporate features.",
+                    "sid": 31,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The observed performance gains, coupled with the simplicity of model implementation, makes it a compelling alternative to existing more complex counterparts.",
+                    "sid": 32,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Recent work has made significant progress on unsupervised POS tagging (Me\u00b4rialdo, 1994; Smith and Eisner, 2005; Haghighi and Klein, 2006; Johnson,2007; Goldwater and Griffiths, 2007; Gao and John son, 2008; Ravi and Knight, 2009).",
+                    "sid": 33,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our work is closely related to recent approaches that incorporate the sparsity constraint into the POS induction process.",
+                    "sid": 34,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This line of work has been motivated by empirical findings that the standard EM-learned unsupervised HMM does not exhibit sufficient word tag sparsity.",
+                    "sid": 35,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The extent to which this constraint is enforced varies greatly across existing methods.",
+                    "sid": 36,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On one end of the spectrum are clustering approaches that assign a single POS tag to each word type (Schutze, 1995; Lamar et al., 2010).",
+                    "sid": 37,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These clusters are computed using an SVD variant without relying on transitional structure.",
+                    "sid": 38,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While our method also enforces a singe tag per word constraint, it leverages the transition distribution encoded in an HMM, thereby benefiting from a richer representation of context.",
+                    "sid": 39,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Other approaches encode sparsity as a soft constraint.",
+                    "sid": 40,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, by altering the emission distribution parameters, Johnson (2007) encourages the model to put most of the probability mass on few tags.",
+                    "sid": 41,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This design does not guarantee \u201cstructural zeros,\u201d but biases towards sparsity.",
+                    "sid": 42,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A more forceful approach for encoding sparsity is posterior regularization, which constrains the posterior to have a small number of expected tag assignments (Grac\u00b8a et al., 2009).",
+                    "sid": 43,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach makes the training objective more complex by adding linear constraints proportional to the number of word types, which is rather prohibitive.",
+                    "sid": 44,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A more rigid mechanism for modeling sparsity is proposed by Ravi and Knight (2009), who minimize the size of tagging grammar as measured by the number of transition types.",
+                    "sid": 45,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The use of ILP in learning the desired grammar significantly increases the computational complexity of this method.",
+                    "sid": 46,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to these approaches, our method directly incorporates these constraints into the structure of the model.",
+                    "sid": 47,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This design leads to a significant reduction in the computational complexity of training and inference.",
+                    "sid": 48,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another thread of relevant research has explored the use of features in unsupervised POS induction (Smith and Eisner, 2005; Berg-Kirkpatrick et al., 2010; Hasan and Ng, 2009).",
+                    "sid": 49,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These methods demonstrated the benefits of incorporating linguistic features using a log-linear parameterization, but requires elaborate machinery for training.",
+                    "sid": 50,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our work, we demonstrate that using a simple na\u00a8\u0131veBayes approach also yields substantial performance gains, without the associated training complexity.",
+                    "sid": 51,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "generative story. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We consider the unsupervised POS induction problem without the use of a tagging dictionary.",
+                    "sid": 52,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A graphical depiction of our model as well as a summary of random variables and parameters can be found in Figure 1.",
+                    "sid": 53,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is standard, we use a fixed constant K for the number of tagging states.",
+                    "sid": 54,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Model Overview The model starts by generating a tag assignment T for each word type in a vocabulary, assuming one tag per word.",
+                    "sid": 55,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Conditioned on T , features of word types W are drawn.",
+                    "sid": 56,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer to (T , W ) as the lexicon of a language and \u03c8 for the parameters for their generation; \u03c8 depends on a single hyperparameter \u03b2.",
+                    "sid": 57,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the lexicon has been drawn, the model proceeds similarly to the standard token-level HMM: Emission parameters \u03b8 are generated conditioned on tag assignments T . We also draw transition parameters \u03c6.",
+                    "sid": 58,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both parameters depend on a single hyperparameter \u03b1.",
+                    "sid": 59,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once HMM parameters (\u03b8, \u03c6) are drawn, a token-level tag and word sequence, (t, w), is generated in the standard HMM fashion: a tag sequence t is generated from \u03c6.",
+                    "sid": 60,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The corresponding token words w are drawn conditioned on t and \u03b8.2 Our full generative model is given by: K P (\u03c6, \u03b8|T , \u03b1, \u03b2) = n (P (\u03c6t|\u03b1)P (\u03b8t|T , \u03b1)) t=1 The transition distribution \u03c6t for each tag t is drawn according to DIRICHLET(\u03b1, K ), where \u03b1 is the shared transition and emission distribution hyperparameter.",
+                    "sid": 61,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In total there are O(K 2) parameters associated with the transition parameters.",
+                    "sid": 62,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to the Bayesian HMM, \u03b8t is not drawn from a distribution which has support for each of the n word types.",
+                    "sid": 63,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, we condition on the type-level tag assignments T . Specifically, let St = {i|Ti = t} denote the indices of theword types which have been assigned tag t accord ing to the tag assignments T . Then \u03b8t is drawn from DIRICHLET(\u03b1, St), a symmetric Dirichlet which only places mass on word types indicated by St. This ensures that each word will only be assigned a single tag at inference time (see Section 4).",
+                    "sid": 64,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that while the standard HMM, has O(K n) emission parameters, our model has O(n) effective parameters.3 Token Component Once HMM parameters (\u03c6, \u03b8) have been drawn, the HMM generates a token-level corpus w in the standard way: P (w, t|\u03c6, \u03b8) = P (T , W , \u03b8, \u03c8, \u03c6, t, w|\u03b1, \u03b2) = P (T , W , \u03c8|\u03b2) [Lexicon] \uf8eb n n \uf8ed (w,t)\u2208(w,t) j \uf8f6 P (tj |\u03c6tj\u22121 )P (wj |tj , \u03b8tj )\uf8f8 P (\u03c6, \u03b8|T , \u03b1, \u03b2) [Parameter] P (w, t|\u03c6, \u03b8) [Token] We refer to the components on the right hand side as the lexicon, parameter, and token component respectively.",
+                    "sid": 65,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the parameter and token components will remain fixed throughout experiments, we briefly describe each.",
+                    "sid": 66,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parameter Component As in the standard Bayesian HMM (Goldwater and Griffiths, 2007), all distributions are independently drawn from symmetric Dirichlet distributions: 2 Note that t and w denote tag and word sequences respectively, rather than individual tokens or tags.",
+                    "sid": 67,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in our model, conditioned on T , there is precisely one t which has nonzero probability for the token component, since for each word, exactly one \u03b8t has support.",
+                    "sid": 68,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Lexicon Component.",
+                    "sid": 69,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present several variations for the lexical component P (T , W |\u03c8), each adding more complex pa rameterizations.",
+                    "sid": 70,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Uniform Tag Prior (1TW) Our initial lexicon component will be uniform over possible tag assignments as well as word types.",
+                    "sid": 71,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its only purpose is 3 This follows since each \u03b8t has St \u2212 1 parameters and.",
+                    "sid": 72,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P St = n. \u03b2 T VARIABLES \u03c8 Y W : Word types (W1 ,.",
+                    "sid": 73,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".., Wn ) (obs) P T : Tag assigns (T1 ,.",
+                    "sid": 74,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ".., Tn ) T W \u03c6 E w : Token word seqs (obs) t : Token tag assigns (det by T ) PARAMETERS \u03c8 : Lexicon parameters \u03b8 : Token word emission parameters \u03c6 : Token tag transition parameters \u03c6 \u03c6 t1 t2 \u03b8 \u03b8 w1 w2 K \u03c6 T tm O K \u03b8 E wN m N N Figure 1: Graphical depiction of our model and summary of latent variables and parameters.",
+                    "sid": 75,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The type-level tag assignments T generate features associated with word types W . The tag assignments constrain the HMM emission parameters \u03b8.",
+                    "sid": 76,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tokens w are generated by token-level tags t from an HMM parameterized by the lexicon structure.",
+                    "sid": 77,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The hyperparameters \u03b1 and \u03b2 represent the concentration parameters of the token- and type-level components of the model respectively.",
+                    "sid": 78,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They are set to fixed constants.",
+                    "sid": 79,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "to explore how well we can induce POS tags using only the one-tag-per-word constraint.",
+                    "sid": 80,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, the lexicon is generated as: P (T , W |\u03c8) =P (T )P (W |T ) Word Type Features (FEATS): Past unsupervised POS work have derived benefits from features on word types, such as suffix and capitalization features (Hasan and Ng, 2009; Berg-Kirkpatrick et al.,2010).",
+                    "sid": 81,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Past work however, has typically associ n = n P (Ti)P (Wi|Ti) = i=1 1 n K n ated these features with token occurrences, typically in an HMM.",
+                    "sid": 82,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our model, we associate these features at the type-level in the lexicon.",
+                    "sid": 83,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, we conThis model is equivalent to the standard HMM ex cept that it enforces the one-word-per-tag constraint.",
+                    "sid": 84,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Learned Tag Prior (PRIOR) We next assume there exists a single prior distribution \u03c8 over tag assignments drawn from DIRICHLET(\u03b2, K ).",
+                    "sid": 85,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This alters generation of T as follows: n P (T |\u03c8) = n P (Ti|\u03c8) i=1 Note that this distribution captures the frequency of a tag across word types, as opposed to tokens.",
+                    "sid": 86,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The P (T |\u03c8) distribution, in English for instance, should have very low mass for the DT (determiner) tag, since determiners are a very small portion of the vocabulary.",
+                    "sid": 87,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, NNP (proper nouns) form a large portion of vocabulary.",
+                    "sid": 88,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that these observa sider suffix features, capitalization features, punctuation, and digit features.",
+                    "sid": 89,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While possible to utilize the feature-based log-linear approach described in Berg-Kirkpatrick et al.",
+                    "sid": 90,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010), we adopt a simpler na\u00a8\u0131ve Bayes strategy, where all features are emitted independently.",
+                    "sid": 91,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we assume each word type W consists of feature-value pairs (f, v).",
+                    "sid": 92,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each feature type f and tag t, a multinomial \u03c8tf is drawn from a symmetric Dirichlet distribution with concentration parameter \u03b2.",
+                    "sid": 93,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The P (W |T , \u03c8) term in the lexicon component now decomposes as: n P (W |T , \u03c8) = n P (Wi|Ti, \u03c8) i=1 n \uf8eb \uf8f6 tions are not modeled by the standard HMM, which = n \uf8ed n P (v|\u03c8Ti f )\uf8f8 instead can model token-level frequency.",
+                    "sid": 94,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "i=1 (f,v)\u2208Wi",
+                    "sid": 95,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "learning and inference. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "For inference, we are interested in the posterior probability over the latent variables in our model.",
+                    "sid": 96,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training, we treat as observed the language word types W as well as the token-level corpus w. We utilize Gibbs sampling to approximate our collapsed model posterior: P (T ,t|W , w, \u03b1, \u03b2) \u221d P (T , t, W , w|\u03b1, \u03b2) 0.7 0.6 0.5 0.4 0.3 English Danish Dutch Germany Portuguese Spanish Swedish = P (T , t, W , w, \u03c8, \u03b8, \u03c6, w|\u03b1, \u03b2)d\u03c8d\u03b8d\u03c6 Note that given tag assignments T , there is only one setting of token-level tags t which has mass in the above posterior.",
+                    "sid": 97,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, for the ith word type, the set of token-level tags associated with token occurrences of this word, denoted t(i), must all take the value Ti to have nonzero mass. Thus in the context of Gibbs sampling, if we want to block sample Ti with t(i), we only need sample values for Ti and consider this setting of t(i).",
+                    "sid": 98,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The equation for sampling a single type-level assignment Ti is given by, 0.2 0 5 10 15 20 25 30 Iteration Figure 2: Graph of the one-to-one accuracy of our full model (+FEATS) under the best hyperparameter setting by iteration (see Section 5).",
+                    "sid": 99,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance typically stabilizes across languages after only a few number of iterations.",
+                    "sid": 100,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "to represent the ith word type emitted by the HMM: P (t(i)|Ti, t(\u2212i), w, \u03b1) \u221d n P (w|Ti, t(\u2212i), w(\u2212i), \u03b1) (tb ,ta ) P (Ti, t(i)|T , W , t(\u2212i), w, \u03b1, \u03b2) = P (T |tb, t(\u2212i), \u03b1)P (ta|T , t(\u2212i), \u03b1) \u2212i (i) i i (\u2212i) P (Ti|W , T \u2212i, \u03b2)P (t |Ti, t , w, \u03b1) All terms are Dirichlet distributions and parameters can be analytically computed from counts in t(\u2212i)where T \u2212i denotes all type-level tag assignment ex cept Ti and t(\u2212i) denotes all token-level tags except and w (\u2212i) (Johnson, 2007).",
+                    "sid": 101,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "t(i).",
+                    "sid": 102,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The terms on the right-hand-side denote the type-level and token-level probability terms respectively.",
+                    "sid": 103,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The type-level posterior term can be computed according to, P (Ti|W , T \u2212i, \u03b2) \u221d Note that each round of sampling Ti variables takes time proportional to the size of the corpus, as with the standard token-level HMM.",
+                    "sid": 104,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A crucial difference is that the number of parameters is greatly reduced as is the number of variables that are sampled during each iteration.",
+                    "sid": 105,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast to results reported in Johnson (2007), we found that the per P (Ti|T \u2212i, \u03b2) n (f,v)\u2208Wi P (v|Ti, f, W \u2212i, T \u2212i, \u03b2) formance of our Gibbs sampler on the basic 1TW model stabilized very quickly after about 10 full it All of the probabilities on the right-hand-side are Dirichlet, distributions which can be computed analytically given counts.",
+                    "sid": 106,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The token-level term is similar to the standard HMM sampling equations found in Johnson (2007).",
+                    "sid": 107,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The relevant variables are the set of token-level tags that appear before and after each instance of the ith word type; we denote these context pairs with the set {(tb, ta)} and they are contained in t(\u2212i).",
+                    "sid": 108,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use w erations of sampling (see Figure 2 for a depiction).",
+                    "sid": 109,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We evaluate our approach on seven languages: English, Danish, Dutch, German, Portuguese, Spanish, and Swedish.",
+                    "sid": 110,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On each language we investigate the contribution of each component of our model.",
+                    "sid": 111,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all languages we do not make use of a tagging dictionary.",
+                    "sid": 112,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mo del Hy per par am . E n g li s h1 1 m-1 D a n i s h1 1 m-1 D u t c h1 1 m-1 G er m a n1 1 m-1 Por tug ues e1 1 m-1 S p a ni s h1 1 m-1 S w e di s h1 1 m-1 1T W be st me dia n 45.",
+                    "sid": 113,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 62.6 45.",
+                    "sid": 114,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 61.7 37.",
+                    "sid": 115,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 56.2 32.",
+                    "sid": 116,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 53.8 47.",
+                    "sid": 117,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 53.7 43.",
+                    "sid": 118,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 61.0 44.",
+                    "sid": 119,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 62.2 39.",
+                    "sid": 120,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 68.4 49.",
+                    "sid": 121,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 68.4 48.",
+                    "sid": 122,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 68.1 34.",
+                    "sid": 123,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 54.4 33.",
+                    "sid": 124,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "54.3",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "36.",
+                    "sid": 125,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 55.3 34.",
+                    "sid": 126,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 50.2 +P RI OR be st me dia n 47.",
+                    "sid": 127,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 65.5 46.",
+                    "sid": 128,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 64.7 42.",
+                    "sid": 129,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 58.3 40.",
+                    "sid": 130,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 57.3 51.",
+                    "sid": 131,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 65.9 48.",
+                    "sid": 132,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 60.7 50.",
+                    "sid": 133,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "62.2",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "41.",
+                    "sid": 134,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 68.3 56.",
+                    "sid": 135,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 70.7 52.",
+                    "sid": 136,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 70.9 42.",
+                    "sid": 137,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "54.8",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "37.",
+                    "sid": 138,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 55.8 38.",
+                    "sid": 139,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "58.0",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "36.",
+                    "sid": 140,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 57.3 +F EA TS be st me dia n 50.",
+                    "sid": 141,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 66.4 47.",
+                    "sid": 142,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 66.4 52.",
+                    "sid": 143,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 61.2 43.",
+                    "sid": 144,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 60.7 56.",
+                    "sid": 145,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 69.0 51.",
+                    "sid": 146,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 67.3 55.",
+                    "sid": 147,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 70.4 46.",
+                    "sid": 148,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 61.7 64.",
+                    "sid": 149,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 74.5 56.",
+                    "sid": 150,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 70.1 58.",
+                    "sid": 151,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 68.9 50.",
+                    "sid": 152,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 57.2 43.",
+                    "sid": 153,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 61.7 38.",
+                    "sid": 154,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 60.6 Table 3: Multilingual Results: We report token-level one-to-one and many-to-one accuracy on a variety of languages under several experimental settings (Section 5).",
+                    "sid": 155,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each language and setting, we report one-to-one (11) and many- to-one (m-1) accuracies.",
+                    "sid": 156,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each cell, the first row corresponds to the result using the best hyperparameter choice, where best is defined by the 11 metric.",
+                    "sid": 157,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second row represents the performance of the median hyperparameter setting.",
+                    "sid": 158,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Model components cascade, so the row corresponding to +FEATS also includes the PRIOR component (see Section 3).",
+                    "sid": 159,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "La ng ua ge # To ke ns # W or d Ty pe s # Ta gs E ng lis h D a ni s h D u tc h G e r m a n P or tu g u e s e S p a ni s h S w e di s h 1 1 7 3 7 6 6 9 4 3 8 6 2 0 3 5 6 8 6 9 9 6 0 5 2 0 6 6 7 8 8 9 3 3 4 1 9 1 4 6 7 4 9 2 0 6 1 8 3 5 6 2 8 3 9 3 7 2 3 2 5 2 8 9 3 1 1 6 4 5 8 2 0 0 5 7 4 5 2 5 1 2 5 4 2 2 4 7 4 1 Table 2: Statistics for various corpora utilized in experiments.",
+                    "sid": 160,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "See Section 5.",
+                    "sid": 161,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The English data comes from the WSJ portion of the Penn Treebank and the other languages from the training set of the CoNLL-X multilingual dependency parsing shared task.",
+                    "sid": 162,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.1 Data Sets.",
+                    "sid": 163,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following the setup of Johnson (2007), we use the whole of the Penn Treebank corpus for training and evaluation on English.",
+                    "sid": 164,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For other languages, we use the CoNLL-X multilingual dependency parsing shared task corpora (Buchholz and Marsi, 2006) which include gold POS tags (used for evaluation).",
+                    "sid": 165,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We train and test on the CoNLL-X training set.",
+                    "sid": 166,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistics for all data sets are shown in Table 2.",
+                    "sid": 167,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Setup.",
+                    "sid": 168,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Models To assess the marginal utility of each component of the model (see Section 3), we incremen- tally increase its sophistication.",
+                    "sid": 169,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we (+FEATS) utilizes the tag prior as well as features (e.g., suffixes and orthographic features), discussed in Section 3, for the P (W |T , \u03c8) component.",
+                    "sid": 170,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hyperparameters Our model has two Dirichlet concentration hyperparameters: \u03b1 is the shared hyperparameter for the token-level HMM emission and transition distributions.",
+                    "sid": 171,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u03b2 is the shared hyperparameter for the tag assignment prior and word feature multinomials.",
+                    "sid": 172,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We experiment with four values for each hyperparameter resulting in 16 (\u03b1, \u03b2) combinations: \u03b1 \u03b2 0.001, 0.01, 0.1, 1.0 0.01, 0.1, 1.0, 10 Iterations In each run, we performed 30 iterations of Gibbs sampling for the type assignment variables W .4 We use the final sample for evaluation.",
+                    "sid": 173,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation Metrics We report three metrics to evaluate tagging performance.",
+                    "sid": 174,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As is standard, we report the greedy one-to-one (Haghighi and Klein, 2006) and the many-to-one token-level accuracy obtained from mapping model states to gold POS tags.",
+                    "sid": 175,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also report word type level accuracy, the fraction of word types assigned their majority tag (where the mapping between model state and tag is determined by greedy one-to-one mapping discussed above).5 For each language, we aggregate results in the following way: First, for each hyperparameter setting, evaluate three variants: The first model (1TW) only 4 Typically, the performance stabilizes after only 10 itera-.",
+                    "sid": 176,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "encodes the one tag per word constraint and is uni form over type-level tag assignments.",
+                    "sid": 177,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second model (+PRIOR) utilizes the independent prior over type-level tag assignments P (T |\u03c8).",
+                    "sid": 178,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final model tions.",
+                    "sid": 179,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5 We choose these two metrics over the Variation Information measure due to the deficiencies discussed in Gao and Johnson (2008).",
+                    "sid": 180,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "we perform five runs with different random initialization of sampling state.",
+                    "sid": 181,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hyperparameter settings are sorted according to the median one-to-one metric over runs.",
+                    "sid": 182,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report results for the best and median hyperparameter settings obtained in this way.",
+                    "sid": 183,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, for both settings we report results on the median run for each setting.",
+                    "sid": 184,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tag set As is standard, for all experiments, we set the number of latent model tag states to the size of the annotated tag set.",
+                    "sid": 185,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The original tag set for the CoNLL-X Dutch data set consists of compounded tags that are used to tag multi-word units (MWUs) resulting in a tag set of over 300 tags.",
+                    "sid": 186,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We tokenize MWUs and their POS tags; this reduces the tag set size to 12.",
+                    "sid": 187,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "See Table 2 for the tag set size of other languages.",
+                    "sid": 188,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With the exception of the Dutch data set, no other processing is performed on the annotated tags.",
+                    "sid": 189,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6 Results and Analysis.",
+                    "sid": 190,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report token- and type-level accuracy in Table 3 and 6 for all languages and system settings.",
+                    "sid": 191,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our analysis and comparison focuses primarily on the one-to-one accuracy since it is a stricter metric than many-to-one accuracy, but also report many-to-one for completeness.",
+                    "sid": 192,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparison with state-of-the-art taggers For comparison we consider two unsupervised tag- gers: the HMM with log-linear features of Berg- Kirkpatrick et al.",
+                    "sid": 193,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) and the posterior regular- ization HMM of Grac\u00b8a et al.",
+                    "sid": 194,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009).",
+                    "sid": 195,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The system of Berg-Kirkpatrick et al.",
+                    "sid": 196,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) reports the best unsupervised results for English.",
+                    "sid": 197,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We consider two variants of Berg-Kirkpatrick et al.",
+                    "sid": 198,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010)\u2019s richest model: optimized via either EM or LBFGS, as their relative performance depends on the language.",
+                    "sid": 199,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model outperforms theirs on four out of five languages on the best hyperparameter setting and three out of five on the median setting, yielding an average absolute difference across languages of 12.9% and 3.9% for best and median settings respectively compared to their best EM or LBFGS performance.",
+                    "sid": 200,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While Berg-Kirkpatrick et al.",
+                    "sid": 201,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) consistently outperforms ours on English, we obtain substantial gains across other languages.",
+                    "sid": 202,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, on Spanish, the absolute gap on median performance is 10%.",
+                    "sid": 203,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Top 5 Bot to m 5 Go ld NN P NN JJ CD NN S RB S PD T # \u201d , 1T W CD W RB NN S VB N NN PR P$ W DT : MD . +P RI OR CD JJ NN S WP $ NN RR B- , $ \u201d . +F EA TS JJ NN S CD NN P UH , PR P$ # . \u201c Table 5: Type-level English POS Tag Ranking: We list the top 5 and bottom 5 POS tags in the lexicon and the predictions of our models under the best hyperparameter setting.",
+                    "sid": 204,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our second point of comparison is with Grac\u00b8a et al.",
+                    "sid": 205,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009), who also incorporate a sparsity constraint, but does via altering the model objective using posterior regularization.",
+                    "sid": 206,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can only compare with Grac\u00b8a et al.",
+                    "sid": 207,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) on Portuguese (Grac\u00b8a et al.",
+                    "sid": 208,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009) also report results on English, but on the reduced 17 tag set, which is not comparable to ours).",
+                    "sid": 209,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their best model yields 44.5% one-to-one accuracy, compared to our best median 56.5% result.",
+                    "sid": 210,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, our full model takes advantage of word features not present in Grac\u00b8a et al.",
+                    "sid": 211,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009).",
+                    "sid": 212,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even without features, but still using the tag prior, our median result is 52.0%, still significantly outperforming Grac\u00b8a et al.",
+                    "sid": 213,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2009).",
+                    "sid": 214,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ablation Analysis We evaluate the impact of incorporating various linguistic features into our model in Table 3.",
+                    "sid": 215,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A novel element of our model is the ability to capture type-level tag frequencies.",
+                    "sid": 216,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For this experiment, we compare our model with the uniform tag assignment prior (1TW) with the learned prior (+PRIOR).",
+                    "sid": 217,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Across all languages, +PRIOR consistently outperforms 1TW, reducing error on average by 9.1% and 5.9% on best and median settings respectively.",
+                    "sid": 218,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar behavior is observed when adding features.",
+                    "sid": 219,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difference between the featureless model (+PRIOR) and our full model (+FEATS) is 13.6% and 7.7% average error reduction on best and median settings respectively.",
+                    "sid": 220,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, the difference between our most basic model (1TW) and our full model (+FEATS) is 21.2% and 13.1% for the best and median settings respectively.",
+                    "sid": 221,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One striking example is the error reduction for Spanish, which reduces error by 36.5% and 24.7% for the best and median settings respectively.",
+                    "sid": 222,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We observe similar trends when using another measure \u2013 type-level accuracy (defined as the fraction of words correctly assigned their majority tag), according to which La ng ua ge M etr ic B K 10 E M B K 10 L B F G S G 10 F EA T S B es t F EA T S M ed ia n E ng lis h 1 1 m 1 4 8 . 3 6 8 . 1 5 6 . 0 7 5 . 5 \u2013 \u2013 5 0 . 9 6 6 . 4 4 7 . 8 6 6 . 4 D an is h 1 1 m 1 4 2 . 3 6 6 . 7 4 2 . 6 5 8 . 0 \u2013 \u2013 5 2 . 1 6 1 . 2 4 3 . 2 6 0 . 7 D ut ch 1 1 m 1 5 3 . 7 6 7 . 0 5 5 . 1 6 4 . 7 \u2013 \u2013 5 6 . 4 6 9 . 0 5 1 . 5 6 7 . 3 Po rtu gu es e 1 1 m 1 5 0 . 8 7 5 . 3 4 3 . 2 7 4 . 8 44 .5 69 .2 6 4 . 1 7 4 . 5 5 6 . 5 7 0 . 1 S pa ni sh 1 1 m 1 \u2013 \u2013 4 0 . 6 7 3 . 2 \u2013 \u2013 5 8 . 3 6 8 . 9 5 0 . 0 5 7 . 2 Table 4: Comparison of our method (FEATS) to state-of-the-art methods.",
+                    "sid": 223,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Feature-based HMM Model (Berg- Kirkpatrick et al., 2010): The KM model uses a variety of orthographic features and employs the EM or LBFGS optimization algorithm; Posterior regulariation model (Grac\u00b8a et al., 2009): The G10 model uses the posterior regular- ization approach to ensure tag sparsity constraint.",
+                    "sid": 224,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "La ng ua ge 1T W + P RI O R + F E A T S E ng lis h D a ni s h D u tc h G e r m a n P or tu g u e s e S p a ni s h S w e di s h 2 1.",
+                    "sid": 225,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 1 0.",
+                    "sid": 226,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 2 3.",
+                    "sid": 227,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 1 2.",
+                    "sid": 228,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8 1 8.",
+                    "sid": 229,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4 7 . 3 8 . 9 2 8 . 8 2 0 . 7 3 2 . 3 3 5 . 2 2 9 . 6 2 7 . 6 1 4 . 2 4 2 . 8 4 5 . 9 4 4 . 3 6 0 . 6 6 1 . 5 4 9 . 9 3 3 . 9 Table 6: Type-level Results: Each cell report the type- level accuracy computed against the most frequent tag of each word type.",
+                    "sid": 230,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The state-to-tag mapping is obtained from the best hyperparameter setting for 11 mapping shown in Table 3.",
+                    "sid": 231,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "our full model yields 39.3% average error reduction across languages when compared to the basic configuration (1TW).",
+                    "sid": 232,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 provides insight into the behavior of different models in terms of the tagging lexicon they generate.",
+                    "sid": 233,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The table shows that the lexicon tag frequency predicated by our full model are the closest to the gold standard.",
+                    "sid": 234,
+                    "ssid": 95,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "7 Conclusion and Future Work.",
+                    "sid": 235,
+                    "ssid": 96,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have presented a method for unsupervised part- of-speech tagging that considers a word type and its allowed POS tags as a primary element of the model.",
+                    "sid": 236,
+                    "ssid": 97,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This departure from the traditional token-based tagging approach allows us to explicitly capture type- level distributional properties of valid POS tag as signments as part of the model.",
+                    "sid": 237,
+                    "ssid": 98,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting model is compact, efficiently learnable and linguistically expressive.",
+                    "sid": 238,
+                    "ssid": 99,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our empirical results demonstrate that the type-based tagger rivals state-of-the-art tag-level taggers which employ more sophisticated learning mechanisms to exploit similar constraints.",
+                    "sid": 239,
+                    "ssid": 100,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we make a simplifying assumption of one-tag-per-word.",
+                    "sid": 240,
+                    "ssid": 101,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This assumption, however, is not inherent to type-based tagging models.",
+                    "sid": 241,
+                    "ssid": 102,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A promising direction for future work is to explicitly model a distribution over tags for each word type.",
+                    "sid": 242,
+                    "ssid": 103,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hypothesize that modeling morphological information will greatly constrain the set of possible tags, thereby further refining the representation of the tag lexicon.",
+                    "sid": 243,
+                    "ssid": 104,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "The authors acknowledge the support of the NSF (CAREER grant IIS0448168, and grant IIS 0904684).",
+                    "sid": 244,
+                    "ssid": 105,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We are especially grateful to Taylor Berg- Kirkpatrick for running additional experiments.",
+                    "sid": 245,
+                    "ssid": 106,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We thank members of the MIT NLP group for their suggestions and comments.",
+                    "sid": 246,
+                    "ssid": 107,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings, conclusions, or recommendations expressed in this paper are those of the authors, and do not necessarily reflect the views of the funding organizations.",
+                    "sid": 247,
+                    "ssid": 108,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

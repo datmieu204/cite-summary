@@ -1,0 +1,1433 @@
+{
+    "ID": "N04-1016",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Previous work demonstrated that web counts can be used to approximate bigram frequencies, and thus should be useful for a wide variety of NLP tasks.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "So far, only two generation tasks (candidate selection for machine translation and confusion-set disambiguation) have been tested using web-scale data sets.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The present paper investigates if these results generalize to tasks covering both syntax and semantics, both generation and analysis, and a larger range of n-grams.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the majority of tasks, we fi nd that simple, unsupervised models perform better when n-gram frequencies are obtained from the web rather than from a large corpus.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, in most cases, web-based models fail to outperform more sophisticated state-of-the- art models trained on small corpora.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We argue that web-based models should therefore be used as a baseline for, rather than an alternative to, standard models.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Keller and Lapata (2003) investigated the validity of web counts for a range of predicate-argument bigrams (verb- object, adjective-noun, and noun-noun bigrams).",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They presented a simple method for retrieving bigram counts from the web by querying a search engine and demonstrated that web counts (a) correlate with frequencies obtained from a carefully edited, balanced corpus such as the 100M words British National Corpus (BNC), (b) correlate with frequencies recreated using smoothing methods in the case of unseen bigrams, (c) reliably predict human plausibility judgments, and (d) yield state-of-the-art performance on pseudo-disambiguation tasks.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Keller and Lapata\u2019s (2003) results suggest that web- based frequencies can be a viable alternative to bigram frequencies obtained from smaller corpora or recreated using smoothing.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, they do not demonstrate that realistic NLP tasks can benefi t from web counts.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to show this, web counts would have to be applied to a diverse range of NLP tasks, both syntactic and seman Task n POS Ling Type MT candidate select.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1,2 V, N Sem Generation Spelling correction 1,2,3 Any Syn/Sem Generation Adjective ordering 1,2 Adj Sem Generation Compound bracketing 1,2 N Syn Analysis Compound interpret.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1,2,3 N, P Sem Analysis Countability detection 1,2 N, Det Sem Analysis Table 1: Overview of the tasks investigated in this paper (n: size of n-gram; POS: parts of speech; Ling: linguistic knowledge; Type: type of task) tic, involving analysis (e.g., disambiguation) and generation (e.g., selection among competing outputs).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Also, it remains to be shown that the web-based approach scales up to larger n-grams (e.g., trigrams), and to combinations of different parts of speech (Keller and Lapata 2003 only tested bigrams involving nouns, verbs, and adjectives).",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another important question is whether web-based methods, which are by defi nition unsupervised, can be competitive alternatives to supervised approaches used for most tasks in the literature.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This paper aims to address these questions.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We start by using web counts for two generation tasks for which the use of large data sets has shown promising results: (a) target language candidate selection for machine translation (Grefenstette, 1998) and (b) context sensitive spelling correction (Banko and Brill, 2001a,b).",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we investigate the generality of the web-based approach by applying it to a range of analysis and generations tasks, involving both syntactic and semantic knowledge: (c) ordering of prenominal adjectives, (d) compound noun bracketing, (e) compound noun interpretation, and (f) noun count- ability detection.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 gives an overview of these tasks and their properties.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In all cases, we propose a simple, unsupervised n-gram based model whose parameters are estimated using web counts.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare this model both against a baseline (same model, but parameters estimated on the BNC) and against state-of-the-art models from the literature, which are either supervised (i.e., use annotated training data) or unsupervised but rely on taxonomies to recreate missing counts.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "method. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Following Keller and Lapata (2003), web counts for n- grams were obtained using a simple heuristic based on queries to the search engine Altavista.1 In this approach, the web count for a given n-gram is simply the number of hits (pages) returned by the search engine for the queries generated for this n-gram.",
+                    "sid": 22,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Three different types of queries were used for the NLP tasks in the present paper: Literal queries use the quoted n-gram directly as a search term for Altavista (e.g., the bigram history changes expands to the query \"history changes\").",
+                    "sid": 23,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Near queries use Altavista\u2019s NEAR operator to expand the n-gram; a NEAR b means that a has to occur in the same ten word window as b; the window is treated as a bag of words (e.g., history changes expands to \"history\" NEAR \"changes\").",
+                    "sid": 24,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Inflected queries are performed by expanding an n-gram into all its morphological forms.",
+                    "sid": 25,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These forms are then submitted as literal queries, and the resulting hits are summed up (e.g., history changes expands to \"history change\", \"histories change\", \"history changed\", etc.).",
+                    "sid": 26,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "John Carroll\u2019s suite of morphological tools (morpha, morphg, and ana) was used to generate inflected forms of verbs and nouns.2 In certain cases (detailed below), determiners were inserted before nouns in order to make it possible to recognize simple NPs.",
+                    "sid": 27,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This insertion was limited to a/an, the, and the empty determiner (for bare plurals).",
+                    "sid": 28,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All queries (other than the ones using the NEAR operator) were performed as exact matches (using quotation marks in Altavista).",
+                    "sid": 29,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All search terms were submitted to the search engine in lower case.",
+                    "sid": 30,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If a query consists of a single, highly frequent word (such as the ), Altavista will return an error message.",
+                    "sid": 31,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In these cases, we set the web count to a large constant (108 ).",
+                    "sid": 32,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This problem is limited to unigrams, which were used in some of the models detailed below.",
+                    "sid": 33,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Sometimes the search engine fails to return a hit for a given n-gram (for any of its morphological variants).",
+                    "sid": 34,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We smooth zero counts by setting them to .5.",
+                    "sid": 35,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all tasks, the web-based models are compared against identical models whose parameters were estimated from the BNC (Burnard, 1995).",
+                    "sid": 36,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BNC is a static 100M word corpus of British English, which is about 1000 times smaller than the web (Keller and La- pata, 2003).",
+                    "sid": 37,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing the performance of the same model on the web and on the BNC allows us to assess how much improvement can be expected simply by using a larger data set.",
+                    "sid": 38,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BNC counts were retrieved using the Gsearch corpus query tool (Corley et al., 2001); the morphological query expansion was the same as for web queries; the NEAR operator was simulated by assuming a window of fi ve words to the left and fi ve to the right.",
+                    "sid": 39,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 We did not use Google counts, as Google limits the number of queries to 1000 per day, which makes the process of retrieving a large number of web counts very time consuming.",
+                    "sid": 40,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 The tools can be downloaded from http://www.cogs.",
+                    "sid": 41,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "susx.ac.uk/lab/nlp/carroll/morph.html.",
+                    "sid": 42,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "# best model on development set \u2217 / \u2217 (not) sign.",
+                    "sid": 43,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "different from best BNC model on test set \u2020 / \u2020 (not) sign.",
+                    "sid": 44,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "different from baseline \u2021 / \u2021 (not) sign.",
+                    "sid": 45,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "different from best model in the literature Table 2: Meaning of diacritics indicating statistical signifi cance ( 2 tests) Gsearch was used to search solely for adjacent words; no POS information was incorporated in the queries, and no parsing was performed.",
+                    "sid": 46,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all of our tasks, we have to select either the best of several possible models or the best parameter setting for a single model.",
+                    "sid": 47,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore require a separate development set.",
+                    "sid": 48,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was achieved by using the gold standard data set from the literature for a given task and randomly dividing it into a development set and a test set (of equal size).",
+                    "sid": 49,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We report the test set performance for all models for a given task, and indicate which model shows optimal performance on the development set (marked by a \u2018#\u2019 in all subsequent tables).",
+                    "sid": 50,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We then compare the test set performance of this optimal model to the performance of the models reported in the literature.",
+                    "sid": 51,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is important to note that the fi gures taken from the literature were typically obtained on the whole gold standard data set, and hence may differ from the performance on our test set.",
+                    "sid": 52,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We work on the assumption that such differences are negligible.",
+                    "sid": 53,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use 2 tests to determine whether the performance of the best web model on the test set is signifi cantly different from that of the best BNC model.",
+                    "sid": 54,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also determine whether both models differ signifi cantly from the baseline and from the best model in the literature.",
+                    "sid": 55,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A set of diacritics is used to indicate signifi cance throughout this paper, see Table 2.",
+                    "sid": 56,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "candidate selection for machine. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Translation Target word selection is a generation task that occurs in machine translation (MT).",
+                    "sid": 57,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A word in a source language can often be translated into different words in the target language and the choice of the appropriate translation depends on a variety of semantic and pragmatic factors.",
+                    "sid": 58,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is illustrated in (1) where there are fi ve translation alternatives for the German noun Geschichte listed in curly brackets, the fi rst being the correct one.",
+                    "sid": 59,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) a. Die Geschichte a\u00a8ndert sich, nicht jedoch die Geographie.",
+                    "sid": 60,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "b. {History, story, tale, saga, strip } changes but geography does not.",
+                    "sid": 61,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical approaches to target word selection rely on bilingual lexica to provide all possible translations of words in the source language.",
+                    "sid": 62,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Once the set of translation candidates is generated, statistical information gathered from target language corpora is used to select the most appropriate alternative (Dagan and Itai, 1994).",
+                    "sid": 63,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is somewhat simplifi ed by Grefenstette (1998) and Prescher et al.",
+                    "sid": 64,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2000) who do not produce a translation of the entire sentence.",
+                    "sid": 65,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, they focus on specifi c syntactic relations.",
+                    "sid": 66,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Grefenstette translates compounds from German and Spanish into English, and uses BNC frequencies as a fi lter for candidate translations.",
+                    "sid": 67,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "He observes that this approach suffers from an acute data sparseness problem through web searches, thus achieving a translation accuracy of 86\u201387%.",
+                    "sid": 68,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Prescher et al.",
+                    "sid": 69,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2000) concentrate on verbs and their objects.",
+                    "sid": 70,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assuming that the target language translation of the verb is known, they select from the candidate translations the noun that is semantically most compatible with the verb.",
+                    "sid": 71,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The semantic fi t between a verb and its argument is modeled using a class-based lexicon that is derived from unlabeled data using the expectation maximization algorithm (verb-argument model).",
+                    "sid": 72,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Prescher et al. also propose a refi ned version of this approach that only models the fi t between a verb and its object (verb-object model), disregarding other arguments of the verb.",
+                    "sid": 73,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The two models are trained on the BNC and evaluated against two corpora of 1,340 and 814 bilingual sentence pairs, with an average of 8.63 and 2.83 translations for the object noun, respectively.",
+                    "sid": 74,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 lists Prescher et al.\u2019s results for the two corpora and for both models together with a random baseline (select a target noun at random) and a frequency baseline (select the most frequent target noun).",
+                    "sid": 75,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Grefenstette\u2019s (1998) evaluation was restricted to compounds that are listed in a dictionary.",
+                    "sid": 76,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These compounds are presumably well-established and fairly frequent, which makes it easy to obtain reliable web frequencies.",
+                    "sid": 77,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We wanted to test if the web-based approach extends from lexicalized compounds to productive syntactic units for which dictionary entries do not exist.",
+                    "sid": 78,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We therefore performed our evaluation using Prescher et al.\u2019s (2000) test set of verb-object pairs.",
+                    "sid": 79,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Web counts were retrieved for all possible verb-object translations; the most likely one was selected using either co-occurrence frequency ( f (v, n)) or conditional probability ( f (v, n)/ f (n)).",
+                    "sid": 80,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The web counts were gathered using inflected queries involving the verb, a determiner, and the object (see Section 2).",
+                    "sid": 81,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 compares the web-based models against the BNC models.",
+                    "sid": 82,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For both the high ambiguity and the low ambiguity data set, we fi nd that the performance of the best Altavista model is not signifi cantly different from that of the best BNC model.",
+                    "sid": 83,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 4 compares our simple, unsupervised methods with the two sophisticated class-based models discussed above.",
+                    "sid": 84,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results show that there is no signifi cant difference in performance between the best model reported in the literature and the best Altavista or the best BNC model.",
+                    "sid": 85,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, both models signifi cantly outperform the baseline.",
+                    "sid": 86,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This holds for both the high and low ambiguity data sets.",
+                    "sid": 87,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Altavista BNC high low high low Model ambig ambig ambig ambig f (v, n) 45.74 68.73#/ \u2217 45.89# 70.06# f (v, n)/ f (n) 45.16#/ \u2217 64.96 46.18 66.07 Table 3: Performance of Altavista counts and BNC counts 2000) high low Model ambig ambig Random baseline 14.20 45.90 Frequency baseline 31.90 45.50 Prescher et al.",
+                    "sid": 88,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2000): verb-argument 43.30 61.50 Best Altavista 45.16\u2020/ \u2021 68.73\u2020/ \u2021 Best BNC 45.89\u2020/ \u2021 70.06\u2020/ \u2021 Prescher et al.",
+                    "sid": 89,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2000): verb-object 49.40 68.20 Table 4: Performance comparison with the literature for candidate selection for MT",
+                    "sid": 90,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "context-sensitive spelling correction. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "Context-sensitive spelling correction is the task of correcting spelling errors that result in valid words.",
+                    "sid": 91,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such a spelling error is illustrated in (4) where principal was typed when principle was intended.",
+                    "sid": 92,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) Introduction of the dialogue principal proved strikingly effective.",
+                    "sid": 93,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task can be viewed as generation task, as it consists of choosing between alternative surface realizations of a word.",
+                    "sid": 94,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This choice is typically modeled by confusion sets such as {principal, principle} or {then, than} under the assumption that each word in the set could be mistakenly typed when another word in the set was intended.",
+                    "sid": 95,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task is to infer which word in a confusion set is the correct one in a given context.",
+                    "sid": 96,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This choice can be either syn tactic (as for {then, than}) or semantic (as for {principal, principle}).A number of machine learning methods have been pro posed for context-sensitive spelling correction.",
+                    "sid": 97,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These include a variety of Bayesian classifi ers (Golding, 1995; Golding and Schabes, 1996), decision lists (Golding, 1995) transformation-based learning (Mangu and Brill, 1997), Latent Semantic Analysis (LSA) (Jones and Martin, 1997), multiplicative weight update algorithms (Golding and Roth, 1999), and augmented mixture models (Cucerzan and Yarowsky, 2002).",
+                    "sid": 98,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Despite their differences, most approaches use two types of features: context words and collocations.",
+                    "sid": 99,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Context word features record the presence of a word within a fi xed window around the target word (bag of words); collocational features capture the syntactic environment of the target word and are usually represented by a small number of words and/or part- of-speech tags to the left or right of the target word.",
+                    "sid": 100,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results obtained by a variety of classifi cation methods are given in Table 6.",
+                    "sid": 101,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All methods use either the full set or a subset of 18 confusion sets originally gathered by Golding (1995).",
+                    "sid": 102,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most methods are trained and tested on Model Alta BNC Model Alta BNC f (t ) 72.98 70.00 f (w1 , t , w2 )/ f (t ) 87.77 76.33 f (w1 , t ) 84.40 83.02 f (w1 , w2 , t )/ f (t ) 86.27 74.47 f (t , w1 ) 84.89 82.74 f (t , w2 , w2 )/ f (t ) 84.94 74.23 f (w1 , t , w2 ) 89.24#*77.13 f (w1 , t , w2 )/ f (w1 , t ) 80.70 73.69 f (t , w1 , w2 ) 84.68 75.08 f (w1 , w2 , t )/ f (w2 , t ) 72.11 69.28 f (w1 , t )/ f (t ) 82.81 77.84 f (t , w1 , w2 )/ f (t , w1 ) 75.65 72.57 f (t , w1 )/ f (t ) 77.49 80.71# Table 5: Performance of Altavista counts and BNC counts for context sensitive spelling correction (data from Cucerzan and Yarowsky 2002) Model Accuracy Baseline BNC 70.00 Baseline Altavista 72.98 Best BNC 80.71\u2020\u2021 Golding (1995) 81.40 Jones and Martin (1997) 84.26 Best Altavista 89.24\u2020\u2021 Golding and Schabes (1996) 89.82 Mangu and Brill (1997) 92.79 Cucerzan and Yarowsky (2002) 92.20 Golding and Roth (1999) 94.23 Table 6: Performance comparison with the literature for context sensitive spelling correction the Brown corpus, using 80% for training and 20% for testing.3 We devised a simple, unsupervised method for performing spelling correction using web counts.",
+                    "sid": 103,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The method takes into account collocational features, i.e., words that are adjacent to the target word.",
+                    "sid": 104,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each word in the confusion set, we used the web to estimate how frequently it co-occurs with a word or a pair of words immediately to its left or right.",
+                    "sid": 105,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Disambiguation is then performed by selecting the word in the confusion set with the highest co-occurrence frequency or probability.",
+                    "sid": 106,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The web counts were retrieved using literal queries (see Section 2).",
+                    "sid": 107,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ties are resolved by comparing the unigram frequencies of the words in the confusion set and defaulting to the word with the highest one.",
+                    "sid": 108,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 shows the types of collocations we considered and their corresponding accuracy.",
+                    "sid": 109,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The baseline ( f (t )) in Table 5 was obtained by always choosing the most frequent unigram in the confusion set.",
+                    "sid": 110,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the same test set (2056 tokens from the Brown corpus) and confusion sets as Golding and Schabes (1996), Mangu and Brill (1997), and Cucerzan and Yarowsky (2002).",
+                    "sid": 111,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 5 shows that the best result (89.24%) for the web- based approach is obtained with a context of one word to the left and one word to the right of the target word ( f (w1 , t , w2 )).",
+                    "sid": 112,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BNC-based models perform consistently worse than the web-based models with the exception of f (t , w1 )/t ; the best Altavista model performs sig nifi cantly better than the best BNC model.",
+                    "sid": 113,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 6 shows 3 An exception is Golding (1995), who uses the entire Brown corpus for training (1M words) and 3/4 of the Wall Street Journal corpus (Marcus et al., 1993) for testing.",
+                    "sid": 114,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "that both the best Altavista model and the best BNC model outperform their respective baselines.",
+                    "sid": 115,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A comparison with the literature shows that the best Altavista model outperforms Golding (1995), Jones and Martin (1997) highest accuracy on the task is achieved by the class of multiplicative weight-update algorithms such as Winnow (Golding and Roth, 1999).",
+                    "sid": 116,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Both the best BNC model and the best Altavista model perform signifi cantly worse than this model.",
+                    "sid": 117,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that Golding and Roth (1999) use algorithms that can handle large numbers of features and are robust to noise.",
+                    "sid": 118,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our method uses a very small feature set, it relies only on co-occurrence frequencies and does not have access to POS information (the latter has been shown to have an improvement on confusion sets whose words belong to different parts of speech).",
+                    "sid": 119,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An advantage of our method is that it can be used for a large number of confusion sets without relying on the availability of training data.",
+                    "sid": 120,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "ordering of prenominal adjectives. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The ordering of prenominal modifi ers is important for natural language generation systems where the text must be both fluent and grammatical.",
+                    "sid": 121,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the sequence big fat Greek wedding is perfectly acceptable, whereas fat Greek big wedding sounds odd.",
+                    "sid": 122,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The ordering of prenominal adjectives has sparked a great deal of theoretical debate (see Shaw and Hatzivassiloglou 1999 for an overview) and efforts have concentrated on defi ning rules based on semantic criteria that account for different orders (e.g., age \u227a color, value \u227a dimension).",
+                    "sid": 123,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data intensive approaches to the ordering problem rely on corpora for gathering evidence for the likelihood of different orders.",
+                    "sid": 124,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They rest on the hypothesis that the relative order of premodifi ers is fi xed, and independent of context and the noun being modifi ed.",
+                    "sid": 125,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest strategy is what Shaw and Hatzivassiloglou (1999) call di rect evidence.",
+                    "sid": 126,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given an adjective pair {a, b}, they count how many times (a, b) and (b, a) appear in the corpus and choose the pair with the highest frequency.",
+                    "sid": 127,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unfortunately the direct evidence method performs poorly when a given order is unseen in the training data.",
+                    "sid": 128,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To compensate for this, Shaw and Hatzivassiloglou (1999) propose to compute the transitive closure of theordering relation: if a \u227a c and c \u227a b, then a \u227a b. Mal ouf (2000) further proposes a back-off bigram model of adjective pairs for choosing among alternative orders (P((a, b)|{a, b}) vs. P((b, a)|{a, b})).",
+                    "sid": 129,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "He also proposes positional probabilities as a means of estimating how likely it is for a given adjective a to appear fi rst in a sequence by looking at each pair in the training data that contains the adjective a and recording its position.",
+                    "sid": 130,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, he uses memory-based learning as a means to encode morphological and semantic similarities among different adjective orders.",
+                    "sid": 131,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each adjective pair ab is encoded as a vector of 16 features (the last eight characters of a and the last eight characters of b) and a class ((a, b) or Model Altavista BNC f (a1 , a2 ) : f (a2 , a1 ) 89.6#\u2217/ \u2021 80.4#\u2021 f (a1 , a2 )/ f (a2 ) : f (a2 , a1 )/ f (a1 ) 83.2 77.0 f (a1 , a2 )/ f (a1 ) : f (a2 , a1 )/ f (a2 ) 80.2 80.6 Malouf (2000): memory-based \u2013 91.0 Table 7: Performance of Altavista counts and BNC counts for adjective ordering (data from Malouf 2000) (b, a)).",
+                    "sid": 132,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Malouf (2000) extracted 263,838 individual pairs of adjectives from the BNC which he randomly partitioned into test (10%) and training data (90%) and evaluated all the above methods for ordering prenominal adjectives.",
+                    "sid": 133,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "His results showed that a memory-based classifi er that uses morphological information as well as positional probabilities as features outperforms all other methods (see Table 7).",
+                    "sid": 134,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the ordering task we restricted ourselves to the direct evidence strategy which simply chooses the adjective order with the highest frequency or probability (see Table 7).",
+                    "sid": 135,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Web counts were obtained by submitting literal queries to Altavista (see Section 2).",
+                    "sid": 136,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used the same 263,838 adjective pairs that Malouf extracted from the BNC.",
+                    "sid": 137,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These were randomly partitioned into a training (90%) and test corpus (10%).",
+                    "sid": 138,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The test corpus contained 26,271 adjective pairs.",
+                    "sid": 139,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given that submitting 26,271 queries to Altavista would be fairly time- consuming, a random sample of 1000 sequences was obtained from the test corpus and the web frequencies of these pairs were retrieved.",
+                    "sid": 140,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best Altavista model signifi cantly outperformed the best BNC model, as indicated in Table 7.",
+                    "sid": 141,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also found that there was no signifi cant difference between the best Altavista model and the best model reported by Malouf, a supervised method using Model Alta BNC Baseline 63.93 63.93 f (n1 , n2 ) : f (n2 , n3 ) 77.86 66.39 f (n1 , n2 ) : f (n1 , n3 ) 78.68#\u2217 65.57 f (n1 , n2 )/ f (n1 ) : f (n2 , n3 )/ f (n2 ) 68.85 65.57 f (n1 , n2 )/ f (n2 ) : f (n2 , n3 )/ f (n3 ) 70.49 63.11 f (n1 , n2 )/ f (n2 ) : f (n1 , n3 )/ f (n3 ) 80.32 66.39 f (n1 , n2 ) : f (n2 , n3 ) (NEAR) 68.03 63.11 f (n1 , n2 ) : f (n1 , n3 ) (NEAR) 71.31 67.21 f (n1 , n2 )/ f (n1 ) : f (n2 , n3 )/ f (n2 ) (NEAR) 61.47 62.29 f (n1 , n2 )/ f (n2 ) : f (n2 , n3 )/ f (n3 ) (NEAR) 65.57 57.37 f (n1 , n2 )/ f (n2 ) : f (n1 , n3 )/ f (n3 ) (NEAR) 75.40 68.03# Table 8: Performance of Altavista counts and BNC counts for compound bracketing (data from Lauer 1995) Model Accuracy Baseline 63.93 Best BNC 68.03/ \u2020\u2021 Lauer (1995): adjacency 68.90 Lauer (1995): dependency 77.50 Best Altavista 78.68\u2020/ \u2021 Lauer (1995): tuned 80.70 Upper bound 81.50 Table 9: Performance comparison with the literature for compound bracketing 1993).",
+                    "sid": 142,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lauer (1995) proposes an unsupervised method for estimating the frequencies of the competing bracketings based on a taxonomy or a thesaurus.",
+                    "sid": 143,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "He uses a probability ratio to compare the probability of the left- branching analysis to that of the right-branching (see (4) for the dependency model and (5) for the adjacency model).",
+                    "sid": 144,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "P(t1 \u2192 t2 )P(t2 \u2192 t3 ) ti \u2208cats(wi ) positional probability estimates from the BNC and morphological variants.",
+                    "sid": 145,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) Rdep = ti \u2208cats(wi ) P(t 1 \u2192 t3 )P(t 2 \u2192 t3 )",
+                    "sid": 146,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "bracketing of compound nouns. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "t cats(w ) P(t1 \u2192 t2 )The fi rst analysis task we consider is the syntactic disam (5) Radj = i \u2208 i P(t2 \u2192 t3 ) biguation of compound nouns, which has received a fair amount of attention in the NLP literature (Pustejovsky et al., 1993; Resnik, 1993; Lauer, 1995).",
+                    "sid": 147,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task can be summarized as follows: given a three word compound n1 n3 n3 , determine the correct binary bracketing of the word sequence (see (3) for an example).",
+                    "sid": 148,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(3) a. [[backup compiler] disk] b. [backup [compiler disk]] Previous approaches typically compare different bracketings and choose the most likely one.",
+                    "sid": 149,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The adjacency model compares [n1 n2 ] against [n2 n3 ] and adopts a right branching analysis if [n2 n3 ] is more likely than [n1 n2 ].",
+                    "sid": 150,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dependency model compares [n1 n2 ] against [n1 n3 ] and adopts a right branching analysis if [n1 n3 ] is more likely than [n1 n2 ].",
+                    "sid": 151,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simplest model of compound noun disambiguation compares the frequencies of the two competing analyses and opts for the most frequent one (Pustejovsky et al., ti \u2208cats(wi ) Here t1 , t2 and t3 are conceptual categories in the taxonomy or thesaurus, and the nouns w1 . . .",
+                    "sid": 152,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "wi are members of these categories.",
+                    "sid": 153,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The estimation of probabilities over concepts (rather than words) reduces the number of model parameters and effectively decreases the amount of train ing data required.",
+                    "sid": 154,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The probability P(t1 \u2192 t2 ) denotes the modifi cation of a category t2 by a category t1 .Lauer (1995) tested both the adjacency and de pendency models on 244 compounds extracted from Grolier\u2019s encyclopedia, a corpus of 8 million words.",
+                    "sid": 155,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Frequencies for the two models were obtained from the same corpus and from Roget\u2019s thesaurus (version 1911) by counting pairs of nouns that are either strictly adjacent or co-occur within a window of a fi xed size (e.g., two, three, fi fty, or hundred words).",
+                    "sid": 156,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The majority of the bracketings in our test set were left-branching, yielding a baseline of 63.93% (see Table 9).",
+                    "sid": 157,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lauer\u2019s best results (77.50%) were obtained with the dependency model and a training scheme which takes strictly adjacent nouns into account.",
+                    "sid": 158,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Performance increased further by 3.2% when POS tags were taken into account.",
+                    "sid": 159,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results for this tuned model are also given in Table 9.",
+                    "sid": 160,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, Lauer conducted an experiment with human judges to assess the upper bound for the bracketing task.",
+                    "sid": 161,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An average accuracy of 81.50% was obtained.",
+                    "sid": 162,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We replicated Lauer\u2019s (1995) results for compound noun bracketing using the same test set.",
+                    "sid": 163,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compared the performance of the adjacency and dependency models (see (4) and (5)), but instead of relying on a corpus and a thesaurus, we estimated the relevant probabilities using web counts.",
+                    "sid": 164,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The latter were obtained using inflected queries (see Section 2) and Altavista\u2019s NEAR operator.",
+                    "sid": 165,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Ties were resolved by defaulting to the most frequent analysis (i.e., left-branching).",
+                    "sid": 166,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To gauge the performance of the web-based models we compared them against their BNC-based alternatives; the performance of the best Altavista model was signifi cantly higher than that of the best BNC model (see Table 8).",
+                    "sid": 167,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A comparison with the literature (see Table 9) shows that the best BNC model fails to signifi cantly outperform the baseline, and it performs signifi cantly worse than the best model in the liter Table 10: Performance of Altavista counts and BNC counts for compound interpretation (data from Lauer 1995) Model Accuracy Best BNC 27.85/ \u2020\u2021 Lauer (1995): concept-based 28.00 Baseline 33.00 Lauer (1995): word-based 40.00 Best Altavista 55.71\u2020\u2021 Table 11: Performance comparison with the literature for compound interpretation hundreds of millions of training instances would be necessary.",
+                    "sid": 168,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As an alternative to (6), he proposes the model in (7) which combines the probability of the modifi er given a certain preposition with the probability of the head given the same preposition, and assumes that these two probabilities are independent.",
+                    "sid": 169,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ature (Lauer\u2019s tuned model).",
+                    "sid": 170,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best Altavista model, on the other hand, is not signifi cantly different from Lauer\u2019s tuned model and signifi cantly outperforms the baseline.",
+                    "sid": 171,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence we achieve the same performance as Lauer with (7) p\u2217 = arg max p t1 \u2208 cats(n1 ) t2 \u2208 cats(n2 ) P(t1 |p)P(t2 |p) out recourse to a predefi ned taxonomy or a thesaurus.",
+                    "sid": 172,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "interpretation of compound nouns. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "The second analysis task we consider is the semantic interpretation of compound nouns.",
+                    "sid": 173,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most previous approaches to this problem have focused on the interpretation of two word compounds whose nouns are related via a basic set of semantic relations (e.g., CAUSE relates onion tears, FOR relates pet spray ).",
+                    "sid": 174,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The majority of proposals are symbolic and therefore limited to a specifi c domain due to the large effort involved in hand-coding semantic information (see Lauer 1995 for an extensive overview).",
+                    "sid": 175,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lauer (1995) is the fi rst to propose and evaluate an unsupervised probabilistic model of compound noun interpretation for domain independent text.",
+                    "sid": 176,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By recasting the interpretation problem in terms of paraphrasing, Lauer assumes that the semantic relations of compound heads and modifi ers can be expressed via prepositions that (in contrast to abstract semantic relations) can be found in a corpus.",
+                    "sid": 177,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in order to interpret war story, one needs to fi nd in a corpus related paraphrases: story about the war, story of the war, story in the war, etc. Lauer uses eight prepositions for the paraphrasing task (of, for, in, at, on, from, with, about ).",
+                    "sid": 178,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A simple model of compound noun paraphrasing is shown in (6): Here, t1 and t2 represent concepts in Roget\u2019s thesaurus.Lauer (1995) also experimented with a lexicalized ver sion of (7) where probabilities are calculated on the basis of word (rather than concept) frequencies which Lauer obtained from Grolier\u2019s encyclopedia heuristically via pattern matching.",
+                    "sid": 179,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lauer (1995) tested the model in (7) on 282 compounds that he selected randomly from Grolier\u2019s encyclopedia and annotated with their paraphrasing prepositions.",
+                    "sid": 180,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The preposition of accounted for 33% of the paraphrases in this data set (see Baseline in Table 11).",
+                    "sid": 181,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The concept- based model (see (7)) achieved an accuracy of 28% on this test set, whereas its lexicalized version reached an accuracy of 40% (see Table 11).",
+                    "sid": 182,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We attempted the interpretation task with the lexicalized version of the bigram model (see (7)), but also tried the more data intensive trigram model (see (6)), again in its lexicalized form.",
+                    "sid": 183,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we experimented with several conditional and unconditional variants of (7) and (6).",
+                    "sid": 184,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Co-occurrence frequencies were estimated from the web using inflected queries (see Section 2).",
+                    "sid": 185,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Determiners were inserted before nouns resulting in queries of the type story/stories about and about the/a/0 war/wars for the compound war story.",
+                    "sid": 186,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As shown in Table 10, the best performance was obtained using the web-based trigram model ( f (n1 , p, n2 )); it signifi cantly outperformed the best BNC model.",
+                    "sid": 187,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The (6) p\u2217 = arg max P( p n1 , n2 ) p co mp aris on wit h the lite rat ure in Tab le 11 sho we d that the bes t Alt avi sta mo del sig nifi can tly out per for me d bot h Lauer (1995) points out that the above model contains one parameter for every triple (p, n1 , n2 ), and as a result the baseline and the best model in the literature (Lauer\u2019s word-based model).",
+                    "sid": 188,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The BNC model, on the other hand, Altavista BNC Model Count Uncount Count Uncount f (n) 87.01 90.13 87.32# 90.39# f (det, n) 88.38#/ \u2217 91.22#/ \u2217 51.01 50.23 f (det, n)/ f (n) 83.19 85.38 50.95 50.23 Backoff 87.01 89.80 \u2013 \u2013 Table 12: Performance of Altavista counts and BNC counts for noun countability detection (data from Baldwin and Bond 2003) achieved a performance that is not signifi cantly different from the baseline, and signifi cantly worse than Lauer\u2019s best model.",
+                    "sid": 189,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "noun countability detection. ",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "The next analysis task that we consider is the problem of determining the countability of nouns.",
+                    "sid": 190,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Countability is the semantic property that determines whether a noun can occur in singular and plural forms, and affects the range of permissible modifi ers.",
+                    "sid": 191,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In English, nouns are typically either countable (e.g., one dog, two dogs ) or uncountable (e.g., some peace, *one peace, *two peaces ).",
+                    "sid": 192,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Baldwin and Bond (2003) propose a method for automatically learning the countability of English nouns from the BNC.",
+                    "sid": 193,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They obtain information about noun countability by merging lexical entries from COMLEX (Grishman et al., 1994) and the ALTJ/E Japanese-to-English semantic transfer dictionary (Ikehara et al., 1991).",
+                    "sid": 194,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Words are classifi ed into four classes: countable, uncountable, bipartite (e.g., trousers ), and plural only (e.g., goods ).",
+                    "sid": 195,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A memory-based classifi er is used to learn the four-way distinction on the basis of several linguistically motivated features such as: number of the head noun, number of the modifi er, subject-verb agreement, plural determiners.",
+                    "sid": 196,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We devised unsupervised models for the countability learning task and evaluated their performance on Baldwin and Bond\u2019s (2003) test data.",
+                    "sid": 197,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We concentrated solely on countable and uncountable nouns, as they account for the vast majority of the data.",
+                    "sid": 198,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Four models were tested: (a) compare the frequency of the singular and plural forms of the noun; (b) compare the frequency of determiner-noun pairs that are characteristic of countable or uncountable nouns; the determiners used were many for countable and much for uncountable ones; (c) same as model (b), but the det-noun frequencies are normalized by the frequency of the noun; (d) backoff: try to make a decision using det-noun frequencies; if these are too sparse, back off to singular/plural frequencies.",
+                    "sid": 199,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unigram and bigram frequencies were estimated from the web using literal queries; for models (a)\u2013(c) a threshold parameter was optimized on the development set (this parameter determines the ratio of singular/plural frequencies or det-noun frequencies above which a noun was considered as countable).",
+                    "sid": 200,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For model (b), an additional backoff parameter was used, specifying the minimum frequency that triggers backoff.",
+                    "sid": 201,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The models and their performance on the test set are Model Count Uncount Baseline 74.60 78.30 Best BNC 87.32\u2020\u2021 90.39\u2020\u2021 Best Altavista 88.38\u2020\u2021 91.22\u2020\u2021 Baldwin and Bond (2003) 93.90 95.20 Table 13: Performance comparison with the literature for noun countability detection listed in Table 12.",
+                    "sid": 202,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The best Altavista model is the conditional det-noun model ( f (det, n)/ f (n)), which achieves 88.38% on countable and 91.22% on uncountable nouns.",
+                    "sid": 203,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the BNC, the simple unigram model performs best.",
+                    "sid": 204,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its performance is not statistically different from that of the best Altavista model.",
+                    "sid": 205,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that for the BNC models, data sparseness means the det-noun models perform poorly, which is why the backoff model was not attempted here.",
+                    "sid": 206,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 13 shows that both the Altavista model and BNC model signifi cantly outperform the baseline (relative frequency of the majority class on the gold-standard data).",
+                    "sid": 207,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The comparison with the literature shows that both the Altavista and the BNC model perform signifi cantly worse than the best model proposed by Baldwin and Bond (2003); this is a supervised model that uses many more features than just singular/plural frequency and det-noun frequency.",
+                    "sid": 208,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions. ",
+            "number": "9",
+            "sents": [
+                {
+                    "text": "We showed that simple, unsupervised models using web counts can be devised for a variety of NLP tasks.",
+                    "sid": 209,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tasks were selected so that they cover both syntax and semantics, both generation and analysis, and a wider range of n-grams than have been previously used.",
+                    "sid": 210,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all but two tasks (candidate selection for MT and noun countability detection) we found that simple, unsupervised models perform signifi cantly better when n- gram frequencies are obtained from the web rather than from a standard large corpus.",
+                    "sid": 211,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This result is consistent with Keller and Lapata\u2019s (2003) fi ndings that the web yields better counts than the BNC.",
+                    "sid": 212,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason for this seems to be that the web is much larger than the BNC (about 1000 times); the size seems to compensate for the fact that simple heuristics were used to obtain web counts, and for the noise inherent in web data.",
+                    "sid": 213,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results were less encouraging when it comes to comparisons with state-of-the-art models.",
+                    "sid": 214,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that in all but one case, web-based models fail to signifi cantly outperform the state of the art.",
+                    "sid": 215,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The exception was compound noun interpretation, for which the Altavista model was signifi cantly better than the Lauer\u2019s (1995) model.",
+                    "sid": 216,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For three tasks (candidate selection for MT, adjective ordering, and compound noun bracketing), we found that the performance of the web-based models was not significantly different from the performance of the best models reported in the literature.",
+                    "sid": 217,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that for all the tasks we investigated, the best performance in the literature was obtained by supervised models that have access not only to simple bigram or tri gram frequencies, but also to linguistic information such as part-of-speech tags, semantic restrictions, or context (or a thesaurus, in the case of Lauer\u2019s models).",
+                    "sid": 218,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When unsupervised web-based models are compared against supervised methods that employ a wide variety of features, we observe that having access to linguistic information makes up for the lack of vast amounts of data.",
+                    "sid": 219,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results therefore indicate that large data sets such as those obtained from the web are not the panacea that they are claimed to be (at least implicitly) by authors such as Grefenstette (1998) and Keller and Lapata (2003).",
+                    "sid": 220,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather, in our opinion, web-based models should be used as a new baseline for NLP tasks.",
+                    "sid": 221,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The web baseline indicates how much can be achieved with a simple, unsupervised model based on n-grams with access to a huge data set.",
+                    "sid": 222,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This baseline is more realistic than baselines obtained from standard corpora; it is generally harder to beat, as our comparisons with the BNC baseline throughout this paper have shown.",
+                    "sid": 223,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that for certain tasks, the performance of a web baseline model might actually be suffi cient, so that the effort of constructing a sophisticated supervised model and annotating the necessary training data can be avoided.",
+                    "sid": 224,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another possibility that needs further investigation is the combination of web-based models with supervised methods.",
+                    "sid": 225,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This can be done with ensemble learning methods or simply by using web-based frequencies (or probabilities) as features (in addition to linguistically motivated features) to train supervised classifi ers.",
+                    "sid": 226,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "",
+            "sents": [
+                {
+                    "text": "We are grateful to Tim Baldwin, Silviu Cucerzan, Mark Lauer, Rob Malouf, Detelef Prescher, and Adwait Ratnaparkhi for making their data sets available.",
+                    "sid": 227,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

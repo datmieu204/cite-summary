@@ -1,0 +1,1385 @@
+{
+    "ID": "P13-1059",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "We propose a Name-aware Machine Translation (MT) approach which can tightly integrate name processing into MT model, by jointly annotating parallel corpora, extracting name-aware translation grammar and rules, adding name phrase table and name translation driven decoding.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Additionally, we also propose a new MT metric to appropriately evaluate the translation quality of informative words, by assigning different weights to different words according to their importance values in a document.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experiments on ChineseEnglish translation demonstrated the effectiveness of our approach on enhancing the quality of overall translation, name translation and word alignment over a high-quality MT baseline1.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "A shrinking fraction of the world\u2019s Web pages are written in English, therefore the ability to access pages across a range of languages is becoming increasingly important.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This need can be addressed in part by cross-lingual information access tasks such as entity linking (McNamee et al., 2011; Cassidy et al., 2012), event extraction (HakkaniTur et al., 2007), slot filling (Snover et al., 2011) and question answering (Parton et al., 2009; Parton and McKeown, 2010).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A key bottleneck of high- quality cross-lingual information access lies in the performance of Machine Translation (MT).",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditional MT approaches focus on the fluency and accuracy of the overall translation but fall short in their ability to translate certain content words including critical information, especially names.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 Some of the resources and open source programs developed in this work are made freely available for research purpose at http://nlp.cs.qc.cuny.edu/NAMT.tgz A typical statistical MT system can only translate 60% person names correctly (Ji et al., 2009).",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Incorrect segmentation and translation of names which often carry central meanings of a sentence can also yield incorrect translation of long contexts.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Names have been largely neglected in the prior MT research due to the following reasons: \u2022 The current dominant automatic MT scoring metrics (such as Bilingual Evaluation Understudy (BLEU) (Papineni et al., 2002)) treat all words equally, but names have relative low frequency in text (about 6% in newswire and only 3% in web documents) and thus are vastly outnumbered by function words and common nouns, etc..",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Name translations pose a greater complexity because the set of names is open and highly dynamic.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also important to acknowledge that there are many fundamental differences between the translation of names and other tokens, depending on whether a name is rendered phonetically, semantically, or a mixture of both (Ji et al., 2009).",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 The artificial settings of assigning low weights to information translation (compared to overall word translation) in some large- scale government evaluations have discouraged MT developers to spend time and explore resources to tackle this problem.",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We propose a novel Name-aware MT (NAMT) approach which can tightly integrate name processing into the training and decoding processes of an end-to-end MT pipeline, and a new name-aware metric to evaluate MT which can assign different weights to different tokens according to their importance values in a document.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Compared to previous methods, the novel contributions of our approach are: 1.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tightly integrate joint bilingual name tag-.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ging into MT training by coordinating tagged 604 Proceedings of the 51st Annual Meeting of the Association for Computational Linguistics, pages 604\u2013614, Sofia, Bulgaria, August 49 2013.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2013 Association for Computational Linguistics names in parallel corpora, updating word segmentation, word alignment and grammar extraction (Section 3.1).",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "tightly integrate name tagging and transla-. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "tion into MT decoding via name-aware grammar (Section 3.2).",
+                    "sid": 19,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "optimize name translation and context trans-. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "lation simultaneously and conduct name translation driven decoding with language model (LM) based selection (Section 3.2).",
+                    "sid": 20,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "propose a new mt evaluation metric which. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "can discriminate names and non-informative words (Section 4).",
+                    "sid": 21,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 Baseline MT. As our baseline, we apply a high-performing ChineseEnglish MT system (Zheng, 2008; Zheng et al., 2009) based on hierarchical phrase-based translation framework (Chiang, 2005).",
+                    "sid": 22,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is based on a weighted synchronous context-free grammar (SCFG).",
+                    "sid": 23,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All SCFG rules are associated with a set of features that are used to compute derivation probabilities.",
+                    "sid": 24,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The features include: \u2022 Relative frequency in two directions P (\u03b3|\u03b1) and P (\u03b1|\u03b3), estimating the likelihoods of one side of the rule r: X \u2192< \u03b3, \u03b1 > translating into the other side, where \u03b3 and \u03b1 are strings of terminals and non-terminals in the source side and target side.",
+                    "sid": 25,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Non-terminals in \u03b3 and \u03b1 are in one-to-one correspondence.",
+                    "sid": 26,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Lexical weights in two directions: Pw (\u03b3|\u03b1)and Pw (\u03b1|\u03b3), estimating likelihoods of word s in one side of the rule r: X \u2192< \u03b3, \u03b1 > translating into the other side (Koehn et al., 2003).",
+                    "sid": 27,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Phrase penalty: a penalty exp(1) for a rulewith no non-terminal being used in deriva tion.",
+                    "sid": 28,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Rule penalty: a penalty exp(1) for a rule with at least one non-terminal being used in derivation.",
+                    "sid": 29,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 Glue rule penalty: a penalty exp(1) if a glue rule used in derivation.\u2022 Translation length: number of words in trans lation output.",
+                    "sid": 30,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our previous work showed that combining multiple LMs trained from different sources can lead to significant improvement.",
+                    "sid": 31,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LM used for decoding is a log-linear combination of four word n-gram LMs which are built on different English corpora (details described in section 5.1), with the LM weights optimized on a development set and determined by minimum error rate training (MERT), to estimate the probability of a word given the preceding words.",
+                    "sid": 32,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "All four LMs were trained using modified KneserNey smoothing algorithm (Chen and Goodman, 1996) and converted into Bloom filter LMs (Talbot and Brants, 2008) supporting memory map.",
+                    "sid": 33,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The scaling factors for all features are optimized by minimum error rate training algorithm to maximize BLEU score (Och, 2003).",
+                    "sid": 34,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given an input sentence in the source language, translation into the target language is cast as a search problem, where the goal is to find the highest-probability derivation that generates the source-side sentence, using the rules in our SCFG.",
+                    "sid": 35,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The source-side derivation corresponds to a synchronous target- side derivation and the terminal yield of this target- side derivation is the output of the system.",
+                    "sid": 36,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We employ our CKY-style chart decoder, named SRInter- p, to solve the search problem.",
+                    "sid": 37,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Name-aware MT. We tightly integrate name processing into the above baseline to construct a NAMT model.",
+                    "sid": 38,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 1 depicts the general procedure.",
+                    "sid": 39,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Training.",
+                    "sid": 40,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This basic training process of NAMT requires us to apply a bilingual name tagger to annotate parallel training corpora.",
+                    "sid": 41,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditional name tagging approaches for single languages cannot address this requirement because they were all built on data and resources which are specific to each language without using any cross-lingual features.",
+                    "sid": 42,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, due to separate decoding processes the results on parallel data may not be consistent across languages.",
+                    "sid": 43,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We developed a bilingual joint name tagger (Li et al., 2012) based on conditional random fields that incorporates both monolingual and cross-lingual features and conducts joint inference, so that name tagging from two languages can mutually enhance each other and therefore inconsistent results can be corrected simultaneously.",
+                    "sid": 44,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This joint name tagger achieved 86.3% bilingual pair F-measure with manual alignment and 84.4% bilingual pair F-measure with automatic alignment as reported in (Li et al., 2012).",
+                    "sid": 45,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a parallel sentence pair we first apply Giza++ (Och and Ney, 2003) to align words, and apply this join Training Bi-text Data Joint Name Tagger Name Pair Miner R e p l a c e n a m e s w i t h n o n t e r m i n a l s a n d c o m b i n e w i t h t h e o r i g i n a l p a r a l l e l d a t a Extract source language names Extract name pairs and Extract and add Extract SCFG rules with and add them to dictionaries for add them to translation name pairs to combination of name-replaced source language name tagger dictionary phrase table data and original bi-text data Decoding Source Text Source Language Name Tagger Name Translator Hierarchical Phrased-based MT Translate Translated Text Figure 1: Architecture of Name-aware Machine Translation System.",
+                    "sid": 46,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "t bilingual name tagger to extract three types of names: (Person (PER), Organization (ORG) and Geopolitical entities (GPE)) from both the source side and the target side.",
+                    "sid": 47,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We pair two entities from two languages, if they have the same entity type and are mapped together by word alignment.",
+                    "sid": 48,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We ignore two kinds of names: multi-word names with conflicting boundaries in two languages and names only identified in one side of a parallel sentence.",
+                    "sid": 49,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We built a NAMT system from such name- tagged parallel corpora.",
+                    "sid": 50,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we replace tagged name pairs with their entity types, and then use Giza++ and symmetrization heuristics to regenerate word alignment.",
+                    "sid": 51,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the name tags appear very frequently, the existence of such tags yields improvement in word alignment quality.",
+                    "sid": 52,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The re-aligned parallel corpora are used to train our NAMT system based on SCFG.",
+                    "sid": 53,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the joint name tagger ensures that each tagged source name has a corresponding translation on the target side (and vice versa), we can extract SCFG rules by treating the tagged names as non-terminals.",
+                    "sid": 54,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the original parallel corpora contain many high-frequency names, which can already be handled well by the baseline MT. Some of these names carry special meanings that may influence translations of the neighboring words, and thus replacing them with non-terminals can lead to information loss and weaken the translation model.",
+                    "sid": 55,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To address this issue, we merged the name-replaced parallel data with the original parallel data and extract grammars from the combined corpus.",
+                    "sid": 56,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, given the following sentence pair: \u2022 . \u2022 China appeals to world for non involvement in Angola conflict . after name tagging it becomes \u2022 GPE GPE . \u2022 GPE appeals to world for non involvement in GPE conflict . Both sentence pairs are kept in the combined data to build the translation model.",
+                    "sid": 57,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Decoding.",
+                    "sid": 58,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During decoding phase, we extract names with the baseline monolingual name tagger described in (Li et al., 2012) from a source document.",
+                    "sid": 59,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its performance is comparable to the best reported results on Chinese name tagging on Automatic Content Extraction (ACE) data (Ji and Grish- man, 2006; Florian et al., 2006; Zitouni and Florian, 2008; Nguyen et al., 2010).",
+                    "sid": 60,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we apply a state-of-the-art name translation system (Ji et al., 2009) to translate names into the target language.",
+                    "sid": 61,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The name translation system is composed of the following steps: (1) Dictionary matching based on 150,041 name translation pairs; (2) Statistical name transliteration based on a structured perceptron model and a character based MT model (Dayne and Shahram, 2007); (3) Context information extraction based re-ranking.",
+                    "sid": 62,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our NAMT framework, we add the following extensions to name translation.",
+                    "sid": 63,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We developed a name origin classifier based on Chinese last name list (446 name characters) and name structure parsing features to distinguish Chinese person names and foreign person names (Ji, 2009), so that pinyin conversion is applied for Chinese names while name transliteration is applied only for foreign names.",
+                    "sid": 64,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This classifier works reasonably well in most cases (about 92% classification accuracy), except when a common Chinese last name appears as the first character of a foreignname, such as \u201c*frJ\u201d which can be translated ei ther as \u201cJolie\u201d or \u201cZhu Li\u201d.",
+                    "sid": 65,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where BP is brevity penalty defined as follows: 1 if c > r, For those names with fewer than five instances in the training data, we use the name translation BP = e(1\u2212r/c) if c \u2264 r.",
+                    "sid": 66,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2) system to provide translations; for the rest of the names, we leave them to the baseline MT model to handle.",
+                    "sid": 67,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The joint bilingual name tagger was also exploited to mine bilingual name translation pairs from parallel training corpora.",
+                    "sid": 68,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The mapping where wn is a set of positive weights summing to one and usually uniformly set as wn = 1/N , c is the length of the system translation and r is the length of reference translation, and pn is modified n-gram precision defined as: score between a Chinese name and an Englishname was computed by the number of aligned to pn = \u2208 C ountclip(n-gram) \u2208 C Candidates n-gram C kens.",
+                    "sid": 69,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A name pair is extracted if the mapping C ountclip(n-gram ) score is the highest among all combinations and the name types on both sides are identical.",
+                    "sid": 70,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is C t \u2208Candidates n-gramt \u2208C t (3) necessary to incorporate word alignment as additional constraints because the order of names is often changed after translation.",
+                    "sid": 71,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the extracted 9,963 unique name translation pairs were also used to create an additional name phrase table for NAMT.",
+                    "sid": 72,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Manual evaluation on 2,000 name pairs showed the accuracy is 86%.",
+                    "sid": 73,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The non-terminals in SCFG rules are rewritten to the extracted names during decoding, therefore allow unseen names in the test data to be translated.",
+                    "sid": 74,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, based on LMs, our decoder exploits the dynamically created phrase table from name translation, competing with originally extracted rules, to find the best translation for the input sentence.",
+                    "sid": 75,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "where C and C are translation candidates in the candidate sentence set, if a source sentence is translated to many candidate sentences.",
+                    "sid": 76,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As in BLEU metric, we first count the maximum number of times an n-gram occurs in any single reference translation.",
+                    "sid": 77,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The total count of each candidate n-gram is clipped at sentence level by its maximum reference count.",
+                    "sid": 78,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Then we add up the weights of clipped n-grams and divide them by the total weight of all n-grams.",
+                    "sid": 79,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Based on BLEU score, we design a name-aware BLEU metric as follows.",
+                    "sid": 80,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Depending on whether a token t is contained in a name in reference translation, we assign a weight weightt to t as follows: weightt = 4 Name-aware MT Evaluation.",
+                    "sid": 81,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Traditional MT evaluation metrics such as 1 \u2212 e\u2212tf (t,d)\u00b7idf (t,D) , if t never appears in names Z , if t occurs in name(s) (4) BLEU (Papineni et al., 2002) and Translation Edit Rate (TER) (Snover et al., 2006) assign the same weights to all tokens equally.",
+                    "sid": 82,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For exam where P E is the sum of penalties of non-name tokens and Z is the number of tokens within all names: ple, incorrect translations of \u201cthe\u201d and \u201cBush\u201d will receive the same penalty.",
+                    "sid": 83,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, for cross P E = t never appears in names e\u2212tf (t,d)\u00b7idf (t,D) (5) lingual information processing applications, we should acknowledge that certain informationally critical words are more important than other common words.",
+                    "sid": 84,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to properly evaluate the translation quality of NAMT methods, we propose tomodify the BLEU metric so that they can dynamIn this paper, the tf \u00b7 idf score is computed at sen tence level, therefore, D is the sentence set and each d \u2208 D is a sentence.",
+                    "sid": 85,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The weight of an n-gram in reference translation is the sum of weights of all tokens it contains.",
+                    "sid": 86,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "ically assign more weights to names during evaluation.",
+                    "sid": 87,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "weightngram = t\u2208ngram weightt (6) BLEU considers the correspondence between a system translation and a human translation:Next, we compute the weighted modified n gram precision C ountweight\u2212clip(n-gram) as follows: C ountweight\u2212clip(n-gram) = BLEU = BP \u00b7 exp N wn log pn n=1 (1) if the ngrami is correctly translated weightngrami (7) The C ountclip(n-gram) in the equation 3 is substituted with above C ountweight\u2212clip(n-gram).",
+                    "sid": 88,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When we sum up the total weight of all n-grams of a candidate translation, some n-grams may contain tokens which do not exist in reference translation.",
+                    "sid": 89,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assign the lowest weight of tokens in reference translation to these rare tokens.",
+                    "sid": 90,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also add an item, name penalty N P , to penalize the output sentences which contain too many or too few names: 2 get side of ChineseEnglish and Egyptian ArabicEnglish parallel text, English monolingual discussion forums data R1R4 released in BOLT Phase 1 (LDC2012E04, LDC2012E16, LDC2012E21, LDC2012E54), and English Gigaword Fifth Edition (LDC2011T07).",
+                    "sid": 91,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LM2 is a 7-gram LM trained only on the English monolingual discussion forums data listed above.",
+                    "sid": 92,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LM3 is a 4-gram LM trained on the web genre among the target side of all parallel text (i.e., web text from preBOLTparallel text and BOLT released discussion fo v \u22121) /2\u03c3 (8)rum parallel text).",
+                    "sid": 93,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LM4 is a 4 gram LM trained where u is the number of name tokens in system translation and v is the number of name tokens in reference translation.",
+                    "sid": 94,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally the name-aware BLEU score is defined as: on the English broadcast news and conversation transcripts released under the DARPA GALE program.",
+                    "sid": 95,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that for LM4 training data, some transcripts were quick transcripts and quick rich transcripts released by LDC, and some were generated by running flexible alignment of closed captions or BLEUNA = BP \u00b7 N P \u00b7 exp N \\ wn log wpn n=1 (9) speech recognition output from LDC on the audio data (Venkataraman et al., 2004).",
+                    "sid": 96,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to demonstrate the effectiveness and generality of our approach, we evaluated our apThis new metric can also be applied to evalu ate MT approaches which emphasize other types of facts such as events, by simply replacing name tokens by other fact tokens.",
+                    "sid": 97,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this section we present the experimental results of NAMT compared to the baseline MT. 5.1 Data Set.",
+                    "sid": 98,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used a large ChineseEnglish MT training corpus from various sources and genres (including newswire, web text, broadcast news and broadcast conversations) for our experiments.",
+                    "sid": 99,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also used some translation lexicon data and Wikipedia translations.",
+                    "sid": 100,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The majority of the data sets were collected or made available by LDC for U.S. DARPA Translingual Information Detection, Extraction and Summarization (TIDES) program, Global Autonomous Language Exploitation (GALE) program, Broad Operational Language Translation (BOLT) program and National Institute of Standards and Technology (NIST) MT evaluations.",
+                    "sid": 101,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training corpus includes 1,686,458 sentence pairs.",
+                    "sid": 102,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The joint name tagger extracted 1,890,335 name pairs (295,087 Persons, 1,269,056 Geopolitical entities and 326,192 Organizations).",
+                    "sid": 103,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Four LMs, denoted LM1, LM2, LM3, andLM4, were trained from different English cor proach on seven test sets from multiple genres and domains.",
+                    "sid": 104,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We asked four annotators to annotate names in four reference translations of each sentence and an expert annotator to adjudicate results.",
+                    "sid": 105,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The detailed statistics and name distribution of each test data set is shown in Table 1.",
+                    "sid": 106,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The percentage of names occurred fewer than 5 times in training data are listed in the brackets in the last column of the table.",
+                    "sid": 107,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.2 Overall Performance.",
+                    "sid": 108,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Besides the new name-aware MT metric, we also adopt two traditional metrics, TER to evaluate the overall translation performance and Named Entity Weak Accuracy (NEWA) (Hermjakob et al., 2008) to evaluate the name translation performance.",
+                    "sid": 109,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "TER measures the amount of edits required to change a system output into one of the reference translations.",
+                    "sid": 110,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically: # of edits TER = (10) average # of reference words Possible edits include insertion, substitution deletion and shifts of words.",
+                    "sid": 111,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The NEWA metric is defined as follows.",
+                    "sid": 112,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using a manually assembled name variant table, we also support the matching of name variants (e.g., \u201cWorld Health Organization\u201d and \u201cWHO\u201d).pora.",
+                    "sid": 113,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LM1 is a 7-gram LM trained on the tar NEWA = Count # of correctly translated names Count # of names in references (11) C or pu s G e n r e Sent enc e # Wo rd # in sou rce T o k e n # in ref ere nc e G P E( % ) PE R( %) OR G( %) A l l n a m e s (% occ urr ed < 5) B OL T 1 f o r u m 1 , 2 0 0 20 ,9 68 2 4 , 1 9 3 87 5( 82 .9) 90 (8.",
+                    "sid": 114,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5) 91 (8.",
+                    "sid": 115,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6) 1 , 0 5 6 ( 5 1 . 4 ) B OL T 2 f o r u m 1 , 2 8 3 23 ,7 07 2 5 , 7 5 9 81 5( 73 .7) 141 (12.",
+                    "sid": 116,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8) 149 (13.",
+                    "sid": 117,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5) 1 , 1 0 5 ( 6 5 . 9 ) B OL T 3 f o r u m 2 , 0 0 0 38 ,5 95 4 2 , 5 1 9 1,6 64( 80.",
+                    "sid": 118,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4) 20 4(9 .8) 20 4(9 .8) 2 , 0 7 2 ( 4 7 . 4 ) B OL T 4 f o r u m 1 , 9 1 8 41 ,7 59 4 7 , 7 5 5 1,8 52( 80.",
+                    "sid": 119,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0) 348 (25.",
+                    "sid": 120,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0) 11 3(5 .0) 2 , 3 1 3 ( 5 3 . 3 ) B OL T 5 b l o g 9 5 0 23 ,9 30 2 6 , 8 7 5 35 2( 42 .5) 235 (28.",
+                    "sid": 121,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3) 242 (29.",
+                    "sid": 122,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2) 8 2 9 ( 5 5 . 3 ) NIS T20 06 new s&b log 1 , 6 6 4 38 ,4 42 4 5 , 9 1 4 1,6 60( 58.",
+                    "sid": 123,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2) 568 (19.",
+                    "sid": 124,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9) 625 (21.",
+                    "sid": 125,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9) 2 , 8 5 3 ( 7 3 . 1 ) NIS T20 08 new s&b log 1 , 3 5 7 32 ,6 46 3 7 , 3 1 5 70 0( 47 .9) 367 (25.",
+                    "sid": 126,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1) 395 (27.",
+                    "sid": 127,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0) 1 , 4 6 2 ( 7 2 . 0 ) Table 1: Statistics and Name Distribution of Test Data Sets.",
+                    "sid": 128,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "M e t r i c Sy st e m BO LT 1 BO LT 2 BO LT 3 BO LT 4 BO LT 5 NI ST 20 06 NI ST 20 08 B L E U Ba seli ne NP hra se N A M T 1 4 . 2 1 4 . 1 1 4 . 2 1 4 . 0 1 4 . 4 1 4 . 6 1 7 . 3 1 7 . 1 1 6 . 9 1 5 . 6 1 5 . 4 1 5 . 7 1 5 . 3 1 5 . 3 1 5 . 5 3 5 . 5 3 5 . 4 3 6 . 3 2 9 . 3 2 9 . 3 3 0 . 0Name aware BLEU Ba seli ne NP hra se N A M T 1 8 . 2 1 8 . 1 1 8 . 4 1 7 . 9 1 8 . 8 1 9 . 5 1 8 . 6 1 8 . 5 1 9 . 7 1 7 . 6 1 8 . 1 1 8 . 2 1 8 . 3 1 8 . 0 1 8 . 9 3 6 . 1 3 5 . 8 3 9 . 4 3 1 . 7 3 1 . 8 3 3 . 1 T E R Ba seli ne NP hra se N A M T 7 0 . 6 7 0 . 6 7 0 . 3 7 1 . 0 7 0 . 4 7 0 . 2 6 9 . 4 6 9 . 4 6 9 . 2 7 0 . 3 7 0 . 4 7 0 . 1 6 7 . 1 6 7 . 1 6 6 . 6 5 8 . 7 5 8 . 7 5 7 . 7 6 1 . 0 6 0 . 9 6 0 . 5 NE WA A l l Ba seli ne NP hra se N A M T 6 9 . 7 6 9 . 8 7 1 . 4 7 0 . 1 7 1 . 1 7 2 . 0 7 3 . 9 7 3 . 8 7 7 . 7 7 2 . 3 7 2 . 5 7 5 . 1 6 0 . 6 6 0 . 6 6 2 . 7 6 6 . 5 6 8 . 3 7 2 . 9 6 0 . 4 6 1 . 9 6 3 . 2 G P E Ba seli ne NP hra se N A M T 7 2 . 8 7 3 . 6 7 4 . 2 7 8 . 4 7 9 . 3 8 0 . 2 8 0 . 0 7 9 . 2 8 2 . 8 7 8 . 7 7 8 . 9 8 0 . 4 8 1 . 3 8 2 . 3 7 9 . 3 7 9 . 2 8 2 . 6 8 5 . 5 7 6 . 0 7 9 . 5 7 9 . 3 P E R Ba seli ne NP hra se N A M T 5 3 . 3 5 2 . 2 5 5 . 6 4 4 . 7 4 5 . 4 4 5 . 4 4 5 . 1 4 8 . 9 5 8 . 8 4 9 . 4 4 8 . 5 5 5 . 2 4 8 . 9 4 7 . 6 5 6 . 2 5 4 . 2 5 5 . 1 6 0 . 0 5 1 . 2 5 0 . 9 5 2 . 3 O R G Ba seli ne NP hra se N A M T 5 6 . 0 5 0 . 5 6 0 . 4 4 9 . 0 5 0 . 3 5 2 . 3 5 2 . 9 5 4 . 4 5 5 . 4 3 8 . 1 4 0 . 7 4 1 . 6 4 1 . 7 4 1 . 3 4 5 . 0 4 4 . 0 4 2 . 2 5 1 . 0 4 1 . 3 4 0 . 7 4 4 . 8 Table 2: Translation Performance (%).",
+                    "sid": 129,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For better comparison with NAMT, besides the original baseline, we develop the other baseline system by adding name translation table into the phrase table (NPhrase).",
+                    "sid": 130,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 presents the performance of overall translation and name translation.",
+                    "sid": 131,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can see that except for the BOLT3 data set with BLEU metric, our NAMT approach consistently outperformed the baseline system for all data sets with all metrics, and provided up to 23.6% relative error reduction on name translation.",
+                    "sid": 132,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to Wilcoxon Matched-Pairs Signed-Ranks Test, the improvement is not significant with BLEU metric, but is significant at 98% confidence level with all of the other metrics.",
+                    "sid": 133,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The gains are more significant for formal genres than informal genres mainly because most of the training data for name tagging and name translation were from newswire.",
+                    "sid": 134,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, using external name translation table only did not improve translation quality in most test sets except for BOLT2.",
+                    "sid": 135,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, it is important to use name-replaced corpora for rule extraction to fully take advantage of improved word alignment.Many errors from the baseline MT approach oc curred because some parts of out-of-vocabulary names were mistakenly segmented into common words.",
+                    "sid": 136,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the baseline MT system mis takenly translated a person name \u201cM l lli (Sun Honglei)\u201d into \u201cSun red thunder\u201d.",
+                    "sid": 137,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In informal genres such as discussion forums and web blogs, even common names often appear in rare forms due to misspelling or morphing.",
+                    "sid": 138,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \u201c\ufffdiMII; (Obama)\u201d was mistakenly translated into \u201cMa Olympic\u201d.",
+                    "sid": 139,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Such errors can be compounded when word reordering was applied.",
+                    "sid": 140,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, the following sentence: \u201c\ufffd\ufffd\ufffdfl bEJl;Blilj(\ufffd,Jl;B\ufffd fu (Guo Meimei\u2019s strength real ly is formidable, I really admire her)\u201d was mistakenly translated into \u201cGuo the strength of the America and the America also really strong , ah , really admire her\u201d by the baseline MT system because the person name \u201c\ufffd\ufffd\ufffd (Guomeimei)\u201d was mistakenly segmented into three words \u201c\ufffd (Guo)\u201d, \u201c\ufffd (the America)\u201d and \u201c\ufffd (the Ameri ca)\u201d.",
+                    "sid": 141,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But our NAMT approach successfully identified and translated this name and also generated better overall translation: \u201cGuo Meimei \u2019s power is also really strong , ah , really admire her\u201d.",
+                    "sid": 142,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "baseline NAMT 20 18 16 14 12 10 8 6 4 2 0 BLEU Name-aware BLEU Automatic Metrics 4.0 3.5 3.0 2.5 2.0 1.5 1.0 0.5 0.0 Hum.",
+                    "sid": 143,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1 Hum.",
+                    "sid": 144,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 Hum.",
+                    "sid": 145,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3 Human Evaluation Table 3: Impact of Joint Bilingual Name Tagging on Word Alignment (%).",
+                    "sid": 146,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2: Scores based on Automatic Metrics and Human Evaluation.",
+                    "sid": 147,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.3 Name-aware BLEU vs The Human.",
+                    "sid": 148,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Evaluation In order to investigate the correlation between name-aware BLEU scores and human judgment results, we asked three bilingual speakers to judge our translation output from the baseline system and the NAMT system, on a Chinese subset of 250 sentences (each sentence has two corresponding translations from baseline and NAMT) extracted randomly from 7 test corpora.",
+                    "sid": 149,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The annotators rated each translation from 1 (very bad) to 5 (very good) and made their judgments based on whether the translation is understandable and conveys the same meaning.",
+                    "sid": 150,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We computed the name-aware BLEU scores on the subset and also the aggregated average scores from human judgments.",
+                    "sid": 151,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows that NAMT consistently achieved higher scores with both name-aware BLEU metric and human judgement.",
+                    "sid": 152,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we calculated three Pearson product-moment correlation coefficients between human judgment scores and name-aware BLEU scores of these two MT systems.",
+                    "sid": 153,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Give the sample size and the correlation coefficient value, the high significance value of 0.99 indicates that name- aware BLEU tracks human judgment well.",
+                    "sid": 154,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.4 Word Alignment.",
+                    "sid": 155,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is also important to investigate the impact of our NAMT approach on improving word alignment.",
+                    "sid": 156,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conducted the experiment on the ChineseEnglish Parallel Treebank (Li et al., 2010) with ground-truth word alignment.",
+                    "sid": 157,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The detailed procedure following NAMT framework is as follows: (1) Ran the joint bilingual name tagger; (2) Replaced each name string with its name type (PER, ORG or GPE), and ran Giza++ on the replaced sentences; (3) Ran Giza++ on the words within each name pair.",
+                    "sid": 158,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(4) Merged (2) and (3) to produce the final word alignment results.",
+                    "sid": 159,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to compare with the upper-bound gains, we also measured the performance of applying ground-truth name tagging with the above procedures.",
+                    "sid": 160,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The experiment results are shown in Table 3.",
+                    "sid": 161,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the words within names, our approach provided significant gains by enhancing F-measure from 46.0% to 50.3%.",
+                    "sid": 162,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Only 10.6% words are within names, therefore the upper-bound gains on overall word alignment is only 1.3%.",
+                    "sid": 163,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our joint name tagging approach achieved 0.4% (statistically significant) improvement over the baseline.",
+                    "sid": 164,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Figure 3 we categorized the sentences according to the percentage of name words in each sentence and measured the improvement for each category.",
+                    "sid": 165,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We can clearly see that as the sentences include more names, the gains achieved by our approach tend to be greater.",
+                    "sid": 166,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "5.5 Remaining Error Analysis.",
+                    "sid": 167,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although the proposed model has significantly enhanced translation quality, some challenges remain.",
+                    "sid": 168,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We analyze some major sources of the remaining errors as follows.",
+                    "sid": 169,
+                    "ssid": 72,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 170,
+                    "ssid": 73,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Name Structure Parsing..",
+                    "sid": 171,
+                    "ssid": 74,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that the gains of our NAMT approach were mainly achieved for names with one or two components.",
+                    "sid": 172,
+                    "ssid": 75,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When the name structure becomes too complicated to parse, name tagging and name translation are likely to produce errors, especially for long nested organizations.",
+                    "sid": 173,
+                    "ssid": 76,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \u201ctlEE .\u00a3 \ufffd\ufffd\ufffd 3kfiD\u201d (Anti-malfeasance Bureau of Gutian County Procuratorate) consists of a nested organization name with a GPE as modifier: \u201ctl EE.\u00a3 \ufffd\ufffd\ufffd\u201d (Gutian County Procuratorate) and an ORG name: \u201c 3kfiD\u201d (Anti-malfeasance Bu reau).",
+                    "sid": 174,
+                    "ssid": 77,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 175,
+                    "ssid": 78,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Name abbreviation tagging and translation.",
+                    "sid": 176,
+                    "ssid": 79,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some organization abbreviations are also difficult to extract because our name taggers have 5.5 5.0 Baseline Giza++ Joint Name Tagging enabl e the LM to decid e which transl ations to choos e when encou nterin g the name s in the 4.5 Ground-truth Name Tagging (Upper-bound).",
+                    "sid": 177,
+                    "ssid": 80,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4.0 3.5 3.0 2.5 2.0 1.5 1.0 0.5 0.00.5 texts (Ji et al., 2009).",
+                    "sid": 178,
+                    "ssid": 81,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Heuristic rules or supervised models can be developed to create \u201cdo-not translate\u201d list (Babych and Hartley,2003) or learn \u201cwhen-to transliterate\u201d (Her- mjakob et al., 2008).",
+                    "sid": 179,
+                    "ssid": 82,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.",
+                    "sid": 180,
+                    "ssid": 83,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Post-processing: in a cross-lingual.",
+                    "sid": 181,
+                    "ssid": 84,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "information retrieval or question answering framework, online query names can be utilized 0~10 10~20 20~30 30~40 >40 #name tokens/#all tokens(%) Figure 3: Word alignment gains according to the percentage of name words in each sentence.",
+                    "sid": 182,
+                    "ssid": 85,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "not incorporated any coreference resolution techniques.",
+                    "sid": 183,
+                    "ssid": 86,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, without knowing that \u201cFAW \u201d refers to \u201cFirst Automotive Works\u201d in \u201cFAW has also utilized the capital market to directly finance, and now owns three domestic listed companies\u201d, our system mistakenly labeled it as a GPE.",
+                    "sid": 184,
+                    "ssid": 87,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same challenge exists in name alignment andtranslation (for example, \u201c \ufffd-* (Min Ge)\u201d refer s to \u201c \ufffd:)1-*\u00ae'llj)\\Si\u201d (Revolutionary Committee of the Chinese Kuomintang).",
+                    "sid": 185,
+                    "ssid": 88,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.",
+                    "sid": 186,
+                    "ssid": 89,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Cross-lingual information transfer.",
+                    "sid": 187,
+                    "ssid": 90,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "English monolingual features normally generate higher confidence than Chinese features for ORG names.",
+                    "sid": 188,
+                    "ssid": 91,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, some good propagated Chinese features were not able to correct English results.",
+                    "sid": 189,
+                    "ssid": 92,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, in the following sentence pair: \u201c\ufffd1,@9=1]),*.it;fkfl1])1\ufffd\ufffd7J:itn\\i\u00a5...",
+                    "sid": 190,
+                    "ssid": 93,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(in accordance with the tripartite a greement reached by China, Laos and the UNHCR on)...\u201d, even though the tagger can successfully label \u201ckfl1])1\ufffd\ufffd/UNHCR\u201d as an organization because it is a common Chinese name, English features based on previous GPE contexts still incorrectly predicted \u201cUNHCR\u201d as a GPE name.",
+                    "sid": 191,
+                    "ssid": 94,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "related work. ",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Two types of humble strategies were previously attempted to build name translation components which operate in tandem and loosely integrate into conventional statistical MT systems: 1.",
+                    "sid": 192,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Pre-processing: identify names in the source.",
+                    "sid": 193,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "texts and propose name translations to the MT system; the name translation results can be simply but aggressively transferred from the source to the target side using word alignment, or added into phrase table in order toto obtain translation and post-edit MT out put (Parton et al., 2009; Ma and McKeown, 2009; Parton and McKeown, 2010; Parton et al., 2012).",
+                    "sid": 194,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is challenging to decide when to use name translation results.",
+                    "sid": 195,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The simple transfer method ensures all name translations appear in the MT output, but it heavily relies on word alignment and does not take into account word reordering or the words found in a name\u2019s context; therefore it could mistakenly break some context phrase structures due to name translation or alignment errors.",
+                    "sid": 196,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LM selection method often assigns an inappropriate weight to the additional name translation table because it is constructed independently from translation of context words; therefore after weighted voting most correct name translations are not used in the final translation output.",
+                    "sid": 197,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our experimental results 2 confirmed this weakness.",
+                    "sid": 198,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More importantly, in these approaches the MT model was still mostly treated as a \u201cblack-box\u201d because neither the translation model nor the LM was updated or adapted specifically for names.",
+                    "sid": 199,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently the wider idea of incorporating semantics into MT has received increased interests.",
+                    "sid": 200,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of them designed some certain semantic representations, such as predicate-argument structure or semantic role labeling (Wu and Fung, 2009; Liu and Gildea, 2009; Meyer et al., 2011; Bojar and Wu, 2012), word sense disambiguation (Carpu- at and Wu, 2007b; Carpuat and Wu, 2007a) and graph-structured grammar representation (Jones et al., 2012).",
+                    "sid": 201,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lo et al.",
+                    "sid": 202,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2012) proposed a semantic role driven MT metric.",
+                    "sid": 203,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, none of these work declaratively exploited results from information extraction for MT. Some statistical MT systems (e.g.",
+                    "sid": 204,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(Zens et al., 2005), (Aswani and Gaizauskas, 2005)) have attempted to use text normalization to improve word alignment for dates, numbers and job titles.",
+                    "sid": 205,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "But little reported work has shown the impact of joint name tagging on overall word alignment.",
+                    "sid": 206,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of the previous name translation work combined supervised transliteration approaches with LM based re-scoring (Knight and Graehl, 1998; AlOnaizan and Knight, 2002; Huang et al., 2004).",
+                    "sid": 207,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some recent research used comparable corpora to mine name translation pairs (Feng et al., 2004; Kutsumi et al., 2004; Udupa et al., 2009; Ji, 2009; Fung and Yee, 1998; Rapp, 1999; Shao and Ng, 2004; Lu and Zhao, 2006; Hassan et al., 2007).",
+                    "sid": 208,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, most of these approaches required large amount of seeds, suffered from Information Extraction errors, and relied on phonetic similarity, context co-occurrence and document similarity for re-scoring.",
+                    "sid": 209,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, our name pair mining approach described in this paper does not require any machine translation or transliteration features.",
+                    "sid": 210,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions and future work. ",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We developed a name-aware MT framework which tightly integrates name tagging and name translation into training and decoding of MT. Experiments on ChineseEnglish translation demonstrated the effectiveness of our approach over a high-quality MT baseline in both overall translation and name translation, especially for formal genres.",
+                    "sid": 211,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also proposed a new name-aware evaluation metric.",
+                    "sid": 212,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the future we intend to improve the framework by training a discriminative model to automatically assign weights to combine name translation and baseline translation with additional features including name confidence values, name types and global validation evidence, as well as conducting LM adaptation through bilingual topic modeling and clustering based on name annotations.",
+                    "sid": 213,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also plan to jointly optimize MT and name tagging by propagating multiple word segmentation and name annotation hypotheses in lattice structure to statistical MT and conduct lattice- based decoding (Dyer et al., 2008).",
+                    "sid": 214,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, we are interested in extending this framework to translate other out-of-vocabulary terms.",
+                    "sid": 215,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgement",
+            "number": "",
+            "sents": [
+                {
+                    "text": "This work was supported by the U.S. Army Research Laboratory under Cooperative Agreement No.",
+                    "sid": 216,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "W911NF09-20053 (NSCTA), the U.S. NS- F CAREER Award under Grant IIS0953149, the U.S. NSF EAGER Award under Grant No.",
+                    "sid": 217,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "IIS1144111, the U.S. DARPA FA875013-20041 Deep Exploration and Filtering of Text (DEFT) Program and CUNY Junior Faculty Award.",
+                    "sid": 218,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The views and conclusions contained in this document are those of the authors and should not be interpreted as representing the official policies, either expressed or implied, of the U.S. Government.",
+                    "sid": 219,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The U.S. Government is authorized to reproduce and distribute reprints for Government purposes notwithstanding any copyright notation here on.",
+                    "sid": 220,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We express our gratitude to Bing Zhao who provided the test sets and references that were used for Broad Operational Language Translation (BOLT) evaluation and thanks to Taylor Cassidy for constructive comments.",
+                    "sid": 221,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

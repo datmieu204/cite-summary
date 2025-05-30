@@ -1,0 +1,1373 @@
+{
+    "ID": "P11-1144",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Semi-Supervised Frame-Semantic Parsing for Unknown Predicates",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We describe a new approach to disambiguating semantic frames evoked by lexical predicates previously unseen in a lexicon or annotated data.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach makes use of large amounts of unlabeled data in a graph-based semi-supervised learning framework.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We construct a large graph where vertices correspond to potential predicates and use label propagation to learn possible semantic frames for new ones.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The label-propagated graph is used within a frame-semantic parser and, for unknown predicates, results in over 15% absolute improvement in frame identification accuracy and over 13% absolute improvement full frame-semantic parsing on a blind test set, over a state-of-the-art supervised baseline.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Frame-semantic parsing aims to extract a shallow semantic structure from text, as shown in Figure 1.",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The FrameNet lexicon (Fillmore et al., 2003) is a rich linguistic resource containing expert knowledge about lexical and predicate-argument semantics.",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The lexicon suggests an analysis based on the theory of frame semantics (Fillmore, 1982).",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent approaches to frame-semantic parsing have broadly focused on the use of two statistical classifiers corresponding to the aforementioned subtasks: the first one to identify the most suitable semantic frame for a marked lexical predicate (target, henceforth) in a sentence, and the second for performing semantic role labeling (SRL) given the frame.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The FrameNet lexicon, its exemplar sentences containing instantiations of semantic frames, and full-text annotations provide supervision for learning frame-semantic parsers.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Yet these annotations lack coverage, including only 9,300 annotated target types.",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent papers have tried to address the coverage problem.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Johansson and Nugues (2007) used WordNet (Fellbaum, 1998) to expand the list of targets that can evoke frames and trained classifiers to identify the best-suited frame for the newly created targets.",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In past work, we described an approach where latent variables were used in a probabilistic model to predict frames for unseen targets (Das et al., 2010a).1 Relatedly, for the argument identification subtask, Matsubayashi et al. (2009) proposed a technique for generalization of semantic roles to overcome data sparseness.",
+                    "sid": 13,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unseen targets continue to present a major obstacle to domain-general semantic analysis.",
+                    "sid": 14,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this paper, we address the problem of idenfifying the semantic frames for targets unseen either in FrameNet (including the exemplar sentences) or the collection of full-text annotations released along with the lexicon.",
+                    "sid": 15,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using a standard model for the argument identification stage (Das et al., 2010a), our proposed method improves overall frame-semantic parsing, especially for unseen targets.",
+                    "sid": 16,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To better handle these unseen targets, we adopt a graph-based semi-supervised learning stategy (\u00a74).",
+                    "sid": 17,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We construct a large graph over potential targets, most of which 1Notwithstanding state-of-the-art results, that approach was only able to identify the correct frame for 1.9% of unseen targets in the test data available at that time.",
+                    "sid": 18,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "That system achieves about 23% on the test set used in this paper.",
+                    "sid": 19,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1435 indicate targets that evoke frames; thin solid/dotted lines with labels indicate arguments.",
+                    "sid": 20,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N m under \u201cbells\u201d is short for the Noise maker role of the NOISE MAKERS frame. are drawn from unannotated data, and a fraction of which come from seen FrameNet annotations.",
+                    "sid": 21,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we perform label propagation on the graph, which is initialized by frame distributions over the seen targets.",
+                    "sid": 22,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The resulting smoothed graph consists of posterior distributions over semantic frames for each target in the graph, thus increasing coverage.",
+                    "sid": 23,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These distributions are then evaluated within a frame-semantic parser (\u00a75).",
+                    "sid": 24,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Considering unseen targets in test data (although few because the test data is also drawn from the training domain), significant absolute improvements of 15.7% and 13.7% are observed for frame identification and full framesemantic parsing, respectively, indicating improved coverage for hitherto unobserved predicates (\u00a76).",
+                    "sid": 25,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 background",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Before going into the details of our model, we provide some background on two topics relevant to this paper: frame-semantic parsing and graph-based learning applied to natural language tasks.",
+                    "sid": 26,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gildea and Jurafsky (2002) pioneered SRL, and since then there has been much applied research on predicate-argument semantics.",
+                    "sid": 27,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Early work on frame-semantic role labeling made use of the exemplar sentences in the FrameNet corpus, each of which is annotated for a single frame and its arguments (Thompson et al., 2003; Fleischman et al., 2003; Shi and Mihalcea, 2004; Erk and Pad\u00b4o, 2006, inter alia).",
+                    "sid": 28,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most of this work was done on an older, smaller version of FrameNet.",
+                    "sid": 29,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, since the release of full-text annotations in SemEval\u201907 (Baker et al., 2007), there has been work on identifying multiple frames and their corresponding sets of arguments in a sentence.",
+                    "sid": 30,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The LTH system of Johansson and Nugues (2007) performed the best in the SemEval\u201907 shared task on frame-semantic parsing.",
+                    "sid": 31,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our probabilistic frame-semantic parser outperforms LTH on that task and dataset (Das et al., 2010a).",
+                    "sid": 32,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The current paper builds on those probabilistic models to improve coverage on unseen predicates.2 Expert resources have limited coverage, and FrameNet is no exception.",
+                    "sid": 33,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Automatic induction of semantic resources has been a major effort in recent years (Snow et al., 2006; Ponzetto and Strube, 2007, inter alia).",
+                    "sid": 34,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the domain of frame semantics, previous work has sought to extend the coverage of FrameNet by exploiting resources like VerbNet, WordNet, or Wikipedia (Shi and Mihalcea, 2005; Giuglea and Moschitti, 2006; Pennacchiotti et al., 2008; Tonelli and Giuliano, 2009), and projecting entries and annotations within and across languages (Boas, 2002; Fung and Chen, 2004; Pad\u00b4o and Lapata, 2005).",
+                    "sid": 35,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although these approaches have increased coverage to various degrees, they rely on other lexicons and resources created by experts.",
+                    "sid": 36,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "F\u00a8urstenau and Lapata (2009) proposed the use of unlabeled data to improve coverage, but their work was limited to verbs.",
+                    "sid": 37,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Bejan (2009) used self-training to improve frame identification and reported improvements, but did not explicitly model unknown targets.",
+                    "sid": 38,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, we use statistics gathered from large volumes of unlabeled data to improve the coverage of a frame-semantic parser on several syntactic categories, in a novel framework that makes use of graph-based semi-supervised learning.",
+                    "sid": 39,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2SEMAFOR, the system presented by Das et al. (2010a) is publicly available at http://www.ark.cs.cmu.edu/ SEMAFOR and has been extended in this work.",
+                    "sid": 40,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In graph-based semi-supervised learning, one constructs a graph whose vertices are labeled and unlabeled examples.",
+                    "sid": 41,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Weighted edges in the graph, connecting pairs of examples/vertices, encode the degree to which they are expected to have the same label (Zhu et al., 2003).",
+                    "sid": 42,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Variants of label propagation are used to transfer labels from the labeled to the unlabeled examples.",
+                    "sid": 43,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are several instances of the use of graph-based methods for natural language tasks.",
+                    "sid": 44,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Most relevant to our work an approach to word-sense disambiguation due to Niu et al. (2005).",
+                    "sid": 45,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Their formulation was transductive, so that the test data was part of the constructed graph, and they did not consider predicate-argument analysis.",
+                    "sid": 46,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In contrast, we make use of the smoothed graph during inference in a probabilistic setting, in turn using it for the full frame-semantic parsing task.",
+                    "sid": 47,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recently, Subramanya et al. (2010) proposed the use of a graph over substructures of an underlying sequence model, and used a smoothed graph for domain adaptation of part-of-speech taggers.",
+                    "sid": 48,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Subramanya et al.\u2019s model was extended by Das and Petrov (2011) to induce part-of-speech dictionaries for unsupervised learning of taggers.",
+                    "sid": 49,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our semi-supervised learning setting is similar to these two lines of work and, like them, we use the graph to arrive at better final structures, in an inductive setting (i.e., where a parametric model is learned and then separately applied to test data, following most NLP research).",
+                    "sid": 50,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 approach overview",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Our overall approach to handling unobserved targets consists of four distinct stages.",
+                    "sid": 51,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before going into the details of each stage individually, we provide their overview here: Graph Construction: A graph consisting of vertices corresponding to targets is constructed using a combination of frame similarity (for observed targets) and distributional similarity as edge weights.",
+                    "sid": 52,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This stage also determines a fixed set of nearest neighbors for each vertex in the graph.",
+                    "sid": 53,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Label Propagation: The observed targets (a small subset of the vertices) are initialized with empirical frame distributions extracted from FrameNet annotations.",
+                    "sid": 54,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Label propagation results in a distribution of frames for each vertex in the graph.",
+                    "sid": 55,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Supervised Learning: Frame identification and argument identification models are trained following Das et al. (2010a).",
+                    "sid": 56,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The graph is used to define the set of candidate frames for unseen targets.",
+                    "sid": 57,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Parsing: The frame identification model of Das et al. disambiguated among only those frames associated with a seen target in the annotated data.",
+                    "sid": 58,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For an unseen target, all frames in the FrameNet lexicon were considered (a large number).",
+                    "sid": 59,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The current work replaces that strategy, considering only the top M frames in the distribution produced by label propagation.",
+                    "sid": 60,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This strategy results in large improvements in frame identification for the unseen targets and makes inference much faster.",
+                    "sid": 61,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Argument identification is done exactly like Das et al. (2010a).",
+                    "sid": 62,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 semi-supervised learning",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We perform semi-supervised learning by constructing a graph of vertices representing a large number of targets, and learn frame distributions for those which were not observed in FrameNet annotations.",
+                    "sid": 63,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We construct a graph with targets as vertices.",
+                    "sid": 64,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For us, each target corresponds to a lemmatized word or phrase appended with a coarse POS tag, and it resembles the lexical units in the FrameNet lexicon.",
+                    "sid": 65,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, two targets corresponding to the same lemma would look like boast.N and boast.V.",
+                    "sid": 66,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Here, the first target is a noun, while the second is a verb.",
+                    "sid": 67,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example multiword target is chemical weapon.N.",
+                    "sid": 68,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use two resources for graph construction.",
+                    "sid": 69,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we take all the words and phrases present in the dependency-based thesaurus constructed using syntactic cooccurrence statistics (Lin, 1998).3 To construct this resource, a corpus containing 64 million words was parsed with a fast dependency parser (Lin, 1993; Lin, 1994), and syntactic contexts were used to find similar lexical items for a given word over targets.",
+                    "sid": 70,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Green targets are observed in the FrameNet data.",
+                    "sid": 71,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Above/below them are shown the most frequently observed frame that these targets evoke.",
+                    "sid": 72,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The black targets are unobserved and label propagation produces a distribution over most likely frames that they could evoke. or phrase.",
+                    "sid": 73,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Lin separately treated nouns, verbs and adjectives/adverbs and the thesaurus contains three parts for each of these categories.",
+                    "sid": 74,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each item in the thesaurus, 200 nearest neighbors are listed with a symmetric similarity score between 0 and 1.",
+                    "sid": 75,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We processed this thesaurus in two ways: first, we lowercased and lemmatized each word/phrase and merged entries which shared the same lemma; second, we separated the adjectives and adverbs into two lists from Lin\u2019s original list by scanning a POS-tagged version of the Gigaword corpus (Graff, 2003) and categorizing each item into an adjective or an adverb depending on which category the item associated with more often in the data.",
+                    "sid": 76,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second step was necessary because FrameNet treats adjectives and adverbs separately.",
+                    "sid": 77,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At the end of this processing step, we were left with 61,702 units\u2014approximately six times more than the targets found in FrameNet annotations\u2014each labeled with one of 4 coarse tags.",
+                    "sid": 78,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We considered only the top 20 most similar targets for each target, and noted Lin\u2019s similarity between two targets t and u, which we call simDL(t, u).",
+                    "sid": 79,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second component of graph construction comes from FrameNet itself.",
+                    "sid": 80,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We scanned the exemplar sentences in FrameNet 1.54 and the training section of the full-text annotations that we use to train the probabilistic frame parser (see \u00a76.1), and gathered a distribution over frames for each target.",
+                    "sid": 81,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a pair of targets t and u, we measured the Euclidean distance5 between their frame distributions.",
+                    "sid": 82,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This distance was next converted to a similarity score, namely, simFN(t, u) between 0 and 1 by subtracting each one from the maximum distance found in like KL- or JS-divergence, but we leave that exploration to future work. the whole data, followed by normalization.",
+                    "sid": 83,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like simDL(t, u), this score is symmetric.",
+                    "sid": 84,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This resulted in 9,263 targets, and again for each, we considered the 20 most similar targets.",
+                    "sid": 85,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, the overall similarity between two given targets t and u was computed as: sim(t, u) = \u03b1 \u00b7 simFN(t, u) + (1 \u2212 \u03b1) \u00b7 simDL(t, u) Note that this score is symmetric because its two components are symmetric.",
+                    "sid": 86,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The intuition behind taking a linear combination of the two types of similarity functions is as follows.",
+                    "sid": 87,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hope that distributionally similar targets would have the same semantic frames because ideally, lexical units evoking the same set of frames appear in similar syntactic contexts.",
+                    "sid": 88,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We would also like to involve the annotated data in graph construction so that it can eliminate some noise in the automatically constructed thesaurus.6 Let 1C(t) denote the K most similar targets to target t, under the score sim.",
+                    "sid": 89,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We link vertices t and u in the graph with edge weight wtu, defined as: The hyperparameters \u03b1 and K are tuned by crossvalidation (\u00a76.3).",
+                    "sid": 90,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we softly label those vertices of the constructed graph for which frame distributions are available from the FrameNet data (the same distributions that are used to compute simFN).",
+                    "sid": 91,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, initially, a small fraction of the vertices in the graph 6In future work, one might consider learning a similarity metric from the annotated data, so as to exactly suit the frame identification task.",
+                    "sid": 92,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1438 have soft frame labels on them.",
+                    "sid": 93,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows an excerpt from a constructed graph.",
+                    "sid": 94,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For simplicity, only the most probable frames under the empirical distribution for the observed targets are shown; we actually label each vertex with the full empirical distribution over frames for the corresponding observed target in the data.",
+                    "sid": 95,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dotted lines demarcate parts of the graph that associate with different frames.",
+                    "sid": 96,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Label propagation helps propagate the initial soft labels throughout the graph.",
+                    "sid": 97,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To this end, we use a variant of the quadratic cost criterion of Bengio et al. (2006), also used by Subramanya et al.",
+                    "sid": 98,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2010) and Das and Petrov (2011).7 Let V denote the set of all vertices in the graph, Vl \u2282 V be the set of known targets and F denote the set of all frames.",
+                    "sid": 99,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let N(t) denote the set of neighbors of vertex t \u2208 V .",
+                    "sid": 100,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let q = {q1, q2, ... , q|V |} be the set of frame distributions, one per vertex.",
+                    "sid": 101,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each known target t \u2208 Vl, we have an initial frame distribution rt.",
+                    "sid": 102,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For every edge in the graph, weights are defined as in Eq.",
+                    "sid": 103,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 104,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We find q by solving: (2) We use a squared loss to penalize various pairs of distributions over frames: ka\u2212bk2 = Pf\u2208F(a(f)\u2212 b(f))2.",
+                    "sid": 105,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first term in Eq.",
+                    "sid": 106,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 requires that, for known targets, we stay close to the initial frame distributions.",
+                    "sid": 107,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The second term is the graph smoothness regularizer, which encourages the distributions of similar nodes (large wtu) to be similar.",
+                    "sid": 108,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final term is a regularizer encouraging all distributions to be uniform to the extent allowed by the first two terms.",
+                    "sid": 109,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(If an unlabeled vertex does not have a path to any labeled vertex, this term ensures that its converged marginal will be uniform over all frames.) \u00b5 and \u03bd are hyperparameters whose choice we discuss in \u00a76.3.",
+                    "sid": 110,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that Eq.",
+                    "sid": 111,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2 is convex in q.",
+                    "sid": 112,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While it is possible to derive a closed form solution for this objective 7Instead of a quadratic cost, an entropic distance measure could have been used, e.g., KL-divergence, considered by Subramanya and Bilmes (2009).",
+                    "sid": 113,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We do not explore that direction in the current paper. function, it would require the inversion of a |V |\u00d7|V | matrix.",
+                    "sid": 114,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, like Subramanya et al. (2010), we employ an iterative method with updates defined as: Here, 1{\u00b7} is an indicator function.",
+                    "sid": 115,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The iterative procedure starts with a uniform distribution for each qt .",
+                    "sid": 116,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all our experiments, we run 10 iterations of the updates.",
+                    "sid": 117,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The final distribution of frames for a target t is denoted by q\u2217t.",
+                    "sid": 118,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 learning and inference for frame-semantic parsing",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this section, we briefly review learning and inference techniques used in the frame-semantic parser, which are largely similar to Das et al. (2010a), except the handling of unknown targets.",
+                    "sid": 119,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that in all our experiments, we assume that the targets are marked in a given sentence of which we want to extract a frame-semantic analysis.",
+                    "sid": 120,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Therefore, unlike the systems presented in SemEval\u201907, we do not define a target identification module.",
+                    "sid": 121,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a given sentence x with frame-evoking targets t, let ti denote the ith target (a word sequence).",
+                    "sid": 122,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We seek a list f = hf1, ... , fmi of frames, one per target.",
+                    "sid": 123,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let L be the set of targets found in the FrameNet annotations.",
+                    "sid": 124,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let Lf \u2286 L be the subset of these targets annotated as evoking a particular frame f. The set of candidate frames Fi for ti is defined to include every frame f such that ti \u2208 Lf.",
+                    "sid": 125,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If ti \u22086 L (in other words, ti is unseen), then Das et al. (2010a) considered all frames F in FrameNet as candidates.",
+                    "sid": 126,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Instead, in our work, we check whether ti \u2208 V , where V are the vertices of the constructed graph, and set: The integer M is set using cross-validation (\u00a76.3).",
+                    "sid": 127,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If ti \u22086 V , then all frames F are considered as Fi.",
+                    "sid": 128,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The frame prediction rule uses a probabilistic model over frames for a target: Note that a latent variable ` E Lf is used, which is marginalized out.",
+                    "sid": 129,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Broadly, lexical semantic relationships between the \u201cprototype\u201d variable ` (belonging to the set of seen targets for a frame f) and the target ti are used as features for frame identification, but since ` is unobserved, it is summed out both during inference and training.",
+                    "sid": 130,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A conditional log-linear model is used to model this probability: for f E Fi and ` E Lf, p\u03b8(f, `  |ti, x) = where \u03b8 are the model weights, and g is a vectorvalued feature function.",
+                    "sid": 131,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This discriminative formulation is very flexible, allowing for a variety of (possibly overlapping) features; e.g., a feature might relate a frame f to a prototype `, represent a lexicalsemantic relationship between ` and ti, or encode part of the syntax of the sentence (Das et al., 2010b).",
+                    "sid": 132,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given some training data, which is of the form ((x(j), t(j), f(j), A(j)))N(where N is the number of sentences in the data 1 and A is the set of argument in a sentence), we discriminatively train the frame identification model by maximizing the following log-likelihood:8 f = (f1, ... , fm) corresponding to each target, argument identification or SRL is the task of choosing which of each fi\u2019s roles are filled, and by which parts of x.",
+                    "sid": 133,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We directly adopt the model of Das et al. (2010a) for the argument identification stage and briefly describe it here.",
+                    "sid": 134,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let Rfi = {r1, ... , r|Rfi|} denote frame fi\u2019s roles observed in FrameNet annotations.",
+                    "sid": 135,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A set S of spans that are candidates for filling any role r E Rfi are identified in the sentence.",
+                    "sid": 136,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, S could contain any subsequence of x, but we consider only the set of contiguous spans that (a) contain a single word or (b) comprise a valid subtree of a word and all its descendants in a dependency parse.",
+                    "sid": 137,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The empty span is also included in S, since some roles are not explicitly filled.",
+                    "sid": 138,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training, if an argument is not a valid subtree of the dependency parse (this happens due to parse errors), we add its span to S. Let Ai denote the mapping of roles in Rfi to spans in S. The model makes a prediction for each Ai(rk) (for all roles rk E Rfi): A conditional log-linear model over spans for each role of each evoked frame is defined as: This non-convex objective function is locally optimized using a distributed implementation of LBFGS (Liu and Nocedal, 1989).9 Given a sentence x = (x1,... , xn), the set of targets t = (t1, ... , tm), and a list of evoked frames 8We found no benefit from using an L2 regularizer.",
+                    "sid": 139,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9While training, in the partition function of the log-linear model, all frames F in FrameNet are summed up for a target ti instead of only Fi (as in Eq.",
+                    "sid": 140,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "8), to learn interactions between the latent variables and different sentential contexts.",
+                    "sid": 141,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This objective function is convex, and we globally optimize it using the distributed implementation of L-BFGS.",
+                    "sid": 142,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We regularize by including \u2212110I\u03c8\ufffd22 in the objective (the strength is not tuned).",
+                    "sid": 143,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Naive prediction of roles using Equation 10 may result in overlap among arguments filling different roles of a frame, since the argument identification model fills each role independently of the others.",
+                    "sid": 144,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We want to enforce the constraint that two roles of a single frame cannot be filled by overlapping spans.",
+                    "sid": 145,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, illegal overlap is disallowed using a 10,000hypothesis beam search.",
+                    "sid": 146,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 experiments and results",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "Before presenting our experiments and results, we will describe the datasets used in our experiments, and the various baseline models considered.",
+                    "sid": 147,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We make use of the FrameNet 1.5 lexicon released in 2010.",
+                    "sid": 148,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This lexicon is a superset of previous versions of FrameNet.",
+                    "sid": 149,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It contains 154,607 exemplar sentences with one marked target and frame-role annotations.",
+                    "sid": 150,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "78 documents with full-text annotations with multiple frames per sentence were also released (a superset of the SemEval\u201907 dataset).",
+                    "sid": 151,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We randomly selected 55 of these documents for training and treated the 23 remaining ones as our test set.",
+                    "sid": 152,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After scanning the exemplar sentences and the training data, we arrived at a set of 877 frames, 1,068 roles,10 and 9,263 targets.",
+                    "sid": 153,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our training split of the full-text annotations contained 3,256 sentences with 19,582 frame annotatations with corresponding roles, while the test set contained 2,420 sentences with 4,458 annotations (the test set contained fewer annotated targets per sentence).",
+                    "sid": 154,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also divide the 55 training documents into 5 parts for crossvalidation (see \u00a76.3).",
+                    "sid": 155,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The raw sentences in all the training and test documents were preprocessed using MXPOST (Ratnaparkhi, 1996) and the MST dependency parser (McDonald et al., 2005) following Das et al. (2010a).",
+                    "sid": 156,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work we assume the frame-evoking targets have been correctly identified in training and test data.",
+                    "sid": 157,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "10Note that the number of listed roles in the lexicon is nearly 9,000, but their number in actual annotations is a lot fewer.",
+                    "sid": 158,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We compare our model with three baselines.",
+                    "sid": 159,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The first baseline is the purely supervised model of Das et al. (2010a) trained on the training split of 55 documents.",
+                    "sid": 160,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that this is the strongest baseline available for this task;11 we refer to this model as \u201cSEMAFOR.\u201d The second baseline is a semi-supervised selftrained system, where we used SEMAFOR to label 70,000 sentences from the Gigaword corpus with frame-semantic parses.",
+                    "sid": 161,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For finding targets in a raw sentence, we used a relaxed target identification scheme, where we marked every target seen in the lexicon and all other words which were not prepositions, particles, proper nouns, foreign words and Wh-words as potential frame evoking units.",
+                    "sid": 162,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was done so as to find unseen targets and get frame annotations with SEMAFOR on them.",
+                    "sid": 163,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We appended these automatic annotations to the training data, resulting in 711,401 frame annotations, more than 36 times the supervised data.",
+                    "sid": 164,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These data were next used to train a frame identification model (\u00a75.1).12 This setup is very similar to Bejan (2009) who used selftraining to improve frame identification.",
+                    "sid": 165,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We refer to this model as \u201cSelf-training.\u201d The third baseline uses a graph constructed only with Lin\u2019s thesaurus, without using supervised data.",
+                    "sid": 166,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, we followed the same scheme as in \u00a74.1 but with the hyperparameter \u03b1 = 0.",
+                    "sid": 167,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, label propagation was run on this graph (and hyperparameters tuned using cross validation).",
+                    "sid": 168,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The posterior distribution of frames over targets was next used for frame identification (Eq.",
+                    "sid": 169,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "6-7), with SEMAFOR as the trained model.",
+                    "sid": 170,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This model, which is very similar to our full model, is referred to as \u201cLinGraph.\u201d \u201cFullGraph\u201d refers to our full system.",
+                    "sid": 171,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We used five-fold cross-validation to tune the hyperparameters \u03b1, K, p, and M in our model.",
+                    "sid": 172,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The 11We do not compare our model with other systems, e.g. the ones submitted to SemEval\u201907 shared task, because SEMAFOR outperforms them significantly (Das et al., 2010a) on the previous version of the data.",
+                    "sid": 173,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, we trained our models on the new FrameNet 1.5 data, and training code for the SemEval\u201907 systems was not readily available.",
+                    "sid": 174,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "12Note that we only self-train the frame identification model and not the argument identification model, which is fixed throughout. uniform regularization hyperparameter v for graph construction was set to 10\u22126 and not tuned.",
+                    "sid": 175,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each cross-validation split, four folds were used to train a frame identification model, construct a graph, run label propagation and then the model was tested on the fifth fold.",
+                    "sid": 176,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This was done for all hyperparameter settings, which were \u03b1 E 10.2, 0.5, 0.8}, K E 15,10,15, 20}, p E 10.01, 0.1, 0.3, 0.5, 1.0} and M E 12, 3, 5,10}.",
+                    "sid": 177,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The joint setting which performed the best across five-folds was \u03b1 = 0.2, K = 10, p = 1.0, M = 2.",
+                    "sid": 178,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar tuning was also done for the baseline LinGraph, where \u03b1 was set to 0, and rest of the hyperparameters were tuned (the selected hyperparameters were K = 10, p = 0.1 and M = 2).",
+                    "sid": 179,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "With the chosen set of hyperparameters, the test set was used to measure final performance.",
+                    "sid": 180,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The standard evaluation script from the SemEval\u201907 task calculates precision, recall, and F1score for frames and arguments; it also provides a score that gives partial credit for hypothesizing a frame related to the correct one in the FrameNet lexicon.",
+                    "sid": 181,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We present precision, recall, and F1-measure microaveraged across the test documents, report labels-only matching scores (spans must match exactly), and do not use named entity labels.",
+                    "sid": 182,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This evaluation scheme follows Das et al. (2010a).",
+                    "sid": 183,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical significance is measured using a reimplementation of Dan Bikel\u2019s parsing evaluation comparator.13 Tables 1 and 2 present results for frame identification and full frame-semantic parsing respectively.",
+                    "sid": 184,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "They also separately tabulate the results achieved for unknown targets.",
+                    "sid": 185,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our full model, denoted by \u201cFullGraph,\u201d outperforms all the baselines for both tasks.",
+                    "sid": 186,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the Self-training model even falls 13http://www.cis.upenn.edu/\u02dcdbikel/ software.html#comparator short of the supervised baseline SEMAFOR, unlike what was observed by Bejan (2009) for the frame identification task.",
+                    "sid": 187,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model using a graph constructed solely from the thesaurus (LinGraph) outperforms both the supervised and the self-training baselines for all tasks, but falls short of the graph constructed using the similarity metric that is a linear combination of distributional similarity and supervised frame similarity.",
+                    "sid": 188,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This indicates that a graph constructed with some knowledge of the supervised data is more powerful.",
+                    "sid": 189,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For unknown targets, the gains of our approach are impressive: 15.7% absolute accuracy improvement over SEMAFOR for frame identification, and 13.7% absolute F1 improvement over SEMAFOR for full frame-semantic parsing (both significant).",
+                    "sid": 190,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When all the test targets are considered, the gains are still significant, resulting in 5.4% relative error reduction over SEMAFOR for frame identification, and 1.3% relative error reduction over SEMAFOR for full-frame semantic parsing.",
+                    "sid": 191,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although these improvements may seem modest, this is because only 3.2% of the test set targets are unseen in training.",
+                    "sid": 192,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We expect that further gains would be realized in different text domains, where FrameNet coverage is presumably weaker than in news data.",
+                    "sid": 193,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A semi-supervised strategy like ours is attractive in such a setting, and future work might explore such an application.",
+                    "sid": 194,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approach also makes decoding much faster.",
+                    "sid": 195,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the unknown component of the test set, SEMAFOR takes a total 111 seconds to find the best set of frames, while the FullGraph model takes only 19 seconds to do so, thus bringing disambiguation time down by a factor of nearly 6.",
+                    "sid": 196,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is because our model now disambiguates between only M = 2 frames instead of the full set of 877 frames in FrameNet.",
+                    "sid": 197,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the full test set too, the speedup is noticeable, as SEMAFOR takes 131 seconds for frame identification, while the FullGraph model only takes 39 seconds.",
+                    "sid": 198,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The following is an example from our test set showing SEMAFOR\u2019s output (for one target): clarations and IAEA inspection findingsAction indicate that North Korea might have reprocessed enough plutonium for one or two nuclear weapons.",
+                    "sid": 199,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the model identifies an incorrect frame REASON for the target discrepancy.N, in turn identifying the wrong semantic role Action for the underlined argument.",
+                    "sid": 200,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, the FullGraph model exactly identifies the right semantic frame, SIMILARITY, as well as the correct role, Entities.",
+                    "sid": 201,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This improvement can be easily explained.",
+                    "sid": 202,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The excerpt from our constructed graph in Figure 2 shows the same target discrepancy.N in black, conveying that it did not belong to the supervised data.",
+                    "sid": 203,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is connected to the target difference.N drawn from annotated data, which evokes the frame SIMILARITY.",
+                    "sid": 204,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Thus, after label propagation, we expect the frame SIMILARITY to receive high probability for the target discrepancy.N.",
+                    "sid": 205,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 3 shows the top 5 frames that are assigned the highest posterior probabilities in the distribution qt for four hand-selected test targets absent in supervised data, including discrepancy.N.",
+                    "sid": 206,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For all of them, the FullGraph model identifies the correct frames for all four words in the test data by ranking these frames in the top M = 2.",
+                    "sid": 207,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "LinGraph also gets all four correct, Self-training only gets print.V/TEXT CREATION, and SEMAFOR gets none.",
+                    "sid": 208,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Across unknown targets, on average the M = 2 most common frames in the posterior distribution qt found by FullGraph have q(\ufffd) (f) = 7 877, or seven times the average across all frames.",
+                    "sid": 209,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that the graph propagation method is confident only in predicting the top few frames out of the whole possible set.",
+                    "sid": 210,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Moreover, the automatically selected number of frames to extract per unknown target, M = 2, suggests that only a few meaningful frames were assigned to unknown predicates.",
+                    "sid": 211,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This matches the nature of FrameNet data, where the average frame ambiguity for a target type is 1.20.",
+                    "sid": 212,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusion",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We have presented a semi-supervised strategy to improve the coverage of a frame-semantic parsing model.",
+                    "sid": 213,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We showed that graph-based label propagation and resulting smoothed frame distributions over unseen targets significantly improved the coverage of a state-of-the-art semantic frame disambiguation model to previously unseen predicates, also improving the quality of full framesemantic parses.",
+                    "sid": 214,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The improved parser is available at http://www.ark.cs.cmu.edu/SEMAFOR.",
+                    "sid": 215,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "8",
+            "sents": [
+                {
+                    "text": "We are grateful to Amarnag Subramanya for helpful discussions.",
+                    "sid": 216,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also thank Slav Petrov, Nathan Schneider, and the three anonymous reviewers for valuable comments.",
+                    "sid": 217,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This research was supported by NSF grants IIS0844507, IIS-0915187 and TeraGrid resources provided by the Pittsburgh Supercomputing Center under NSF grant number TG-DBS110003.",
+                    "sid": 218,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

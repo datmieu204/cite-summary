@@ -1,0 +1,1217 @@
+{
+    "ID": "N12-1090",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Translation-Based Projection for Multilingual Coreference Resolution",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To build a coreference resolver for a new language, the typical approach is to first coreference-annotate documents from this target language and then train a resolver on these annotated documents using supervised learning techniques.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the high cost associated with manually coreference-annotating documents needed by a supervised approach makes it difficult to deploy coreference technologies across a large number of natural languages.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To alleviate this corpus annotation bottleneck, we examine a translation-based projection approach to multilingual coreference resolution.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Experimental results on two target languages demonstrate the promise of our approach.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Noun phrase (NP) coreference resolution is the task of determining which NPs (or mentions) refer to each real-world entity in a document.",
+                    "sid": 5,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent years have witnessed a surge of interest in multilingual coreference resolution.",
+                    "sid": 6,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For instance, the ACE 2004/2005 evaluations and SemEval-2010 Shared Task 1 have both involved coreference resolution in multiple languages.",
+                    "sid": 7,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As evidenced by the participants in these evaluations, the most common approach to building a resolver for a new language is supervised, which involves training a resolver on coreference-annotated documents from the target language.",
+                    "sid": 8,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although supervised approaches work reasonably well, they present a challenge to deploying coreference technologies across a large number of natural languages.",
+                    "sid": 9,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, for each new language of interest, one has to hire native speakers of the language to go through the labor-intensive, timeconsuming process of hand-annotating a potentially large number of documents with coreference annotation before a supervised resolver can be trained.",
+                    "sid": 10,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One may argue that a potential solution to this corpus annotation bottleneck is to employ an unsupervised or heuristic approach to coreference resolution, especially in light of the fact that they have recently started to rival their supervised counterparts.",
+                    "sid": 11,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, by adopting these approaches, we are simply replacing the corpus annotation bottleneck by another, possibly equally serious, bottleneck, the knowledge acquisition bottleneck.",
+                    "sid": 12,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, in these approaches, one has to employ knowledge of the target language to design coreference rules (e.g., Mitkov (1999), Poon and Domingos (2008), Raghunathan et al. (2010)) or sophisticated generative models (e.g., Haghighi and Klein (2007,2010), Ng (2008)) to combine the available knowledge sources.",
+                    "sid": 13,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One could argue that designing coreference rules and generative models may not be as timeconsuming as annotating a large coreference corpus.",
+                    "sid": 14,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This may be true for a well-studied language like English, where we can easily compose a rule that disallows coreference between two mentions if they disagree in number and gender, for instance.",
+                    "sid": 15,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, computing these features may not be as simple as we hope for a language like Chinese: the lack of morphology complicates the determination of number information, and the fact that most Chinese first names are used by both genders makes gender determination difficult.",
+                    "sid": 16,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The difficulty in accurately computing features translates to difficulties in composing coreference rules: for example, the aforementioned rule involving gender and number agreement, as well as rules that implement traditional linguistic constraints on coreference, may no longer be accurate and desirable to have if the features involved cannot be accurately computed.",
+                    "sid": 17,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consequently, we believe that research in multilingual coreference resolution will continue to be dominated by supervised approaches.",
+                    "sid": 18,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the high cost of annotating data with coreference chains, it is crucial to explore methods for obtaining annotated data in a cost-effective manner.",
+                    "sid": 19,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Motivated in part by this observation, we examine one such method that has recently shown promise for a variety of NLP tasks, translation-based projection, which is composed of three steps.",
+                    "sid": 20,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To coreference annotate a text in the target language, we (1) machine-translate it to a resource-rich language (henceforth the source language); (2) automatically produce the desired linguistic annotations (which in our case are coreference annotations) on the translated text using the linguistic tool developed for the source language (which in our case is a coreference resolver) ; and (3) project the annotations from the source language to the target language.",
+                    "sid": 21,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Unlike supervised approaches, this projection approach does not require any coreference-annotated data from the target language.",
+                    "sid": 22,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Equally importantly, unlike its unsupervised counterparts, this approach does not require that we have any linguistic knowledge of the target language.",
+                    "sid": 23,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, we have no knowledge of the target languages we employ in our evaluation.",
+                    "sid": 24,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One of our goals is to examine the feasibility of building a coreference resolver for a language for which we have no coreference-annotated data and no linguistic knowledge of the language.",
+                    "sid": 25,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that we view projection as an approach for alleviating the corpus annotation bottleneck, not as a solution to the multilingual coreference resolution problem.",
+                    "sid": 26,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, though rarely emphasized in previous work on applying projection, we note that projection alone cannot be used to solve multilingual NLP problems, including coreference resolution.",
+                    "sid": 27,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason is that every language has its own idiosyncrasies with respect to linguistic properties, and projection simply cannot produce annotations capturing those properties that are specific to the target language.",
+                    "sid": 28,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our goal in this paper is to explore the extent to which projection, which does not require that we have any knowledge of the target language, can push the limits of multilingual coreference resolution.",
+                    "sid": 29,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If our results indicate that projection is a promising approach, then the automatic coreference annotations it produces can be used to augment the manual annotations that capture the properties specific to the target language, thus alleviating the corpus annotation bottleneck.",
+                    "sid": 30,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 related work on projection",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "The idea of projecting annotations from a resourcerich language to a resource-scarce language was originally proposed by Yarowsky and Ngai (2001) and subsequently developed by others (e.g., Resnik (2004), Hwa et al. (2005)).",
+                    "sid": 31,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These projection algorithms assume as input a parallel corpus for the source language and the target language.",
+                    "sid": 32,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given the recent availability of machine translation (MT) services on the Web, researchers have focused more on translated-based projection rather than acquiring a parallel corpus themselves.",
+                    "sid": 33,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "MT-based projection has been applied to various NLP tasks, such as partof-speech tagging (e.g., Das and Petrov (2011)), mention detection (e.g., Zitouni and Florian (2008)), and sentiment analysis (e.g., Mihalcea et al. (2007)).",
+                    "sid": 34,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There have been two initial attempts to apply projection to create coreference-annotated data for a resource-poor language, both of which involve projecting hand-annotated coreference data from English to Romanian via a parallel corpus.",
+                    "sid": 35,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, Harabagiu and Maiorano (2000) create an EnglishRomanian corpus by manually translating the MUC6 corpus into Romanian and manually project the English annotations to Romanian.",
+                    "sid": 36,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, Postolache et al. (2006) apply a word alignment algorithm to project the hand-annotated English coreference chains and then manually fix the projection errors on the Romanian side.",
+                    "sid": 37,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, their goal is different from ours in at least two respects.",
+                    "sid": 38,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, while they employ significant knowledge of the target language to create a clean coreference corpus, we examine the quality of coreferenceannotated data created via an entirely automatic process, determining quality by the performance of the resolver trained on the data.",
+                    "sid": 39,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, unlike ours, neither of these attempts is at the level of defining a technology for projection annotations that can potentially be deployed across a large number of languages without coreference-annotated data.",
+                    "sid": 40,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 translation-based projection",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "Recall that our MT-based projection approach to coreference resolution is composed of three steps.",
+                    "sid": 41,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a text in the target language, we (1) machinetranslate the text to the source language; (2) automatically produce coreference annotations on the translated text using a coreference resolver developed for the source language; and (3) project the annotations from the source language to the target language.",
+                    "sid": 42,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we employ our approach in three settings, which differ in terms of the extent to which linguistic taggers (e.g., chunkers and named entity (NE) recognizers) for the target language are available.",
+                    "sid": 43,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The goal is to examine whether these linguistic taggers can be profitably exploited to improve the performance of the projection approach.",
+                    "sid": 44,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Below we assume that English and French are our source and target languages, respectively.",
+                    "sid": 45,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this setting, we assume that we do not have access to any French tagger that we can exploit to improve projection.",
+                    "sid": 46,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, all we can do is to employ the three steps involved in the projection approach as described at the beginning of this section to create coreference-annotated data for French.",
+                    "sid": 47,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we translate a French text to an English text using GoogleTranslate1, and create coreference chains for the translated English text using Reconcile2 (Stoyanov et al., 2010).",
+                    "sid": 48,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To project mentions from English to French, we first align the English and French words in each pair of parallel sentences, and then project the English mentions onto the French text using the alignment.",
+                    "sid": 49,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, since the alignment is noisy, the French words to which the words in the English mention are aligned may not form a contiguous text span.",
+                    "sid": 50,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To fix this problem, we follow Yarowsky and Ngai (2001) and use the smallest text span that covers all the aligned French words to create the French mention.3 We process the English mentions in the text in a left-to-right manner, as processing the mentions sequentially enables us to ensure that an English mention is not mapped to a French text span that has already been mapped to by a previously-processed English mention.4 To align English and French words, we trained a word alignment model using GIZA++5 (Och and Ney, 2000) on a parallel corpus comprising the English-French section of Europarl6 (Koehn, 2005) as well as all the French texts (and their translated English counterparts) for which we want to automatically create coreference chains.",
+                    "sid": 51,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Following common practice, we stemmed the parallel corpus using the Porter stemmer (Porter, 1980) in order to reduce data sparseness.",
+                    "sid": 52,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, even with stemming, we found that many English words were not aligned to any French words by the resulting alignment model.",
+                    "sid": 53,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This would prevent many English mentions from being projected to the French side, potentially harming the recall of the French coreference annotations.",
+                    "sid": 54,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To improve alignment coverage, we retrained the alignment model by supplying GIZA++ with an English-French bilingual dictionary that we assembled using three online dictionary databases: OmegaWiki, Wiktionary, and Universal Dictionary.",
+                    "sid": 55,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Furthermore, if a word w appears in both the English side and the French side in a pair of parallel sentences, we assume that it has the same orthographic form in both languages and hence we augment the bilingual dictionary with the entry (w, w).",
+                    "sid": 56,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that the use of a supervised resolver like Reconcile does not render our approach supervised, since we can replace it with any resolver, be it supervised, heuristic, or unsupervised.",
+                    "sid": 57,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, we treat the resolver built for the source language as a black box that can produce coreference annotations.",
+                    "sid": 58,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we consider a comparatively less resourcescarce setting where a French mention extractor is available for identifying mentions in a French text7, and describe how we can modify the projection approach to exploit this French mention extractor.",
+                    "sid": 59,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given a French text we want to coreferenceannotate, we first translate it to English using GoogleTranslate and align the French and English words using a French-to-English word alignment algorithm.",
+                    "sid": 60,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we identify the mentions in the French text using the given mention extractor, and project them onto the English text using the NP projection algorithm described in Setting 1.",
+                    "sid": 61,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we run Reconcile on the resulting English mentions to generate coreference chains for the translated text, and project these chains back to the French text.",
+                    "sid": 62,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As explained before, the performance of this method is sensitive to the accuracy of the NP projection algorithm in recovering the English mentions, which in turn depends on the accuracy of the word alignment algorithm.",
+                    "sid": 63,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To make this method more robust to noisy word alignment, we make a modification to it.",
+                    "sid": 64,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Rather than running Reconcile on the mentions produced by the NP projection algorithm, we use Reconcile to identify the mentions directly from the translated text.",
+                    "sid": 65,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After that, we create a mapping between the English mentions produced by the NP projection algorithm and those produced by Reconcile using a small set of heuristics.",
+                    "sid": 66,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, let MP be the set of mentions identified by the NP projection algorithm and MR be the set of mentions identified by Reconcile.",
+                    "sid": 67,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For each mention mP in MP, we map it to a mention in MR that shares the same right boundary.",
+                    "sid": 68,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If this fails, we map it to a mention that covers its entire text span.",
+                    "sid": 69,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If this fails again, we map it to a mention that has a partial overlap with it.",
+                    "sid": 70,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If this still fails, we assume that mP is not found by Reconcile and simply add mP to MR. As before, we process the mentions in MP in a left-to-right manner in order to ensure that no two mentions in MP are mapped to the same Reconcile mention.",
+                    "sid": 71,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we discard all mentions in MR that are not mapped by any mention in MP, and present MR to Reconcile for coreference resolution.",
+                    "sid": 72,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since we now have a 1-to-1 mapping between the Reconcile mentions and the French mentions, projecting the coreference results back to French is trivial.",
+                    "sid": 73,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It may not be immediately clear why the exploitation of the mention extractor in this setting may yield better coreference annotations than those produced in Setting 1.",
+                    "sid": 74,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To see the reason, recall that one source of errors inherent in a projection approach is word alignment errors.",
+                    "sid": 75,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Setting 1, when we tried to project English mentions to the French text, word alignment errors would adversely affect the ability of the NP projection algorithm to correctly define the boundaries of the French mentions.",
+                    "sid": 76,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since coreference performance depends crucially on the ability to correctly identify mentions (Stoyanov et al., 2009), the presence of word alignment errors implies that the resulting French coreference annotations could score poorly even if the English coreference annotations produced by Reconcile were of high quality.",
+                    "sid": 77,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the current setting, on the other hand, we reduce the sensitivity of coreference performance to word alignment errors via the use of the French mention extractor to produce more accurate French mention boundaries.",
+                    "sid": 78,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we consider a setting that is the least resource-scarce of the three.",
+                    "sid": 79,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We assume that in addition to a French mention extractor, we have access to other French linguistic taggers (e.g., syntactic and semantic parsers) that will allow us to generate the linguistic features needed to train a French resolver on the projected coreference annotations.",
+                    "sid": 80,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, assume that Test is a set of French texts we want to coreference-annotate, and Training is a set of French texts that is disjoint from Test but is drawn from the same domain as Test.8 To annotate the Test texts, we perform the following steps.",
+                    "sid": 81,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we employ the French mention extractor in combination with the method described in Setting 2 to automatically coreference-annotate the Training texts.",
+                    "sid": 82,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, motivated by Kobdani et al. (2011), we train a French coreference resolver on the automatically coreference-annotated training texts, using the features provided by the available linguistic taggers.",
+                    "sid": 83,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we apply the resolver to generate coreference chains for each Test text.",
+                    "sid": 84,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Two questions arise.",
+                    "sid": 85,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, is this method necessarily better than the one described in Setting 2?",
+                    "sid": 86,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We hypothesize that the answer is affirmative: not only can this method exploit the knowledge about the target language provided by the additional linguistic taggers, but the resulting coreference resolver may allow us to generalize from the (noisily labeled) data and make this method more robust to the noise inherent in the projected coreference annotations than the previously-described methods.",
+                    "sid": 87,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, is this method necessarily better than projection via a parallel corpus?",
+                    "sid": 88,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Like the first question, this is also an empirical question.",
+                    "sid": 89,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nevertheless, one reason why this method is intuitively better is that it ensures that the training and test documents are drawn from the same domain.",
+                    "sid": 90,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "On the other hand, when projecting annotations via a parallel corpus, we may encounter a domain mismatch problem if the parallel corpus and the test documents come from different domains, and the coreference resolver may not work well if it is trained and tested on different domains.",
+                    "sid": 91,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 coreference resolution system",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "To train the coreference resolver employed in Setting 3 in the previous section, we need to derive linguistic features from the documents in the target language.",
+                    "sid": 92,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we employ the coreference data sets produced as part of the SemEval2010 shared task on Coreference Resolution in Multiple Languages.",
+                    "sid": 93,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The shared task organizers have made publicly available six data sets that correspond to six European languages.",
+                    "sid": 94,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each data set comprises not only training and test documents that are coreference-annotated, but also a number of word-based linguistic features from which we derive mention-based linguistic features for training a resolver.",
+                    "sid": 95,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section, we will describe how this resolver is trained and then applied to generate coreference chains for unseen documents.",
+                    "sid": 96,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training the coreference classifier.",
+                    "sid": 97,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As our coreference model, we train a mention-pair model, which is a classifier that determines whether two mentions are co-referring or not (e.g., Soon et al. (2001), Ng and Cardie (2002)).9 Each instance i(mj, mk) corresponds to mj (a candidate antecedent) and mk (the mention to be resolved), and is represented by a set of 23 features shown in Table 1.",
+                    "sid": 98,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we can see, each feature is either relational, capturing the relation between mj and mk, or non-relational, capturing the linguistic property of mk.",
+                    "sid": 99,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The possible values of a relational feature (except LEXICAL) are C (compatible), I (incompatible), and NA (the comparison 9Note that any supervised coreference model can be used, such as an entity-mention model (e.g., Luo et al. (2004), Yang et al.",
+                    "sid": 100,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(2008)) or a ranking model (e.g., Denis and Baldridge (2008), Rahman and Ng (2009)). cannot be made due to missing data).",
+                    "sid": 101,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a nonrelational feature, we refer the reader to the data sets for the list of possible values.10 We follow Soon et al.\u2019s (2001) method for creating training instances.",
+                    "sid": 102,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we create (1) a positive instance for each anaphoric mention mk and its closest antecedent mj; and (2) a negative instance for mk paired with each of the intervening mentions, mj+1, mj+2, ... , mk\u22121.",
+                    "sid": 103,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The classification associated with a training instance is either positive or negative, depending on whether the two mentions are coreferent in the associated text.",
+                    "sid": 104,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To train the classifier, we use SVMUght (Joachims, 1999).",
+                    "sid": 105,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Applying the classifier to a test text.",
+                    "sid": 106,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After training, the classifier is used to identify an antecedent for a mention in a test text.",
+                    "sid": 107,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, each mention, mk, is compared to each preceding mention, mj, from right to left, and mj is selected as the antecedent of mk if the pair is classified as coreferent.",
+                    "sid": 108,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The process terminates as soon as an antecedent is found for mk or the beginning of the text is reached.",
+                    "sid": 109,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 evaluation",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "We evaluate our MT-based projection approach for each of the three settings described in Section 3.",
+                    "sid": 110,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Data sets.",
+                    "sid": 111,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We use the Spanish and Italian data sets from the SemEval-2010 shared task on Coreference Resolution in Multiple Languages.11 Each data set is composed of a training set and a test set.",
+                    "sid": 112,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistics of these data sets are shown in Table 2.",
+                    "sid": 113,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Scoring programs.",
+                    "sid": 114,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To score the output of a coreference resolver, we employ four scoring programs, MUC (Vilain et al., 1995), B3 (Bagga and Baldwin, 1998), \u03c63-CEAF (Luo, 2005), and BLANC (Recasens and Hovy, 2011), which were downloaded from the shared task website (see Footnote 10).",
+                    "sid": 115,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Gold-standard versus regular settings.",
+                    "sid": 116,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The format of each data set follows that of a typical CoNLL shared task data set.",
+                    "sid": 117,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, each row corresponds to a word in a document; moreover, all but the last column contain the linguistic features computed for the words, and the last column stores the coreference information.",
+                    "sid": 118,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Some of the features were computed via automatic means, but some were extracted from human annotations.",
+                    "sid": 119,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given this distinction, the shared task organizers defined two evaluation settings: in the regular setting, only the columns that were computed automatically can be used to derive coreference features for classifier training, and results should be reported on system mentions; on the other hand, in the gold-standard setting, only the columns that were extracted from human annotations can be used to derive coreference features, and results should be reported on true mentions.",
+                    "sid": 120,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will present results corresponding to both settings.",
+                    "sid": 121,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Note that these two settings should not be confused with the three settings described in Section 3.",
+                    "sid": 122,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Mention extraction.",
+                    "sid": 123,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that Settings 2 and 3 both assume the availability of a mention extractor for extracting mentions in the target language.",
+                    "sid": 124,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we extract mentions using two methods.",
+                    "sid": 125,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we assume the availability of an oracle mention extractor that will enable us to extract true mentions (i.e., gold-standard mentions) directly from the test texts.",
+                    "sid": 126,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we employ simple heuristics to automatically extract system mentions.",
+                    "sid": 127,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since coreference performance is sensitive to the accuracy of mention extraction (Stoyanov et al., 2009), we experiment with several heuristic methods for extracting system mentions for both Spanish and Italian.",
+                    "sid": 128,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to our cross-validation experiments on the training data, the best heuristic for extracting Spanish mentions is different from that for extracting Italian mentions.",
+                    "sid": 129,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, for Spanish, the best heuristic method operates as follows.",
+                    "sid": 130,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, it extracts all the syntactic heads (i.e., the word tokens whose gold dependency labels are SUBJ, PRED, or GMOD).",
+                    "sid": 131,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, for each syntactic head, it identifies the smallest text span containing the head and all of its dependents, and creates a mention from this text span.",
+                    "sid": 132,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For Italian, on the other hand, the best heuristic simply involves creating one mention for each gold NE.",
+                    "sid": 133,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The reason why this simple heuristic works well is that most of the Italian mentions are NEs, owing to the fact that abstract NPs and pronouns are also annotated as NEs in the Italian data set.",
+                    "sid": 134,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When evaluated on the test set, the heuristic-based mention extractor achieves F-scores of 80.2 (78.4 recall, 82.1 precision) for Spanish and 92.3 (85.9 recall, 99.6 precision) for Italian.",
+                    "sid": 135,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our supervised systems.",
+                    "sid": 136,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While our MT-based projection approach is unsupervised (i.e., it does not rely on any coreference annotations from the target language), it would be informative to see the performance of the supervised resolvers, since their performance can be viewed as a crude upper bound on the performance of our unsupervised systems.",
+                    "sid": 137,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, we train a mention-pair model on the training set using the 23 features shown in Table 1 and SVMUght as the underlying learning algorithm12, and apply the resulting model in combination with Soon et al.\u2019s clustering algorithm (see Section 4) to generate coreference chains for the test texts.",
+                    "sid": 138,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results on the test sets, reported in terms of recall (R), precision (P), and F-score (F) computed by the four coreference scorers, are shown in the first two rows of Table 3 (Spanish) and Table 4 (Italian).",
+                    "sid": 139,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For convenience, we summarize a system\u2019s performance using a single number, which is shown in the last column (Average) and is obtained by taking a simple average of the F-scores of the four scorers.",
+                    "sid": 140,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "More specifically, row 1, which is marked with a \u2019G\u2019, and row 2, which is marked with a \u2019R\u2019, show the results obtained under the gold-standard setting and the regular setting, respectively.",
+                    "sid": 141,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As we can see, under the gold-standard setting, the supervised resolver achieves an average F-score of 66.1 (Spanish) and 65.9 (Italian).",
+                    "sid": 142,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Not surprisingly, under the regular setting, its average F-score drops statistically significantly13 to 54.6 (Spanish) and 63.4 (Italian).14 Best systems in the shared task.",
+                    "sid": 143,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To determine whether the upper bounds established by our supervised systems are reasonable, we show the results of the best-performing resolvers participating in the shared task for both languages under the goldstandard and regular settings in rows 3 and 4 of Tables 3 and 4.",
+                    "sid": 144,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since none of the participating systems achieved the best score over all four scorers, we report the performance of the system that has the highest average F-score.",
+                    "sid": 145,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to the shared task website, TANL-1 (Attardi et al., 2010) achieved the best average F-score in the regular setting for Spanish, whereas SUCRE (Kobdani and Sch\u00a8utze, 2010) outperformed others in the remaining settings.",
+                    "sid": 146,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing these best shared task results with our supervised results in rows 1 and 2, we see that our average F-score for Spanish/Gold is worse than its shared task counterpart by 0.7 points, but otherwise our system outperforms in other settings w.r.t. average F-score, specifically by 5.0 points for Spanish/Regular (due to a better MUC F-score), by 3.4\u2013 4.7 points for Italian (due to better CEAF, B3, and BLANC scores).",
+                    "sid": 147,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Overall, these results suggest that the scores achieved by our systems are at least as competitive as the best shared task scores.",
+                    "sid": 148,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Next, we evaluate our projection algorithm.",
+                    "sid": 149,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Setting 1.",
+                    "sid": 150,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results of our approach, when applied in Setting 1, are shown in row 5 of Tables 3 and 4.",
+                    "sid": 151,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Given that it has to operate under the severe condition where no linguistic taggers are available for the target language, it is perhaps not surprising to see that its performance is significantly worse than that of its supervised counterparts.",
+                    "sid": 152,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Setting 2.",
+                    "sid": 153,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recall that this setting is less resourcescarce than Setting 1 in that a mention extractor for the target language is available.",
+                    "sid": 154,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Results of our algorithm, when operating under Setting 2 using true mentions and system mentions, are shown in rows 6 and 7 of Tables 3 and 4, respectively.",
+                    "sid": 155,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In comparison to the results for Setting 1, we see that the F-scores obtained under Setting 2 increase significantly, regardless of (1) the scoring programs and (2) whether true mentions or system mentions are used.",
+                    "sid": 156,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "These results provide evidence for our earlier hypothesis that our projection algorithm can profitably exploit the linguistic knowledge about the target language that is available to it.",
+                    "sid": 157,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In particular, the mention extractor helps make our approach less sensitive to word alignment and NP projection errors.",
+                    "sid": 158,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In comparison to our supervised results in rows 1 and 2, our algorithm still lags behind by about 8\u201310 points in average F-score.",
+                    "sid": 159,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this should not be surprising, since our algorithm is unsupervised.",
+                    "sid": 160,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Looking closer at the results, we can see that the performance lag by our approach can be attributed to its lower recall: in general, the lag in MUC recall appears to be more acute than that in B3 and CEAF recall.",
+                    "sid": 161,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since MUC only scores non-singleton clusters wheres B3 and CEAF score both singleton and non-singleton clusters, these results suggest that our approach is better at identifying singleton clusters than recovering coreference links.",
+                    "sid": 162,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Setting 3.",
+                    "sid": 163,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we evaluate our approach in a setting where it has access to all the information available to our supervised resolvers, except for the gold-standard coreference annotations on the training sets.",
+                    "sid": 164,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Specifically, our approach uses projected coreference annotations to train a resolver on the training texts, whereas the supervised resolvers do so using gold-standard annotations.",
+                    "sid": 165,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing Settings 2 and 3 with respect to true mentions (rows 6 and 8 of Tables 3 and 4), we see mixed results.",
+                    "sid": 166,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to MUC and BLANC, the resolvers in Setting 3 are significantly better than those in Setting 2 for both languages.",
+                    "sid": 167,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to B3, the resolvers in Setting 2 are significantly better than those in Setting 3 for both languages.",
+                    "sid": 168,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "According to CEAF, the Spanish resolvers in Setting 3 are significantly better than their counterparts in Setting 2, but the opposite is true for the Italian resolvers.",
+                    "sid": 169,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To understand these somewhat contradictory performance trends, let us first note that the dramatic increase in the MUC F-score can be attributed to large gains in MUC recall.",
+                    "sid": 170,
+                    "ssid": 61,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This suggests that the classifiers being trained in Setting 3 have enabled the discovery of additional coreference links.",
+                    "sid": 171,
+                    "ssid": 62,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In other words, there are benefits to be obtained just by learning over noisy coreference annotations, a result that we believe is quite interesting.",
+                    "sid": 172,
+                    "ssid": 63,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, not all of these newly discovered coreference links are correct.",
+                    "sid": 173,
+                    "ssid": 64,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The fact that some scoring programs (e.g., B) are more sensitive to spurious coreference links than the others (e.g., MUC) explains these mixed results.",
+                    "sid": 174,
+                    "ssid": 65,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Nevertheless, according to average F-score, the resolvers in Setting 3 perform significantly better than those in Setting 2 for both languages: F-score increases by 5.3 points for Spanish and 0.7 points for Italian.",
+                    "sid": 175,
+                    "ssid": 66,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar trends can be observed when comparing the two settings w.r.t. system mentions (rows 7 and 9 of Tables 3 and 4): F-score increases by 4.9 points for Spanish and 2.8 points for Italian.",
+                    "sid": 176,
+                    "ssid": 67,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While our Setting 3 results still underperform the supervised results in rows 1 and 2, we can see that they achieve 93\u201394% of the average F-scores of the supervised Spanish resolvers and 89\u201391% of the average F-scores of the supervised Italian resolvers.",
+                    "sid": 177,
+                    "ssid": 68,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Importantly, recall that our approach achieves this level of performance without relying on any goldstandard coreference annotations in Spanish and Italian, and we believe that these results demonstrate the promise of our MT-based projection approach.",
+                    "sid": 178,
+                    "ssid": 69,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since these results suggest that our approach cannot be successfully applied without MT services, a parallel corpus for learning a word alignment model, and a mention extractor for the target language, a natural question is: to what extent do these requirements limit the applicability of our approach?",
+                    "sid": 179,
+                    "ssid": 70,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While it is the case that our approach cannot be applied to a truly resource-scarce language, it can be applied to the numerous Indian and East European languages for which the aforementioned requirements are satisfied but coreference-annotated data is not readily available.",
+                    "sid": 180,
+                    "ssid": 71,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 conclusions and future work",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We explored the under-investigated yet challenging task of performing coreference resolution for a language for which we have no coreference-annotated data and no linguistic knowledge of the language.",
+                    "sid": 181,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our translation-based projection approach has the flexibility to exploit any available knowledge about the target language.",
+                    "sid": 182,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In experiments with Spanish and Italian, we obtained promising results: our approach achieved around 90% of the performance of a supervised resolver when only a mention extractor for the target language was available.",
+                    "sid": 183,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe that this approach has the potential to allow coreference technologies to be deployed across a larger number of languages than is currently possible, and that this is just the beginning of a new line of work.",
+                    "sid": 184,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To gain additional insights into our approach, we plan to pursue several directions.",
+                    "sid": 185,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we will isolate the impact of each factor that adversely affects its performance, including errors in projection, translation, and coreference resolution in the resource-rich language.",
+                    "sid": 186,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we will perform an empirical comparison of two approaches to projecting coreference annotations, our translation-based approach and Camargo de Souza and Orasan\u2019s (2011) approach, where annotations are projected via a parallel corpus.",
+                    "sid": 187,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Third, rather than translate from the target to the source language, we will examine whether it is better to translate all the coreference-annotated data available in the source language to the target language, and train a coreference model for the target language on the translated data.",
+                    "sid": 188,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Fourth, since the success of our projection approach depends heavily on the accuracies of machine translation as well as coreference resolution in the source language, we will determine whether their accuracies can be improved via an ensemble approach, where we employ multiple MT engines and multiple coreference resolvers.",
+                    "sid": 189,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Finally, we plan to employ our approach to alleviate the corpus-annotation bottleneck, specifically by using the annotated data it produces to augment the manual coreference annotations that capture the specific properties of the target language.",
+                    "sid": 190,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgments",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We thank the three anonymous reviewers for their detailed and insightful comments on an earlier draft of the paper.",
+                    "sid": 191,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This work was supported in part by NSF Grants IIS-0812261 and IIS-1147644.",
+                    "sid": 192,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Any opinions, findings, or conclusions expressed in this paper are those of the authors and do not necessarily reflect the views or official policies of NSF.",
+                    "sid": 193,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

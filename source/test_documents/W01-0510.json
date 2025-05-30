@@ -1,0 +1,899 @@
+{
+    "ID": "W01-0510",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Information Extraction Using The Structured Language Model",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The paper presents a data-driven approach to information extraction (viewed as template filling) using the structured language model (SLM) as a statistical parser.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The task of template filling is cast as constrained parsing using the SLM.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model is automatically trained from a set of sentences annotated with frame/slot labels and spans.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Training proceeds in stages: first a constrained syntactic parser is trained such that the parses on training data meet the specified semantic spans, then the non-terminal labels are enriched to contain semantic information and finally a constrained syntactic+semantic parser is trained on the parse trees resulting from the previous stage.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Despite the small amount of training data used, the model is shown to outperform the slot level accuracy of a simple semantic grammar authored manually for the MiPad personal information management task.",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "1 introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "Information extraction from text can be characterized as template filling (Jurafsky and Martin, 2000): a given template or frame contains a certain number of slots that need to be filled in with segments of text.",
+                    "sid": 6,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Typically not all the words in text are relevant to a particular frame.",
+                    "sid": 7,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Assuming that the segments of text relevant to filling in the slots are nonoverlapping contiguous strings of words, one can represent the semantic frame as a simple semantic parse tree for the sentence to be processed.",
+                    "sid": 8,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tree has two levels: the root node is tagged with the frame label and spans the entire sentence; the leaf nodes are tagged with the slot labels and span the strings of words relevant to the corresponding slot.",
+                    "sid": 9,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Consider the semantic parse S for a sentence W presented in Fig.",
+                    "sid": 10,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 11,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "CalendarTask is the frame tag, (CalendarTask schedule meeting with (ByFullName*Person megan hokins) about (SubjectByWildCard*Subject internal lecture) at (PreciseTime*Time two thirty p.m.)) spanning the entire sentence; the remaining ones are slot tags with their corresponding spans.",
+                    "sid": 12,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the MiPad scenario (Huang et al., 2000) essentially a personal information management (PIM) task there is a module that is able to convert the information extracted according to the semantic parse into specific actions.",
+                    "sid": 13,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this case the action is to schedule a calendar appointment.",
+                    "sid": 14,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We view the problem of information extraction as the recovery of the two-level semantic parse S for a given word sequence W. We propose a data driven approach to information extraction that uses the structured language model (SLM) (Chelba and Jelinek, 2000) as an automatic parser.",
+                    "sid": 15,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The parser is constrained to explore only parses that contain pre-set constituents spanning a given word string and bearing a tag in a given set of semantic tags.",
+                    "sid": 16,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The constraints available during training and test are different, the test case constraints being more relaxed as explained in Section 4.",
+                    "sid": 17,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The main advantage of the approach is that it doesn't require any grammar authoring expertise.",
+                    "sid": 18,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach is fully automatic once the annotated training data is provided; it does assume that an application schema i.e. frame and slot structure has been defined but does not require semantic grammars that identify word-sequence to slot or frame mapping.",
+                    "sid": 19,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the process of converting the word sequence coresponding to a slot into actionable canonical forms i.e. convert half past two in the afternoon into 2:30 p.m. may require grammars.",
+                    "sid": 20,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The design of the frames what information is relevant for taking a certain action, what slot/frame tags are to be used, see (Wang, 1999) is a delicate task that we will not be concerned with for the purposes of this paper.",
+                    "sid": 21,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remainder of the paper is organized as follows: Section 2 reviews the structured language model (SLM) followed by Section 3 which describes in detail the training procedure and Section 4 which defines the operation of the SLM as a constrained parser and presents the necessary modifications to the model.",
+                    "sid": 22,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5 compares our approach to others in the literature, in particular that of (Miller et al., 2000).",
+                    "sid": 23,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 6 presents the experiments we have carried out.",
+                    "sid": 24,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude with Section 7.",
+                    "sid": 25,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "2 structured language model",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "We proceed with a brief review of the structured language model (SLM); an extensive presentation of the SLM can be found in (Chelba and Jelinek, 2000).",
+                    "sid": 26,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model assigns a probability P(W;T) to every sentence W and its every possible binary parse T. The terminals of T are the words of W with POStags, and the nodes of T are annotated with phrase headwords and non-terminal labels.",
+                    "sid": 27,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let in Figures 3-4 and they ensure that all possible binary branching parses with all possible headword and non-terminal label assignments for the w1 ::: wk word sequence can be generated.",
+                    "sid": 28,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pk1 ::: pkNk sequence of PARSER operations at position k grows the word-parse (k - 1)-prefix into a word-parse k-prefix.",
+                    "sid": 29,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "W be a sentence of length n words to which we have prepended the sentence beginning marker <s> and appended the sentence end marker </s> so that w0 =<s> and wn+1 =</s>.",
+                    "sid": 30,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Let Wk = w0 ::: wk be the word k-prefix of the sentence the words from the begining of the sentence up to the current position k and WkTk the word-parse k-prefix.",
+                    "sid": 31,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Figure 2 shows a word-parse k-prefix; h_0 .. h_{-m} are the exposed heads, each head being a pair (headword, non-terminal label), or (word, POStag) in the case of a root-only tree.",
+                    "sid": 32,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The exposed heads at a given position k in the input sentence are a function of the word-parse k-prefix.",
+                    "sid": 33,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The joint probability P(W; T) of a word sequence W and a complete parse T can be broken into: Our model is based on three probabilities, each estimated using deleted interpolation and parameterized (approximated) as follows: It is worth noting that if the binary branching structure developed by the parser were always rightbranching and we mapped the POStag and nonterminal label vocabularies to a single type then our model would be equivalent to a trigram language model.",
+                    "sid": 34,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the number of parses for a given word prefix Wk grows exponentially with k, \ufffd{Tk11 - O(2k), the state space of our model is huge even for relatively short sentences, so we had to use a search strategy that prunes it.",
+                    "sid": 35,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our choice was a synchronous multi-stack search algorithm which is very similar to a beam search.",
+                    "sid": 36,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The language model probability assignment for the word at position k + 1 in the input sentence is made using: which ensures a proper probability over strings W*, where Sk is the set of all parses present in our stacks at the current stage k. Each model component WORD-PREDICTOR, TAGGER, PARSER is initialized from a set of parsed sentences after undergoing headword percolation and binarization.",
+                    "sid": 37,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Separately for each model component we: An N-best EM (Dempster et al., 1977) variant is then employed to jointly re-estimate the model parameters such that the likelihood of the training data under our model is increased.",
+                    "sid": 38,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "3 training procedure",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "This section describes the training procedure for the SLM when applied to information extraction and introduces the modifications that need to be made to the SLM operation.",
+                    "sid": 39,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training of the model proceeds in four stages: At this time only the constituent span information in S is taken into account.",
+                    "sid": 40,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3. enrich the non-terminal and pre-terminal labels of the resulting parses with the semantic tags (frame and slot) present in the semantic parse, thus expanding the vocabulary of non-terminal and pre-terminal tags used by the syntactic parser to include semantic information alongside the usual syntactic tags.",
+                    "sid": 41,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "4. train the SLM as a L(abel)-matched constrained parser to explore only the semantic parses for the training data.",
+                    "sid": 42,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This time the semantic constituent labels are taken into account too, which means that a parse P containing both syntactic and semantic information is said to L(abeled)-match S if and only if the set of labeled semantic constituents that defines S is identical to the set of semantic constituents that defines P. If we let SEM(P) denote the function that maps a tree P containing both syntactic and semantic information to the tree containing only semantic information, referred to as the semantic projection of P, then all the parses Pi, di < N, proposed by the SLM for a given sentence W, L-match S and thus satisfy SEM(Pi) = S, di < N. The semantic tree S has a two level structure so the above requirement can be satisfied only if the parses SEM(P) proposed by the SLM are also on two levels, frame and slot level respectively.",
+                    "sid": 43,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have incorporated this constraint into the operation of the SLM see Section 4.2.",
+                    "sid": 44,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model thus trained is then used to parse test sentences and recover the semantic parse using S = SEM(argmaxP, P(Pi,W)).",
+                    "sid": 45,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In principle, one should sum over all the parses P that yield the same semantic parse S and then choose S = arg maxS EP,s.t.",
+                    "sid": 46,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SEM(P,)=S P(Pi, W).",
+                    "sid": 47,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A few iterations of the N-best EM variant see Section 2 were run at each of the second and fourth step in the training procedure.",
+                    "sid": 48,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The constrained parser operation makes this an EM variant where the hidden space the possible parse trees for a given sentence is a priori limited by the semantic constraints to a subset of the hidden space of the unrestricted model.",
+                    "sid": 49,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "At test time we wish to recover the most likely subset of the hidden space consistent with the constraints imposed on the sentence.",
+                    "sid": 50,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To be more specific, during the second training stage, the E-step of the reestimation procedure will only explore syntactic trees (hidden events) that match the semantic parse; the fourth stage E-steps will consider hidden events that are constrained even further to L-match the semantic parse.",
+                    "sid": 51,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have no proof that this procedure should lead to better performance in terms of slot/frame accuracy but intuitively one expects it to place more and more probability mass on the desirable trees that is, the trees that are consistent with the semantic annotation.",
+                    "sid": 52,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is confirmed experimentally by the fact that the likelihood of the training word sequence (observable) calculated by Eq.",
+                    "sid": 53,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "(1) where the sum runs over the parse trees that match/L-match the semantic constraints does increaser at every training step, as presented in Section 6, Table 1.",
+                    "sid": 54,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, 'Equivalent to a decrease in perplexity the increase in likelihood is not always correlated with a decrease in error rate on the training data, see Tables 2 and 3 in Section 6.",
+                    "sid": 55,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "4 constrained parsing using the structured language model",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "We now detail the constrained operation of the SLM matched and L-matched parsing used at the second and fourth steps of the training procedure described in the previous section.",
+                    "sid": 56,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A semantic parse S for a given sentence W consists of a set of constituent boundaries along with semantic tags.",
+                    "sid": 57,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When parsing the sentence using the standard formulation of the SLM, one obtains binary parses that are not guaranteed to match the semantic parse S, i.e. the constituent proposed by the SLM may cross semantic constituent boundaries; for the constituents matching the semantic constituent boundaries, the labels proposed may not be the desired ones.",
+                    "sid": 58,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To fix terminology, we define a constrained constituent or simply a constraint c to be a span together with a sets of allowable tags for the span: c =< l, r, Q > where l is the left boundary of the constraint, r is the right boundary of the constraint and Q is the set of allowable non-terminal tags for the constraint.",
+                    "sid": 59,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A semantic parse can be viewed as a set of constraints; for each constraint the set of allowable nonterminal tags Q contains a single element, respectively the semantic tag for each constituent.",
+                    "sid": 60,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An additional fact to be kept in mind is that the semantic parse tree consists of exactly two levels: the frame level (root semantic tag) and the slot level (leaf semantic tags).",
+                    "sid": 61,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "During training, we wish to constrain the SLM operation such that it considers only parses that match the constraints ci, i = 1 ... C as it proceeds left to right through a given sentence W. In light of the training procedure sketched in the introduction, we consider two flavors of constrained parsing, one in which we only generate parses that match the constraint boundaries and another in which we also enforce that the proposed tag for every matching constituent is among the constrained set of non-terminal tags ci.Q L(abeled)-match constrained parsing.",
+                    "sid": 62,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The only constraints available for the test sentences are: . the semantic tag of the root node which spans the entire sentence must be in the set of frame tags.",
+                    "sid": 63,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If it were a test sentence the example in Figure 1 would have the following semantic parse (constraints): ({CalendarTask,ContactsTask,MailTask} 2The set of allowable tags must contain at least one element schedule meeting with megan hokins about internal lecture to two thirty p.m.) . the semantic projection of the trees proposed by the SLM must have exactly two levels; this constraint is built in the operation of the Lmatch parser.",
+                    "sid": 64,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The next section will describe the constrained parsing algorithm.",
+                    "sid": 65,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4.2 will describe further changes that the algorithm uses to produce only parses P whose semantic projection SEM(P) has exactly two levels, frame (root) and slot (leaf) level, respectively only in the L-match case.",
+                    "sid": 66,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We conclude with Section 4.3 explaining how the constrained parsing algorithm interacts with the pruning of the SLM search space for the most likely parse.",
+                    "sid": 67,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The trees produced by the SLM are binary trees.",
+                    "sid": 68,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The tags annotating the nodes of the tree are purely syntactic during the second training stage or syntactic+semantic during the last training stage or at test time.",
+                    "sid": 69,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It can be proved that satisfying the following two conditions at each position k in the input sentence ensures that all the binary trees generated by the SLM parsing algorithm match the pre-set constraints ci, i = 1 ... C as it proceeds left to right through the input sentence W = w0 ... wn+1.",
+                    "sid": 70,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ". for a given word-parse k-prefix WkTk (see Section 2) accept an adjoin transition if and only if: tic projection of the non-terminal tag SEM(NTtag) proposed by the adjoin operation is non-void then the newly created constituent must L-match an existing constraint, I ci s.t.",
+                    "sid": 71,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "SEM(NTtag) E ci.Q.",
+                    "sid": 72,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": ". for a given word-parse k-prefix WkTk (see Section 2) accept the null transition if and only if all the constraints ci whose right boundary is equal to the current word index k, ci.r = k, have been matched.",
+                    "sid": 73,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If these constraints remain un-matched they will be broken at a later time during the process of completing the parse for the current sentence W: there will be an adjoin operation involving a constituent to the right of the current position that will break all the constraints ending at the current position k. The two-layer structure of the semantic trees need not be enforced during training, simply L-matching 3A constraint is violated by a constituent if the span of the constituent crosses the span of the constraint. the semantic constraints will implicitly satisfy this constraint.",
+                    "sid": 74,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As explained above, for test sentences we can only specify the frame level constraint, leaving open the possibility of generating a tree whose semantic projection would contain more than two levels nested slot level constituents.",
+                    "sid": 75,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to avoid this, each tree in a given word-parse has two bits that describe whether the tree already contains a constituent whose semantic projection is a frame/slot level tag, respectively.",
+                    "sid": 76,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An adjoin operation proposing a tag that violates the correct layering of frame/slot level tags can now be detected and discarded.",
+                    "sid": 77,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the absence of pruning the search for the most likely parse satisfying the constraints for a given sentence becomes computationally intractable4.",
+                    "sid": 78,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In practice, we are forced to use pruning techniques in order to limit the size of the search space.",
+                    "sid": 79,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, it is possible that during the left to right traversal of the sentence, the pruning scheme will keep alive only parses whose continuation cannot meet constraints that we have not encountered yet and no complete parse for the current sentence can be returned.",
+                    "sid": 80,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In such cases, we back-off to unconstrained parsing \ufffd regular SLM usage.",
+                    "sid": 81,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In our experiments, we noticed that this was necessary for very few training sentences (1 out of 2,239) and relatively few test sentences (31 out of 1,101).",
+                    "sid": 82,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "5 comparison with previous work",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "The use of a syntactic parser augmented with semantic tags for information information from text is not a novel idea.",
+                    "sid": 83,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The basic approach we described is very similar to the one presented in (Miller et al., 2000) however there are a few major differences: . in our approach the augmentation of the syntactic tags with semantic tags is straightforward due to the fact that the semantic constituents are matched exactly5.",
+                    "sid": 84,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The approach in (Miller et al., 2000) needs to insert additional nodes in the syntactic tree to account for the semantic constituents that do not have a corresponding syntactic one.",
+                    "sid": 85,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We believe our approach ensures tighter coupling between the syntactic and the semantic information in the final augmented trees.",
+                    "sid": 86,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2022 our constraint definition allows for a set of semantic tags to be matched on a given span.",
+                    "sid": 87,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The semantic annotation required by our task is much simpler than that employed by (Miller et al., 2000).",
+                    "sid": 88,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "One possibly beneficial extension of our work suggested by (Miller et al., 2000) would be to add semantic tags describing relations between entities (slots), in which case the semantic constraints would not be structured strictly on the two levels used in the current approach, respectively frame and slot level.",
+                    "sid": 89,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, this would complicate the task of data annotation making it more expensive.",
+                    "sid": 90,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The same constrained EM variant employed for reestimating the model parameters has been used by (Pereira and Schabes, 1992) for training a purely syntactic parser showing increase in likelihood but no improvement in parsing accuracy.",
+                    "sid": 91,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "6 experiments",
+            "number": "6",
+            "sents": [
+                {
+                    "text": "We have evaluated the model on manually annotated data for the MiPad (Huang et al., 2000) task.",
+                    "sid": 92,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have used 2,239 sentences (27,119 words) for training and 1,101 sentences (8,652 words) for test.",
+                    "sid": 93,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There were 2,239/5,431 semantic frames/slots in the training data and 1,101/1,698 in the test data, respectively.",
+                    "sid": 94,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word vocabulary size was 1,035, closed over the test data.",
+                    "sid": 95,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The slot and frame vocabulary sizes were 79 and 3, respectively.",
+                    "sid": 96,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pre-terminal (POStag) vocabulary sizes were 64 and 144 for training steps 2 and 4 (see Section 3), respectively; the non-terminal (NTtag) vocabulary sizes were 61 and 540 for training steps 2 and 4 (see Section 3), respectively.",
+                    "sid": 97,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have used the NLPwin (Heidorn, 1999) parser to obtain the MiPad syntactic treebank needed for initializing the SLM at training step 1.",
+                    "sid": 98,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Although not guaranteed theoretically, the N-best EM variant used for the SLM parameter reestimation increases the likelihood of the training data with each iteration when the parser is run in both matched (training step 2) and L-matched (training step 4) constrained modes.",
+                    "sid": 99,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows the evolution of the training and test data perplexities (calculated using the probability assignment in Eq.",
+                    "sid": 100,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1) during the constrained training steps 2 and 4.",
+                    "sid": 101,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The training data perplexity decreases monotonically during both training steps whereas the test data perplexity doesn't decrease monotonically in either case.",
+                    "sid": 102,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We attribute this discrepancy between the evolution of the likelihood on the training and test corpora to the different constrained settings for the SLM.",
+                    "sid": 103,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The most important performance measure is the slot/frame error rate.",
+                    "sid": 104,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "To measure it, we use manually created parses which consist of frame-level labels and slot-level labels and spans as reference.",
+                    "sid": 105,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A frame-level error is caused by a frame label of the hypothesis parse which is different from the frame label of the reference.",
+                    "sid": 106,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to calculate the slotlevel errors, we create a set of slot label and slot span pairs for the reference and hypothesis parse, respectively.",
+                    "sid": 107,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The number of slot errors is then the minimum edit distance between these 2 sets using the substitution, insertion and deletion operations on the elements of the set.",
+                    "sid": 108,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 2 shows the error rate on training and test data at different stages during training.",
+                    "sid": 109,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The last column of test data results (Test-L1) shows the results obtained by assuming that the user has specified the identity of the frame and thus the frame level constraint contains only the correct semantic tag.",
+                    "sid": 110,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This is a plausible scenario if the user has the possibility to choose the frame using a different input modality such as a stylus.",
+                    "sid": 111,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The error rates on the training data were calculated by running the model with the same constraint as on the test data constraining the set of allowable tags at the frame level.",
+                    "sid": 112,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This could be seen as an upper bound on the performance of the model (since the model parameters were estimated on the same data).",
+                    "sid": 113,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our model significantly outperforms the baseline model a simple semantic context free grammar authored manually for the MiPad task in terms of slot error rate (about 35% relative reduction in slot error rate) but it is outperformed by the latter in terms of frame error rate.",
+                    "sid": 114,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "When running the models from training step 2 on test data one cannot add any constraints; only frame level constraints can be used when evaluating the models from training step 4 on test data.",
+                    "sid": 115,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "N-best reestimation at either training stage (2 or 4) doesn't improve the accuracy of the system, although the results obtained by intializing the model using the reestimated stage 2 model iteration 2-{0,1,2} models tend to be slightly better than their 0-{0,1,2} counterparts.",
+                    "sid": 116,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Constraining the frame level tag to have the correct value doesn't significantly reduce the slot error rate in either approach, as can be seen from the Test-L1 column of results6.",
+                    "sid": 117,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Recent results (Chelba, 2001) on the portability of syntactic structure within the SLM framework show that it is possible to initialize the SLM parameters from a treebank for out-of-domain text and maintain the same language modeling performance.",
+                    "sid": 118,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have repeated the experiment in the context of information extraction.",
+                    "sid": 119,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Similar to the approach in (Miller et al., 2000) we initialized the SLM statistics from the UPenn Treebank parse trees (about 1Mwds of training data) at the first training stage, see Section 3.",
+                    "sid": 120,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The remaining part of the training procedure was the same as in the previous set of experiments.",
+                    "sid": 121,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The word, slot and frame vocabulary were the same as in the previous set of experiments.",
+                    "sid": 122,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The pre-terminal (POStag) vocabulary sizes were 40 and 204 for training steps 2 and 4 (see Section 3), respectively; the non-terminal (NTtag) vocabulary sizes were 52 and 434 for training steps 2 and 4 (see Section 3), respectively.",
+                    "sid": 123,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are presented in Table 3, showing improved performance over the model initialized from in-domain parse trees.",
+                    "sid": 124,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The frame accuracy increases substantially, almost matching that of the baseline model, while the slot accuracy is just slightly increased.",
+                    "sid": 125,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We attribute the improved performance of the model initialized from the UPenn Treebank to the fact that the model explores a more diverse set of trees for a given sentence than the model initialized from the MiPad automatic treebank generated using the NLPwin parser.",
+                    "sid": 126,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have also evaluated the impact of the training data size on the model performance.",
+                    "sid": 127,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are presented in Table 4, showing a strong dependence of both the slot and frame error rates on the amount of training data used.",
+                    "sid": 128,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This, together with the high accuracy of the model on training data (see Table 3), suggests that we are far from saturation in performance and that more training data is very likely to improve the model performance substantially.",
+                    "sid": 129,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As a summary error analysis, we have investigated the correlation between the semantic frame/slot error rate and the number of semantic slots in a sentence.",
+                    "sid": 130,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We have binned the sentences in the test set according to the number of slots in the manual an6The frame error rate in this column should be 0; in practice this doesn't happen because some test sentences could not be L-match parsed using the pruning strategy employed by the SLM, see Section 4.3 notation and evaluated the frame/slot error rate in each bin.",
+                    "sid": 131,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The results are shown in Table 5.",
+                    "sid": 132,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The frame/slot accuracy increases with the number of slots per sentence except for the 5+ bin where the frame error rate increases showing that slot co-ocurence statistics improve performance; sentences containing more semantic slots tend to be less ambiguous from an information extraction point of view.",
+                    "sid": 133,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "7 conclusions and future directions",
+            "number": "7",
+            "sents": [
+                {
+                    "text": "We have presented a data-driven approach to information extraction that, despite the small amount of training data used, is shown to outperform the slot level accuracy of a simple semantic grammar authored manually for the MiPad personal information management task.",
+                    "sid": 134,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The performance of the baseline model could be improved with more authoring effort, although this is expensive.",
+                    "sid": 135,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The big difference in performance between training and test and the fact that we are using so little training data, makes improvements by using more training data very likely, although this may be expensive.",
+                    "sid": 136,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A framework which utilizes the vast amounts of text data collected once such a system is deployed would be desirable.",
+                    "sid": 137,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Statistical modeling techniques that make more effective use of the training data should be used in the SLM, maximum entropy (Berger et al., 1996) being a good candidate.",
+                    "sid": 138,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "As for using the SLM as the language understanding component of a speech driven application, such as MiPad, it would be interesting to evaluate the impact of incorporating the semantic constraints on the word-level accuracy of the system.",
+                    "sid": 139,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another possible research direction is to modify the framework such that it finds the most likely semantic parse given the acoustics thus treating the word sequence as a hidden variable.",
+                    "sid": 140,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}

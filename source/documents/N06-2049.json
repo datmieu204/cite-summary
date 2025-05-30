@@ -1,0 +1,983 @@
+{
+    "ID": "N06-2049",
+    "sections": [
+        {
+            "text": "abstract",
+            "number": 0,
+            "sents": [
+                {
+                    "text": "Subword-based Tagging by Conditional Random Fields for Chinese Word Segmentation",
+                    "sid": 0,
+                    "ssid": null,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We proposed two approaches to improve Chinese word segmentation: a subword-based tagging and a confidence measure approach.",
+                    "sid": 1,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found the former achieved better performance than the existing character-based tagging, and the latter improved segmentation further by combining the former with a dictionary-based segmentation.",
+                    "sid": 2,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, the latter can be used to balance out-of-vocabulary rates and in-vocabulary rates.",
+                    "sid": 3,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By these techniques we achieved higher F-scores in CITYU, PKU and MSR corpora than the best results from Sighan Bakeoff 2005.",
+                    "sid": 4,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "introduction",
+            "number": "1",
+            "sents": [
+                {
+                    "text": "The character-based \u201cIOB\u201d tagging approach has been widely used in Chinese word segmentation recently (Xue and Shen, 2003; Peng and McCallum, 2004; Tseng et al., 2005).",
+                    "sid": 5,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Under the scheme, each character of a word is labeled as \u2018B\u2019 if it is the first character of a multiple-character word, or \u2018O\u2019 if the character functions as an independent word, or \u2018I\u2019 otherwise.\u201d For example, \u201d (whole) (Beijing city)\u201d is labeled as \u201d (whole)/O (north)/B (capital)/I (city)/I\u201d.",
+                    "sid": 6,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that so far all the existing implementations were using character-based IOB tagging.",
+                    "sid": 7,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work we propose a subword-based IOB tagging, which assigns tags to a predefined lexicon subset consisting of the most frequent multiple-character words in addition to single Chinese characters.",
+                    "sid": 8,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If only Chinese characters are used, the subword-based IOB tagging is downgraded into a character-based one.",
+                    "sid": 9,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Taking the same example mentioned above, \u201c (whole) (Beijing city)\u201d is labeled as \u201d (whole)/O (Beijing)/B (city)/I\u201d in the subword-based tagging, where \u201d (Beijing)/B\u201d is labeled as one unit.",
+                    "sid": 10,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will give a detailed description of this approach in Section 2.",
+                    "sid": 11,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "\u2217 Now the second author is affiliated with NTT.",
+                    "sid": 12,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In addition, we found a clear weakness with the IOB tagging approach: It yields a very low in-vocabulary (IV) rate (R-iv) in return for a higher out-of-vocabulary (OOV) rate (R-oov).",
+                    "sid": 13,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the results of the closed test in Bakeoff 2005 (Emerson, 2005), the work of (Tseng et al., 2005), using conditional random fields (CRF) for the IOB tagging, yielded very high R-oovs in all of the four corpora used, but the R-iv rates were lower.",
+                    "sid": 14,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "While OOV recognition is very important in word segmentation, a higher IV rate is also desired.",
+                    "sid": 15,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work we propose a confidence measure approach to lessen the weakness.",
+                    "sid": 16,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By this approach we can change R-oovs and R-ivs and find an optimal tradeoff.",
+                    "sid": 17,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach will be described in Section 2.2.",
+                    "sid": 18,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the followings, we illustrate our word segmentation process in Section 2, where the subword-based tagging is implemented by the CRFs method.",
+                    "sid": 19,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 3 presents our experimental results.",
+                    "sid": 20,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 4 describes current state- of-the-art methods for Chinese word segmentation, with which our results were compared.",
+                    "sid": 21,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Section 5 provides the concluding remarks.",
+                    "sid": 22,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "our chinese word segmentation process. ",
+            "number": "2",
+            "sents": [
+                {
+                    "text": "Our word segmentation process is illustrated in Fig.",
+                    "sid": 23,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "1.",
+                    "sid": 24,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is composed of three parts: a dictionary-based N-gram word segmentation for segmenting IV words, a subword- based tagging by the CRF for recognizing OOVs, and a confidence-dependent word segmentation used for merging the results of both the dictionary-based and the IOB tagging.",
+                    "sid": 25,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "An example exhibiting each step\u2019s results is also given in the figure.",
+                    "sid": 26,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since the dictionary-based approach is a well-known method, we skip its technical descriptions.",
+                    "sid": 27,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, keep in mind that the dictionary-based approach can produce a higher R-iv rate.",
+                    "sid": 28,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will use this advantage in the confidence measure approach.",
+                    "sid": 29,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.1 Subword-based IOB tagging using CRFs.",
+                    "sid": 30,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There are several steps to train a subword-based IOB tag- ger.",
+                    "sid": 31,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "First, we extracted a word list from the training data sorted in decreasing order by their counts in the training 193 Proceedings of the Human Language Technology Conference of the North American Chapter of the ACL, pages 193\u2013196, New York, June 2006.",
+                    "sid": 32,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Qc 2006 Association for Computational Linguistics input \u5498\u38c5\u1bf9\u0523\u0cfc\u08eb\u0480\u13d6 +XDQJ<LQJ&KXQ OLYHV LQ %HLMLQJFLW\\ Dictionary-based word segmentation \u5498 \u38c5 \u1bf9 \u0523 \u0cfc \u08eb\u0480\u13d6 +XDQJ <LQJ &KXQ OLYHV LQ %HLMLQJFLW\\ Subword-based IOB tagging \u5498/% \u38c5/, \u1bf9/, \u0523/2 \u0cfc/2 \u08eb\u0480/% \u13d6/, +XDQJ/% <LQJ/, &KXQ/, OLYHV/2 LQ/2 %HLMLQJ/% FLW\\/, Confidence-based segmentation \u5498/% \u38c5/, \u1bf9/, \u0523/2 \u0cfc/2 \u08eb\u0480/% \u13d6/, +XDQJ/% <LQJ/, &KXQ/, OLYHV/2 LQ/2 %HLMLQJ/% FLW\\/, output \u5498\u38c5\u1bf9 \u0523 \u0cfc \u08eb\u0480\u13d6 +XDQJ<LQJ&KXQ OLYHV LQ %HLMLQJFLW\\ Figure 1: Outline of word segmentation process data.",
+                    "sid": 33,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We chose all the single characters and the top multi- character words as a lexicon subset for the IOB tagging.",
+                    "sid": 34,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the subset consists of Chinese characters only, it is a character-based IOB tagger.",
+                    "sid": 35,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We regard the words in the subset as the subwords for the IOB tagging.",
+                    "sid": 36,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Second, we re-segmented the words in the training data into subwords belonging to the subset, and assigned IOB tags to them.",
+                    "sid": 37,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For a character-based IOB tagger, there is only one possibility of re-segmentation.",
+                    "sid": 38,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, there are multiple choices for a subword-based IOB tagger.",
+                    "sid": 39,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, \u201c (Beijing-city)\u201d can be segmented as \u201c (Beijing-city)/O,\u201d or \u201c (Beijing)/B (city)/I,\u201d or \u201d (north)/B (capital)/I (city)/I.\u201d In this work we used forward maximal match (FMM) for disambiguation.",
+                    "sid": 40,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Of course, backward maximal match (BMM) or other approaches are also applicable.",
+                    "sid": 41,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We did not conduct comparative experiments because trivial differences of these approaches may not result in significant consequences to the subword-based ap proach.",
+                    "sid": 42,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In the third step, we used the CRFs approach to train the IOB tagger (Lafferty et al., 2001) on the training data.",
+                    "sid": 43,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We downloaded and used the package \u201cCRF++\u201d from the site \u201chttp://www.chasen.org/\u02dctaku/software.\u201d According to the CRFs, the probability of an IOB tag sequence, T = t0 t1 \u00b7 \u00b7 \u00b7 tM , given the word sequence, W = w0 w1 \u00b7 \u00b7 \u00b7 wM , is defined by p(T |W ) = and current observation ti simultaneously; gk (ti , W ), the unigram feature functions because they trigger only current observation ti . \u03bbk and \u00b5k are the model parameters corresponding to feature functions fk and gk respectively.",
+                    "sid": 44,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The model parameters were trained by maximizing the log-likelihood of the training data using L-BFGS gradient descent optimization method.",
+                    "sid": 45,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In order to overcome overfitting, a gaussian prior was imposed in the training.",
+                    "sid": 46,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The types of unigram features used in our experiments included the following types: w0 , w\u22121 , w1 , w\u22122 , w2 , w0 w\u22121 , w0 w1 , w\u22121 w1 , w\u22122 w\u22121 , w2 w0 where w stands for word.",
+                    "sid": 47,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The subscripts are position indicators.",
+                    "sid": 48,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "0 means the current word; \u22121, \u22122, the first or second word to the left; 1, 2, the first or second word to the right.",
+                    "sid": 49,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the bigram features, we only used the previous and the current observations, t\u22121 t0 . As to feature selection, we simply used absolute counts for each feature in the training data.",
+                    "sid": 50,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We defined a cutoff value for each feature type and selected the features with occurrence counts over the cutoff.",
+                    "sid": 51,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A forward-backward algorithm was used in the training and viterbi algorithm was used in the decoding.",
+                    "sid": 52,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "2.2 Confidence-dependent word segmentation.",
+                    "sid": 53,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Before moving to this step in Figure 1, we produced two segmentation results: the one by the dictionary-based approach and the one by the IOB tagging.",
+                    "sid": 54,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, neither was perfect.",
+                    "sid": 55,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The dictionary-based segmentation produced results with higher R-ivs but lower R-oovs while the IOB tagging yielded the contrary results.",
+                    "sid": 56,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this section we introduce a confidence measure approach to combine the two results.",
+                    "sid": 57,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We define a confidence measure, C M(tiob |w), to measure the confidence of the results produced by the IOB tagging by using the results from the dictionary-based segmentation.",
+                    "sid": 58,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The confidence measure comes from two sources: IOB tagging and dictionary- based word segmentation.",
+                    "sid": 59,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Its calculation is defined as: C M(tiob |w) = \u03b1C Miob (tiob |w) + (1 \u2212 \u03b1)\u03b4(tw , tiob )ng (2) where tiob is the word w\u2019s IOB tag assigned by the IOB tagging; tw , a prior IOB tag determined by the results of the dictionary-based segmentation.",
+                    "sid": 60,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "After the dictionary- based word segmentation, the words are re-segmented into subwords by FMM before being fed to IOB tagging.",
+                    "sid": 61,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Each subword is given a prior IOB tag, tw . C Miob (t|w), a \uf8eb M \uf8eb\uf8f6\uf8f6 confidence probability derived in the process of IOB tag exp \uf8ec)' \uf8ec)' \u03bbk fk (ti\u22121 , ti , W ) + )' \u00b5k gk (ti , W )\uf8f7\uf8f7 /Z, \uf8ec\uf8ed i=1 \uf8ec\uf8ed k k \uf8f7\uf8f8 \uf8f7\uf8f8 (1) ging, is defined as Z = )' T =t0 t1 \u00b7\u00b7\u00b7tM p(T |W ) C Miob (t|w ) = L,T =t0 t1 \u00b7\u00b7\u00b7tM ,ti =t P(T |W, wi ) T =t 0 t1 \u00b7\u00b7\u00b7 tM P ( T | W ) where we call fk (ti\u22121 , ti , W ) bigram feature functions because the features trigger the previous observation ti\u22121 where the numerator is a sum of all the observation sequences with word wi labeled as t. \u03b4(tw , tiob )ng denotes the contribution of the dictionary- based segmentation.",
+                    "sid": 62,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It is a Kronecker delta function defined as \u03b4(tw , tiob )ng = { 1 if tw = tiob 0 otherwise In Eq. 2, \u03b1 is a weighting between the IOB tagging and the dictionary-based word segmentation.",
+                    "sid": 63,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found the value 0.7 for \u03b1, empirically.",
+                    "sid": 64,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By Eq. 2 the results of IOB tagging were reevaluated.",
+                    "sid": 65,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A confidence measure threshold, t, was defined for making a decision based on the value.",
+                    "sid": 66,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "If the value was lower than t, the IOB tag was rejected and the dictionary-based segmentation was used; otherwise, the IOB tagging segmentation was used.",
+                    "sid": 67,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "A new OOV was thus created.",
+                    "sid": 68,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the two extreme cases, t = 0 is the case of the IOB tagging while t = 1 is that of the dictionary-based approach.",
+                    "sid": 69,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In a real application, a satisfactory tradeoff between R- ivs and R-oovs could find through tuning the confidence threshold.",
+                    "sid": 70,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In Section 3.2 we will present the experimental segmentation results of the confidence measure approach.",
+                    "sid": 71,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "experiments. ",
+            "number": "3",
+            "sents": [
+                {
+                    "text": "We used the data provided by Sighan Bakeoff 2005 to test our approaches described in the previous sections.",
+                    "sid": 72,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The data contain four corpora from different sources: Academia Sinica (AS), City University of Hong Kong (CITYU), Peking University (PKU) and Microsoft Research in Beijing (MSR).",
+                    "sid": 73,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since this work was to evaluate the proposed subword-based IOB tagging, we carried out the closed test only.",
+                    "sid": 74,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Five metrics were used to evaluate segmentation results: recall(R), precision(P), F-score(F), OOV rate(R-oov) and IV rate(R-iv).",
+                    "sid": 75,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For detailed info.",
+                    "sid": 76,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "of the corpora and these scores, refer to (Emerson, 2005).",
+                    "sid": 77,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the dictionary-based approach, we extracted a word list from the training data as the vocabulary.",
+                    "sid": 78,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Tri- gram LMs were generated using the SRI LM toolkit for disambiguation.",
+                    "sid": 79,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Table 1 shows the performance of the dictionary-based segmentation.",
+                    "sid": 80,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since there were some single-character words present in the test data but not in the training data, the R-oov rates were not zero in this experiment.",
+                    "sid": 81,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In fact, there were no OOV recognition.",
+                    "sid": 82,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Hence, this approach produced lower F-scores.",
+                    "sid": 83,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the R-ivs were very high.",
+                    "sid": 84,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.1 Effects of the Character-based and the.",
+                    "sid": 85,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "subword-based tagger The main difference between the character-based and the word-based is the contents of the lexicon subset used for re-segmentation.",
+                    "sid": 86,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the character-based tagging, we used all the Chinese characters.",
+                    "sid": 87,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For the subword-based tagging, we added another 2000 most frequent multiple- character words to the lexicons for tagging.",
+                    "sid": 88,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmentation results of the dictionary-based were re-segmented Table 1: Our segmentation results by the dictionary- based approach for the closed test of Bakeoff 2005, very low R-oov rates due to no OOV recognition applied.",
+                    "sid": 89,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "R P FR oo vR iv A S 0.9 51 0.9 53 0.9 42 0.9 40 0.9 47 0.9 47 0.",
+                    "sid": 90,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "67 8 0.",
+                    "sid": 91,
+                    "ssid": 20,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "64 7 0.9 64 0.9 67 CI TY U 0.9 39 0.9 50 0.9 43 0.9 42 0.9 41 0.9 46 0.",
+                    "sid": 92,
+                    "ssid": 21,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "70 0 0.",
+                    "sid": 93,
+                    "ssid": 22,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "73 6 0.9 58 0.9 67 P K U 0.9 40 0.9 43 0.9 50 0.9 46 0.9 45 0.9 45 0.",
+                    "sid": 94,
+                    "ssid": 23,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "78 3 0.",
+                    "sid": 95,
+                    "ssid": 24,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "75 4 0.9 49 0.9 55 M S R 0.9 57 0.9 65 0.9 60 0.9 63 0.9 59 0.9 64 0.",
+                    "sid": 96,
+                    "ssid": 25,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "71 0 0.",
+                    "sid": 97,
+                    "ssid": 26,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "71 6 0.9 64 0.9 72 Table 2: Segmentation results by a pure subword-based IOB tagging.",
+                    "sid": 98,
+                    "ssid": 27,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The upper numbers are of the character- based and the lower ones, the subword-based.",
+                    "sid": 99,
+                    "ssid": 28,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "using the FMM, and then labeled with \u201cIOB\u201d tags by the CRFs.",
+                    "sid": 100,
+                    "ssid": 29,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The segmentation results using CRF tagging are shown in Table 2, where the upper numbers of each slot were produced by the character-based approach while the lower numbers were of the subword-based.",
+                    "sid": 101,
+                    "ssid": 30,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found that the proposed subword-based approaches were effective in CITYU and MSR corpora, raising the F-scores from 0.941 to 0.946 for CITYU corpus, 0.959 to 0.964 for MSR corpus.",
+                    "sid": 102,
+                    "ssid": 31,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "There were no F-score changes for AS and PKU corpora, but the recall rates were improved.",
+                    "sid": 103,
+                    "ssid": 32,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Comparing Table 1 and 2, we found the CRF-modeled IOB tagging yielded better segmentation than the dictionary- based approach.",
+                    "sid": 104,
+                    "ssid": 33,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "However, the R-iv rates were getting worse in return for higher R-oov rates.",
+                    "sid": 105,
+                    "ssid": 34,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We will tackle this problem by the confidence measure approach.",
+                    "sid": 106,
+                    "ssid": 35,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "3.2 Effect of the confidence measure.",
+                    "sid": 107,
+                    "ssid": 36,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In section 2.2, we proposed a confidence measure approach to reevaluate the results of IOB tagging by combinations of the results of the dictionary-based segmentation.",
+                    "sid": 108,
+                    "ssid": 37,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The effect of the confidence measure is shown in Table 3, where we used \u03b1 = 0.7 and confidence threshold t = 0.8.",
+                    "sid": 109,
+                    "ssid": 38,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In each slot, the numbers on the top were of the character-based approach while the numbers on the bottom were the subword-based.",
+                    "sid": 110,
+                    "ssid": 39,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found the results in Table 3 were better than those in Table 2 and Table 1, which prove that using confidence measure approach achieved the best performance over the dictionary-based segmentation and the IOB tagging approach.",
+                    "sid": 111,
+                    "ssid": 40,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The act of confidence measure made a tradeoff between R-ivs and R- oovs, yielding higher R-oovs than Table 1 and higher R R P FR oo vR iv A S 0.9 53 0.9 56 0.9 44 0.9 47 0.9 48 0.9 51 0.",
+                    "sid": 112,
+                    "ssid": 41,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "60 7 0.",
+                    "sid": 113,
+                    "ssid": 42,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "64 9 0.9 69 0.9 69 CI TY U 0.9 43 0.9 52 0.9 48 0.9 49 0.9 46 0.9 51 0.",
+                    "sid": 114,
+                    "ssid": 43,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "68 2 0.",
+                    "sid": 115,
+                    "ssid": 44,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "74 1 0.9 64 0.9 69 P K U 0.9 42 0.9 47 0.9 57 0.9 55 0.9 49 0.9 51 0.",
+                    "sid": 116,
+                    "ssid": 45,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "77 5 0.",
+                    "sid": 117,
+                    "ssid": 46,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "74 8 0.9 52 0.9 59 M S R 0.9 60 0.9 72 0.9 66 0.9 69 0.9 63 0.9 71 0.",
+                    "sid": 118,
+                    "ssid": 47,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "67 4 0.",
+                    "sid": 119,
+                    "ssid": 48,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "71 2 0.9 67 0.9 76 Table 3: Effects of combination using the confidence measure.",
+                    "sid": 120,
+                    "ssid": 49,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The upper numbers and the lower numbers are of the character-based and the subword-based, respectively A S CI T Y U M SR P K U Ba ke off be st 0.",
+                    "sid": 121,
+                    "ssid": 50,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 2 0.",
+                    "sid": 122,
+                    "ssid": 51,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 4 3 0.",
+                    "sid": 123,
+                    "ssid": 52,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "96 4 0.",
+                    "sid": 124,
+                    "ssid": 53,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 0 O u r s 0.",
+                    "sid": 125,
+                    "ssid": 54,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 1 0.",
+                    "sid": 126,
+                    "ssid": 55,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "9 5 1 0.",
+                    "sid": 127,
+                    "ssid": 56,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "97 1 0.",
+                    "sid": 128,
+                    "ssid": 57,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "95 1 Table 4: Comparison our results with the best ones from Sighan Bakeoff 2005 in terms of F-score ivs than Table 2.",
+                    "sid": 129,
+                    "ssid": 58,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Even with the use of confidence measure, the word- based IOB tagging still outperformed the character-based IOB tagging.",
+                    "sid": 130,
+                    "ssid": 59,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It proves the proposed word-based IOB tagging was very effective.",
+                    "sid": 131,
+                    "ssid": 60,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "discussion and related works. ",
+            "number": "4",
+            "sents": [
+                {
+                    "text": "The IOB tagging approach adopted in this work is not a new idea.",
+                    "sid": 132,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "It was first used in Chinese word segmentation by (Xue and Shen, 2003), where maximum entropy methods were used.",
+                    "sid": 133,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Later, this approach was implemented by the CRF-based method (Peng and McCallum, 2004), which was proved to achieve better results than the maximum entropy approach because it can solve the label bias problem (Lafferty et al., 2001).",
+                    "sid": 134,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our main contribution is to extend the IOB tagging approach from being a character-based to a subword-based.",
+                    "sid": 135,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We proved the new approach enhanced the word segmentation significantly.",
+                    "sid": 136,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our results are listed together with the best results from Bakeoff 2005 in Table 4 in terms of F-scores.",
+                    "sid": 137,
+                    "ssid": 6,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We achieved the highest F-scores in CITYU, PKU and MSR corpora.",
+                    "sid": 138,
+                    "ssid": 7,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We think our proposed subword- based tagging played an important role for the good results.",
+                    "sid": 139,
+                    "ssid": 8,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Since it was a closed test, some information such as Arabic and Chinese number and alphabetical letters cannot be used.",
+                    "sid": 140,
+                    "ssid": 9,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We could yield a better results than those shown in Table 4 using such information.",
+                    "sid": 141,
+                    "ssid": 10,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For example, inconsistent errors of foreign names can be fixed if alphabetical characters are known.",
+                    "sid": 142,
+                    "ssid": 11,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "For AS corpus, \u201cAdam Smith\u201d are two words in the training but become a one- word in the test, \u201cAdamSmith\u201d.",
+                    "sid": 143,
+                    "ssid": 12,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Our approaches produced wrong segmentations for labeling inconsistency.",
+                    "sid": 144,
+                    "ssid": 13,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Another advantage of the word-based IOB tagging over the character-based is its speed.",
+                    "sid": 145,
+                    "ssid": 14,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The subword-based approach is faster because fewer words than characters were labeled.",
+                    "sid": 146,
+                    "ssid": 15,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We found a speed up both in training and test.",
+                    "sid": 147,
+                    "ssid": 16,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "The idea of using the confidence measure has appeared in (Peng and McCallum, 2004), where it was used to recognize the OOVs.",
+                    "sid": 148,
+                    "ssid": 17,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "In this work we used it more delicately.",
+                    "sid": 149,
+                    "ssid": 18,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "By way of the confidence measure we combined results from the dictionary-based and the IOB-tagging-based and as a result, we could achieve the optimal performance.",
+                    "sid": 150,
+                    "ssid": 19,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "conclusions. ",
+            "number": "5",
+            "sents": [
+                {
+                    "text": "In this work, we proposed a subword-based IOB tagging method for Chinese word segmentation.",
+                    "sid": 151,
+                    "ssid": 1,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "Using the CRFs approaches, we prove that it outperformed the character- based method using the CRF approaches.",
+                    "sid": 152,
+                    "ssid": 2,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "We also successfully employed the confidence measure to make a confidence-dependent word segmentation.",
+                    "sid": 153,
+                    "ssid": 3,
+                    "kind_of_tag": "s"
+                },
+                {
+                    "text": "This approach is effective for performing desired segmentation based on users\u2019 requirements to R-oov and R-iv.",
+                    "sid": 154,
+                    "ssid": 4,
+                    "kind_of_tag": "s"
+                }
+            ]
+        },
+        {
+            "text": "acknowledgements",
+            "number": "",
+            "sents": [
+                {
+                    "text": "The authors appreciate the reviewers\u2019 effort and good advice for improving the paper.",
+                    "sid": 155,
+                    "ssid": 5,
+                    "kind_of_tag": "s"
+                }
+            ]
+        }
+    ]
+}
