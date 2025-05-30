@@ -1,4 +1,4 @@
-# Cite-Summary
+# Cite-Summ
 
 Automatically **detect rhetorical facets** in citation sentences  
 (*aim • hypothesis • method • result • implication*) **and generate concise, facet-aware summaries** for each cited paper.
